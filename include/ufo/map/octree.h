@@ -122,6 +122,17 @@ class Octree
 	Code getRootCode() const noexcept { return Code(0, getTreeDepthLevels()); }
 
 	//
+	// Automatic pruning
+	//
+
+	void enableAutomaticPruning(bool enable) noexcept
+	{
+		automatic_pruning_enabled_ = enable;
+	}
+
+	bool isAutomaticPruningEnabled() const noexcept { return automatic_pruning_enabled_; }
+
+	//
 	// "Normal" iterators
 	//
 
