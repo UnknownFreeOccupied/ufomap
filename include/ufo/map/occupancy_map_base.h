@@ -284,6 +284,7 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 				// Occupied space
 				indices_[Base::toCode(end)] = prob_hit_log_;
 			} else {
+				direction /= distance;
 				end = origin + (direction * max_range);
 			}
 
