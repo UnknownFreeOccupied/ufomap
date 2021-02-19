@@ -44,6 +44,7 @@
 
 #include <ufo/geometry/bounding_volume.h>
 #include <ufo/geometry/collision_checks.h>
+#include <ufo/map/code.h>
 #include <ufo/map/types.h>
 
 #include <array>
@@ -145,6 +146,17 @@ class OctreeIterator
 
 	Point3 getCenter() const { return path_[current_depth_].aabb.center; }
 
+	Code getCode(DepthType depth = 0) const
+	{
+		// TODO: Improve
+		Code code = tree_->getRootCode();
+		for (int d = code.getDepth() - 1;
+		     static_cast<int>(getDepth()) <= d && static_cast<int>(depth) <= d; --d) {
+			code = code.getChild(path_[d].index);
+		}
+		return code;
+	}
+
 	double getX() const { return path_[current_depth_].aabb.center[0]; }
 
 	double getY() const { return path_[current_depth_].aabb.center[1]; }
@@ -179,15 +191,13 @@ class OctreeIterator
 		node.aabb.half_size = Point3(s, s, s);
 		node.inside = bounding_volume_.empty();
 
-
 		// Prefill AABBs
 		for (size_t depth = min_depth_; depth < current_depth_; ++depth) {
 			s = tree_->getNodeHalfSize(depth);
 			path_[depth].aabb.half_size = Point3(s, s, s);
 		}
 
-		if (validNode(node, current_depth_) &&
-		    current_depth_ >= min_depth_) {
+		if (validNode(node, current_depth_) && current_depth_ >= min_depth_) {
 			path_[current_depth_] = node;
 			if (!validReturnNode()) {
 				operator++();
