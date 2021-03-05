@@ -512,19 +512,19 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 	bool isOccupied(Code const& code) const
 	{
 		auto [node, depth] = Base::getNode(code);
-		return isOccupied(node);
+		return isOccupied(*node);
 	}
 
 	bool isUnknown(Code const& code) const
 	{
 		auto [node, depth] = Base::getNode(code);
-		return isUnknown(node);
+		return isUnknown(*node);
 	}
 
 	bool isFree(Code const& code) const
 	{
 		auto [node, depth] = Base::getNode(code);
-		return isFree(node);
+		return isFree(*node);
 	}
 
 	//
@@ -637,6 +637,36 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 			}
 		}
 		return true;
+	}
+
+	//
+	// Bounding box contain all known
+	//
+
+	ufo::geometry::AABB getKnownBBX() const
+	{
+		if (!containsFree(Base::getRootCode()) && !containsOccupied(Base::getRootCode())) {
+			// Only unknown
+			return ufo::geometry::AABB(Point3(0, 0, 0), 0);
+		}
+
+		Point3 min(std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
+		           std::numeric_limits<double>::max());
+		Point3 max(std::numeric_limits<double>::lowest(),
+		           std::numeric_limits<double>::lowest(),
+		           std::numeric_limits<double>::lowest());
+
+		for (auto it = beginLeaves(true, true, false), it_end = endLeaves(); it != it_end;
+		     ++it) {
+			double hf = it.getHalfSize();
+			Point3 center = it.getCenter();
+			for (int i : {0, 1, 2}) {
+				min[i] = std::min(min[i], center[i] - hf);
+				max[i] = std::max(max[i], center[i] + hf);
+			}
+		}
+
+		return ufo::geometry::AABB(min, max);
 	}
 
  protected:
