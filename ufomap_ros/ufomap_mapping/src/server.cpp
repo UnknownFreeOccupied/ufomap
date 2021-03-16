@@ -56,7 +56,7 @@ Server::Server(ros::NodeHandle &nh, ros::NodeHandle &nh_priv)
     : nh_(nh), nh_priv_(nh_priv), tf_listener_(tf_buffer_), cs_(nh_priv)
 {
 	// Set up map
-	double resolution = nh_priv_.param("resolution", 0.1);
+	double resolution = nh_priv_.param("resolution", 0.05);
 	ufo::map::DepthType depth_levels = nh_priv_.param("depth_levels", 16);
 
 	// Automatic pruning is disabled so we can work in multiple threads for subscribers,
@@ -134,6 +134,17 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 			    // Clear robot
 			    if (clear_robot_) {
 				    start = std::chrono::steady_clock::now();
+
+						try {
+							transform =
+									ufomap_ros::rosToUfo(tf_buffer_
+																					.lookupTransform(frame_id_, robot_frame_id_,
+																														msg->header.stamp, transform_timeout_)
+																					.transform);
+						} catch (tf2::TransformException &ex) {
+							ROS_WARN_THROTTLE(1, "%s", ex.what());
+							return;
+						}
 
 				    ufo::map::Point3 r(robot_radius_, robot_radius_, robot_height_ / 2.0);
 				    ufo::geometry::AABB aabb(transform.translation() - r,
@@ -340,7 +351,7 @@ bool Server::resetCallback(ufomap_srvs::Reset::Request &request,
 	std::visit(
 	    [this, &request, &response](auto &map) {
 		    if constexpr (!std::is_same_v<std::decay_t<decltype(map)>, std::monostate>) {
-			    map.clear(request.new_resolution, request.new_depth);
+			    map.clear(request.new_resolution, request.new_depth_levels);
 			    response.success = true;
 		    } else {
 			    response.success = false;
@@ -406,6 +417,7 @@ void Server::configCallback(ufomap_mapping::ServerConfig &config, uint32_t level
 	early_stopping_ = config.early_stopping;
 
 	clear_robot_ = config.clear_robot;
+	robot_frame_id_ = config.robot_frame_id;
 	robot_height_ = config.robot_height;
 	robot_radius_ = config.robot_radius;
 	clearing_depth_ = config.clearing_depth;

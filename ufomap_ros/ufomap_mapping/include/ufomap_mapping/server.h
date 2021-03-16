@@ -141,6 +141,7 @@ class Server
 
 	// Clear robot
 	bool clear_robot_;
+	std::string robot_frame_id_;
 	double robot_height_;
 	double robot_radius_;
 	int clearing_depth_;
