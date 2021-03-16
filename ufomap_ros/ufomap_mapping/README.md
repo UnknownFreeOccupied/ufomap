@@ -4,6 +4,8 @@ ufomap_server offer a [dynamic_reconfigure](http://wiki.ros.org/dynamic_reconfig
 ## ufomap_server
 ufomap_server builds and distributes volumetric 3D occupancy maps as UFOMap binary stream.
 
+See [launch/server.launch](https://github.com/UnknownFreeOccupied/ufomap/blob/master/ufomap_ros/ufomap_mapping/launch/server.launch) for an example launch file. The rest of the parameters can be changed using dynamic_reconfigure.
+
 ### Subscribed Topics
 * **cloud_in** ([sensor_msgs/PointCloud2](http://docs.ros.org/en/api/sensor_msgs/html/msg/PointCloud2.html))  
    Incoming point cloud for integration. You need to remap this topic to your sensor data topic and provide a TF transform between the sensor data and the static map frame.
