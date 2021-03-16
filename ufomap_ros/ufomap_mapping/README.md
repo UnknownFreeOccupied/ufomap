@@ -15,9 +15,12 @@ ufomap_server builds and distributes volumetric 3D occupancy maps as UFOMap bina
    Same as map, except only nodes down to depth X. This substantially reduces the message size and the time it takes to serialize and deserialize the message. Since many nodes does not require a map at finest resolution this is a good way to achieve additional performance.
    
 ### Services
-* **~get_map**
-* **~clear_volume**
-* **~reset**
+* **~get_map** ([ufomap_srvs/GetMap](https://github.com/UnknownFreeOccupied/ufomap_ros/blob/master/ufomap_srvs/srv/GetMap.srv))  
+   The complete UFOMap as a binary stream, encoding unknown, free, and occupied space, together with [meta data](https://github.com/UnknownFreeOccupied/ufomap/blob/master/ufomap_ros/ufomap_msgs/msg/UFOMapMetaData.msg).
+* **~clear_volume** ([ufomap_srvs/ClearVolume](https://github.com/UnknownFreeOccupied/ufomap_ros/blob/master/ufomap_srvs/srv/ClearVolume.srv))  
+   Clear a part of the map, specified by a bounding volume. Sets all voxels inside the bounding volume to `~clamping_thres_min`/free space.
+* **~reset**  
+   Resets the complete map.
 
 ### Parameters
 * **~frame_id** (string, default: map)  
