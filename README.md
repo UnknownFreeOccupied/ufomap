@@ -2,8 +2,16 @@
 
 UFOMap is an effienct probabilistic 3D mapping framework with an explicit representation of unknown space.
 
-## Wiki
+## Table of Contents
 Please see the [Wiki](https://github.com/UnknownFreeOccupied/ufomap/wiki) for how to install and use UFOMap.
+1. [Setup](https://github.com/UnknownFreeOccupied/ufomap/wiki/Tutorials)
+2. [Tutorials](https://github.com/UnknownFreeOccupied/ufomap/wiki/Setup)
+3. [ROS Tutorials](https://github.com/UnknownFreeOccupied/ufomap/wiki/ROS-Tutorials)
+4. [Advanced ROS Tutorials](https://github.com/UnknownFreeOccupied/ufomap/wiki/Advanced-ROS-Tutorials)
+5. [Performance](https://github.com/UnknownFreeOccupied/ufomap/wiki/Performance)
+6. [Example Outputs](https://github.com/UnknownFreeOccupied/ufomap/wiki/Example-Outputs)
+7. [Data Repository](https://github.com/UnknownFreeOccupied/ufomap/wiki/Data-Repository)
+8. [API](https://github.com/UnknownFreeOccupied/ufomap/wiki/API)
 
 ## Credits
 ### Paper
