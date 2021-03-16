@@ -4,6 +4,10 @@ UFOMap is an efficient probabilistic 3D mapping framework with an explicit repre
 
 ![UFOMap visualization](https://user-images.githubusercontent.com/6604166/111369561-7bcabd00-8697-11eb-8145-1409ef9709a0.png)
 
+Using UFOMap you will be able to create 3D volumetric maps, contain unknown/free/occupied space, similar to the one below in real-time.
+
+![Real-time Volumetric Mapping](https://user-images.githubusercontent.com/6604166/111332481-1fa17200-8672-11eb-8e02-62d399867fa5.png)
+
 ## Table of Contents
 Please see the [Wiki](https://github.com/UnknownFreeOccupied/ufomap/wiki) for how to install and use UFOMap.
 1. [Setup](https://github.com/UnknownFreeOccupied/ufomap/wiki/Tutorials)
