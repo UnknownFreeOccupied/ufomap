@@ -9,12 +9,15 @@ ufomap_server builds and distributes volumetric 3D occupancy maps as UFOMap bina
    Incoming point cloud for integration. You need to remap this topic to your sensor data topic and provide a TF transform between the sensor data and the static map frame.
 
 ### Published Topics
-* map  ([ufomap_msgs/UFOMapStamped](https://github.com/UnknownFreeOccupied/ufomap/blob/master/ufomap_ros/ufomap_msgs/msg/UFOMapStamped.msg))  
+* ~map  ([ufomap_msgs/UFOMapStamped](https://github.com/UnknownFreeOccupied/ufomap/blob/master/ufomap_ros/ufomap_msgs/msg/UFOMapStamped.msg))  
    The complete UFOMap as a binary stream, encoding unknown, free, and occupied space, together with [meta data](https://github.com/UnknownFreeOccupied/ufomap/blob/master/ufomap_ros/ufomap_msgs/msg/UFOMapMetaData.msg).
-* map_depth_X (where X is [1, 21], depending on the parameter `publish_depth`) [OPTIONAL] ([ufomap_msgs/UFOMapStamped](https://github.com/UnknownFreeOccupied/ufomap/blob/master/ufomap_ros/ufomap_msgs/msg/UFOMapStamped.msg))  
+* ~map_depth_X (where X is [1, 21], depending on the parameter `publish_depth`) [OPTIONAL] ([ufomap_msgs/UFOMapStamped](https://github.com/UnknownFreeOccupied/ufomap/blob/master/ufomap_ros/ufomap_msgs/msg/UFOMapStamped.msg))  
    Same as map, except only nodes down to depth X. This substantially reduces the message size and the time it takes to serialize and deserialize the message. Since many nodes does not require a map at finest resolution this is a good way to achieve additional performance.
    
 ### Services
+* ~get_map
+* ~clear_volume
+* ~reset
 
 ### Parameters
 * ~frame_id (string, default: map)
@@ -47,3 +50,6 @@ ufomap_server builds and distributes volumetric 3D occupancy maps as UFOMap bina
 ### Required TF Transforms
 * sensor data frame -> map  
    Required transform of sensor data into the static map frame. It has to be possible to transform the point cloud coming from `cloud_in` to `frame_id`. You need to supply this transform.
+   
+
+**NOTE: '~' means it is in the ufomap_server private namespace.**
