@@ -12,7 +12,7 @@ Please see the [Wiki](https://github.com/UnknownFreeOccupied/ufomap/wiki) for ho
 ### Cite
 If you use UFOMap in a scientific publication, please cite the following paper:
 * Daniel Duberg and Patric Jensfelt, "UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown," in IEEE Robotics and Automation Letters, vol. 5, no. 4, pp. 6411-6418, Oct. 2020, doi: 10.1109/LRA.2020.3013861.
-```
+```latex
 @article{duberg2020ufomap,
   author={Daniel Duberg and Patric Jensfelt},
   journal={IEEE Robotics and Automation Letters}, 
