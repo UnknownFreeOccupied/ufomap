@@ -1,16 +1,16 @@
 <?xml version="1.0" ?>
 <launch>
-	<arg name="resolution" default="0.1" />
+	<arg name="resolution" default="0.05" />
 	<arg name="depth_levels" default="16" />
 	<arg name="num_workers" default="1" />
 	<arg name="color" default="true" />
 
   <node pkg="ufomap_mapping" type="ufomap_mapping_server_node" name="ufomap_mapping_server_node" output="log" required="true">
-    <remap from="cloud_in" to="/camera/depth/points" />
+		<remap from="cloud_in" to="/camera/depth/points" />
 
 		<param name="num_workers" value="$(arg num_workers)" />
 		
-    <param name="resolution" value="$(arg resolution)" />
+		<param name="resolution" value="$(arg resolution)" />
 		<param name="depth_levels" value="$(arg depth_levels)" />
 		<param name="color_map" value="$(arg color)"/>
   </node>
