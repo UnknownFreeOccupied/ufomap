@@ -25,4 +25,4 @@ If you use UFOMap in a scientific publication, please cite the following paper:
 }
 ```
 ### Videos
-* [Youtube playlist](https://youtube.com/playlist?list=PLoZnKRp2UVom4bv2fUVXgI5VCbuTrfrU3)
+* [YouTube Playlist](https://youtube.com/playlist?list=PLoZnKRp2UVom4bv2fUVXgI5VCbuTrfrU3)
