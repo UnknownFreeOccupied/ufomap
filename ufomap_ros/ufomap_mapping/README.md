@@ -45,3 +45,5 @@ ufomap_server builds and distributes volumetric 3D occupancy maps as UFOMap bina
 * ~verbose (bool, default: false)
 
 ### Required TF Transforms
+* sensor data frame -> map  
+   Required transform of sensor data into the static map frame. It has to be possible to transform the point cloud coming from `cloud_in` to `frame_id`. You need to supply this transform.
