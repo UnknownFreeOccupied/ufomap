@@ -15,7 +15,7 @@ Supports intersection test between
 | **Sphere**       | ✔    | ?       | ?    | ?        | ?         | ✔       | ✔            | ✔   | ✔     | ✔     | ✔   | ✔      | ?        |
 | **Triangle**     | ?    | ?       | ?    | ?        | ?         | ?       | ?            | ?   | ?     | ?     | ?   | ?      | ?        |
 
-✔: means implemented
-✖: not implemented
-✖*: implemented but wrong
+✔: means implemented<br>
+✖: not implemented<br>
+✖*: implemented but wrong<br>
 ?: type does not even exist
