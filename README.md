@@ -1,6 +1,6 @@
 # UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
 
-UFOMap is an effienct probabilistic 3D mapping framework with an explicit representation of unknown space.
+UFOMap is an efficient probabilistic 3D mapping framework with an explicit representation of unknown space.
 
 ## Table of Contents
 Please see the [Wiki](https://github.com/UnknownFreeOccupied/ufomap/wiki) for how to install and use UFOMap.
