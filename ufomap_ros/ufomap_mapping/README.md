@@ -17,5 +17,31 @@ ufomap_server builds and distributes volumetric 3D occupancy maps as UFOMap bina
 ### Services
 
 ### Parameters
+* ~frame_id (string, default: map)
+* ~resolution (double, default: 0.05)
+* ~depth_levels (int, default: 16)
+* ~color_map (bool, default: false)
+* ~max_range (double, default: -1 (unlimited))
+* ~insert_depth (int, default: 0)
+* ~simple_ray_casting (bool, default: false)
+* ~early_stopping (int, default: 0)
+* ~clear_robot (bool, default: false)
+* ~robot_height (double, default: )
+* ~robot_radius (double, default: )
+* ~clearing_depth (int, default: 0)
+* ~compress (bool, default: false)
+* ~update_part_of_map (bool, default: true)
+* ~publish_depth (int, default: 4)
+* ~prob_hit (double, default: 0.7)
+* ~prob_miss (double, default: 0.4)
+* ~clamping_thres_min (double, default: )
+* ~clamping_thres_max (double, default: )
+* ~transform_timeout (double, default: )
+* ~map_latch (bool, default: false)
+* ~map_queue_size (int, default: 10)
+* ~cloud_in_queue_size (int, default: 10)
+* ~pub_rate (double, default: 0)
+* ~update_rate (double, default: 0)
+* ~verbose (bool, default: false)
 
 ### Required TF Transforms
