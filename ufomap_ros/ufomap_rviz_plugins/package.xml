@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ufomap_rviz_plugins</name>
+  <version>1.0.0</version>
+  <description>The ufomap_rviz_plugins package</description>
+
+  <maintainer email="dduberg@kth.se">Daniel Duberg</maintainer>
+
+  <license>BSD</license>
+
+  <!-- Url tags are optional, but multiple are allowed, one per tag -->
+  <!-- Optional attribute type can be: website, bugtracker, or repository -->
+  <!-- Example: -->
+  <!-- <url type="website">http://wiki.ros.org/ufo_ros</url> -->
+
+  <author email="dduberg@kth.se">Daniel Duberg</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>rviz</depend>
+  <depend>ufomap_msgs</depend>
+  <depend>ufomap_ros</depend>
+
+  <depend>qtbase5-dev</depend>
+  <depend>libqt5-core</depend>
+  <depend>libqt5-widgets</depend>
+
+  <build_depend>ufomap</build_depend>
+  
+  <doc_depend>doxygen</doc_depend>
+
+  <!-- <build_depend>qtbase5-dev</build_depend>
+  <build_export_depend>qtbase5-dev</build_export_depend>
+  <build_export_depend>libqt5-core</build_export_depend>
+  <exec_depend>libqt5-core</exec_depend>
+  <build_export_depend>libqt5-widgets</build_export_depend>
+  <exec_depend>libqt5-widgets</exec_depend> -->
+
+
+  <export>
+    <rviz plugin="${prefix}/plugin_description.xml"/>
+  </export>
+</package>

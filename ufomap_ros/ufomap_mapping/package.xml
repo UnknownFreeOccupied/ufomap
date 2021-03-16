@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ufomap_mapping</name>
+  <version>1.0.0</version>
+  <description>The ufomap_mapping package</description>
+
+  <maintainer email="dduberg@kth.se">Daniel Duberg</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">https://github.com/danielduberg/UFOMap</url>
+
+  <author email="dduberg@kth.se">Daniel Duberg</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>dynamic_reconfigure</depend>
+  <depend>geometry_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_sensor_msgs</depend>
+  <depend>ufomap_msgs</depend>
+  <depend>ufomap_ros</depend>
+  <depend>ufomap_srvs</depend>
+
+  <depend>ufomap</depend>
+  
+  <doc_depend>doxygen</doc_depend>
+
+
+  <export>
+  </export>
+</package>

@@ -1,0 +1,4 @@
+float64 new_resolution
+uint8 new_depth
+---
+bool success

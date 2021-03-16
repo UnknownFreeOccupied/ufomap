@@ -1,0 +1,4 @@
+ufomap_msgs/BoundingVolume bounding_volume
+uint8 depth
+---
+bool success
