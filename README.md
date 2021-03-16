@@ -60,3 +60,5 @@ If you use UFOMap in a scientific publication, please cite the following paper:
   doi={10.1109/LRA.2020.3013861}
 }
 ```
+### Videos
+* [Youtube playlist](https://youtube.com/playlist?list=PLoZnKRp2UVom4bv2fUVXgI5VCbuTrfrU3)
