@@ -635,6 +635,58 @@ class Octree
 	// Input/output (read/write)
 	//
 
+	static std::string readType(std::string const& filename)
+	{
+		std::ifstream file(filename.c_str(), std::ios_base::in | std::ios_base::binary);
+		if (!file.is_open()) {
+			return "";
+		}
+		// TODO: Check is_good of finished stream, warn?
+		return readType(file);
+	}
+
+	static std::string readType(std::istream& s)
+	{
+		// check if first line valid:
+		std::string line;
+		std::getline(s, line);
+		if (0 != line.compare(0, FILE_HEADER.length(), FILE_HEADER)) {
+			return "";
+		}
+
+		std::string id = "";
+
+		std::string token;
+		bool header_read = false;
+		while (s.good() && !header_read) {
+			s >> token;
+			if ("data" == token) {
+				header_read = true;
+				// Skip forward to the end of line
+				char c;
+				do {
+					c = s.get();
+				} while (s.good() && ('\n' != c));
+			} else if (0 == token.compare(0, 1, "#")) {
+				// Comment line, skip forward to the end of line
+				char c;
+				do {
+					c = s.get();
+				} while (s.good() && ('\n' != c));
+			} else if ("id" == token) {
+				s >> id;
+			} else {
+				// Other token
+				char c;
+				do {
+					c = s.get();
+				} while (s.good() && ('\n' != c));
+			}
+		}
+
+		return id;
+	}
+
 	virtual bool read(std::string const& filename)
 	{
 		std::ifstream file(filename.c_str(), std::ios_base::in | std::ios_base::binary);
