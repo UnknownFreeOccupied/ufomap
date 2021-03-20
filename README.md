@@ -12,8 +12,8 @@ Using UFOMap you will be able to create 3D volumetric maps, contain unknown/free
 
 ## Table of Contents
 Please see the [Wiki](https://github.com/UnknownFreeOccupied/ufomap/wiki) for how to install and use UFOMap.
-1. [Setup](https://github.com/UnknownFreeOccupied/ufomap/wiki/Tutorials)
-2. [Tutorials](https://github.com/UnknownFreeOccupied/ufomap/wiki/Setup)
+1. [Setup](https://github.com/UnknownFreeOccupied/ufomap/wiki/Setup)
+2. [Tutorials](https://github.com/UnknownFreeOccupied/ufomap/wiki/Tutorials)
 3. [ROS Tutorials](https://github.com/UnknownFreeOccupied/ufomap/wiki/ROS-Tutorials)
 4. [Advanced ROS Tutorials](https://github.com/UnknownFreeOccupied/ufomap/wiki/Advanced-ROS-Tutorials)
 5. [Performance](https://github.com/UnknownFreeOccupied/ufomap/wiki/Performance)
