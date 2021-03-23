@@ -5,7 +5,7 @@ UFOMap is an efficient probabilistic 3D mapping framework with an explicit repre
 ![UFOMap visualization](https://user-images.githubusercontent.com/6604166/111369561-7bcabd00-8697-11eb-8145-1409ef9709a0.png)  
    UFOMap with occupied space as colored voxels and unknown space as white transparent voxels. The free space is not visualized here.
 
-Using UFOMap you will be able to create 3D volumetric maps, contain unknown/free/occupied space, similar to the one below in real-time. The UFOMap maps you create can be used for efficient path/trajectory planning, obstacle avoidance, reconstruction, and more.
+Using UFOMap you will be able to create 3D volumetric maps, containing unknown/free/occupied space, similar to the one below in real-time. The UFOMap maps you create can be used for efficient path/trajectory planning, obstacle avoidance, reconstruction, and more.
 
 ![Real-time Volumetric Mapping](https://user-images.githubusercontent.com/6604166/111788476-6c7a8800-88c0-11eb-9592-86609b9eb57c.png)
    Colored UFOMap constructed in real-time (2 Hz) at 2 mm voxel size.
