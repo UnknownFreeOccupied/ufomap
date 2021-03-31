@@ -92,47 +92,213 @@ class OccupancyMapColor : public OccupancyMapBase<ColorOccupancyNode<float>>
 
 	template <typename T>
 	void insertPointCloud(Point3 const& sensor_origin, T const& cloud,
-	                      double max_range = -1, DepthType depth = 0)
+	                      double max_range = -1, DepthType depth = 0,
+	                      bool simple_ray_casting = false, unsigned int early_stopping = 0,
+	                      bool async = false)
 	{
-		Base::insertPointCloud(sensor_origin, cloud, max_range, depth);
+		if constexpr (std::is_same_v<T, PointCloud>) {
+			Base::insertPointCloud(sensor_origin, cloud, max_range, depth, simple_ray_casting,
+			                       early_stopping, async);
 
-		if constexpr (std::is_same_v<T, PointCloudColor>) {
-			integrateColors(sensor_origin, cloud, max_range);
+			if constexpr (std::is_same_v<T, PointCloudColor>) {
+				integrateColors(sensor_origin, cloud, max_range);
+			}
+		} else if constexpr (std::is_same_v<T, PointCloudColor>) {
+			std::vector<std::tuple<Code, float, Color>> occupied_hits;
+			occupied_hits.reserve(cloud.size());
+			PointCloud discretized;
+			discretized.reserve(cloud.size());
+			Point3 min_change = Base::getMax();
+			Point3 max_change = Base::getMin();
+			for (Point3Color& end_color : cloud) {
+				Point3 end = end_color;
+				Point3 origin = sensor_origin;
+				Point3 direction = (end - origin);
+				double distance = direction.norm();
+
+				// Move origin and end inside BBX
+				if (!Base::moveLineInside(origin, end)) {
+					// Line outside of BBX
+					continue;
+				}
+
+				if (0 > max_range || distance <= max_range) {
+					// Occupied space
+					Code end_code = Base::toCode(end);
+					if (indices_.insert(end_code).second) {
+						occupied_hits.push_back(
+						    std::make_tuple(end_code, prob_hit_log_, end_color.getColor()));
+					}
+				} else {
+					direction /= distance;
+					end = origin + (direction * max_range);
+				}
+
+				discretized.push_back(end);
+
+				for (int i : {0, 1, 2}) {
+					min_change[i] = std::min(min_change[i], std::min(end[i], origin[i]));
+					max_change[i] = std::max(max_change[i], std::max(end[i], origin[i]));
+				}
+			}
+
+			LogitType prob_miss_log = prob_miss_log_ / double((2.0 * depth) + 1);
+
+			indices_.clear();
+
+			if (integrate_.valid()) {
+				integrate_.wait();
+			}
+
+			if (async) {
+				integrate_ =
+				    std::async(std::launch::async, &OccupancyMapColor::insertPointCloudHelper,
+				               this, sensor_origin, std::move(discretized),
+				               std::move(occupied_hits), prob_miss_log, depth, simple_ray_casting,
+				               early_stopping, min_change, max_change);
+			} else {
+				insertPointCloudHelper(sensor_origin, std::move(discretized),
+				                       std::move(occupied_hits), prob_miss_log, depth,
+				                       simple_ray_casting, early_stopping, min_change,
+				                       max_change);
+			}
 		}
 	}
 
 	template <typename T>
 	void insertPointCloud(Point3 const& sensor_origin, T cloud,
 	                      math::Pose6 const& frame_origin, double max_range = -1,
-	                      DepthType depth = 0)
+	                      DepthType depth = 0, bool simple_ray_casting = false,
+	                      unsigned int early_stopping = 0, bool async = false)
 	{
-		cloud.transform(frame_origin);
-		insertPointCloud(sensor_origin, cloud, max_range, depth);
+		cloud.transform(frame_origin, async);
+		insertPointCloud(sensor_origin, cloud, max_range, depth, simple_ray_casting,
+		                 early_stopping, async);
 	}
 
 	template <typename T>
 	void insertPointCloudDiscrete(Point3 const& sensor_origin, T const& cloud,
 	                              double max_range = -1, DepthType depth = 0,
 	                              bool simple_ray_casting = false,
-	                              unsigned int early_stopping = 0)
+	                              unsigned int early_stopping = 0, bool async = false)
 	{
-		Base::insertPointCloudDiscrete(sensor_origin, cloud, max_range, depth,
-		                               simple_ray_casting, early_stopping);
+		if constexpr (std::is_same_v<T, PointCloud>) {
+			Base::insertPointCloudDiscrete(sensor_origin, cloud, max_range, depth,
+			                               simple_ray_casting, early_stopping);
+		} else if constexpr (std::is_same_v<T, PointCloudColor>) {
+			double squared_max_range = max_range * max_range;
 
-		if constexpr (std::is_same_v<T, PointCloudColor>) {
-			integrateColors(sensor_origin, cloud, max_range);
+			std::vector<std::tuple<Code, float, Color>> occupied_hits;
+			occupied_hits.reserve(cloud.size());
+			PointCloud discretized;
+			discretized.reserve(cloud.size());
+			Point3 min_change = Base::getMax();
+			Point3 max_change = Base::getMin();
+			for (Point3Color const& end_color : cloud) {
+				Point3 end = end_color;
+				double dist_sqrt = (end - sensor_origin).squaredNorm();
+				if (0 > max_range || dist_sqrt < squared_max_range) {
+					if (Base::isInside(end)) {
+						Code end_code = Base::toCode(end);
+						if (!indices_.insert(end_code).second) {
+							continue;
+						}
+						// double dist = std::sqrt(dist_sqrt);
+						// testis.push_back(std::make_tuple(end_code, prob_hit_log_ / (dist * dist),
+						//                                  end_color.getColor()));
+						occupied_hits.push_back(
+						    std::make_tuple(end_code, prob_hit_log_, end_color.getColor()));
+					}
+				} else {
+					Point3 direction = Base::toCoord(Base::toKey(end, depth)) - sensor_origin;
+					dist_sqrt = direction.squaredNorm();
+					if (0 <= max_range && dist_sqrt > squared_max_range) {
+						direction /= std::sqrt(dist_sqrt);
+						end = sensor_origin + (direction * max_range);
+					}
+				}
+				Point3 current = sensor_origin;
+				// Move origin and end inside map
+				if (!Base::moveLineInside(current, end)) {
+					// Line outside of map
+					continue;
+				}
+
+				Key end_key = Base::toKey(end, depth);
+
+				if (!indices_.insert(Base::toCode(end_key)).second) {
+					continue;
+				}
+
+				Point3 end_coord = Base::toCoord(end_key);
+
+				discretized.push_back(end_coord);
+
+				// Min/max change detection
+				Point3 current_center = Base::toCoord(Base::toKey(current, depth));
+				Point3 end_center = end_coord;
+
+				double temp = Base::getNodeHalfSize(depth);
+				for (int i : {0, 1, 2}) {
+					min_change[i] = std::min(
+					    min_change[i], std::min(end_center[i] - temp, current_center[i] - temp));
+					max_change[i] = std::max(
+					    max_change[i], std::max(end_center[i] + temp, current_center[i] + temp));
+				}
+			}
+
+			LogitType prob_miss_log = prob_miss_log_ / double((2.0 * depth) + 1);
+
+			indices_.clear();
+
+			if (integrate_.valid()) {
+				integrate_.wait();
+			}
+
+			if (async) {
+				integrate_ =
+				    std::async(std::launch::async, &OccupancyMapColor::insertPointCloudHelper,
+				               this, sensor_origin, std::move(discretized),
+				               std::move(occupied_hits), prob_miss_log, depth, simple_ray_casting,
+				               early_stopping, min_change, max_change);
+			} else {
+				insertPointCloudHelper(sensor_origin, std::move(discretized),
+				                       std::move(occupied_hits), prob_miss_log, depth,
+				                       simple_ray_casting, early_stopping, min_change,
+				                       max_change);
+			}
 		}
+	}
+
+	void updateValue(Code const& code, LogitType const& update, Color color)
+	{
+		auto path = Base::createNode(code);
+		DepthType depth = code.getDepth();
+
+		if (Base::isLeaf(path[depth], depth)) {
+			updateNodeColor(*path[depth], color, toProb(update));
+
+			if (updateOccupancy(path[depth]->value.occupancy, update)) {
+				if (change_detection_enabled_) {
+					changes_.insert(code);
+				}
+			}
+		} else {
+			// TODO: Error
+		}
+
+		Base::updateParents(path, depth);
 	}
 
 	template <typename T>
 	void InsertPointCloudDiscrete(Point3 const& sensor_origin, PointCloudColor cloud,
 	                              math::Pose6 const& frame_origin, double max_range = -1,
 	                              DepthType depth = 0, bool simple_ray_casting = false,
-	                              unsigned int early_stopping = 0)
+	                              unsigned int early_stopping = 0, bool async = false)
 	{
-		cloud.transform(frame_origin);
+		cloud.transform(frame_origin, async);
 		insertPointCloudDiscrete(sensor_origin, cloud, max_range, depth, simple_ray_casting,
-		                         early_stopping);
+		                         early_stopping, async);
 	}
 
 	//
@@ -156,6 +322,41 @@ class OccupancyMapColor : public OccupancyMapBase<ColorOccupancyNode<float>>
 	                     double max_range = -1);
 
 	//
+	// Integrator helper
+	//
+
+	void insertPointCloudHelper(Point3 sensor_origin, PointCloud&& discretized,
+	                            std::vector<std::tuple<Code, float, Color>>&& occupied_hits,
+	                            LogitType prob_miss_log, DepthType depth,
+	                            bool simple_ray_casting, unsigned int early_stopping,
+	                            Point3 min_change, Point3 max_change)
+	{
+		std::future<void> f = std::async(std::launch::async, [this, &occupied_hits]() {
+			std::for_each(begin(occupied_hits), end(occupied_hits), [this](auto&& hit) {
+				updateValue(std::get<0>(hit), std::get<1>(hit), std::get<2>(hit));
+			});
+		});
+
+		CodeMap<LogitType> free_hits;
+
+		freeSpace(sensor_origin, discretized, free_hits, prob_miss_log, depth,
+		          simple_ray_casting, early_stopping);
+
+		f.wait();
+
+		for (auto const& [code, value] : free_hits) {
+			Base::updateValue(code, value);
+		}
+
+		if (min_max_change_detection_enabled_) {
+			for (int i : {0, 1, 2}) {
+				min_change_[i] = std::min(min_change_[i], min_change[i]);
+				max_change_[i] = std::max(max_change_[i], max_change[i]);
+			}
+		}
+	}
+
+	//
 	// Update node
 	//
 
@@ -166,6 +367,8 @@ class OccupancyMapColor : public OccupancyMapBase<ColorOccupancyNode<float>>
 	//
 
 	void updateNodeColor(Code code, Color update);
+
+	void updateNodeColor(LEAF_NODE& node, Color update, double prob);
 
 	//
 	// Average child color

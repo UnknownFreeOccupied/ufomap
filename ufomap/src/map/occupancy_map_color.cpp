@@ -133,7 +133,15 @@ void OccupancyMapColor::updateNodeColor(Code code, Color update)
 
 	auto path = Base::createNode(code);
 	DepthType depth = code.getDepth();
-	Color& current = path[depth]->value.color;
+
+	updateNodeColor(*path[depth], update, 1.0 - Base::getOccupancy(*path[depth]));
+
+	Base::updateParents(path, depth);
+}
+
+void OccupancyMapColor::updateNodeColor(LEAF_NODE& node, Color update, double prob)
+{
+	Color& current = node.value.color;
 
 	if (current == update) {
 		return;
@@ -142,7 +150,10 @@ void OccupancyMapColor::updateNodeColor(Code code, Color update)
 	if (!current.isSet()) {
 		current = update;
 	} else {
-		double prob = std::max(Base::getOccupancy(*path[depth]), 0.9);
+		double total_prob = prob + Base::getOccupancy(node);
+		prob /= total_prob;
+
+		// double prob = std::max(0.0, std::min(2.0 * (Base::getOccupancy(node) - 0.5), 0.9));
 		double prob_inv = 1.0 - prob;
 
 		double c_r = static_cast<double>(current.r);
@@ -153,12 +164,10 @@ void OccupancyMapColor::updateNodeColor(Code code, Color update)
 		double u_g = static_cast<double>(update.g);
 		double u_b = static_cast<double>(update.b);
 
-		current.r = std::sqrt(((c_r * c_r) * prob) + ((u_r * u_r) * prob_inv));
-		current.g = std::sqrt(((c_g * c_g) * prob) + ((u_g * u_g) * prob_inv));
-		current.b = std::sqrt(((c_b * c_b) * prob) + ((u_b * u_b) * prob_inv));
+		current.r = std::sqrt(((c_r * c_r) * prob_inv) + ((u_r * u_r) * prob));
+		current.g = std::sqrt(((c_g * c_g) * prob_inv) + ((u_g * u_g) * prob));
+		current.b = std::sqrt(((c_b * c_b) * prob_inv) + ((u_b * u_b) * prob));
 	}
-
-	Base::updateParents(path, depth);
 }
 
 //
