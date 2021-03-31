@@ -87,7 +87,8 @@ Server::Server(ros::NodeHandle &nh, ros::NodeHandle &nh_priv)
 	clear_volume_server_ =
 	    nh_priv_.advertiseService("clear_volume", &Server::clearVolumeCallback, this);
 	reset_server_ = nh_priv_.advertiseService("reset", &Server::resetCallback, this);
-	save_map_server_ = nh_priv_.advertiseService("save_map", &Server::saveMapCallback, this);
+	save_map_server_ =
+	    nh_priv_.advertiseService("save_map", &Server::saveMapCallback, this);
 }
 
 void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
@@ -136,16 +137,16 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 			    if (clear_robot_) {
 				    start = std::chrono::steady_clock::now();
 
-						try {
-							transform =
-									ufomap_ros::rosToUfo(tf_buffer_
-																					.lookupTransform(frame_id_, robot_frame_id_,
-																														msg->header.stamp, transform_timeout_)
-																					.transform);
-						} catch (tf2::TransformException &ex) {
-							ROS_WARN_THROTTLE(1, "%s", ex.what());
-							return;
-						}
+				    try {
+					    transform = ufomap_ros::rosToUfo(
+					        tf_buffer_
+					            .lookupTransform(frame_id_, robot_frame_id_, msg->header.stamp,
+					                             transform_timeout_)
+					            .transform);
+				    } catch (tf2::TransformException &ex) {
+					    ROS_WARN_THROTTLE(1, "%s", ex.what());
+					    return;
+				    }
 
 				    ufo::map::Point3 r(robot_radius_, robot_radius_, robot_height_ / 2.0);
 				    ufo::geometry::AABB aabb(transform.translation() - r,
@@ -170,44 +171,48 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 			    if (!map_pub_.empty() && update_part_of_map_ && map.validMinMaxChange() &&
 			        (!last_update_time_.isValid() ||
 			         (msg->header.stamp - last_update_time_) >= update_rate_)) {
-				    last_update_time_ = msg->header.stamp;
-				    start = std::chrono::steady_clock::now();
-
+				    bool can_update = true;
 				    if (update_async_handler_.valid()) {
-					    update_async_handler_.wait();
+					    can_update = std::future_status::ready ==
+					                 update_async_handler_.wait_for(std::chrono::seconds(0));
 				    }
 
-				    ufo::geometry::AABB aabb(map.minChange(), map.maxChange());
-				    // TODO: should this be here?
-				    map.resetMinMaxChangeDetection();
+				    if (can_update) {
+					    last_update_time_ = msg->header.stamp;
+					    start = std::chrono::steady_clock::now();
 
-				    update_async_handler_ =
-				        std::async(std::launch::async, [this, &aabb, &msg, &map]() {
-					        for (int i = 0; i < map_pub_.size(); ++i) {
-						        if (map_pub_[i] && (0 < map_pub_[i].getNumSubscribers() ||
-						                            map_pub_[i].isLatched())) {
-							        ufomap_msgs::UFOMapStamped::Ptr msg(new ufomap_msgs::UFOMapStamped);
-							        if (ufomap_msgs::ufoToMsg(map, msg->map, aabb, compress_, i)) {
-								        msg->header.stamp = msg->header.stamp;
-								        msg->header.frame_id = frame_id_;
-								        map_pub_[i].publish(msg);
-							        }
-						        }
-					        }
-				        });
+					    ufo::geometry::AABB aabb(map.minChange(), map.maxChange());
+					    // TODO: should this be here?
+					    map.resetMinMaxChangeDetection();
 
-				    double update_time =
-				        std::chrono::duration<float, std::chrono::seconds::period>(
-				            std::chrono::steady_clock::now() - start)
-				            .count();
-				    if (0 == num_updates_ || update_time < min_update_time_) {
-					    min_update_time_ = update_time;
+					    update_async_handler_ = std::async(std::launch::async, [this, &aabb, &msg,
+					                                                            &map]() {
+						    for (int i = 0; i < map_pub_.size(); ++i) {
+							    if (map_pub_[i] &&
+							        (0 < map_pub_[i].getNumSubscribers() || map_pub_[i].isLatched())) {
+								    ufomap_msgs::UFOMapStamped::Ptr msg(new ufomap_msgs::UFOMapStamped);
+								    if (ufomap_msgs::ufoToMsg(map, msg->map, aabb, compress_, i)) {
+									    msg->header.stamp = msg->header.stamp;
+									    msg->header.frame_id = frame_id_;
+									    map_pub_[i].publish(msg);
+								    }
+							    }
+						    }
+					    });
+
+					    double update_time =
+					        std::chrono::duration<float, std::chrono::seconds::period>(
+					            std::chrono::steady_clock::now() - start)
+					            .count();
+					    if (0 == num_updates_ || update_time < min_update_time_) {
+						    min_update_time_ = update_time;
+					    }
+					    if (update_time > max_update_time_) {
+						    max_update_time_ = update_time;
+					    }
+					    accumulated_update_time_ += update_time;
+					    ++num_updates_;
 				    }
-				    if (update_time > max_update_time_) {
-					    max_update_time_ = update_time;
-				    }
-				    accumulated_update_time_ += update_time;
-				    ++num_updates_;
 			    }
 
 			    publishInfo();
@@ -279,6 +284,8 @@ void Server::publishInfo()
 void Server::mapConnectCallback(ros::SingleSubscriberPublisher const &pub, int depth)
 {
 	// When a new node subscribes we will publish the whole map to that node.
+
+	// TODO: Make this async
 
 	std::visit(
 	    [this, &pub, depth](auto &map) {
@@ -363,13 +370,15 @@ bool Server::resetCallback(ufomap_srvs::Reset::Request &request,
 }
 
 bool Server::saveMapCallback(ufomap_srvs::SaveMap::Request &request,
-                           ufomap_srvs::SaveMap::Response &response)
+                             ufomap_srvs::SaveMap::Response &response)
 {
 	std::visit(
 	    [this, &request, &response](auto &map) {
-		    if constexpr (!std::is_same_v<std::decay_t<decltype(map)>, std::monostate>) {ufo::geometry::BoundingVolume bv =
+		    if constexpr (!std::is_same_v<std::decay_t<decltype(map)>, std::monostate>) {
+			    ufo::geometry::BoundingVolume bv =
 			        ufomap_msgs::msgToUfo(request.bounding_volume);
-					response.success = map.write(request.filename, bv, request.compress, request.depth);
+			    response.success =
+			        map.write(request.filename, bv, request.compress, request.depth);
 		    } else {
 			    response.success = false;
 		    }
