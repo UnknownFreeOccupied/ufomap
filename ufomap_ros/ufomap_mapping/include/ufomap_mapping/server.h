@@ -112,7 +112,7 @@ class Server
 	unsigned int map_queue_size_;
 	ros::Timer pub_timer_;
 	double pub_rate_;
-	double update_rate_;
+	ros::Duration update_rate_;
 	ros::Time last_update_time_;
 	ros::Publisher info_pub_;
 

@@ -169,8 +169,8 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 			    // Publish update
 			    if (!map_pub_.empty() && update_part_of_map_ && map.validMinMaxChange() &&
 			        (!last_update_time_.isValid() ||
-			         (ros::Time::now() - last_update_time_).toSec() > update_rate_)) {
-				    last_update_time_ = ros::Time::now();
+			         (msg->header.stamp - last_update_time_) >= update_rate_)) {
+				    last_update_time_ = msg->header.stamp;
 				    start = std::chrono::steady_clock::now();
 
 				    if (update_async_handler_.valid()) {
@@ -488,7 +488,7 @@ void Server::configCallback(ufomap_mapping::ServerConfig &config, uint32_t level
 		}
 	}
 
-	update_rate_ = config.update_rate;
+	update_rate_ = ros::Duration(1.0 / config.update_rate);
 }
 
 }  // namespace ufomap_mapping
