@@ -267,8 +267,15 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 
 	template <typename T>
 	void insertPointCloud(Point3 const& sensor_origin, T cloud, double max_range = -1,
-	                      DepthType depth = 0)
+	                      DepthType depth = 0, bool simple_ray_casting = false,
+	                      unsigned int early_stopping = 0, bool async = false)
 	{
+		std::vector<std::pair<Code, float>> occupied_hits;
+		occupied_hits.reserve(cloud.size());
+		PointCloud discretized;
+		discretized.reserve(cloud.size());
+		Point3 min_change = Base::getMax();
+		Point3 max_change = Base::getMin();
 		for (Point3& end : cloud) {
 			Point3 origin = sensor_origin;
 			Point3 direction = (end - origin);
@@ -282,53 +289,76 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 
 			if (0 > max_range || distance <= max_range) {
 				// Occupied space
-				indices_[Base::toCode(end)] = prob_hit_log_;
+				Code end_code = Base::toCode(end);
+				if (indices_.insert(end_code).second) {
+					occupied_hits.push_back(std::make_pair(end_code, prob_hit_log_));
+				}
 			} else {
 				direction /= distance;
 				end = origin + (direction * max_range);
 			}
 
-			if (min_max_change_detection_enabled_) {
-				for (int i : {0, 1, 2}) {
-					min_change_[i] = std::min(min_change_[i], std::min(end[i], origin[i]));
-					max_change_[i] = std::max(max_change_[i], std::max(end[i], origin[i]));
-				}
+			discretized.push_back(end);
+
+			for (int i : {0, 1, 2}) {
+				min_change[i] = std::min(min_change[i], std::min(end[i], origin[i]));
+				max_change[i] = std::max(max_change[i], std::max(end[i], origin[i]));
 			}
 		}
 
-		freeSpace(sensor_origin, cloud, indices_, prob_miss_log_, depth, false, 0);
-
-		for (auto const& [code, value] : indices_) {
-			updateValue(code, value);
-		}
+		LogitType prob_miss_log = prob_miss_log_ / double((2.0 * depth) + 1);
 
 		indices_.clear();
+
+		if (integrate_.valid()) {
+			integrate_.wait();
+		}
+
+		if (async) {
+			integrate_ = std::async(
+			    std::launch::async, &OccupancyMapBase<DATA_TYPE>::insertPointCloudHelper, this,
+			    sensor_origin, std::move(discretized), std::move(occupied_hits), prob_miss_log,
+			    depth, simple_ray_casting, early_stopping, min_change, max_change);
+		} else {
+			insertPointCloudHelper(sensor_origin, std::move(discretized),
+			                       std::move(occupied_hits), prob_miss_log, depth,
+			                       simple_ray_casting, early_stopping, min_change, max_change);
+		}
 	}
 
 	template <typename T>
 	void insertPointCloud(Point3 const& sensor_origin, T cloud,
 	                      math::Pose6 const& frame_origin, double max_range = -1,
-	                      DepthType depth = 0)
+	                      DepthType depth = 0, bool simple_ray_casting = false,
+	                      unsigned int early_stopping = 0, bool async = false)
 	{
-		cloud.transform(frame_origin);
-		insertPointCloud(sensor_origin, cloud, max_range, depth);
+		cloud.transform(frame_origin, async);
+		insertPointCloud(sensor_origin, cloud, max_range, depth, simple_ray_casting,
+		                 early_stopping, async);
 	}
 
 	template <typename T>
 	void insertPointCloudDiscrete(Point3 const& sensor_origin, T const& cloud,
 	                              double max_range = -1, DepthType depth = 0,
 	                              bool simple_ray_casting = false,
-	                              unsigned int early_stopping = 0)
+	                              unsigned int early_stopping = 0, bool async = false)
 	{
 		double squared_max_range = max_range * max_range;
 
-		CodeSet discretized;
+		std::vector<std::pair<Code, float>> occupied_hits;
+		occupied_hits.reserve(cloud.size());
+		PointCloud discretized;
+		discretized.reserve(cloud.size());
+		Point3 min_change = Base::getMax();
+		Point3 max_change = Base::getMin();
 		for (Point3 end : cloud) {
 			if (0 > max_range || (end - sensor_origin).squaredNorm() < squared_max_range) {
 				if (Base::isInside(end)) {
-					if (!indices_.try_emplace(Base::toCode(end), prob_hit_log_).second) {
+					Code end_code = Base::toCode(end);
+					if (!indices_.insert(end_code).second) {
 						continue;
 					}
+					occupied_hits.push_back(std::make_pair(end_code, prob_hit_log_));
 				}
 			} else {
 				Point3 direction = Base::toCoord(Base::toKey(end, depth)) - sensor_origin;
@@ -345,43 +375,73 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 				continue;
 			}
 
-			discretized.insert(Base::toCode(end, depth));
+			Key end_key = Base::toKey(end, depth);
 
-			if (min_max_change_detection_enabled_) {
-				Point3 current_center = Base::toCoord(Base::toKey(current, depth));
-				Point3 end_center = Base::toCoord(Base::toKey(end, depth));
+			if (!indices_.insert(Base::toCode(end_key)).second) {
+				continue;
+			}
 
-				double temp = Base::getNodeHalfSize(depth);
-				for (int i : {0, 1, 2}) {
-					min_change_[i] = std::min(
-					    min_change_[i], std::min(end_center[i] - temp, current_center[i] - temp));
-					max_change_[i] = std::max(
-					    max_change_[i], std::max(end_center[i] + temp, current_center[i] + temp));
-				}
+			Point3 end_coord = Base::toCoord(end_key);
+
+			discretized.push_back(end_coord);
+
+			// Min/max change detection
+			Point3 current_center = Base::toCoord(Base::toKey(current, depth));
+			Point3 end_center = end_coord;
+
+			double temp = Base::getNodeHalfSize(depth);
+			for (int i : {0, 1, 2}) {
+				min_change[i] = std::min(
+				    min_change[i], std::min(end_center[i] - temp, current_center[i] - temp));
+				max_change[i] = std::max(
+				    max_change[i], std::max(end_center[i] + temp, current_center[i] + temp));
 			}
 		}
 
-		LogitType value = prob_miss_log_ / double((2.0 * depth) + 1);
-
-		freeSpace(sensor_origin, discretized, indices_, value, depth, simple_ray_casting,
-		          early_stopping);
-
-		for (auto const& [code, value] : indices_) {
-			updateValue(code, value);
-		}
+		LogitType prob_miss_log = prob_miss_log_ / double((2.0 * depth) + 1);
 
 		indices_.clear();
+
+		if (integrate_.valid()) {
+			integrate_.wait();
+		}
+
+		if (async) {
+			integrate_ = std::async(
+			    std::launch::async, &OccupancyMapBase<DATA_TYPE>::insertPointCloudHelper, this,
+			    sensor_origin, std::move(discretized), std::move(occupied_hits), prob_miss_log,
+			    depth, simple_ray_casting, early_stopping, min_change, max_change);
+		} else {
+			insertPointCloudHelper(sensor_origin, std::move(discretized),
+			                       std::move(occupied_hits), prob_miss_log, depth,
+			                       simple_ray_casting, early_stopping, min_change, max_change);
+		}
 	}
 
 	template <typename T>
 	void InsertPointCloudDiscrete(Point3 const& sensor_origin, T cloud,
 	                              math::Pose6 const& frame_origin, double max_range = -1,
 	                              DepthType depth = 0, bool simple_ray_casting = false,
-	                              unsigned int early_stopping = 0)
+	                              unsigned int early_stopping = 0, bool async = false)
 	{
-		cloud.transform(frame_origin);
+		cloud.transform(frame_origin, async);
 		insertPointCloudDiscrete(sensor_origin, cloud, max_range, depth, simple_ray_casting,
-		                         early_stopping);
+		                         early_stopping, async);
+	}
+
+	bool insertPointCloudDone() const
+	{
+		if (integrate_.valid()) {
+			return std::future_status::ready == integrate_.wait_for(std::chrono::seconds(0));
+		}
+		return true;
+	}
+
+	void insertPointCloudWait() const
+	{
+		if (integrate_.valid()) {
+			integrate_.wait();
+		}
 	}
 
 	//
@@ -1133,12 +1193,16 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 		int num_steps = distance / Base::getNodeSize(depth);
 		Point3 step = direction * Base::getNodeSize(depth);
 		int current_step = 0;
+		double current_distance = distance;
+		double dist_per_step = distance / num_steps;
 		// if (0 == depth) {
 		// 	current += step;
 		// 	current_step = 1;
 		// }
 		unsigned int already_update_in_row = 0;
 		for (; current_step <= num_steps; ++current_step) {
+			// if (indices.try_emplace(Base::toCode(current, depth), value / (current_distance *
+			// current_distance)).second) {
 			if (indices.try_emplace(Base::toCode(current, depth), value).second) {
 				already_update_in_row = 0;
 			} else {
@@ -1148,6 +1212,41 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 				}
 			}
 			current += step;
+			current_distance -= dist_per_step;
+		}
+	}
+
+	//
+	// Integrator helper
+	//
+
+	void insertPointCloudHelper(Point3 sensor_origin, PointCloud&& discretized,
+	                            std::vector<std::pair<Code, float>>&& occupied_hits,
+	                            LogitType prob_miss_log, DepthType depth,
+	                            bool simple_ray_casting, unsigned int early_stopping,
+	                            Point3 min_change, Point3 max_change)
+	{
+		std::future<void> f = std::async(std::launch::async, [this, &occupied_hits]() {
+			std::for_each(begin(occupied_hits), end(occupied_hits),
+			              [this](auto&& hit) { updateValue(hit.first, hit.second); });
+		});
+
+		CodeMap<LogitType> free_hits;
+
+		freeSpace(sensor_origin, discretized, free_hits, prob_miss_log, depth,
+		          simple_ray_casting, early_stopping);
+
+		f.wait();
+
+		for (auto const& [code, value] : free_hits) {
+			updateValue(code, value);
+		}
+
+		if (min_max_change_detection_enabled_) {
+			for (int i : {0, 1, 2}) {
+				min_change_[i] = std::min(min_change_[i], min_change[i]);
+				max_change_[i] = std::max(max_change_[i], max_change[i]);
+			}
 		}
 	}
 
@@ -1328,7 +1427,8 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 	Point3 max_change_;
 
 	// Defined here for speedup
-	CodeMap<LogitType> indices_;
+	CodeSet indices_;
+	std::future<void> integrate_;
 
 	template <typename T, typename D, typename I, typename L, bool O>
 	friend class OccupancyMapIterator;
