@@ -117,7 +117,7 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 
 			    map.insertPointCloudDiscrete(transform.translation(), cloud, max_range_,
 			                                 insert_depth_, simple_ray_casting_,
-			                                 early_stopping_);
+			                                 early_stopping_, async_);
 
 			    double integration_time =
 			        std::chrono::duration<float, std::chrono::seconds::period>(
@@ -441,6 +441,7 @@ void Server::configCallback(ufomap_mapping::ServerConfig &config, uint32_t level
 	insert_depth_ = config.insert_depth;
 	simple_ray_casting_ = config.simple_ray_casting;
 	early_stopping_ = config.early_stopping;
+	async_ = config.async;
 
 	clear_robot_ = config.clear_robot;
 	robot_frame_id_ = config.robot_frame_id;

@@ -143,6 +143,7 @@ class Server
 	ufo::map::DepthType insert_depth_;
 	bool simple_ray_casting_;
 	unsigned int early_stopping_;
+	bool async_;
 
 	// Clear robot
 	bool clear_robot_;
