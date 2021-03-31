@@ -11,6 +11,7 @@ add_service_files(
   ClearVolume.srv
 	GetMap.srv
 	Reset.srv
+	SaveMap.srv
 )
 
 generate_messages(

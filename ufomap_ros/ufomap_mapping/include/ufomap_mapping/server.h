@@ -49,6 +49,7 @@
 #include <ufomap_srvs/ClearVolume.h>
 #include <ufomap_srvs/GetMap.h>
 #include <ufomap_srvs/Reset.h>
+#include <ufomap_srvs/SaveMap.h>
 
 // ROS
 #include <diagnostic_msgs/DiagnosticStatus.h>
@@ -86,6 +87,9 @@ class Server
 	bool resetCallback(ufomap_srvs::Reset::Request &request,
 	                   ufomap_srvs::Reset::Response &response);
 
+	bool saveMapCallback(ufomap_srvs::SaveMap::Request &request,
+	                     ufomap_srvs::SaveMap::Response &response);
+
 	void timerCallback(ros::TimerEvent const &event);
 
 	void configCallback(ufomap_mapping::ServerConfig &config, uint32_t level);
@@ -116,6 +120,7 @@ class Server
 	ros::ServiceServer get_map_server_;
 	ros::ServiceServer clear_volume_server_;
 	ros::ServiceServer reset_server_;
+	ros::ServiceServer save_map_server_;
 
 	// TF2
 	tf2_ros::Buffer tf_buffer_;

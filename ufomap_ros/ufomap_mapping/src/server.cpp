@@ -87,6 +87,7 @@ Server::Server(ros::NodeHandle &nh, ros::NodeHandle &nh_priv)
 	clear_volume_server_ =
 	    nh_priv_.advertiseService("clear_volume", &Server::clearVolumeCallback, this);
 	reset_server_ = nh_priv_.advertiseService("reset", &Server::resetCallback, this);
+	save_map_server_ = nh_priv_.advertiseService("save_map", &Server::saveMapCallback, this);
 }
 
 void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
@@ -353,6 +354,22 @@ bool Server::resetCallback(ufomap_srvs::Reset::Request &request,
 		    if constexpr (!std::is_same_v<std::decay_t<decltype(map)>, std::monostate>) {
 			    map.clear(request.new_resolution, request.new_depth_levels);
 			    response.success = true;
+		    } else {
+			    response.success = false;
+		    }
+	    },
+	    map_);
+	return true;
+}
+
+bool Server::saveMapCallback(ufomap_srvs::SaveMap::Request &request,
+                           ufomap_srvs::SaveMap::Response &response)
+{
+	std::visit(
+	    [this, &request, &response](auto &map) {
+		    if constexpr (!std::is_same_v<std::decay_t<decltype(map)>, std::monostate>) {ufo::geometry::BoundingVolume bv =
+			        ufomap_msgs::msgToUfo(request.bounding_volume);
+					response.success = map.write(request.filename, bv, request.compress, request.depth);
 		    } else {
 			    response.success = false;
 		    }
