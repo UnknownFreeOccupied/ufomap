@@ -146,9 +146,7 @@ class OccupancyMapColor : public OccupancyMapBase<ColorOccupancyNode<float>>
 
 			indices_.clear();
 
-			if (integrate_.valid()) {
-				integrate_.wait();
-			}
+			Base::insertPointCloudWait();
 
 			if (async) {
 				integrate_ =
@@ -251,9 +249,7 @@ class OccupancyMapColor : public OccupancyMapBase<ColorOccupancyNode<float>>
 
 			indices_.clear();
 
-			if (integrate_.valid()) {
-				integrate_.wait();
-			}
+			Base::insertPointCloudWait();
 
 			if (async) {
 				integrate_ =

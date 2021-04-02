@@ -310,9 +310,7 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 
 		indices_.clear();
 
-		if (integrate_.valid()) {
-			integrate_.wait();
-		}
+		insertPointCloudWait();
 
 		if (async) {
 			integrate_ = std::async(
@@ -402,9 +400,7 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 
 		indices_.clear();
 
-		if (integrate_.valid()) {
-			integrate_.wait();
-		}
+		insertPointCloudWait();
 
 		if (async) {
 			integrate_ = std::async(
