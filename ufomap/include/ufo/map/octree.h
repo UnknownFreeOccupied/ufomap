@@ -64,6 +64,7 @@
 
 // Compression
 #include <lz4.h>
+#include <lz4hc.h>
 
 namespace ufo::map
 {
@@ -773,23 +774,30 @@ class Octree
 	}
 
 	virtual bool write(std::string const& filename, bool compress = false,
-	                   DepthType min_depth = 0) const
+	                   DepthType min_depth = 0, int compression_acceleration_level = 1,
+	                   int compression_level = 0) const
 	{
-		return write(filename, ufo::geometry::BoundingVolume(), compress, min_depth);
+		return write(filename, ufo::geometry::BoundingVolume(), compress, min_depth,
+		             compression_acceleration_level, compression_level);
 	}
 
 	virtual bool write(std::string const& filename,
 	                   ufo::geometry::BoundingVar const& bounding_volume,
-	                   bool compress = false, DepthType min_depth = 0) const
+	                   bool compress = false, DepthType min_depth = 0,
+	                   int compression_acceleration_level = 1,
+	                   int compression_level = 0) const
 	{
 		ufo::geometry::BoundingVolume bv;
 		bv.add(bounding_volume);
-		return write(filename, bv, compress, min_depth);
+		return write(filename, bv, compress, min_depth, compression_acceleration_level,
+		             compression_level);
 	}
 
 	virtual bool write(std::string const& filename,
 	                   ufo::geometry::BoundingVolume const& bounding_volume,
-	                   bool compress = false, DepthType min_depth = 0) const
+	                   bool compress = false, DepthType min_depth = 0,
+	                   int compression_acceleration_level = 1,
+	                   int compression_level = 0) const
 	{
 		std::ofstream file(filename.c_str(), std::ios_base::out | std::ios_base::binary);
 
@@ -797,33 +805,43 @@ class Octree
 			return false;
 		}
 		// TODO: check is_good of finished stream, return
-		const bool success = write(file, bounding_volume, compress, min_depth);
+		const bool success = write(file, bounding_volume, compress, min_depth,
+		                           compression_acceleration_level, compression_level);
 		file.close();
 		return success;
 	}
 
-	virtual bool write(std::ostream& s, bool compress = false,
-	                   DepthType min_depth = 0) const
+	virtual bool write(std::ostream& s, bool compress = false, DepthType min_depth = 0,
+	                   int compression_acceleration_level = 1,
+	                   int compression_level = 0) const
 	{
-		return write(s, ufo::geometry::BoundingVolume(), compress, min_depth);
+		return write(s, ufo::geometry::BoundingVolume(), compress, min_depth,
+		             compression_acceleration_level, compression_level);
 	}
 
 	virtual bool write(std::ostream& s, ufo::geometry::BoundingVar const& bounding_volume,
-	                   bool compress = false, DepthType min_depth = 0) const
+	                   bool compress = false, DepthType min_depth = 0,
+	                   int compression_acceleration_level = 1,
+	                   int compression_level = 0) const
 	{
 		ufo::geometry::BoundingVolume bv;
 		bv.add(bounding_volume);
-		return write(s, bv, compress, min_depth);
+		return write(s, bv, compress, min_depth, compression_acceleration_level,
+		             compression_level);
 	}
 
 	virtual bool write(std::ostream& s,
 	                   ufo::geometry::BoundingVolume const& bounding_volume,
-	                   bool compress = false, DepthType min_depth = 0) const
+	                   bool compress = false, DepthType min_depth = 0,
+	                   int compression_acceleration_level = 1,
+	                   int compression_level = 0) const
 	{
 		std::stringstream data(std::ios_base::in | std::ios_base::out |
 		                       std::ios_base::binary);
 
-		int uncompressed_data_size = writeData(data, bounding_volume, compress, min_depth);
+		int uncompressed_data_size =
+		    writeData(data, bounding_volume, compress, min_depth,
+		              compression_acceleration_level, compression_level);
 
 		if (0 > uncompressed_data_size) {
 			return false;
@@ -848,32 +866,43 @@ class Octree
 		return s.good();
 	}
 
-	virtual int writeData(std::ostream& s, bool compress = false,
-	                      DepthType min_depth = 0) const
+	virtual int writeData(std::ostream& s, bool compress = false, DepthType min_depth = 0,
+	                      int compression_acceleration_level = 1,
+	                      int compression_level = 0) const
 	{
-		return writeData(s, ufo::geometry::BoundingVolume(), compress, min_depth);
+		return writeData(s, ufo::geometry::BoundingVolume(), compress, min_depth,
+		                 compression_acceleration_level, compression_level);
 	}
 
 	virtual int writeData(std::ostream& s,
 	                      ufo::geometry::BoundingVar const& bounding_volume,
-	                      bool compress = false, DepthType min_depth = 0) const
+	                      bool compress = false, DepthType min_depth = 0,
+	                      int compression_acceleration_level = 1,
+	                      int compression_level = 0) const
 	{
 		ufo::geometry::BoundingVolume bv;
 		bv.add(bounding_volume);
-		return writeData(s, bv, compress, min_depth);
+		return writeData(s, bv, compress, min_depth, compression_acceleration_level,
+		                 compression_level);
 	}
 
 	virtual int writeData(std::ostream& s,
 	                      ufo::geometry::BoundingVolume const& bounding_volume,
-	                      bool compress = false, DepthType min_depth = 0) const
+	                      bool compress = false, DepthType min_depth = 0,
+	                      int compression_acceleration_level = 1,
+	                      int compression_level = 0) const
 	{
 		const std::streampos initial_write_position = s.tellp();
 
 		if (compress) {
 			std::stringstream data(std::ios_base::in | std::ios_base::out |
 			                       std::ios_base::binary);
-			int uncompressed_data_size = writeData(data, bounding_volume, false, min_depth);
-			if (0 > uncompressed_data_size || !compressData(data, s, uncompressed_data_size)) {
+			int uncompressed_data_size =
+			    writeData(data, bounding_volume, false, min_depth,
+			              compression_acceleration_level, compression_level);
+			if (0 > uncompressed_data_size ||
+			    !compressData(data, s, uncompressed_data_size, compression_acceleration_level,
+			                  compression_level)) {
 				return -1;
 			}
 			return uncompressed_data_size;
@@ -1398,16 +1427,23 @@ class Octree
 	// Compress/decompress
 	//
 
-	bool compressData(std::istream& s_in, std::ostream& s_out,
-	                  int uncompressed_data_size) const
+	bool compressData(std::istream& s_in, std::ostream& s_out, int uncompressed_data_size,
+	                  int acceleration_level = 1, int compression_level = 0) const
 	{
 		// Compress data
 		char* data = new char[uncompressed_data_size];
 		s_in.read(data, uncompressed_data_size);
 		const int max_dst_size = LZ4_compressBound(uncompressed_data_size);
 		char* compressed_data = new char[max_dst_size];
-		const int compressed_data_size =
-		    LZ4_compress_default(data, compressed_data, uncompressed_data_size, max_dst_size);
+		int compressed_data_size;
+		if (0 >= compression_level) {
+			compressed_data_size =
+			    LZ4_compress_fast(data, compressed_data, uncompressed_data_size, max_dst_size,
+			                      acceleration_level);
+		} else {
+			compressed_data_size = LZ4_compress_HC(
+			    data, compressed_data, uncompressed_data_size, max_dst_size, compression_level);
+		}
 
 		// Check if compression successful
 		if (0 <= compressed_data_size) {

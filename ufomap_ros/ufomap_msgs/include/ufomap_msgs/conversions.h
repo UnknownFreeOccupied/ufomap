@@ -139,25 +139,30 @@ bool msgToUfo(ufomap_msgs::UFOMap const& msg, TreeType& tree)
 
 template <typename TreeType>
 bool ufoToMsg(TreeType const& tree, ufomap_msgs::UFOMap& msg, bool compress = false,
-              unsigned int depth = 0)
+              unsigned int depth = 0, int compression_acceleration_level = 1,
+              int compression_level = 0)
 {
-	return ufoToMsg(tree, msg, ufo::geometry::BoundingVolume(), compress, depth);
+	return ufoToMsg(tree, msg, ufo::geometry::BoundingVolume(), compress, depth,
+	                compression_acceleration_level, compression_level);
 }
 
 template <typename TreeType, typename BoundingType>
 bool ufoToMsg(TreeType const& tree, ufomap_msgs::UFOMap& msg,
               BoundingType const& bounding_volume, bool compress = false,
-              unsigned int depth = 0)
+              unsigned int depth = 0, int compression_acceleration_level = 1,
+              int compression_level = 0)
 {
 	ufo::geometry::BoundingVolume bv;
 	bv.add(bounding_volume);
-	return ufoToMsg(tree, msg, bv, compress, depth);
+	return ufoToMsg(tree, msg, bv, compress, depth, compression_acceleration_level,
+	                compression_level);
 }
 
 template <typename TreeType>
 bool ufoToMsg(TreeType const& tree, ufomap_msgs::UFOMap& msg,
               ufo::geometry::BoundingVolume const& bounding_volume, bool compress = false,
-              unsigned int depth = 0)
+              unsigned int depth = 0, int compression_acceleration_level = 1,
+              int compression_level = 0)
 {
 	msg.info.version = tree.getFileVersion();
 	msg.info.id = tree.getTreeType();
@@ -169,7 +174,8 @@ bool ufoToMsg(TreeType const& tree, ufomap_msgs::UFOMap& msg,
 	std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
 	                              std::ios_base::binary);
 	msg.info.uncompressed_data_size =
-	    tree.writeData(data_stream, bounding_volume, compress, depth);
+	    tree.writeData(data_stream, bounding_volume, compress, depth,
+	                   compression_acceleration_level, compression_level);
 	if (0 > msg.info.uncompressed_data_size) {
 		return false;
 	}

@@ -6,6 +6,8 @@ string filename
 uint8 depth
 # If the file should be compressed
 bool compress
+# Compression level (higher number equals more compressed)
+int32 compression_level
 # Bounding volume of which part of the map should be saved
 ufomap_msgs/BoundingVolume bounding_volume
 ---

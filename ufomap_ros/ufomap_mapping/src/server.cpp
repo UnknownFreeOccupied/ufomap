@@ -377,8 +377,8 @@ bool Server::saveMapCallback(ufomap_srvs::SaveMap::Request &request,
 		    if constexpr (!std::is_same_v<std::decay_t<decltype(map)>, std::monostate>) {
 			    ufo::geometry::BoundingVolume bv =
 			        ufomap_msgs::msgToUfo(request.bounding_volume);
-			    response.success =
-			        map.write(request.filename, bv, request.compress, request.depth);
+			    response.success = map.write(request.filename, bv, request.compress,
+			                                 request.depth, 1, request.compression_level);
 		    } else {
 			    response.success = false;
 		    }
