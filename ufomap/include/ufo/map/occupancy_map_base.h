@@ -523,8 +523,18 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 
 	void setOccupancy(Code const& code, double occupancy_value)
 	{
-		// TODO: Implement
-		// setValue(code, toLogit(occupancy_value));
+		setNodeValue(code, toLogit(occupancy_value));
+	}
+
+	void setOccupancy(Point3 const& coord, double occupancy_value, DepthType depth = 0)
+	{
+		setOccupancy(Base::toCode(coord, depth), occupancy_value);
+	}
+
+	void setOccupancy(double x, double y, double z, double occupancy_value,
+	                  DepthType depth = 0)
+	{
+		setOccupancy(Base::toCode(x, y, z, depth), occupancy_value);
 	}
 
 	//
@@ -536,6 +546,18 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 		updateValue(code, toLogit(occupancy_value_update));
 	}
 
+	void updateOccupancy(Point3 const& coord, double occupancy_value_update,
+	                     DepthType depth = 0)
+	{
+		updateOccupancy(Base::toCode(coord, depth), occupancy_value_update);
+	}
+
+	void updateOccupancy(double x, double y, double z, double occupancy_value_update,
+	                     DepthType depth = 0)
+	{
+		updateOccupancy(Base::toCode(x, y, z, depth), occupancy_value_update);
+	}
+
 	//
 	// Integrate hit/miss
 	//
@@ -545,13 +567,29 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 		updateValue(code, static_cast<float>(prob_hit_log_));
 	}
 
-	void integrateHit(Point3 const& coord) { integrateHit(Base::toCode(coord)); }
+	void integrateHit(Point3 const& coord, DepthType depth = 0)
+	{
+		integrateHit(Base::toCode(coord, depth));
+	}
 
-	void integrateHit(double x, double y, double z) { integrateHit(Base::toCode(x, y, z)); }
+	void integrateHit(double x, double y, double z, DepthType depth = 0)
+	{
+		integrateHit(Base::toCode(x, y, z, depth));
+	}
 
 	void integrateMiss(Code const& code)
 	{
 		updateValue(code, static_cast<float>(prob_miss_log_));
+	}
+
+	void integrateMiss(Point3 const& coord, DepthType depth = 0)
+	{
+		integrateMiss(Base::toCode(coord, depth));
+	}
+
+	void integrateMiss(double x, double y, double z, DepthType depth = 0)
+	{
+		integrateMiss(Base::toCode(x, y, z, depth));
 	}
 
 	//
@@ -561,6 +599,16 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 	double getOccupancy(Code const& code) const
 	{
 		return toProb(Base::getNode(code).first->value.occupancy);
+	}
+
+	double getOccupancy(Point3 const& coord, DepthType depth = 0) const
+	{
+		return getOccupancy(Base::toCode(coord, depth));
+	}
+
+	double getOccupancy(double x, double y, double z, DepthType depth = 0) const
+	{
+		return getOccupancy(Base::toCode(x, y, z, depth));
 	}
 
 	//
@@ -579,22 +627,56 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 		}
 	}
 
+	OccupancyState getState(Point3 const& coord, DepthType depth = 0) const
+	{
+		return getState(Base::toCode(coord, depth));
+	}
+
+	OccupancyState getState(double x, double y, double z, DepthType depth = 0) const
+	{
+		return getState(Base::toCode(x, y, z, depth));
+	}
+
 	bool isOccupied(Code const& code) const
 	{
-		auto [node, depth] = Base::getNode(code);
-		return isOccupied(*node);
+		return OccupancyState::occupied == getState(code);
+	}
+
+	bool isOccupied(Point3 const& coord, DepthType depth = 0) const
+	{
+		return OccupancyState::occupied == getState(coord, depth);
+	}
+
+	bool isOccupied(double x, double y, double z, DepthType depth = 0) const
+	{
+		return OccupancyState::occupied == getState(x, y, z, depth);
 	}
 
 	bool isUnknown(Code const& code) const
 	{
-		auto [node, depth] = Base::getNode(code);
-		return isUnknown(*node);
+		return OccupancyState::unknown == getState(code);
 	}
 
-	bool isFree(Code const& code) const
+	bool isUnknown(Point3 const& coord, DepthType depth = 0) const
 	{
-		auto [node, depth] = Base::getNode(code);
-		return isFree(*node);
+		return OccupancyState::unknown == getState(coord, depth);
+	}
+
+	bool isUnknown(double x, double y, double z, DepthType depth = 0) const
+	{
+		return OccupancyState::unknown == getState(x, y, z, depth);
+	}
+
+	bool isFree(Code const& code) const { return OccupancyState::free == getState(code); }
+
+	bool isFree(Point3 const& coord, DepthType depth = 0) const
+	{
+		return OccupancyState::free == getState(coord, depth);
+	}
+
+	bool isFree(double x, double y, double z, DepthType depth = 0) const
+	{
+		return OccupancyState::free == getState(x, y, z, depth);
 	}
 
 	//
@@ -603,16 +685,46 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 
 	bool containsOccupied(Code const& code) const { return isOccupied(code); }
 
+	bool containsOccupied(Point3 const& coord, DepthType depth = 0) const
+	{
+		return containsOccupied(Base::toCode(coord, depth));
+	}
+
+	bool containsOccupied(double x, double y, double z, DepthType depth = 0) const
+	{
+		return containsOccupied(Base::toCode(x, y, z, depth));
+	}
+
 	bool containsUnknown(Code const& code) const
 	{
 		auto [node, depth] = Base::getNode(code);
 		return containsUnknown(*node, depth);
 	}
 
+	bool containsUnknown(Point3 const& coord, DepthType depth = 0) const
+	{
+		return containsUnknown(Base::toCode(coord, depth));
+	}
+
+	bool containsUnknown(double x, double y, double z, DepthType depth = 0) const
+	{
+		return containsUnknown(Base::toCode(x, y, z, depth));
+	}
+
 	bool containsFree(Code const& code) const
 	{
 		auto [node, depth] = Base::getNode(code);
 		return containsFree(*node, depth);
+	}
+
+	bool containsFree(Point3 const& coord, DepthType depth = 0) const
+	{
+		return containsFree(Base::toCode(coord, depth));
+	}
+
+	bool containsFree(double x, double y, double z, DepthType depth = 0) const
+	{
+		return containsFree(Base::toCode(x, y, z, depth));
 	}
 
 	//
