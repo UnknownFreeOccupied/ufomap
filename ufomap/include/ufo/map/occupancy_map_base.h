@@ -51,6 +51,8 @@
 
 namespace ufo::map
 {
+enum OccupancyState { unknown, free, occupied };
+
 template <typename DATA_TYPE>
 class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYPE>,
                                        OccupancyMapLeafNode<DATA_TYPE>>
@@ -564,6 +566,18 @@ class OccupancyMapBase : public Octree<DATA_TYPE, OccupancyMapInnerNode<DATA_TYP
 	//
 	// Checking state
 	//
+
+	OccupancyState getState(Code const& code) const
+	{
+		auto [node, depth] = Base::getNode(code);
+		if (isOccupied(*node)) {
+			return OccupancyState::occupied;
+		} else if (isFree(*node)) {
+			return OccupancyState::free;
+		} else {
+			return OccupancyState::unknown;
+		}
+	}
 
 	bool isOccupied(Code const& code) const
 	{
