@@ -185,20 +185,29 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 					    // TODO: should this be here?
 					    map.resetMinMaxChangeDetection();
 
-					    update_async_handler_ = std::async(std::launch::async, [this, &aabb, &msg,
-					                                                            &map]() {
-						    for (int i = 0; i < map_pub_.size(); ++i) {
-							    if (map_pub_[i] &&
-							        (0 < map_pub_[i].getNumSubscribers() || map_pub_[i].isLatched())) {
-								    ufomap_msgs::UFOMapStamped::Ptr msg(new ufomap_msgs::UFOMapStamped);
-								    if (ufomap_msgs::ufoToMsg(map, msg->map, aabb, compress_, i)) {
-									    msg->header.stamp = msg->header.stamp;
-									    msg->header.frame_id = frame_id_;
-									    map_pub_[i].publish(msg);
-								    }
-							    }
-						    }
-					    });
+					    update_async_handler_ = std::async(
+					        std::launch::async, [this, aabb, stamp = msg->header.stamp]() {
+						        std::visit(
+						            [this, &aabb, stamp](auto &map) {
+							            if constexpr (!std::is_same_v<std::decay_t<decltype(map)>,
+							                                          std::monostate>) {
+								            for (int i = 0; i < map_pub_.size(); ++i) {
+									            if (map_pub_[i] && (0 < map_pub_[i].getNumSubscribers() ||
+									                                map_pub_[i].isLatched())) {
+										            ufomap_msgs::UFOMapStamped::Ptr msg(
+										                new ufomap_msgs::UFOMapStamped);
+										            if (ufomap_msgs::ufoToMsg(map, msg->map, aabb, compress_,
+										                                      i)) {
+											            msg->header.stamp = stamp;
+											            msg->header.frame_id = frame_id_;
+											            map_pub_[i].publish(msg);
+										            }
+									            }
+								            }
+							            }
+						            },
+						            map_);
+					        });
 
 					    double update_time =
 					        std::chrono::duration<float, std::chrono::seconds::period>(
