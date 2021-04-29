@@ -987,7 +987,7 @@ class Octree
 	std::pair<LEAF_NODE*, DepthType> getNode(Code const& code)
 	{
 		auto [const_node, depth] = std::as_const(*this).getNode(code);
-		std::make_pair(const_cast<LEAF_NODE*>(const_node), depth);
+		return std::make_pair(const_cast<LEAF_NODE*>(const_node), depth);
 	}
 
 	//
