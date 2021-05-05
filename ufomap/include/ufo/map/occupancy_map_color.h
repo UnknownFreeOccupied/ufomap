@@ -224,7 +224,7 @@ class OccupancyMapColor : public OccupancyMapBase<ColorOccupancyNode<float>>
 
 				Key end_key = Base::toKey(end, depth);
 
-				if (!indices_.insert(Base::toCode(end_key)).second) {
+				if (0 < depth && !indices_.insert(Base::toCode(end_key)).second) {
 					continue;
 				}
 
