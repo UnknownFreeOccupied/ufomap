@@ -33,3 +33,6 @@
 
 # VS Code
 .vscode/*
+
+# Tests
+ufomap_tests/*
