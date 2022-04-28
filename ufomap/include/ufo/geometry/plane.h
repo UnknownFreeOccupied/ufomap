@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -48,28 +47,19 @@ namespace ufo::geometry
 {
 struct Plane {
 	Point normal;
-	double distance;
+	float distance;
 
-	Plane() : normal(1.0, 0.0, 0.0) {}
+	inline Plane() : normal(1.0, 0.0, 0.0) {}
 
-	Plane(Plane const& plane) : normal(plane.normal), distance(plane.distance) {}
+	inline Plane(Point const& normal, float distance) : normal(normal), distance(distance) {}
 
-	Plane(Point const& normal, double distance) : normal(normal), distance(distance) {}
-
-	Plane(Point const& v_1, Point const& v_2, Point const& v_3)
+	inline Plane(Point const& v_1, Point const& v_2, Point const& v_3)
 	{
 		Point aux_1 = v_1 - v_2;
 		Point aux_2 = v_3 - v_2;
 		normal = aux_2.cross(aux_1);
 		normal.normalize();
 		distance = -normal.dot(v_2);
-	}
-
-	Plane& operator=(Plane const& rhs)
-	{
-		normal = rhs.normal;
-		distance = rhs.distance;
-		return *this;
 	}
 };
 }  // namespace ufo::geometry

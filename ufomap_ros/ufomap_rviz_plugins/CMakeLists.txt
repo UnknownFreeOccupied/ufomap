@@ -4,6 +4,8 @@ project(ufomap_rviz_plugins
 )
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -52,14 +54,18 @@ link_directories(
 ) 
 
 QT5_WRAP_CPP(MOC_FILES
-  # include/ufomap_rviz_plugins/ufomap_base_display.h
   include/ufomap_rviz_plugins/ufomap_display.h
   OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED -DBOOST_LEXICAL_CAST_INCLUDED 
 )
 
 add_library(${PROJECT_NAME}
-  # src/ufomap_base_display.cpp
   src/ufomap_display.cpp
+  src/render_display.cpp
+  src/filter_display.cpp
+  src/performance_display.cpp
+  src/data.cpp
+  src/render_data.cpp
+  src/voxels.cpp
   ${MOC_FILES} 
 )
 
@@ -72,6 +78,17 @@ target_link_libraries(${PROJECT_NAME}
 target_compile_options(${PROJECT_NAME}
   PRIVATE
     -Wno-register  # TODO: Should not be needed if OGRE fixes it
+)
+
+if(OGRE_VERSION VERSION_LESS "1.10")
+  set(EXCLUDE_PATTERN "ogre1.10.*")
+else()
+  set(EXCLUDE_PATTERN "ogre1.9.*")
+endif()
+
+install(DIRECTORY ogre_media
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  PATTERN "${EXCLUDE_PATTERN}" EXCLUDE
 )
 
 install(DIRECTORY include/${PROJECT_NAME}/

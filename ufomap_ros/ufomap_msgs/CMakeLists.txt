@@ -31,6 +31,7 @@ add_message_files(
     UFOMap.msg
     UFOMapMetaData.msg
     UFOMapStamped.msg
+    Labels.msg
 )
 
 generate_messages(
@@ -38,6 +39,7 @@ generate_messages(
     geometry_msgs
     std_msgs
 )
+
 
 catkin_package(
   INCLUDE_DIRS include

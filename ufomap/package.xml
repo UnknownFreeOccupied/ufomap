@@ -12,8 +12,6 @@
   <url type="website">https://github.com/danielduberg/ufomap</url>
 
   <buildtool_depend>cmake</buildtool_depend>
-  <depend>lz4</depend>
-  <depend>tbb</depend>
   
   <doc_depend>doxygen</doc_depend>
 

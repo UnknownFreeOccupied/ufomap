@@ -15,6 +15,7 @@
   <depend>geometry_msgs</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
+  <depend>ufomap_msgs</depend>
 
   <build_depend>ufomap</build_depend>
   

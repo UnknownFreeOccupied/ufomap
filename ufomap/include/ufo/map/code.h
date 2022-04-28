@@ -1,10 +1,9 @@
-/**
+/*
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -46,7 +45,7 @@
 #include <ufo/map/key.h>
 #include <ufo/map/types.h>
 
-// STD
+// STL
 #include <immintrin.h>
 
 #include <algorithm>
@@ -69,59 +68,29 @@ namespace ufo::map
 class Code
 {
  public:
-	Code() : code_(0), depth_(0) {}
+	inline Code() = default;
 
-	Code(CodeType code, DepthType depth = 0) : code_(code), depth_(depth) {}
+	inline Code(CodeType code, DepthType depth = 0) : code_(code), depth_(depth) {}
 
-	Code(Key const& key) : code_(toCode(key)), depth_(key.getDepth()) {}
+	inline Code(Key const& key) : code_(toCode(key)), depth_(key.getDepth()) {}
 
-	Code(Code const& other) : code_(other.code_), depth_(other.depth_) {}
-
-	Code& operator=(Code const& rhs)
-	{
-		code_ = rhs.code_;
-		depth_ = rhs.depth_;
-		return *this;
-	}
-
-	bool operator==(Code const& rhs) const
+	constexpr bool operator==(Code const& rhs) const
 	{
 		return code_ == rhs.code_ && depth_ == rhs.depth_;
 	}
 
-	bool operator!=(Code const& rhs) const
+	constexpr bool operator!=(Code const& rhs) const
 	{
 		return code_ != rhs.code_ || depth_ != rhs.depth_;
 	}
 
-	bool operator<(Code const& rhs) const
-	{
-		// TODO: Check
-		return get3Bits(code_) < get3Bits(rhs.code_) &&
-		       get3Bits(code_ >> 1) < get3Bits(rhs.code_ >> 1) &&
-		       get3Bits(code_ >> 2) < get3Bits(rhs.code_ >> 2);
-	}
+	bool operator<(Code const& rhs) const { return code_ < rhs.code_; }
 
-	bool operator<=(Code const& rhs) const
-	{
-		return get3Bits(code_) <= get3Bits(rhs.code_) &&
-		       get3Bits(code_ >> 1) <= get3Bits(rhs.code_ >> 1) &&
-		       get3Bits(code_ >> 2) <= get3Bits(rhs.code_ >> 2);
-	}
+	bool operator<=(Code const& rhs) const { return code_ <= rhs.code_; }
 
-	bool operator>(Code const& rhs) const
-	{
-		return get3Bits(code_) > get3Bits(rhs.code_) &&
-		       get3Bits(code_ >> 1) > get3Bits(rhs.code_ >> 1) &&
-		       get3Bits(code_ >> 2) > get3Bits(rhs.code_ >> 2);
-	}
+	bool operator>(Code const& rhs) const { return code_ > rhs.code_; }
 
-	bool operator>=(Code const& rhs) const
-	{
-		return get3Bits(code_) >= get3Bits(rhs.code_) &&
-		       get3Bits(code_ >> 1) >= get3Bits(rhs.code_ >> 1) &&
-		       get3Bits(code_ >> 2) >= get3Bits(rhs.code_ >> 2);
-	}
+	bool operator>=(Code const& rhs) const { return code_ >= rhs.code_; }
 
 	/**
 	 * @brief Return the code at a specified depth
@@ -242,7 +211,7 @@ class Code
 	 * @param depth The depth the child index is requested for
 	 * @return std::size_t The child index at the specified depth
 	 */
-	std::size_t getChildIdx(DepthType depth) const
+	constexpr std::size_t getChildIdx(DepthType depth) const
 	{
 		return (code_ >> static_cast<CodeType>(3 * depth)) & ((CodeType)0x7);
 	}
@@ -253,7 +222,7 @@ class Code
 	 * @param index The index of the child
 	 * @return Code The child code
 	 */
-	Code getChild(std::size_t index) const
+	inline Code getChild(std::size_t index) const
 	{
 		if (0 == depth_) {
 			// TODO: Throw error?
@@ -267,6 +236,21 @@ class Code
 	}
 
 	/**
+	 * @brief Get the code of a specific sibling to this code
+	 *
+	 * @param index The index of the sibling
+	 * @return Code The sibling code
+	 */
+	inline Code getSibling(std::size_t index) const
+	{
+		CodeType sibling_code = (code_ >> static_cast<CodeType>(3 * (depth_ + 1)))
+		                        << static_cast<CodeType>(3 * (depth_ + 1));
+		return Code(sibling_code +
+		                (static_cast<CodeType>(index) << static_cast<CodeType>(3 * depth_)),
+		            depth_);
+	}
+
+	/**
 	 * @brief Get the eight child codes that comes from this code
 	 *
 	 * @return std::vector<Code> The eight child codes
@@ -277,6 +261,8 @@ class Code
 		if (0 == depth_) {
 			return children;
 		}
+
+		children.reserve(8);
 
 		DepthType child_depth = depth_ - 1;
 		CodeType offset = 3 * child_depth;
@@ -297,6 +283,7 @@ class Code
 	{
 		std::vector<Code> children;
 		CodeType max = 8 << (3 * depth_);
+		children.reserve(max);
 		for (CodeType i = 0; i < max; ++i) {
 			children.emplace_back(code_ + i, 0);
 		}
@@ -308,28 +295,28 @@ class Code
 	 *
 	 * @return CodeType The code
 	 */
-	CodeType getCode() const { return code_; }
+	constexpr CodeType getCode() const noexcept { return code_; }
 
 	/**
 	 * @brief Get the depth that this code is specified at
 	 *
 	 * @return DepthType The depth this code is specified at
 	 */
-	DepthType getDepth() const { return depth_; }
+	constexpr DepthType getDepth() const noexcept { return depth_; }
 
 	/**
 	 * @brief
 	 *
 	 */
 	struct Hash {
-		std::size_t operator()(Code const& code) const
+		constexpr std::size_t operator()(Code const& code) const noexcept
 		{
-			return static_cast<std::size_t>(code.code_);
+			return static_cast<std::size_t>(code.getCode());
 		}
 
-		static size_t hash(Code const& code) { return code.code_; }
+		static constexpr size_t hash(Code const& code) { return code.getCode(); }
 
-		static bool equal(Code const& a, Code const& b) { return a == b; }
+		static constexpr bool equal(Code const& a, Code const& b) { return a == b; }
 	};
 
  private:
@@ -458,7 +445,7 @@ class CodeSet
 		size_t hash = getBucket(value);
 		if (std::any_of(std::execution::seq, data_[hash].begin(), data_[hash].end(),
 		                [&value](auto const& elem) { return value == elem; })) {
-			return std::make_pair(0, false);  // TODO: Fix
+			return {0, false};  // TODO: Fix
 		}
 
 		++size_;
@@ -470,7 +457,7 @@ class CodeSet
 
 		data_[hash].push_back(value);
 
-		return std::make_pair(0, true);  // TOOD: Fix
+		return {0, true};  // TOOD: Fix
 	}
 
 	void clear()
@@ -488,11 +475,11 @@ class CodeSet
 
 	unsigned int bucket_count_power() const noexcept { return power_; }
 
-	float load_factor() const { return size_ / ((float)num_buckets_); }
+	double load_factor() const { return size_ / ((double)num_buckets_); }
 
-	float max_load_factor() const { return max_load_factor_; }
+	double max_load_factor() const { return max_load_factor_; }
 
-	void max_load_factor(float max_load_factor)
+	void max_load_factor(double max_load_factor)
 	{
 		max_load_factor_ = max_load_factor;
 
@@ -503,7 +490,7 @@ class CodeSet
 
 	void rehash(std::size_t count)
 	{
-		std::size_t min_count = std::max((float)count, size() / max_load_factor());
+		std::size_t min_count = std::max((double)count, size() / max_load_factor());
 		unsigned int power =
 		    std::max(power_, std::min((unsigned int)std::log2(min_count) + 1, MAX_POWER));
 
@@ -558,7 +545,7 @@ class CodeSet
 	unsigned int power_;
 	std::size_t num_buckets_;
 	std::size_t size_ = 0;
-	float max_load_factor_ = 1.0;
+	double max_load_factor_ = 1.0;
 
 	inline static const unsigned int MAX_POWER = 28;
 
@@ -576,6 +563,16 @@ class CodeMap
 	}
 
 	struct CodeMapIterator {
+		// Tags
+		// TODO: Fix these
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = std::ptrdiff_t;
+		using value_type = std::pair<Code, T>;
+		using pointer = value_type*;    // or also value_type*
+		using reference = value_type&;  // or also value_type&
+		using const_pointer = value_type const*;
+		using const_reference = value_type const&;
+
 		CodeMapIterator(const CodeMap* map = nullptr) : map_(map)
 		{
 			if (nullptr == map_) {
@@ -585,21 +582,19 @@ class CodeMap
 			if (map_->data_.empty()) {
 				map_ = nullptr;
 			} else {
-				outer_iter_ = map_->data_.begin();
-				outer_iter_end_ = map_->data_.end();
-				while (outer_iter_ != outer_iter_end_ && outer_iter_->empty()) {
-					++outer_iter_;
-				}
+				outer_iter_end_ = map_->data_.cend();
+				outer_iter_ = std::find_if(map_->data_.cbegin(), outer_iter_end_,
+				                           [](auto const& e) { return !e.empty(); });
 				if (outer_iter_ == outer_iter_end_) {
 					map_ = nullptr;
 				} else {
-					inner_iter_ = outer_iter_->begin();
-					inner_iter_end_ = outer_iter_->end();
+					inner_iter_ = outer_iter_->cbegin();
+					inner_iter_end_ = outer_iter_->cend();
 				}
 			}
 		}
 
-		const std::pair<Code, T>& operator*() const
+		std::pair<Code, T> const& operator*() const
 		{
 			return *inner_iter_;  // map_->data_[outer_index_][inner_index_];
 		}
@@ -623,40 +618,108 @@ class CodeMap
 			++inner_iter_;
 			if (inner_iter_ == inner_iter_end_) {
 				++outer_iter_;
-				while (outer_iter_ != outer_iter_end_ && outer_iter_->empty()) {
-					++outer_iter_;
-				}
+				outer_iter_ = std::find_if(outer_iter_, outer_iter_end_,
+				                           [](auto const& e) { return !e.empty(); });
 				if (outer_iter_ == outer_iter_end_) {
 					map_ = nullptr;
 				} else {
-					inner_iter_ = outer_iter_->begin();
-					inner_iter_end_ = outer_iter_->end();
+					inner_iter_ = outer_iter_->cbegin();
+					inner_iter_end_ = outer_iter_->cend();
 				}
 			}
 			return *this;
 		}
 
-		bool operator==(const CodeMapIterator& rhs) const { return (rhs.map_ == map_); }
+		bool operator==(CodeMapIterator const& rhs) const { return (rhs.map_ == map_); }
 
-		bool operator!=(const CodeMapIterator& rhs) const { return (rhs.map_ != map_); }
+		bool operator!=(CodeMapIterator const& rhs) const { return (rhs.map_ != map_); }
 
 	 private:
 		const CodeMap* map_;
-		typename std::vector<std::list<std::pair<Code, T>>>::const_iterator outer_iter_;
-		typename std::vector<std::list<std::pair<Code, T>>>::const_iterator outer_iter_end_;
-		typename std::list<std::pair<Code, T>>::const_iterator inner_iter_;
-		typename std::list<std::pair<Code, T>>::const_iterator inner_iter_end_;
+		typename std::vector<std::vector<std::pair<Code, T>>>::const_iterator outer_iter_;
+		typename std::vector<std::vector<std::pair<Code, T>>>::const_iterator outer_iter_end_;
+		typename std::vector<std::pair<Code, T>>::const_iterator inner_iter_;
+		typename std::vector<std::pair<Code, T>>::const_iterator inner_iter_end_;
 		// typename decltype(CodeMap<T>::data_)::const_iterator outer_iter_;
 		// typename decltype(CodeMap<T>::data_)::const_iterator outer_iter_end_;
 		// typename decltype(CodeMap<T>::data_)::value_type::const_iterator inner_iter_;
 		// typename decltype(CodeMap<T>::data_)::value_type::const_iterator inner_iter_end_;
 	};
 
+	struct CodeMapBucketIterator {
+		// Tags
+		// TODO: Fix these
+		using iterator_category = std::forward_iterator_tag;
+		using difference_type = std::ptrdiff_t;
+		using value_type = std::vector<std::pair<Code, T>>;
+		using pointer = value_type*;    // or also value_type*
+		using reference = value_type&;  // or also value_type&
+		using const_pointer = value_type const*;
+		using const_reference = value_type const&;
+
+		CodeMapBucketIterator(const CodeMap* map = nullptr) : map_(map)
+		{
+			if (nullptr == map_) {
+				return;
+			}
+
+			if (map_->data_.empty()) {
+				map_ = nullptr;
+			} else {
+				outer_iter_end_ = map_->data_.cend();
+				outer_iter_ = std::find_if(map_->data_.cbegin(), outer_iter_end_,
+				                           [](auto const& e) { return !e.empty(); });
+				if (outer_iter_ == outer_iter_end_) {
+					map_ = nullptr;
+				}
+			}
+		}
+
+		const_reference operator*() const
+		{
+			return *outer_iter_;  // map_->data_[outer_index_][inner_index_];
+		}
+
+		value_type operator*()
+		{
+			return *outer_iter_;  // map_->data_[outer_index_][inner_index_];
+		}
+
+		// Postfix increment
+		CodeMapBucketIterator operator++(int)
+		{
+			CodeMapBucketIterator result = *this;
+			++(*this);
+			return result;
+		}
+
+		// Prefix increment
+		CodeMapBucketIterator& operator++()
+		{
+			++outer_iter_;
+			outer_iter_ = std::find_if(outer_iter_, outer_iter_end_,
+			                           [](auto const& e) { return !e.empty(); });
+			if (outer_iter_ == outer_iter_end_) {
+				map_ = nullptr;
+			}
+			return *this;
+		}
+
+		bool operator==(CodeMapBucketIterator const& rhs) const { return (rhs.map_ == map_); }
+
+		bool operator!=(CodeMapBucketIterator const& rhs) const { return (rhs.map_ != map_); }
+
+	 private:
+		const CodeMap* map_;
+		typename std::vector<std::vector<std::pair<Code, T>>>::const_iterator outer_iter_;
+		typename std::vector<std::vector<std::pair<Code, T>>>::const_iterator outer_iter_end_;
+	};
+
 	T& operator[](Code const& key)
 	{
 		std::size_t hash = getBucket(key);
 		auto it = std::find_if(std::execution::seq, data_[hash].begin(), data_[hash].end(),
-		                       [&key](const auto& elem) { return key == elem.first; });
+		                       [&key](auto const& elem) { return key == elem.first; });
 		if (it != data_[hash].end()) {
 			return it->second;
 		}
@@ -668,17 +731,17 @@ class CodeMap
 			hash = getBucket(key);
 		}
 
-		return std::get<1>(data_[hash].emplace_front(key, T()));  // TODO: How to
-		                                                          // call default?
+		return std::get<1>(data_[hash].emplace_back(key, T()));  // TODO: How to
+		                                                         // call default?
 	}
 
 	std::pair<int, bool> try_emplace(Code const& key,
-	                                 const T& value)  // TODO: Fix
+	                                 T const& value)  // TODO: Fix
 	{
 		std::size_t hash = getBucket(key);
 		if (std::any_of(std::execution::seq, data_[hash].begin(), data_[hash].end(),
-		                [&key](const auto& elem) { return key == elem.first; })) {
-			return std::make_pair(0, false);  // TODO: Fix
+		                [&key](auto const& elem) { return key == elem.first; })) {
+			return {0, false};  // TODO: Fix
 		}
 
 		++size_;
@@ -688,9 +751,9 @@ class CodeMap
 			hash = getBucket(key);
 		}
 
-		data_[hash].emplace_front(key, value);
+		data_[hash].emplace_back(key, value);
 
-		return std::make_pair(0, true);  // TODO: Fix
+		return {0, true};  // TODO: Fix
 	}
 
 	void clear()
@@ -702,17 +765,17 @@ class CodeMap
 
 	bool empty() const { return 0 == size_; }
 
-	std::size_t size() { return size_; }
+	constexpr std::size_t size() const { return size_; }
 
 	std::size_t bucket_count() const { return num_buckets_; }
 
 	unsigned int bucket_count_power() const { return power_; }
 
-	float load_factor() const { return size_ / ((float)num_buckets_); }
+	double load_factor() const { return size_ / ((double)num_buckets_); }
 
-	float max_load_factor() const { return max_load_factor_; }
+	double max_load_factor() const { return max_load_factor_; }
 
-	void max_load_factor(float max_load_factor)
+	void max_load_factor(double max_load_factor)
 	{
 		max_load_factor_ = max_load_factor;
 
@@ -723,7 +786,7 @@ class CodeMap
 
 	void rehash(std::size_t count)
 	{
-		std::size_t min_count = std::max((float)count, size() / max_load_factor());
+		std::size_t min_count = std::max((double)count, size() / max_load_factor());
 		unsigned int power =
 		    std::max(power_, std::min((unsigned int)std::log2(min_count) + 1, MAX_POWER));
 
@@ -738,7 +801,7 @@ class CodeMap
 		new_data.resize(num_buckets_);
 
 		for (const auto& [key, value] : *this) {
-			new_data[getBucket(key)].emplace_front(key, value);
+			new_data[getBucket(key)].emplace_back(key, value);
 		}
 
 		data_.swap(new_data);
@@ -755,6 +818,10 @@ class CodeMap
 
 	CodeMapIterator end() const { return CodeMapIterator(); }
 
+	CodeMapBucketIterator beginBuckets() const { return CodeMapBucketIterator(this); }
+
+	CodeMapBucketIterator endBuckets() const { return CodeMapBucketIterator(); }
+
 	void swap(CodeMap<T>& other)
 	{
 		data_.swap(other.data_);
@@ -768,16 +835,16 @@ class CodeMap
 	std::size_t getBucket(Code const& key) const
 	{
 		unsigned int offset = 3 * key.getDepth();
-		unsigned int modder = (num_buckets_ - 1) << offset;
+		unsigned int modder = (bucket_count() - 1) << offset;
 		return (Code::Hash()(key) & modder) >> offset;
 	}
 
  private:
-	std::vector<std::list<std::pair<Code, T>>> data_;
+	std::vector<std::vector<std::pair<Code, T>>> data_;
 	unsigned int power_;
 	std::size_t num_buckets_;
 	std::size_t size_ = 0;
-	float max_load_factor_ = 1.0;
+	double max_load_factor_ = 1.0;
 
 	inline static const unsigned int MAX_POWER = 28;
 

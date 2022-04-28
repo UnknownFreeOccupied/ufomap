@@ -1,10 +1,9 @@
-/**
+/*
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -45,7 +44,7 @@
 // UFO
 #include <ufo/map/types.h>
 
-// STD
+// STL
 #include <immintrin.h>
 
 #include <array>
@@ -63,25 +62,21 @@ namespace ufo::map
 class Key
 {
  public:
-	Key() {}
+	inline Key() = default;
 
-	Key(KeyType x, KeyType y, KeyType z, DepthType depth) : key_{x, y, z}, depth_(depth) {}
-
-	Key(Key const& other) : key_{other.key_}, depth_(other.depth_) {}
-
-	Key& operator=(Key const& rhs)
-	{
-		key_ = rhs.key_;
-		depth_ = rhs.depth_;
-		return *this;
-	}
+	inline Key(KeyType x, KeyType y, KeyType z, DepthType depth) : key_{x, y, z}, depth_(depth) {}
 
 	/**
 	 * @brief Get the depth that this key is specified at
 	 *
 	 * @return DepthType The depth this key is specified at
 	 */
-	DepthType getDepth() const { return depth_; }
+	constexpr DepthType getDepth() const noexcept { return depth_; }
+
+	/**
+	 * @brief Set the depth that this key is specified at
+	 */
+	constexpr void setDepth(DepthType depth) noexcept { depth_ = depth; }
 
 	/**
 	 * @brief Returns if this key is equal to another key at a certain depth
@@ -108,51 +103,51 @@ class Key
 		return (rhs.depth_ != depth_) || (rhs.key_ != key_);
 	}
 
-	KeyType const& operator[](std::size_t index) const { return key_[index]; }
+	constexpr KeyType const& operator[](std::size_t index) const { return key_[index]; }
 
-	KeyType& operator[](std::size_t index) { return key_[index]; }
+	constexpr KeyType& operator[](std::size_t index) { return key_[index]; }
 
 	/**
 	 * @brief Returns the x component of the key
 	 *
 	 * @return const KeyType& The x component of the key
 	 */
-	KeyType const& x() const { return key_[0]; }
+	constexpr KeyType const& x() const noexcept { return key_[0]; }
 
 	/**
 	 * @brief Returns the y component of the key
 	 *
 	 * @return const KeyType& The y component of the key
 	 */
-	KeyType const& y() const { return key_[1]; }
+	constexpr KeyType const& y() const noexcept { return key_[1]; }
 
 	/**
 	 * @brief Returns the z component of the key
 	 *
 	 * @return const KeyType& The z component of the key
 	 */
-	KeyType const& z() const { return key_[2]; }
+	constexpr KeyType const& z() const noexcept { return key_[2]; }
 
 	/**
 	 * @brief Returns the x component of the key
 	 *
 	 * @return KeyType& The x component of the key
 	 */
-	KeyType& x() { return key_[0]; }
+	constexpr KeyType& x() noexcept { return key_[0]; }
 
 	/**
 	 * @brief Returns the y component of the key
 	 *
 	 * @return KeyType& The y component of the key
 	 */
-	KeyType& y() { return key_[1]; }
+	constexpr KeyType& y() noexcept { return key_[1]; }
 
 	/**
 	 * @brief Returns the z component of the key
 	 *
 	 * @return KeyType& The z component of the key
 	 */
-	KeyType& z() { return key_[2]; }
+	constexpr KeyType& z() noexcept { return key_[2]; }
 
 	/**
 	 * @brief

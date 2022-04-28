@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -46,7 +45,7 @@
 #include <ufo/geometry/point.h>
 #include <ufo/math/quaternion.h>
 
-// STD
+// STL
 #include <stdexcept>
 
 namespace ufo::geometry
@@ -56,30 +55,34 @@ struct OBB {
 	Point half_size;
 	math::Quaternion rotation;
 
-	OBB() {}
+	inline OBB() = default;
 
-	OBB(OBB const& obb)
-	    : center(obb.center), half_size(obb.half_size), rotation(obb.rotation)
+	inline OBB(Point const& center, Point const& half_size)
+	    : center(center), half_size(half_size)
 	{
 	}
 
-	OBB(Point const& center, Point const& half_size) : center(center), half_size(half_size)
-	{
-	}
-
-	OBB(Point const& center, Point const& half_size, math::Quaternion const& rotation)
+	inline OBB(Point const& center, Point const& half_size,
+	           math::Quaternion const& rotation)
 	    : center(center), half_size(half_size), rotation(rotation)
 	{
 	}
 
-	OBB(Point const& center, Point const& half_size, Point const& rotation)
+	inline OBB(Point const& center, Point const& half_size, Point const& rotation)
 	    : center(center),
 	      half_size(half_size),
 	      rotation(rotation[0], rotation[1], rotation[2])
 	{
 	}
 
-	Point getMin() const
+  bool operator==(OBB const& rhs) const {
+    return rhs.center == center && rhs.half_size == half_size &&
+           rhs.rotation == rotation;
+  }
+
+  bool operator!=(OBB const& rhs) const { return !(*this == rhs); }
+
+	inline Point getMin() const
 	{
 		Point rot_half_size = rotation.rotate(half_size);
 		Point corners[8]{
@@ -110,7 +113,7 @@ struct OBB {
 		return minimum;
 	}
 
-	Point getMax() const
+	inline Point getMax() const
 	{
 		Point rot_half_size = rotation.rotate(half_size);
 		Point corners[8]{

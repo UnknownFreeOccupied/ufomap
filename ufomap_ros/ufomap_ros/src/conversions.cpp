@@ -1,10 +1,9 @@
-/**
- * UFO ROS integration
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufomap_ros
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -42,147 +41,14 @@
 // UFO ROS
 #include <ufomap_ros/conversions.h>
 
-// ROS
-#include <sensor_msgs/point_cloud2_iterator.h>
-
 namespace ufomap_ros
 {
-void getFields(sensor_msgs::PointCloud2 const& cloud, bool& has_x, bool& has_y,
-               bool& has_z, bool& has_rgb)
+std::optional<sensor_msgs::PointField> getField(sensor_msgs::PointCloud2 const& cloud,
+                                                std::string const& field_name)
 {
-	has_x = false;
-	has_y = false;
-	has_z = false;
-	has_rgb = false;
-
-	for (auto const& field : cloud.fields) {
-		if ("x" == field.name) {
-			has_x = true;
-		} else if ("y" == field.name) {
-			has_y = true;
-		} else if ("z" == field.name) {
-			has_z = true;
-		} else if ("rgb" == field.name) {
-			has_rgb = true;
-		} else if ("r" == field.name) {
-			has_rgb = true;
-		} else if ("g" == field.name) {
-			has_rgb = true;
-		} else if ("b" == field.name) {
-			has_rgb = true;
-		}
-	}
-}
-
-void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in, ufo::map::PointCloud& cloud_out)
-{
-	cloud_out.reserve(cloud_in.data.size() / cloud_in.point_step);
-
-	bool has_x, has_y, has_z, has_rgb;
-	getFields(cloud_in, has_x, has_y, has_z, has_rgb);
-
-	if (!has_x || !has_y || !has_z) {
-		throw std::runtime_error("cloud_in missing one or more of the xyz fields");
-	}
-
-	sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud_in, "x");
-	sensor_msgs::PointCloud2ConstIterator<float> iter_y(cloud_in, "y");
-	sensor_msgs::PointCloud2ConstIterator<float> iter_z(cloud_in, "z");
-	for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-		if (!std::isnan(*iter_x) && !std::isnan(*iter_y) && !std::isnan(*iter_z)) {
-			cloud_out.push_back(ufo::map::Point3(*iter_x, *iter_y, *iter_z));
-		}
-	}
-}
-
-void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
-              ufo::map::PointCloudColor& cloud_out)
-{
-	cloud_out.reserve(cloud_in.data.size() / cloud_in.point_step);
-
-	bool has_x, has_y, has_z, has_rgb;
-	getFields(cloud_in, has_x, has_y, has_z, has_rgb);
-
-	if (!has_x || !has_y || !has_z) {
-		throw std::runtime_error("cloud_in missing one or more of the xyz fields");
-	}
-
-	sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud_in, "x");
-	sensor_msgs::PointCloud2ConstIterator<float> iter_y(cloud_in, "y");
-	sensor_msgs::PointCloud2ConstIterator<float> iter_z(cloud_in, "z");
-
-	if (has_rgb) {
-		sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_r(cloud_in, "r");
-		sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_g(cloud_in, "g");
-		sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_b(cloud_in, "b");
-
-		for (; iter_x != iter_x.end();
-		     ++iter_x, ++iter_y, ++iter_z, ++iter_r, ++iter_g, ++iter_b) {
-			if (!std::isnan(*iter_x) && !std::isnan(*iter_y) && !std::isnan(*iter_z) &&
-			    !std::isnan(*iter_r) && !std::isnan(*iter_g) && !std::isnan(*iter_b)) {
-				cloud_out.push_back(
-				    ufo::map::Point3Color(*iter_x, *iter_y, *iter_z, *iter_r, *iter_g, *iter_b));
-			}
-		}
-
-	} else {
-		// TODO: Should this throw?
-		// throw std::runtime_error("cloud_in missing one or more of the rgb fields");
-
-		for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-			if (!std::isnan(*iter_x) && !std::isnan(*iter_y) && !std::isnan(*iter_z)) {
-				cloud_out.push_back(ufo::map::Point3Color(*iter_x, *iter_y, *iter_z));
-			}
-		}
-	}
-}
-
-void ufoToRos(ufo::map::PointCloud const& cloud_in, sensor_msgs::PointCloud2& cloud_out)
-{
-	bool has_x, has_y, has_z, has_rgb;
-	getFields(cloud_out, has_x, has_y, has_z, has_rgb);
-
-	sensor_msgs::PointCloud2Modifier cloud_out_modifier(cloud_out);
-	cloud_out_modifier.setPointCloud2FieldsByString(1, "xyz");
-	cloud_out_modifier.resize(cloud_in.size());
-
-	sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_out, "x");
-	sensor_msgs::PointCloud2Iterator<float> iter_y(cloud_out, "y");
-	sensor_msgs::PointCloud2Iterator<float> iter_z(cloud_out, "z");
-
-	for (size_t i = 0; i < cloud_in.size(); ++i, ++iter_x, ++iter_y, ++iter_z) {
-		*iter_x = cloud_in[i][0];
-		*iter_y = cloud_in[i][1];
-		*iter_z = cloud_in[i][2];
-	}
-}
-
-void ufoToRos(ufo::map::PointCloudColor const& cloud_in,
-              sensor_msgs::PointCloud2& cloud_out)
-{
-	bool has_x, has_y, has_z, has_rgb;
-	getFields(cloud_out, has_x, has_y, has_z, has_rgb);
-
-	sensor_msgs::PointCloud2Modifier cloud_out_modifier(cloud_out);
-	cloud_out_modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
-	cloud_out_modifier.resize(cloud_in.size());
-
-	sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_out, "x");
-	sensor_msgs::PointCloud2Iterator<float> iter_y(cloud_out, "y");
-	sensor_msgs::PointCloud2Iterator<float> iter_z(cloud_out, "z");
-	sensor_msgs::PointCloud2Iterator<uint8_t> iter_r(cloud_out, "r");
-	sensor_msgs::PointCloud2Iterator<uint8_t> iter_g(cloud_out, "g");
-	sensor_msgs::PointCloud2Iterator<uint8_t> iter_b(cloud_out, "b");
-
-	for (size_t i = 0; i < cloud_in.size();
-	     ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_r, ++iter_g, ++iter_b) {
-		*iter_x = cloud_in[i][0];
-		*iter_y = cloud_in[i][1];
-		*iter_z = cloud_in[i][2];
-		*iter_r = cloud_in[i].getColor().r;
-		*iter_g = cloud_in[i].getColor().g;
-		*iter_b = cloud_in[i].getColor().b;
-	}
+	auto idx = sensor_msgs::getPointCloud2FieldIndex(cloud, field_name);
+	return 0 > idx ? std::nullopt
+	               : std::optional<sensor_msgs::PointField>{cloud.fields[idx]};
 }
 
 // Vector3/Point
@@ -202,6 +68,11 @@ void rosToUfo(geometry_msgs::Vector3 const& point_in, ufo::math::Vector3& point_
 }
 
 ufo::math::Vector3 rosToUfo(geometry_msgs::Point const& point)
+{
+	return ufo::math::Vector3(point.x, point.y, point.z);
+}
+
+ufo::math::Vector3 rosToUfo(geometry_msgs::Vector3 const& point)
 {
 	return ufo::math::Vector3(point.x, point.y, point.z);
 }
@@ -287,5 +158,4 @@ geometry_msgs::Transform ufoToRos(ufo::math::Pose6 const& transform)
 	ufoToRos(transform, transform_out);
 	return transform_out;
 }
-
 }  // namespace ufomap_ros

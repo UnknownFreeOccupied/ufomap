@@ -1,0 +1,25 @@
+# Name of the file if you want to save
+string filename
+# Depth levels
+uint8 depth_levels
+# The depth of the map
+uint8 depth
+# Resolution
+float64 resolution
+# Other as unknown space
+bool as_unknown
+# If the file should be compressed
+bool compress
+# Compression level (higher number equals more compressed)
+int32 compression_level
+# Bounding volume of which part of the map should be saved
+ufomap_msgs/AABB aabb
+# Publish map
+bool publish
+# Publish map frame
+string publish_frame
+---
+# If it was successful
+bool success
+# The map to be returned
+ufomap_msgs/UFOMap map

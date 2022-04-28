@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -50,14 +49,9 @@ struct LineSegment {
 	Point start;
 	Point end;
 
-	LineSegment() {}
+	inline LineSegment() = default;
 
-	LineSegment(LineSegment const& line_segment)
-	    : start(line_segment.start), end(line_segment.end)
-	{
-	}
-
-	LineSegment(Point const& start, Point const& end) : start(start), end(end) {}
+	inline LineSegment(Point const& start, Point const& end) : start(start), end(end) {}
 };
 }  // namespace ufo::geometry
 

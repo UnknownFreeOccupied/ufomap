@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -48,13 +47,11 @@ namespace ufo::geometry
 {
 struct Sphere {
 	Point center;
-	double radius;
+	float radius;
 
-	Sphere() : center(0.0, 0.0, 0.0), radius(0.0) {}
+	inline Sphere() = default;
 
-	Sphere(Sphere const& sphere) : center(sphere.center), radius(sphere.radius) {}
-
-	Sphere(Point const& center, double radius) : center(center), radius(radius) {}
+	inline Sphere(Point const& center, float radius) : center(center), radius(radius) {}
 };
 }  // namespace ufo::geometry
 

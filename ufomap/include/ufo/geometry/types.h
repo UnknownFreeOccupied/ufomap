@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
- * 
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
+ *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- * 
  */
 
 /*
@@ -43,6 +42,7 @@
 #define UFO_GEOMETRY_TYPES_H
 
 #include <ufo/geometry/aabb.h>
+#include <ufo/geometry/aaebb.h>
 #include <ufo/geometry/frustum.h>
 #include <ufo/geometry/line_segment.h>
 #include <ufo/geometry/obb.h>
@@ -53,9 +53,10 @@
 
 #include <variant>
 
-namespace ufo::geometry {
+namespace ufo::geometry
+{
 using BoundingVar =
-    std::variant<AABB, Frustum, LineSegment, OBB, Plane, Point, Ray, Sphere>;
+    std::variant<AABB, AAEBB, Frustum, LineSegment, OBB, Plane, Point, Ray, Sphere>;
 }  // namespace ufo::geometry
 
 #endif  // UFO_GEOMETRY_TYPES_H

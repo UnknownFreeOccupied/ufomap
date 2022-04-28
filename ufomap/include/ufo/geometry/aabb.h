@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -50,23 +49,28 @@ struct AABB {
 	Point center;
 	Point half_size;
 
-	AABB() {}
+	inline AABB() = default;
 
-	AABB(AABB const& aabb) : center(aabb.center), half_size(aabb.half_size) {}
-
-	AABB(Point const& center, double half_size)
+	inline AABB(Point const& center, float half_size)
 	    : center(center), half_size(half_size, half_size, half_size)
 	{
 	}
 
-	AABB(Point const& min, Point const& max) : half_size((max - min) / 2.0)
+	inline AABB(Point const& min, Point const& max) : half_size((max - min) / 2.0)
 	{
 		center = min + half_size;
 	}
 
-	Point getMin() const { return center - half_size; }
+	bool operator==(AABB const& rhs) const
+	{
+		return rhs.center == center && rhs.half_size == half_size;
+	}
 
-	Point getMax() const { return center + half_size; }
+	bool operator!=(AABB const& rhs) const { return !(*this == rhs); }
+
+	inline Point getMin() const { return center - half_size; }
+
+	inline Point getMax() const { return center + half_size; }
 };
 }  // namespace ufo::geometry
 

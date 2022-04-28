@@ -1,10 +1,9 @@
-/**
+/*
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -43,63 +42,36 @@
 #define UFO_MAP_TYPES_H
 
 // UFO
-#include <ufo/map/color.h>
-#include <ufo/math/vector3.h>
 
-// STD
+// STL
 #include <cstdint>
+#include <utility>
 
 namespace ufo::map
 {
+enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
+enum class PropagationCriteria { Max, Min, Mean, Sum, Custom };
+
 using CodeType = uint64_t;
-using KeyType = unsigned int;
-using DepthType = unsigned int;
+using KeyType = uint32_t;
+using DepthType = uint8_t;
+using TimeStepType = uint32_t;
 
-using Point3 = ufo::math::Vector3;
-
-class Point3Color : public Point3
-{
- public:
-	Point3Color() {}
-
-	Point3Color(Point3 const& point, Color const& color) : Point3(point), color_(color) {}
-
-	Point3Color(double x, double y, double z, uint8_t r, uint8_t g, uint8_t b)
-	    : Point3(x, y, z), color_(r, g, b)
-	{
-	}
-
-	Point3Color(Point3 const& point) : Point3(point) {}
-
-	Point3Color(double x, double y, double z) : Point3(x, y, z) {}
-
-	Point3Color(uint8_t r, uint8_t g, uint8_t b) : color_(r, g, b) {}
-
-	Point3Color(Color const& color) : color_(color) {}
-
-	Point3Color& operator=(Point3Color const& rhs)
-	{
-		Point3::operator=(rhs);
-		color_ = rhs.color_;
-		return *this;
-	}
-
-	Color const& getColor() const { return color_; }
-
-	Color& getColor() { return color_; }
-
-	void setColor(Color const& new_color) { color_ = new_color; }
-
-	void setColor(uint8_t r, uint8_t g, uint8_t b)
-	{
-		color_.r = r;
-		color_.g = g;
-		color_.b = b;
-	}
-
- protected:
-	Color color_;
+// Check if
+template <template <typename...> class Base, typename Derived>
+struct is_base_of_template_impl {
+	template <typename... Ts>
+	static constexpr std::true_type test(Base<Ts...> const*);
+	static constexpr std::false_type test(...);
+	using type = decltype(test(std::declval<Derived*>()));
 };
+
+template <template <typename...> class Base, typename Derived>
+using is_base_of_template = typename is_base_of_template_impl<Base, Derived>::type;
+
+template <template <typename...> class Base, typename Derived>
+inline constexpr bool is_base_of_template_v = is_base_of_template<Base, Derived>::value;
+
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TYPES_H

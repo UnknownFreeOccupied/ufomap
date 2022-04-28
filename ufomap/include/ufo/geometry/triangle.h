@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -56,10 +55,11 @@ struct Triangle {
 	{
 	}
 
-	Triangle(Triangle const& other)
-	    : points{other.points[0], other.points[1], other.points[2]}
-	{
-	}
+	Triangle(Triangle const& other) = default;
+	Triangle(Triangle&& other) = default;
+
+	Triangle& operator=(Triangle const& rhs) = default;
+	Triangle& operator=(Triangle&& rhs) = default;
 };
 }  // namespace ufo::geometry
 

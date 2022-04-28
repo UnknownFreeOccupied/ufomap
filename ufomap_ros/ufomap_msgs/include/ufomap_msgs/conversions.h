@@ -1,10 +1,9 @@
-/**
- * UFOMap ROS message conversions
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufo_ros
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -52,6 +51,10 @@
 #include <ufo/geometry/point.h>
 #include <ufo/geometry/ray.h>
 #include <ufo/geometry/sphere.h>
+#include <ufo/geometry/types.h>
+#include <ufo/map/io.h>
+#include <ufo/map/predicate/predicates.h>
+#include <ufo/map/types.h>
 
 // UFO msg
 #include <ufomap_msgs/AABB.h>
@@ -65,7 +68,8 @@
 #include <ufomap_msgs/Sphere.h>
 #include <ufomap_msgs/UFOMap.h>
 
-// STD
+// STL
+#include <optional>
 #include <type_traits>
 
 namespace ufomap_msgs
@@ -119,70 +123,54 @@ ufomap_msgs::BoundingVolume ufoToMsg(
 // ROS message type to UFO type
 //
 
-template <typename TreeType>
-bool msgToUfo(ufomap_msgs::UFOMap const& msg, TreeType& tree)
+template <class Map>
+void msgToUfo(ufomap_msgs::UFOMap const& msg, Map& map, bool propagate = true)
 {
-	std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
-	                              std::ios_base::binary);
-	if (!msg.data.empty()) {
-		data_stream.write((char const*)&msg.data[0], msg.data.size());
-		return tree.readData(data_stream, msgToUfo(msg.info.bounding_volume),
-		                     msg.info.resolution, msg.info.depth_levels,
-		                     msg.info.uncompressed_data_size, msg.info.compressed);
+	if (msg.data.empty()) {
+		return;
 	}
-	return false;
+
+	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+
+	data.write(reinterpret_cast<char const*>(msg.data.data()),
+	           sizeof(typename decltype(msg.data)::value_type) * msg.data.size());
+
+	map.read(data, propagate);
 }
 
 //
 // UFO type to ROS message type
 //
 
-template <typename TreeType>
-bool ufoToMsg(TreeType const& tree, ufomap_msgs::UFOMap& msg, bool compress = false,
-              unsigned int depth = 0, int compression_acceleration_level = 1,
-              int compression_level = 0)
+template <class Map, class Predicates,
+          typename = std::enable_if_t<!std::is_scalar_v<Predicates>>>
+ufomap_msgs::UFOMap ufoToMsg(Map const& map, Predicates const& predicates,
+                             ufo::map::DepthType depth = 0, bool compress = false,
+                             int compression_acceleration_level = 1,
+                             int compression_level = 0)
 {
-	return ufoToMsg(tree, msg, ufo::geometry::BoundingVolume(), compress, depth,
+	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+
+	map.write(data, predicates, depth, compress, compression_acceleration_level,
+	          compression_level);
+
+	ufomap_msgs::UFOMap msg;
+	msg.data.resize(data.tellp());
+	data.seekg(0, std::ios_base::beg);
+	data.read(reinterpret_cast<char*>(msg.data.data()), msg.data.size());
+	return msg;
+}
+
+template <class Map>
+ufomap_msgs::UFOMap ufoToMsg(Map const& map, ufo::map::DepthType depth = 0,
+                             bool compress = false,
+                             int compression_acceleration_level = 1,
+                             int compression_level = 0)
+{
+	return ufoToMsg(map, ufo::map::predicate::TRUE(), depth, compress,
 	                compression_acceleration_level, compression_level);
-}
-
-template <typename TreeType, typename BoundingType>
-bool ufoToMsg(TreeType const& tree, ufomap_msgs::UFOMap& msg,
-              BoundingType const& bounding_volume, bool compress = false,
-              unsigned int depth = 0, int compression_acceleration_level = 1,
-              int compression_level = 0)
-{
-	ufo::geometry::BoundingVolume bv;
-	bv.add(bounding_volume);
-	return ufoToMsg(tree, msg, bv, compress, depth, compression_acceleration_level,
-	                compression_level);
-}
-
-template <typename TreeType>
-bool ufoToMsg(TreeType const& tree, ufomap_msgs::UFOMap& msg,
-              ufo::geometry::BoundingVolume const& bounding_volume, bool compress = false,
-              unsigned int depth = 0, int compression_acceleration_level = 1,
-              int compression_level = 0)
-{
-	msg.info.version = tree.getFileVersion();
-	msg.info.id = tree.getTreeType();
-	msg.info.resolution = tree.getResolution();
-	msg.info.depth_levels = tree.getTreeDepthLevels();
-	msg.info.compressed = compress;
-	msg.info.bounding_volume = ufoToMsg(bounding_volume);
-
-	std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
-	                              std::ios_base::binary);
-	msg.info.uncompressed_data_size =
-	    tree.writeData(data_stream, bounding_volume, compress, depth,
-	                   compression_acceleration_level, compression_level);
-	if (0 > msg.info.uncompressed_data_size) {
-		return false;
-	}
-
-	std::string const& data_string = data_stream.str();
-	msg.data = std::vector<int8_t>(data_string.begin(), data_string.end());
-	return true;
 }
 
 }  // namespace ufomap_msgs

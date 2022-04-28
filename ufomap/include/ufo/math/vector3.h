@@ -1,10 +1,9 @@
-/**
- * UFOMath - the math library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufomath
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -45,6 +44,7 @@
 #include <stddef.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace ufo::math
@@ -52,17 +52,9 @@ namespace ufo::math
 class Vector3
 {
  public:
-	Vector3() : data_{0.0, 0.0, 0.0} {}
-	Vector3(double x, double y, double z) : data_{x, y, z} {}
-	Vector3(Vector3 const& other) : data_{other.data_[0], other.data_[1], other.data_[2]} {}
+	inline Vector3() = default;
 
-	Vector3& operator=(Vector3 const& other)
-	{
-		data_[0] = other.data_[0];
-		data_[1] = other.data_[1];
-		data_[2] = other.data_[2];
-		return *this;
-	}
+	inline Vector3(float x, float y, float z) : data_{x, y, z} {}
 
 	Vector3 cross(Vector3 const& other) const { return cross(*this, other); }
 	static Vector3 cross(Vector3 const& first, Vector3 const& second)
@@ -73,32 +65,32 @@ class Vector3
 		    (first.data_[0] * second.data_[1]) - (first.data_[1] * second.data_[0]));
 	}
 
-	double dot(Vector3 const& other) const { return dot(*this, other); }
-	static double dot(Vector3 const& first, Vector3 const& second)
+	float dot(Vector3 const& other) const { return dot(*this, other); }
+	static float dot(Vector3 const& first, Vector3 const& second)
 	{
 		return (first.data_[0] * second.data_[0]) + (first.data_[1] * second.data_[1]) +
 		       (first.data_[2] * second.data_[2]);
 	}
 
-	double& operator()(size_t idx) { return data_[idx]; }
+	constexpr float& operator()(size_t idx) { return data_[idx]; }
 
-	double const& operator()(size_t idx) const { return data_[idx]; }
-	double& operator[](size_t idx) { return data_[idx]; }
-	double const& operator[](size_t idx) const { return data_[idx]; }
+	constexpr float const& operator()(size_t idx) const { return data_[idx]; }
+	constexpr float& operator[](size_t idx) { return data_[idx]; }
+	constexpr float const& operator[](size_t idx) const { return data_[idx]; }
 
-	double& x() { return data_[0]; }
-	double const& x() const { return data_[0]; }
-	double& y() { return data_[1]; }
-	double const& y() const { return data_[1]; }
-	double& z() { return data_[2]; }
-	double const& z() const { return data_[2]; }
+	constexpr float& x() noexcept { return data_[0]; }
+	constexpr float const& x() const noexcept { return data_[0]; }
+	constexpr float& y() noexcept { return data_[1]; }
+	constexpr float const& y() const noexcept { return data_[1]; }
+	constexpr float& z() noexcept { return data_[2]; }
+	constexpr float const& z() const noexcept { return data_[2]; }
 
-	double& roll() { return data_[0]; }
-	double const& roll() const { return data_[0]; }
-	double& pitch() { return data_[1]; }
-	double const& pitch() const { return data_[1]; }
-	double& yaw() { return data_[2]; }
-	double const& yaw() const { return data_[2]; }
+	constexpr float& roll() noexcept { return data_[0]; }
+	constexpr float const& roll() const noexcept { return data_[0]; }
+	constexpr float& pitch() noexcept { return data_[1]; }
+	constexpr float const& pitch() const noexcept { return data_[1]; }
+	constexpr float& yaw() noexcept { return data_[2]; }
+	constexpr float const& yaw() const noexcept { return data_[2]; }
 
 	Vector3 operator-() const { return Vector3(-data_[0], -data_[1], -data_[2]); }
 
@@ -107,7 +99,7 @@ class Vector3
 		return Vector3(data_[0] - other.data_[0], data_[1] - other.data_[1],
 		               data_[2] - other.data_[2]);
 	}
-	Vector3 operator-(double value) const
+	Vector3 operator-(float value) const
 	{
 		return Vector3(data_[0] - value, data_[1] - value, data_[2] - value);
 	}
@@ -116,7 +108,7 @@ class Vector3
 		return Vector3(data_[0] + other.data_[0], data_[1] + other.data_[1],
 		               data_[2] + other.data_[2]);
 	}
-	Vector3 operator+(double value) const
+	Vector3 operator+(float value) const
 	{
 		return Vector3(data_[0] + value, data_[1] + value, data_[2] + value);
 	}
@@ -125,7 +117,7 @@ class Vector3
 		return Vector3(data_[0] * other.data_[0], data_[1] * other.data_[1],
 		               data_[2] * other.data_[2]);
 	}
-	Vector3 operator*(double value) const
+	Vector3 operator*(float value) const
 	{
 		return Vector3(data_[0] * value, data_[1] * value, data_[2] * value);
 	}
@@ -134,74 +126,74 @@ class Vector3
 		return Vector3(data_[0] / other.data_[0], data_[1] / other.data_[1],
 		               data_[2] / other.data_[2]);
 	}
-	Vector3 operator/(double value) const
+	Vector3 operator/(float value) const
 	{
 		return Vector3(data_[0] / value, data_[1] / value, data_[2] / value);
 	}
 
-	void operator-=(Vector3 const& other)
+	constexpr void operator-=(Vector3 const& other) noexcept
 	{
 		data_[0] -= other.data_[0];
 		data_[1] -= other.data_[1];
 		data_[2] -= other.data_[2];
 	}
-	void operator+=(Vector3 const& other)
+	constexpr void operator+=(Vector3 const& other) noexcept
 	{
 		data_[0] += other.data_[0];
 		data_[1] += other.data_[1];
 		data_[2] += other.data_[2];
 	}
-	void operator*=(Vector3 const& other)
+	constexpr void operator*=(Vector3 const& other) noexcept
 	{
 		data_[0] *= other.data_[0];
 		data_[1] *= other.data_[1];
 		data_[2] *= other.data_[2];
 	}
-	void operator/=(Vector3 const& other)
+	constexpr void operator/=(Vector3 const& other) noexcept
 	{
 		data_[0] /= other.data_[0];
 		data_[1] /= other.data_[1];
 		data_[2] /= other.data_[2];
 	}
 
-	void operator-=(double value)
+	constexpr void operator-=(float value) noexcept
 	{
 		data_[0] -= value;
 		data_[1] -= value;
 		data_[2] -= value;
 	}
-	void operator+=(double value)
+	constexpr void operator+=(float value) noexcept
 	{
 		data_[0] += value;
 		data_[1] += value;
 		data_[2] += value;
 	}
-	void operator*=(double value)
+	constexpr void operator*=(float value) noexcept
 	{
 		data_[0] *= value;
 		data_[1] *= value;
 		data_[2] *= value;
 	}
-	void operator/=(double value)
+	constexpr void operator/=(float value) noexcept
 	{
 		data_[0] /= value;
 		data_[1] /= value;
 		data_[2] /= value;
 	}
 
-	bool operator==(Vector3 const& other) const
+	bool operator==(Vector3 const& other) const noexcept
 	{
 		return data_[0] == other.data_[0] && data_[1] == other.data_[1] &&
 		       data_[2] == other.data_[2];
 	}
-	bool operator!=(Vector3 const& other) const
+	bool operator!=(Vector3 const& other) const noexcept
 	{
 		return data_[0] != other.data_[0] || data_[1] != other.data_[1] ||
 		       data_[2] != other.data_[2];
 	}
 
-	double norm() const { return std::sqrt(squaredNorm()); }
-	double squaredNorm() const
+	float norm() const { return std::sqrt(squaredNorm()); }
+	float squaredNorm() const noexcept
 	{
 		return (data_[0] * data_[0]) + (data_[1] * data_[1]) + (data_[2] * data_[2]);
 	}
@@ -217,29 +209,31 @@ class Vector3
 		return temp.normalize();
 	}
 
-	double angleTo(Vector3 const& other) const
+	float angleTo(Vector3 const& other) const
 	{
 		return std::acos(dot(other) / (norm() * other.norm()));
 	}
 
-	double distance(Vector3 const& other) const
+	float squaredDistance(Vector3 const& other) const
 	{
-		double x = data_[0] - other.data_[0];
-		double y = data_[1] - other.data_[1];
-		double z = data_[2] - other.data_[2];
-		return sqrt((x * x) + (y * y) + (z * z));
+		float x = data_[0] - other.data_[0];
+		float y = data_[1] - other.data_[1];
+		float z = data_[2] - other.data_[2];
+		return (x * x) + (y * y) + (z * z);
 	}
-	double distanceXY(Vector3 const& other) const
+	float distance(Vector3 const& other) const { return sqrt(squaredDistance(other)); }
+	float squaredDistanceXY(Vector3 const& other) const
 	{
-		double x = data_[0] - other.data_[0];
-		double y = data_[1] - other.data_[1];
-		return sqrt((x * x) + (y * y));
+		float x = data_[0] - other.data_[0];
+		float y = data_[1] - other.data_[1];
+		return (x * x) + (y * y);
 	}
+	float distanceXY(Vector3 const& other) const { return sqrt(squaredDistanceXY(other)); }
 
-	size_t size() const { return 3; }
+	constexpr size_t size() const noexcept { return 3; }
 
-	double min() const { return std::min(std::min(data_[0], data_[1]), data_[2]); }
-	double max() const { return std::max(std::max(data_[0], data_[1]), data_[2]); }
+	constexpr float min() const { return std::min(std::min(data_[0], data_[1]), data_[2]); }
+	constexpr float max() const { return std::max(std::max(data_[0], data_[1]), data_[2]); }
 
 	size_t minElementIndex() const
 	{
@@ -260,7 +254,7 @@ class Vector3
 
 	Vector3& ceil()
 	{
-		for (int i = 0; i < 3; ++i) {
+		for (int i = 0; 3 != i; ++i) {
 			data_[i] = std::ceil(data_[i]);
 		}
 		return *this;
@@ -271,7 +265,7 @@ class Vector3
 	}
 	Vector3& floor()
 	{
-		for (int i = 0; i < 3; ++i) {
+		for (int i = 0; 3 != i; ++i) {
 			data_[i] = std::floor(data_[i]);
 		}
 		return *this;
@@ -282,7 +276,7 @@ class Vector3
 	}
 	Vector3& trunc()
 	{
-		for (int i = 0; i < 3; ++i) {
+		for (int i = 0; 3 != i; ++i) {
 			data_[i] = std::trunc(data_[i]);
 		}
 		return *this;
@@ -293,7 +287,7 @@ class Vector3
 	}
 	Vector3& round()
 	{
-		for (int i = 0; i < 3; ++i) {
+		for (int i = 0; 3 != i; ++i) {
 			data_[i] = std::round(data_[i]);
 		}
 		return *this;
@@ -305,7 +299,7 @@ class Vector3
 
 	Vector3& clamp(Vector3 const& min, Vector3 const& max)
 	{
-		for (int i = 0; i < 3; ++i) {
+		for (int i = 0; 3 != i; ++i) {
 			data_[i] = std::clamp(data_[i], min[i], max[i]);
 		}
 		return *this;
@@ -324,7 +318,7 @@ class Vector3
 	}
 
  protected:
-	double data_[3];
+	std::array<float, 3> data_;
 };
 }  // namespace ufo::math
 

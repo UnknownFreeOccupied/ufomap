@@ -1,10 +1,9 @@
-/**
+/*
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -42,286 +41,527 @@
 #ifndef UFO_MAP_ITERATOR_OCTREE_H
 #define UFO_MAP_ITERATOR_OCTREE_H
 
+// UFO
 #include <ufo/geometry/bounding_volume.h>
-#include <ufo/geometry/collision_checks.h>
+#include <ufo/geometry/minimum_distance.h>
 #include <ufo/map/code.h>
+#include <ufo/map/octree/node.h>
+#include <ufo/map/predicate/octree.h>
+#include <ufo/map/predicate/predicates.h>
 #include <ufo/map/types.h>
 
-#include <array>
+// STL
+#include <cstddef>   // For std::ptrdiff_t
+#include <iterator>  // For std::forward_iterator_tag
+#include <queue>
+#include <set>
+#include <stack>
 #include <type_traits>
+// #include <memory>
+// #include <utility>
 
 namespace ufo::map
 {
-template <typename TREE, typename DATA_TYPE, typename INNER_NODE, typename LEAF_NODE,
-          bool ONLY_LEAF>
-class OctreeIterator
+template <class Tree, typename T>
+class IteratorBase
 {
+ public:
+	// Tags
+	using iterator_category = std::forward_iterator_tag;
+	using difference_type = std::ptrdiff_t;
+	using value_type = T;
+	using pointer = value_type*;                // or also value_type*
+	using reference = value_type&;              // or also value_type&
+	using const_pointer = value_type const*;    // or also value_type*
+	using const_reference = value_type const&;  // or also value_type&
+
+	IteratorBase() : tree_(nullptr) {}
+
+	IteratorBase(Tree const* tree) : tree_(tree) {}
+
+	virtual IteratorBase& next() = 0;
+
+	virtual IteratorBase* getCopy() = 0;
+
+	// virtual reference getData() = 0;
+	virtual const_reference getData() const = 0;
+
+	Tree const* getTree() const { return tree_; }
+
+	virtual bool equal(IteratorBase const& other) const = 0;
+
  protected:
-	struct IteratorNode {
-		// Pointer to the actual node
-		LEAF_NODE const* node;
-		// The index of the node from its parent
-		unsigned int index;
-		// The AABB for the node
-		ufo::geometry::AABB aabb;
-		// Indicates if this node is completely inside the bounding volume.
-		// Meaning its children does not have to do any intersection checks.
-		bool inside;
-	};
+	DepthType getDepth(Node const& node) const { return node.getDepth(); }
+
+	Code getCode(Node const& node) const { return node.getCode(); }
+
+	size_t getIdx(Node const& node) const
+	{
+		return getCode(node).getChildIdx(getDepth(node));
+	}
+
+	bool hasChildren(Node const& node) const { return tree_->hasChildren(node); }
+
+	bool hasParent(Node const& node) const { return tree_->hasParent(node); }
+
+	Node getChild(Node const& node, unsigned int idx) const
+	{
+		return tree_->getChild(node, idx);
+	}
+
+	Node getSibling(Node const& node, unsigned int idx) const
+	{
+		return tree_->getSibling(node, idx);
+	}
+
+	template <class Predicates>
+	bool validInnerNode(Node const& node, Predicates const& predicates) const
+	{
+		return hasChildren(node) && validInnerNodeOnlyLeaves(node, predicates);
+	}
+
+	template <class Predicates>
+	bool validInnerNodeOnlyLeaves(Node const& node, Predicates const& predicates) const
+	{
+		return predicate::PredicateInnerCheck<Predicates>::apply(predicates, *tree_, node);
+	}
+
+	template <class Predicates>
+	bool validReturnNode(Node const& node, Predicates const& predicates) const
+	{
+		return predicate::PredicateValueCheck<Predicates>::apply(predicates, *tree_, node);
+	}
+
+ protected:
+	// The UFOMap
+	Tree const* tree_;
+};
+
+template <class Tree, typename T>
+class IteratorWrapper
+{
+ private:
+	using Base = IteratorBase<Tree, T>;
 
  public:
-	OctreeIterator() {}
+	// Tags
+	using iterator_category = typename Base::iterator_category;
+	using difference_type = typename Base::difference_type;
+	using value_type = typename Base::value_type;
+	using pointer = typename Base::pointer;
+	using reference = typename Base::reference;
+	using const_pointer = typename Base::const_pointer;
+	using const_reference = typename Base::const_reference;
 
-	OctreeIterator(TREE const* tree, ufo::geometry::BoundingVolume const& bounding_volume,
-	               DepthType min_depth = 0)
-	    : tree_(tree), bounding_volume_(bounding_volume), min_depth_(min_depth)
-	{
-	}
+	IteratorWrapper(Base* it_base) : it_base_(it_base) {}
 
-	OctreeIterator(TREE const* tree, INNER_NODE const& root,
-	               ufo::geometry::BoundingVolume const& bounding_volume,
-	               unsigned int min_depth = 0)
-	    : OctreeIterator(tree, bounding_volume, min_depth)
-	{
-		init(root);
-	}
+	IteratorWrapper(IteratorWrapper const& other) : it_base_(other.it_base_->getCopy()) {}
 
-	OctreeIterator(OctreeIterator const& other)
-	    : tree_(other.tree_),
-	      bounding_volume_(other.bounding_volume_),
-	      path_(other.path_),
-	      current_depth_(other.current_depth_),
-	      min_depth_(other.min_depth_),
-	      max_depth_(other.max_depth_)
+	IteratorWrapper& operator++()
 	{
-	}
-
-	OctreeIterator& operator=(OctreeIterator const& rhs)
-	{
-		tree_ = rhs.tree_;
-		bounding_volume_ = rhs.bounding_volume_;
-		path_ = rhs.path_;
-		current_depth_ = rhs.current_depth_;
-		min_depth_ = rhs.min_depth_;
-		max_depth_ = rhs.max_depth_;
+		it_base_->next();
 		return *this;
 	}
 
-	bool operator==(OctreeIterator const& rhs) const
+	IteratorWrapper operator++(int)
 	{
-		// TODO: Can be improved
-		return rhs.tree_ == tree_;  // && rhs.path_ == path_;
-	}
-
-	bool operator!=(OctreeIterator const& rhs) const { return !(*this == rhs); }
-
-	// Postfix increment
-	OctreeIterator operator++(int)
-	{
-		OctreeIterator result = *this;
+		IteratorWrapper result(it_base_->getCopy());
 		++(*this);
 		return result;
 	}
 
-	// Prefix increment
-	OctreeIterator& operator++()
+	// pointer operator->() { return &(it_base_->getData()); }
+
+	// reference operator*() { return it_base_->getData(); }
+
+	const_pointer operator->() const { return &(it_base_->getData()); }
+
+	const_reference operator*() const { return it_base_->getData(); }
+
+	friend bool operator==(IteratorWrapper const& lhs, IteratorWrapper const& rhs)
+	{
+		return lhs.it_base_->equal(*(rhs.it_base_));
+	}
+
+	friend bool operator!=(IteratorWrapper const& lhs, IteratorWrapper const& rhs)
+	{
+		return !(lhs == rhs);
+	}
+
+ private:
+	std::unique_ptr<Base> it_base_;
+};
+
+template <class Tree, class Predicates = predicate::TRUE>
+class Iterator : public IteratorBase<Tree, Node>
+{
+ private:
+	static constexpr bool OnlyLeaves =
+	    predicate::contains_predicate<predicate::Leaf, Predicates>();
+
+	using Base = IteratorBase<Tree, Node>;
+
+ public:
+	// Tags
+	using iterator_category = typename Base::iterator_category;
+	using difference_type = typename Base::difference_type;
+	using value_type = typename Base::value_type;
+	using pointer = typename Base::pointer;
+	using reference = typename Base::reference;
+	using const_pointer = typename Base::const_pointer;
+	using const_reference = typename Base::const_reference;
+
+	Iterator(Node const& root)
+	    : node_(root), predicates_(predicate::TRUE()), valid_inner_(false)
+	{
+	}
+
+	Iterator(Node const& root, Predicates const& predicates)
+	    : node_(root), predicates_(predicates), valid_inner_(false)
+	{
+	}
+
+	Iterator(Tree const* tree, Node const& root, Predicates const& predicates)
+	    : Base(tree), node_(root), predicates_(predicates), valid_inner_(false)
+	{
+		init();
+	}
+
+	Iterator& next() override
 	{
 		increment();
 		return *this;
 	}
 
-	DATA_TYPE const* operator->() const { return &(path_[current_depth_].node->value); }
+	Iterator* getCopy() override { return new Iterator(*this); }
 
-	DATA_TYPE const& operator*() const { return path_[current_depth_].node->value; }
+	// reference getData() override { return node_; }
 
-	double getSize() const { return tree_->getNodeSize(getDepth()); }
+	const_reference getData() const override { return node_; }
 
-	double getHalfSize() const { return tree_->getNodeHalfSize(getDepth()); }
-
-	ufo::geometry::AABB getBoundingVolume() const { return path_[current_depth_].aabb; }
-
-	// bool completelyInsideBoundingVolume() const { return path_[current_depth_].inside; }
-
-	DepthType getDepth() const { return current_depth_; }
-
-	Point3 getCenter() const { return path_[current_depth_].aabb.center; }
-
-	Code getCode(DepthType depth = 0) const
+	bool equal(Base const& other) const
 	{
-		// TODO: Improve
-		Code code = tree_->getRootCode();
-		for (int d = code.getDepth() - 1;
-		     static_cast<int>(getDepth()) <= d && static_cast<int>(depth) <= d; --d) {
-			code = code.getChild(path_[d].index);
-		}
-		return code;
+		return other.getTree() == this->getTree() && other.getData() == getData();
 	}
 
-	double getX() const { return path_[current_depth_].aabb.center[0]; }
-
-	double getY() const { return path_[current_depth_].aabb.center[1]; }
-
-	double getZ() const { return path_[current_depth_].aabb.center[2]; }
-
-	bool isPureLeaf() const { return 0 == getDepth(); }
-
-	bool isLeaf() const { return tree_->isLeaf(path_[getDepth()].node, getDepth()); }
-
-	bool hasChildren() const { return !isLeaf(); }
-
- public:
-	// iterator traits
-	using difference_type = std::ptrdiff_t;  // What should this be?
-	using value_type = DATA_TYPE;
-	using pointer = DATA_TYPE const*;
-	using reference = DATA_TYPE const&;
-	using iterator_category = std::forward_iterator_tag;
-
- protected:
-	void init(INNER_NODE const& root)
+ private:
+	void init()
 	{
-		current_depth_ = tree_->getTreeDepthLevels();
-		max_depth_ = current_depth_;
-
-		IteratorNode node;
-		node.node = &root;
-		node.index = 7;  // Root has no siblings
-		node.aabb.center = Point3(0, 0, 0);
-		double s = tree_->getNodeHalfSize(current_depth_);
-		node.aabb.half_size = Point3(s, s, s);
-		node.inside = bounding_volume_.empty();
-
-		// Prefill AABBs
-		for (size_t depth = min_depth_; depth < current_depth_; ++depth) {
-			s = tree_->getNodeHalfSize(depth);
-			path_[depth].aabb.half_size = Point3(s, s, s);
-		}
-
-		if (validNode(node, current_depth_) && current_depth_ >= min_depth_) {
-			path_[current_depth_] = node;
-			if (!validReturnNode()) {
-				operator++();
+		if constexpr (OnlyLeaves) {
+			if (this->validReturnNode(node_, predicates_)) {
+				valid_inner_ = false;
+			} else {
+				valid_inner_ = this->validInnerNodeOnlyLeaves(node_, predicates_);
+				if (valid_inner_) {
+					increment();
+				} else {
+					this->tree_ = nullptr;
+				}
 			}
 		} else {
-			// Same as end iterator
-			tree_ = nullptr;
-		}
-	}
+			valid_inner_ = this->validInnerNode(node_, predicates_);
 
-	bool hasMore() const { return getDepth() <= max_depth_; }
-
-	virtual bool validNode(IteratorNode& node, DepthType) const
-	{
-		if (node.inside) {
-			return true;
-		}
-
-		// Bounding volume can only contain one otherwise we cannot make sure the node is
-		// completely inside and we therefore only do the simple intersection test instead
-		// if (0 < depth && 1 == bounding_volume_.size()) {
-		// 	// Check if the node is completely inside the bounding volume
-		// 	double hs = node.aabb.half_size[0];
-		// 	Point3 const& c = node.aabb.center;
-		// 	std::array<Point3, 8> corners = {Point3(-hs, -hs, -hs), Point3(-hs, -hs, hs),
-		// 	                                 Point3(-hs, hs, -hs),  Point3(-hs, hs, hs),
-		// 	                                 Point3(hs, -hs, -hs),  Point3(hs, -hs, hs),
-		// 	                                 Point3(hs, hs, -hs),   Point3(hs, hs, hs)};
-		// 	bool one_inside = false;
-		// 	node.inside = true;
-		// 	for (Point3 const& offset : corners) {
-		// 		if (!bounding_volume_.intersects(c + offset)) {
-		// 			// The node is not completely inside the bounding volume
-		// 			node.inside = false;
-		// 			break;
-		// 		}
-		// 		one_inside = true;
-		// 	}
-
-		// 	if (one_inside) {
-		// 		return true;
-		// 	}
-		// }
-		return bounding_volume_.intersects(node.aabb);
-	}
-
-	virtual bool validReturnNode() const
-	{
-		if constexpr (ONLY_LEAF) {
-			return min_depth_ == getDepth() || isLeaf();
-		} else {
-			return true;
+			if (!this->validReturnNode(node_, predicates_)) {
+				if (valid_inner_) {
+					increment();
+				} else {
+					this->tree_ = nullptr;
+				}
+			}
 		}
 	}
 
 	void increment()
 	{
-		if (!hasMore()) {
-			tree_ = nullptr;
-		} else {
-			// Skip forward to next valid return node
-			do {
-				singleIncrement();
-			} while (hasMore() && !validReturnNode());
-
-			if (!hasMore()) {
-				tree_ = nullptr;
-			}
+		// Skip forward to next valid return node
+		while (this->tree_ && !singleIncrement()) {
 		}
 	}
 
-	virtual void singleIncrement()
+	// Return true if valid return node
+	bool singleIncrement()
 	{
-		if (getDepth() <= min_depth_ || isLeaf()) {
-			// Move to next leaf if possible
-			++path_[current_depth_].index;
-		} else {
-			// Current node has children
-			--current_depth_;
-			path_[current_depth_].index = 0;
-		}
+		// Go down the tree
+		if (valid_inner_) {
+			if constexpr (OnlyLeaves) {
+				Node current = this->getChild(node_, 0);
+				for (unsigned int idx = 0; idx != 8; ++idx) {
+					current = this->getSibling(current, idx);
 
-		if (!getNextNode()) {
-			// Move up in the tree until valid node is found
-			for (++current_depth_; current_depth_ < max_depth_; ++current_depth_) {
-				++path_[current_depth_].index;
-				if (getNextNode()) {
-					return;
+					if (this->validReturnNode(current, predicates_)) {
+						parents_.push(node_);
+						node_ = current;
+						valid_inner_ = false;
+						return true;
+					} else if (this->validInnerNodeOnlyLeaves(current, predicates_)) {
+						parents_.push(node_);
+						node_ = current;
+						valid_inner_ = true;
+						return false;
+					}
+				}
+			} else {
+				Node current = this->getChild(node_, 0);
+				
+				for (unsigned int idx = 0; idx != 8; ++idx) {
+					current = this->getSibling(current, idx);
+
+					bool valid_inner = this->validInnerNode(current, predicates_);
+
+					if (this->validReturnNode(current, predicates_)) {
+						parents_.push(node_);
+						node_ = current;
+						valid_inner_ = valid_inner;
+						return true;
+					} else if (valid_inner) {
+						parents_.push(node_);
+						node_ = current;
+						return false;
+					}
 				}
 			}
-
-			if (current_depth_ == max_depth_) {
-				++current_depth_;
-			}
 		}
-	}
 
-	bool getNextNode()
-	{
-		DepthType depth = current_depth_;
-		DepthType parent_depth = depth + 1;
-		Point3 const& p_center = path_[parent_depth].aabb.center;
-		double hs = path_[depth].aabb.half_size[0];
-		for (; 8 > path_[depth].index; ++path_[depth].index) {
-			INNER_NODE const& inner_node =
-			    static_cast<INNER_NODE const&>(*path_[parent_depth].node);
-			path_[depth].node = &tree_->getChild(inner_node, depth, path_[depth].index);
-			path_[depth].aabb.center = tree_->getChildCenter(p_center, hs, path_[depth].index);
-			path_[depth].inside = path_[parent_depth].inside;
+		// Go diagonal and up in the tree
+		while (this->getDepth(node_) != this->tree_->getTreeDepthLevels()) {
+			for (auto idx = this->getIdx(node_) + 1; 8 != idx; ++idx) {
+				node_ = this->getSibling(node_, idx);
 
-			if (validNode(path_[depth], depth)) {
-				return true;
+				if constexpr (OnlyLeaves) {
+					if (this->validReturnNode(node_, predicates_)) {
+						valid_inner_ = false;
+						return true;
+					} else if (this->validInnerNodeOnlyLeaves(node_, predicates_)) {
+						valid_inner_ = true;
+						return false;
+					}
+				} else {
+					valid_inner_ = this->validInnerNode(node_, predicates_);
+
+					if (this->validReturnNode(node_, predicates_)) {
+						return true;
+					} else if (valid_inner_) {
+						return false;
+					}
+				}
 			}
+			node_ = parents_.top();
+			parents_.pop();
+			valid_inner_ = true;
 		}
+
+		this->tree_ = nullptr;
+		valid_inner_ = false;
 		return false;
 	}
 
- protected:
-	TREE const* tree_ = nullptr;
-	ufo::geometry::BoundingVolume bounding_volume_;
-	std::array<IteratorNode, TREE::getMaxDepthLevels()> path_;
-	DepthType current_depth_;
-	DepthType min_depth_;
-	DepthType max_depth_;
+ private:
+	// Predicates
+	Predicates predicates_;
+
+	// If current is valid inner node
+	bool valid_inner_;
+
+	// Current node
+	Node node_;
+
+	// Parents
+	std::stack<Node, std::vector<Node>> parents_;
+};
+
+struct NearestNode {
+	NearestNode(Node const& node, double squared_distance)
+	    : node(node), squared_distance(squared_distance)
+	{
+	}
+
+	friend bool operator<(NearestNode const& v1, NearestNode const v2)
+	{
+		return v1.squared_distance < v2.squared_distance;
+	}
+
+	friend bool operator<=(NearestNode const& v1, NearestNode const v2)
+	{
+		return v1.squared_distance <= v2.squared_distance;
+	}
+
+	friend bool operator>(NearestNode const& v1, NearestNode const v2)
+	{
+		return v1.squared_distance > v2.squared_distance;
+	}
+
+	friend bool operator>=(NearestNode const& v1, NearestNode const v2)
+	{
+		return v1.squared_distance >= v2.squared_distance;
+	}
+
+	Node node;
+	double squared_distance;
+};
+
+template <class Tree, class Geometry = math::Vector3, class Predicates = predicate::TRUE>
+class NearestIterator : public IteratorBase<Tree, NearestNode>
+{
+ private:
+	static constexpr bool OnlyLeaves =
+	    predicate::contains_predicate<predicate::Leaf, Predicates>();
+
+	using Base = IteratorBase<Tree, NearestNode>;
+
+ public:
+	// Tags
+	using iterator_category = typename Base::iterator_category;
+	using difference_type = typename Base::difference_type;
+	using value_type = typename Base::value_type;
+	using pointer = typename Base::pointer;
+	using reference = typename Base::reference;
+	using const_pointer = typename Base::const_pointer;
+	using const_reference = typename Base::const_reference;
+
+	NearestIterator() {}
+
+	NearestIterator(Node const& root, Geometry const& geometry,
+	                Predicates const& predicates)
+	    : predicates_(predicates), geometry_(geometry)
+	{
+	}
+
+	NearestIterator(Tree const* tree, Node const& root, Geometry const& geometry,
+	                Predicates const& predicates, float epsilon = 0.0f)
+	    : Base(tree), predicates_(predicates), geometry_(geometry), epsilon_(epsilon)
+	{
+		init(root);
+	}
+
+	NearestIterator& next() override
+	{
+		increment();
+		return *this;
+	}
+
+	NearestIterator* getCopy() override { return new NearestIterator(*this); }
+
+	// reference getData() override { return return_nodes_.top(); }
+
+	const_reference getData() const override { return return_nodes_.top(); }
+
+	bool equal(Base const& other) const
+	{
+		return other.getTree() == this->getTree() && other.getData() == getData();
+	}
+
+ private:
+	double distanceSquared(Node const& node) const
+	{
+		return geometry::minDistanceSquared(node.getBoundingVolume(), geometry_);
+	}
+
+	void init(Node const& node)
+	{
+		if constexpr (OnlyLeaves) {
+			if (this->validReturnNode(node, predicates_)) {
+				return_nodes_.emplace(node, distanceSquared(node));
+			} else if (this->validInnerNodeOnlyLeaves(node, predicates_)) {
+				std::vector<value_type> container;
+				container.reserve(256);
+				return_nodes_ = std::priority_queue<value_type, std::vector<value_type>,
+				                                    std::greater<value_type>>(
+				    std::greater<value_type>(), std::move(container));
+				inner_nodes_ = return_nodes_;
+
+				inner_nodes_.emplace(node, distanceSquared(node) + epsilon_);
+				increment();
+			} else {
+				this->tree_ = nullptr;
+			}
+		} else {
+			bool valid_inner = this->validInnerNode(node, predicates_);
+			bool valid_return = this->validReturnNode(node, predicates_);
+
+			if (valid_inner || valid_return) {
+				std::vector<value_type> container;
+				container.reserve(256);
+				return_nodes_ = std::priority_queue<value_type, std::vector<value_type>,
+				                                    std::greater<value_type>>(
+				    std::greater<value_type>(), std::move(container));
+				inner_nodes_ = return_nodes_;
+
+				float dist_sq = distanceSquared(node);
+
+				if (valid_inner) {
+					inner_nodes_.emplace(node, dist_sq + epsilon_);
+				}
+				if (valid_return) {
+					return_nodes_.emplace(node, dist_sq);
+				} else {
+					increment();
+				}
+			} else {
+				this->tree_ = nullptr;
+			}
+		}
+	}
+
+	void increment()
+	{
+		if (!return_nodes_.empty()) {
+			return_nodes_.pop();
+		}
+
+		// Skip forward to next valid return node
+		while (!inner_nodes_.empty()) {
+			if (!return_nodes_.empty() && return_nodes_.top() <= inner_nodes_.top()) {
+				return;
+			}
+
+			Node current = this->getChild(inner_nodes_.top().node, 0);
+			inner_nodes_.pop();
+
+			for (unsigned int idx = 0; 8 != idx; ++idx) {
+				current = this->getSibling(current, idx);
+
+				if constexpr (OnlyLeaves) {
+					if (this->validInnerNodeOnlyLeaves(current, predicates_)) {
+						inner_nodes_.emplace(current, distanceSquared(current) + epsilon_);
+					} else if (this->validReturnNode(current, predicates_)) {
+						return_nodes_.emplace(current, distanceSquared(current));
+					}
+				} else {
+					// No need to add inner nodes that does not have children
+					bool const valid_inner = this->validInnerNode(current, predicates_);
+					bool const valid_return = this->validReturnNode(current, predicates_);
+
+					if (valid_inner || valid_return) {
+						float dist_sq = distanceSquared(current);
+						if (valid_inner) {
+							inner_nodes_.emplace(current, dist_sq + epsilon_);
+						}
+						if (valid_return) {
+							return_nodes_.emplace(current, dist_sq);
+						}
+					}
+				}
+			}
+		}
+
+		// No valid return node left
+		this->tree_ = nullptr;
+	}
+
+ private:
+	// Predicates
+	Predicates predicates_;
+
+	// Geometry
+	Geometry geometry_;
+
+	// Epsilon for approximate search
+	float epsilon_;
+
+	std::priority_queue<value_type, std::vector<value_type>, std::greater<value_type>>
+	    inner_nodes_;
+	std::priority_queue<value_type, std::vector<value_type>, std::greater<value_type>>
+	    return_nodes_;
 };
 }  // namespace ufo::map
 

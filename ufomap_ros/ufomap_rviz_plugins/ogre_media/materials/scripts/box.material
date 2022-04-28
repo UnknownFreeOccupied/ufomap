@@ -1,0 +1,45 @@
+material ufomap_rviz_plugins/Box
+{
+	technique gp
+	{
+		pass
+		{
+			vertex_program_ref ufomap_rviz_plugins/glsl/pass_pos_color.vert {}
+			geometry_program_ref ufomap_rviz_plugins/glsl/box.geom {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/flat_color.frag {}
+		}
+	}
+
+	technique gp_depth
+	{
+		scheme Depth
+		pass
+		{
+			vertex_program_ref ufomap_rviz_plugins/glsl/pass_pos_color.vert {}
+			geometry_program_ref ufomap_rviz_plugins/glsl/box.geom(with_depth) {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/depth.frag {}
+		}
+	}
+
+	technique gp_selection_first_pass
+	{
+		scheme Pick
+		pass
+		{
+			vertex_program_ref ufomap_rviz_plugins/glsl/pass_pos_color.vert {}
+			geometry_program_ref ufomap_rviz_plugins/glsl/box.geom {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/pick_color.frag {}
+		}
+	}
+
+	technique gp_selection_second_pass
+	{
+		scheme Pick1
+		pass
+		{
+			vertex_program_ref ufomap_rviz_plugins/glsl/pass_pos_color.vert {}
+			geometry_program_ref ufomap_rviz_plugins/glsl/box.geom {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/pass_color.frag {}
+		}
+	}
+}

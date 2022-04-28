@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ufomap_gazebo_plugins</name>
+  <version>1.0.0</version>
+  <description>The ufomap_gazebo_plugins package</description>
+
+  <maintainer email="dduberg@kth.se">Daniel Duberg</maintainer>
+
+  <license>BSD</license>
+
+  <!-- Url tags are optional, but multiple are allowed, one per tag -->
+  <!-- Optional attribute type can be: website, bugtracker, or repository -->
+  <!-- Example: -->
+  <!-- <url type="website">http://wiki.ros.org/ufo_ros</url> -->
+
+  <author email="dduberg@kth.se">Daniel Duberg</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>gazebo</depend>
+  <depend>gazebo_plugins</depend>
+  <depend>gazebo_ros</depend>
+  <depend>roscpp</depend>
+  <depend>ufomap_msgs</depend>
+  <depend>ufomap_ros</depend>
+  <depend>ufomap_srvs</depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <build_depend>ufomap</build_depend>
+  
+  <doc_depend>doxygen</doc_depend>
+</package>

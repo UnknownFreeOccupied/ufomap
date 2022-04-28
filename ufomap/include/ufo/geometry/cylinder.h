@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -49,11 +48,11 @@ namespace ufo::geometry
 struct Cylinder {
 	Point start;
 	Point end;
-	double radius;
+	float radius;
 
 	Cylinder() : start(0.0, 0.0, 0.0), end(0.0, 0.0, 0.0), radius(0.0) {}
 
-	Cylinder(Point const& start, Point const& end, double radius)
+	Cylinder(Point const& start, Point const& end, float radius)
 	    : start(start), end(end), radius(radius)
 	{
 	}

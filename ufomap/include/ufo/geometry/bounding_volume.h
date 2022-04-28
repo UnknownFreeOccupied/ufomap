@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -42,7 +41,7 @@
 #ifndef UFO_GEOMETRY_BOUDING_VOLUME_H
 #define UFO_GEOMETRY_BOUDING_VOLUME_H
 
-#include <ufo/geometry/collision_checks.h>
+// #include <ufo/geometry/collision_checks.h>
 #include <ufo/geometry/types.h>
 
 namespace ufo::geometry
@@ -52,60 +51,76 @@ class BoundingVolume
  public:
 	void add(BoundingVar const& bv) { bounding_volume_.push_back(bv); }
 
-	size_t size() const { return bounding_volume_.size(); }
+	void clear() noexcept { bounding_volume_.clear(); }
 
-	bool empty() const { return bounding_volume_.empty(); }
+	size_t size() const noexcept { return bounding_volume_.size(); }
 
-	bool intersects(BoundingVar const& bv) const;
+	bool empty() const noexcept { return bounding_volume_.empty(); }
 
-	bool intersects(BoundingVolume const& other) const;
+	// bool intersects(BoundingVar const& bv) const;
 
-	std::vector<BoundingVar>::iterator begin() { return bounding_volume_.begin(); }
+	// bool intersects(BoundingVolume const& other) const;
 
-	std::vector<BoundingVar>::const_iterator begin() const
+	std::vector<BoundingVar>::iterator begin() noexcept
 	{
-		return bounding_volume_.begin();
+		return std::begin(bounding_volume_);
 	}
 
-	std::vector<BoundingVar>::const_iterator cbegin() const
+	std::vector<BoundingVar>::const_iterator begin() const noexcept
+	{
+		return std::begin(bounding_volume_);
+	}
+
+	std::vector<BoundingVar>::const_iterator cbegin() const noexcept
 	{
 		return bounding_volume_.cbegin();
 	}
 
-	std::vector<BoundingVar>::iterator end() { return bounding_volume_.end(); }
+	std::vector<BoundingVar>::iterator end() noexcept { return std::end(bounding_volume_); }
 
-	std::vector<BoundingVar>::const_iterator end() const { return bounding_volume_.end(); }
+	std::vector<BoundingVar>::const_iterator end() const noexcept
+	{
+		return std::end(bounding_volume_);
+	}
 
-	std::vector<BoundingVar>::const_iterator cend() const
+	std::vector<BoundingVar>::const_iterator cend() const noexcept
 	{
 		return bounding_volume_.cend();
 	}
 
-	std::vector<BoundingVar>::reverse_iterator rbegin()
+	std::vector<BoundingVar>::reverse_iterator rbegin() noexcept
 	{
 		return bounding_volume_.rbegin();
 	}
 
-	std::vector<BoundingVar>::const_reverse_iterator rbegin() const
+	std::vector<BoundingVar>::const_reverse_iterator rbegin() const noexcept
 	{
 		return bounding_volume_.rbegin();
 	}
 
-	std::vector<BoundingVar>::const_reverse_iterator crbegin() const
+	std::vector<BoundingVar>::const_reverse_iterator crbegin() const noexcept
 	{
 		return bounding_volume_.crbegin();
 	}
 
-	std::vector<BoundingVar>::reverse_iterator rend() { return bounding_volume_.rend(); }
-
-	std::vector<BoundingVar>::const_reverse_iterator rend() const
+	std::vector<BoundingVar>::reverse_iterator rend() noexcept
 	{
 		return bounding_volume_.rend();
 	}
 
-	std::vector<BoundingVar>::const_reverse_iterator crend() const
+	std::vector<BoundingVar>::const_reverse_iterator rend() const noexcept
+	{
+		return bounding_volume_.rend();
+	}
+
+	std::vector<BoundingVar>::const_reverse_iterator crend() const noexcept
 	{
 		return bounding_volume_.crend();
+	}
+
+	void swap(BoundingVolume& other) noexcept
+	{
+		bounding_volume_.swap(other.bounding_volume_);
 	}
 
  private:

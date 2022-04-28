@@ -1,10 +1,9 @@
-/**
+/*
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -42,362 +41,202 @@
 #ifndef UFO_MAP_OCCUPANCY_MAP_COLOR_H
 #define UFO_MAP_OCCUPANCY_MAP_COLOR_H
 
-#include <ufo/map/occupancy_map_base.h>
+// UFO
+#include <ufo/map/color/color_map_base.h>
+#include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/occupancy/occupancy_node.h>
 
 namespace ufo::map
 {
-class OccupancyMapColor : public OccupancyMapBase<ColorOccupancyNode<float>>
+template <class OccupancyType>
+class OccupancyMapColorT final
+    : public OccupancyMapBase<OccupancyMapColorT<OccupancyType>,
+                              OccupancyColorNode<OccupancyType>>,
+      public ColorMapBase<OccupancyMapColorT<OccupancyType>,
+                          OccupancyColorNode<OccupancyType>, OccupancyIndicators>
 {
- private:
-	using DATA_TYPE = ColorOccupancyNode<float>;
-	using Base = OccupancyMapBase<DATA_TYPE>;
+ protected:
+	using Node = OccupancyColorNode<OccupancyType>;
+	using OccupancyBase = OccupancyMapBase<OccupancyMapColorT, Node>;
+	using OctreeBase = typename OccupancyBase::Base;
+	using ColorBase = ColorMapBase<OccupancyMapColorT, Node, OccupancyIndicators>;
+	using LeafNode = typename OctreeBase::LeafNode;
+	using InnerNode = typename OctreeBase::InnerNode;
 
  public:
 	//
 	// Constructors
 	//
 
-	OccupancyMapColor(double resolution, DepthType depth_levels = 16,
-	                  bool automatic_pruning = true, double occupied_thres = 0.5,
-	                  double free_thres = 0.5, double prob_hit = 0.7,
-	                  double prob_miss = 0.4, double clamping_thres_min = 0.1192,
-	                  double clamping_thres_max = 0.971);
+	OccupancyMapColorT(float resolution, DepthType depth_levels = 16,
+	                   bool automatic_pruning = true, float occupied_thres = 0.5,
+	                   float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	                   float clamping_thres_max = 0.971)
+	    : OctreeBase(resolution, depth_levels, automatic_pruning),
+	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
+	                    free_thres, clamping_thres_min, clamping_thres_max),
+	      ColorBase(resolution, depth_levels, automatic_pruning)
+	{  // TODO: Implement
+		initRoot();
+	}
 
-	OccupancyMapColor(std::string const& filename, bool automatic_pruning = true,
-	                  double occupied_thres = 0.5, double free_thres = 0.5,
-	                  double prob_hit = 0.7, double prob_miss = 0.4,
-	                  double clamping_thres_min = 0.1192,
-	                  double clamping_thres_max = 0.971);
+	OccupancyMapColorT(std::filesystem::path const& filename, bool automatic_pruning = true,
+	                   float occupied_thres = 0.5, float free_thres = 0.5,
+	                   float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMapColorT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                         clamping_thres_min, clamping_thres_max)
+	{
+		OctreeBase::read(filename);
+		// TODO: Throw if cannot read
+	}
 
-	OccupancyMapColor(OccupancyMapColor const& other);
+	OccupancyMapColorT(std::istream& in_stream, bool automatic_pruning = true,
+	                   float occupied_thres = 0.5, float free_thres = 0.5,
+	                   float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMapColorT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                         clamping_thres_min, clamping_thres_max)
+	{
+		OctreeBase::read(in_stream);
+		// TODO: Throw if cannot read
+	}
+
+	OccupancyMapColorT(OccupancyMapColorT const& other)
+	    : OctreeBase(other), OccupancyBase(other), ColorBase(other)
+	{
+		initRoot();
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		other.write(io_stream);
+		OctreeBase::read(io_stream);
+	}
+
+	template <class T2>
+	OccupancyMapColorT(OccupancyMapColorT<T2> const& other)
+	    : OctreeBase(other), OccupancyBase(other), ColorBase(other)
+	{
+		initRoot();
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		other.write(io_stream);
+		OctreeBase::read(io_stream);
+	}
+
+	OccupancyMapColorT(OccupancyMapColorT&& other)
+	    : OctreeBase(std::move(other)),
+	      OccupancyBase(std::move(other)),
+	      ColorBase(std::move(other))
+	{
+	}
+
+	OccupancyMapColorT& operator=(OccupancyMapColorT const& rhs)
+	{
+		OctreeBase::operator=(rhs);
+		OccupancyBase::operator=(rhs);
+		ColorBase::operator=(rhs);
+
+		initRoot();
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		rhs.write(io_stream);
+		OctreeBase::read(io_stream);
+
+		return *this;
+	}
+
+	template <class T2>
+	OccupancyMapColorT& operator=(OccupancyMapColorT<T2> const& rhs)
+	{
+		OctreeBase::operator=(rhs);
+		OccupancyBase::operator=(rhs);
+		ColorBase::operator=(rhs);
+
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		rhs.write(io_stream);
+		OctreeBase::read(io_stream);
+
+		return *this;
+	}
+
+	OccupancyMapColorT& operator=(OccupancyMapColorT&& rhs)
+	{
+		OctreeBase::operator=(std::move(rhs));
+		OccupancyBase::operator=(std::move(rhs));
+		ColorBase::operator=(std::move(rhs));
+		return *this;
+	}
 
 	//
 	// Destructor
 	//
 
-	virtual ~OccupancyMapColor() {}
+	virtual ~OccupancyMapColorT() override { printf("OccupancyMapColorT destructor\n"); }
 
 	//
-	// Tree Type
+	// Initilize root
 	//
 
-	virtual std::string getTreeType() const noexcept override
+	virtual void initRoot() override
 	{
-		return "occupancy_map_color";
-	}
-
-	//
-	// Integration
-	//
-
-	template <typename T>
-	void insertPointCloud(Point3 const& sensor_origin, T const& cloud,
-	                      double max_range = -1, DepthType depth = 0,
-	                      bool simple_ray_casting = false, unsigned int early_stopping = 0,
-	                      bool async = false)
-	{
-		if constexpr (std::is_same_v<T, PointCloud>) {
-			Base::insertPointCloud(sensor_origin, cloud, max_range, depth, simple_ray_casting,
-			                       early_stopping, async);
-
-			if constexpr (std::is_same_v<T, PointCloudColor>) {
-				integrateColors(sensor_origin, cloud, max_range);
-			}
-		} else if constexpr (std::is_same_v<T, PointCloudColor>) {
-			std::vector<std::tuple<Code, float, Color>> occupied_hits;
-			occupied_hits.reserve(cloud.size());
-			PointCloud discretized;
-			discretized.reserve(cloud.size());
-			Point3 min_change = Base::getMax();
-			Point3 max_change = Base::getMin();
-			for (Point3Color& end_color : cloud) {
-				Point3 end = end_color;
-				Point3 origin = sensor_origin;
-				Point3 direction = (end - origin);
-				double distance = direction.norm();
-
-				// Move origin and end inside BBX
-				if (!Base::moveLineInside(origin, end)) {
-					// Line outside of BBX
-					continue;
-				}
-
-				if (0 > max_range || distance <= max_range) {
-					// Occupied space
-					Code end_code = Base::toCode(end);
-					if (indices_.insert(end_code).second) {
-						occupied_hits.push_back(
-						    std::make_tuple(end_code, prob_hit_log_, end_color.getColor()));
-					}
-				} else {
-					direction /= distance;
-					end = origin + (direction * max_range);
-				}
-
-				discretized.push_back(end);
-
-				for (int i : {0, 1, 2}) {
-					min_change[i] = std::min(min_change[i], std::min(end[i], origin[i]));
-					max_change[i] = std::max(max_change[i], std::max(end[i], origin[i]));
-				}
-			}
-
-			LogitType prob_miss_log = prob_miss_log_ / double((2.0 * depth) + 1);
-
-			indices_.clear();
-
-			Base::insertPointCloudWait();
-
-			if (async) {
-				integrate_ =
-				    std::async(std::launch::async, &OccupancyMapColor::insertPointCloudHelper,
-				               this, sensor_origin, std::move(discretized),
-				               std::move(occupied_hits), prob_miss_log, depth, simple_ray_casting,
-				               early_stopping, min_change, max_change);
-			} else {
-				insertPointCloudHelper(sensor_origin, std::move(discretized),
-				                       std::move(occupied_hits), prob_miss_log, depth,
-				                       simple_ray_casting, early_stopping, min_change,
-				                       max_change);
-			}
-		}
-	}
-
-	template <typename T>
-	void insertPointCloud(Point3 const& sensor_origin, T cloud,
-	                      math::Pose6 const& frame_origin, double max_range = -1,
-	                      DepthType depth = 0, bool simple_ray_casting = false,
-	                      unsigned int early_stopping = 0, bool async = false)
-	{
-		cloud.transform(frame_origin, async);
-		insertPointCloud(sensor_origin, cloud, max_range, depth, simple_ray_casting,
-		                 early_stopping, async);
-	}
-
-	template <typename T>
-	void insertPointCloudDiscrete(Point3 const& sensor_origin, T const& cloud,
-	                              double max_range = -1, DepthType depth = 0,
-	                              bool simple_ray_casting = false,
-	                              unsigned int early_stopping = 0, bool async = false)
-	{
-		if constexpr (std::is_same_v<T, PointCloud>) {
-			Base::insertPointCloudDiscrete(sensor_origin, cloud, max_range, depth,
-			                               simple_ray_casting, early_stopping);
-		} else if constexpr (std::is_same_v<T, PointCloudColor>) {
-			double squared_max_range = max_range * max_range;
-
-			std::vector<std::tuple<Code, float, Color>> occupied_hits;
-			occupied_hits.reserve(cloud.size());
-			PointCloud discretized;
-			discretized.reserve(cloud.size());
-			Point3 min_change = Base::getMax();
-			Point3 max_change = Base::getMin();
-			for (Point3Color const& end_color : cloud) {
-				Point3 end = end_color;
-				double dist_sqrt = (end - sensor_origin).squaredNorm();
-				if (0 > max_range || dist_sqrt < squared_max_range) {
-					if (Base::isInside(end)) {
-						Code end_code = Base::toCode(end);
-						if (!indices_.insert(end_code).second) {
-							continue;
-						}
-						// double dist = std::sqrt(dist_sqrt);
-						// testis.push_back(std::make_tuple(end_code, prob_hit_log_ / (dist * dist),
-						//                                  end_color.getColor()));
-						occupied_hits.push_back(
-						    std::make_tuple(end_code, prob_hit_log_, end_color.getColor()));
-					}
-				} else {
-					Point3 direction = Base::toCoord(Base::toKey(end, depth)) - sensor_origin;
-					dist_sqrt = direction.squaredNorm();
-					if (0 <= max_range && dist_sqrt > squared_max_range) {
-						direction /= std::sqrt(dist_sqrt);
-						end = sensor_origin + (direction * max_range);
-					}
-				}
-				Point3 current = sensor_origin;
-				// Move origin and end inside map
-				if (!Base::moveLineInside(current, end)) {
-					// Line outside of map
-					continue;
-				}
-
-				Key end_key = Base::toKey(end, depth);
-
-				if (0 < depth && !indices_.insert(Base::toCode(end_key)).second) {
-					continue;
-				}
-
-				Point3 end_coord = Base::toCoord(end_key);
-
-				discretized.push_back(end_coord);
-
-				// Min/max change detection
-				Point3 current_center = Base::toCoord(Base::toKey(current, depth));
-				Point3 end_center = end_coord;
-
-				double temp = Base::getNodeHalfSize(depth);
-				for (int i : {0, 1, 2}) {
-					min_change[i] = std::min(
-					    min_change[i], std::min(end_center[i] - temp, current_center[i] - temp));
-					max_change[i] = std::max(
-					    max_change[i], std::max(end_center[i] + temp, current_center[i] + temp));
-				}
-			}
-
-			LogitType prob_miss_log = prob_miss_log_ / double((2.0 * depth) + 1);
-
-			indices_.clear();
-
-			Base::insertPointCloudWait();
-
-			if (async) {
-				integrate_ =
-				    std::async(std::launch::async, &OccupancyMapColor::insertPointCloudHelper,
-				               this, sensor_origin, std::move(discretized),
-				               std::move(occupied_hits), prob_miss_log, depth, simple_ray_casting,
-				               early_stopping, min_change, max_change);
-			} else {
-				insertPointCloudHelper(sensor_origin, std::move(discretized),
-				                       std::move(occupied_hits), prob_miss_log, depth,
-				                       simple_ray_casting, early_stopping, min_change,
-				                       max_change);
-			}
-		}
-	}
-
-	void updateValue(Code const& code, LogitType const& update, Color color)
-	{
-		auto path = Base::createNode(code);
-		DepthType depth = code.getDepth();
-
-		if (Base::isLeaf(path[depth], depth)) {
-			updateNodeColor(*path[depth], color, toProb(update));
-
-			if (updateOccupancy(path[depth]->value.occupancy, update)) {
-				if (change_detection_enabled_) {
-					changes_.insert(code);
-				}
-			}
-		} else {
-			// TODO: Error
-		}
-
-		Base::updateParents(path, depth);
-	}
-
-	template <typename T>
-	void InsertPointCloudDiscrete(Point3 const& sensor_origin, PointCloudColor cloud,
-	                              math::Pose6 const& frame_origin, double max_range = -1,
-	                              DepthType depth = 0, bool simple_ray_casting = false,
-	                              unsigned int early_stopping = 0, bool async = false)
-	{
-		cloud.transform(frame_origin, async);
-		insertPointCloudDiscrete(sensor_origin, cloud, max_range, depth, simple_ray_casting,
-		                         early_stopping, async);
-	}
-
-	//
-	// Set color
-	//
-
-	void setColor(Code const& code, Color color);
-
-	void setColor(Point3 const& coord, Color color, DepthType depth = 0)
-	{
-		setColor(Base::toCode(coord, depth), color);
-	}
-
-	void setColor(double x, double y, double z, Color color, DepthType depth = 0)
-	{
-		setColor(Base::toCode(x, y, z, depth), color);
-	}
-
-	//
-	// Get color
-	//
-
-	Color getColor(Code const& code) const;
-
-	Color getColor(Point3 const& coord, DepthType depth = 0) const
-	{
-		return getColor(Base::toCode(coord, depth));
-	}
-
-	Color getColor(double x, double y, double z, DepthType depth = 0) const
-	{
-		return getColor(Base::toCode(x, y, z, depth));
-	}
-
- protected:
-	//
-	// Integrate colors
-	//
-
-	void integrateColors(Point3 const& sensor_origin, PointCloudColor const& cloud,
-	                     double max_range = -1);
-
-	//
-	// Integrator helper
-	//
-
-	void insertPointCloudHelper(Point3 sensor_origin, PointCloud&& discretized,
-	                            std::vector<std::tuple<Code, float, Color>>&& occupied_hits,
-	                            LogitType prob_miss_log, DepthType depth,
-	                            bool simple_ray_casting, unsigned int early_stopping,
-	                            Point3 min_change, Point3 max_change)
-	{
-		std::future<void> f = std::async(std::launch::async, [this, &occupied_hits]() {
-			std::for_each(begin(occupied_hits), end(occupied_hits), [this](auto&& hit) {
-				updateValue(std::get<0>(hit), std::get<1>(hit), std::get<2>(hit));
-			});
-		});
-
-		CodeMap<LogitType> free_hits;
-
-		freeSpace(sensor_origin, discretized, free_hits, prob_miss_log, depth,
-		          simple_ray_casting, early_stopping);
-
-		f.wait();
-
-		for (auto const& [code, value] : free_hits) {
-			Base::updateValue(code, value);
-		}
-
-		if (min_max_change_detection_enabled_) {
-			for (int i : {0, 1, 2}) {
-				min_change_[i] = std::min(min_change_[i], min_change[i]);
-				max_change_[i] = std::max(max_change_[i], max_change[i]);
-			}
-		}
+		printf("OccupancyMapColorT initRoot\n");
+		OccupancyBase::initRoot();
+		ColorBase::initRoot();
 	}
 
 	//
 	// Update node
 	//
 
-	virtual bool updateNode(INNER_NODE& node, DepthType depth) override;
+	virtual void updateNode(InnerNode& node, DepthType depth) override
+	{
+		OccupancyBase::updateNode(node, depth);
+		ColorBase::updateNode(node, depth);
+	}
 
 	//
-	// Update node color
+	// Get map type
 	//
 
-	void updateNodeColor(Code code, Color update);
-
-	void updateNodeColor(LEAF_NODE& node, Color update, double prob);
+	static constexpr std::string_view getMapType()
+	{
+		if constexpr (std::is_same_v<typename OccupancyBase::LogitType, uint8_t>) {
+			return "occupancy_map_color_small";
+		} else {
+			return "occupancy_map_color";
+		}
+	}
 
 	//
-	// Average child color
+	// Input/output (read/write)
 	//
 
-	Color getAverageChildColor(INNER_NODE const& node, DepthType depth) const;
+	virtual void addFileInfo(FileInfo& info) const override
+	{
+		OccupancyBase::addFileInfo(info);
+		ColorBase::addFileInfo(info);
+		info["map_type"].emplace_back(getMapType());
+	}
 
-	//
-	// Average color
-	//
+	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	                       std::string const& field, char type, uint64_t size,
+	                       uint64_t num) override
+	{
+		return OccupancyBase::readNodes(in_stream, nodes, field, type, size, num) ||
+		       ColorBase::readNodes(in_stream, nodes, field, type, size, num);
+	}
 
-	Color getAverageColor(std::vector<Color> const& colors) const;
+	virtual void writeNodes(std::ostream& out_stream,
+	                        std::vector<LeafNode const*> const& nodes, bool compress,
+	                        int compression_acceleration_level,
+	                        int compression_level) const override
+	{
+		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level, compression_level);
+		ColorBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level, compression_level);
+	}
 };
+
+using OccupancyMapColor = OccupancyMapColorT<float>;
+using OccupancyMapColorSmall = OccupancyMapColorT<uint8_t>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_H

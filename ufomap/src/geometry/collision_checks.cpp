@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -50,16 +49,16 @@ namespace ufo::geometry
 //////////////////////////////////// Help functions
 ////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////
-bool intersectsLine(const AABB& aabb, const Ray& ray, double t_near, double t_far)
+bool intersectsLine(const AABB& aabb, const Ray& ray, float t_near, float t_far)
 {
 	Point min = aabb.getMin();
 	Point max = aabb.getMax();
 
 	for (int i = 0; i < 3; ++i) {
 		if (0 != ray.direction[i]) {
-			double reciprocal_direction = 1.0 / ray.direction[i];
-			double t1 = (min[i] - ray.origin[i]) * reciprocal_direction;
-			double t2 = (max[i] - ray.origin[i]) * reciprocal_direction;
+			float reciprocal_direction = 1.0 / ray.direction[i];
+			float t1 = (min[i] - ray.origin[i]) * reciprocal_direction;
+			float t2 = (max[i] - ray.origin[i]) * reciprocal_direction;
 
 			if (t1 < t2) {
 				t_near = std::max(t1, t_near);
@@ -99,13 +98,13 @@ Point closestPoint(const OBB& obb, const Point& point)
 	Point result = obb.center;
 	Point dir = point - obb.center;
 
-	std::vector<double> obb_rot_matrix;
+	std::vector<float> obb_rot_matrix;
 	obb.rotation.toRotMatrix(obb_rot_matrix);
 
 	for (int i = 0; i < 3; ++i) {
 		Point axis(obb_rot_matrix[i * 3], obb_rot_matrix[(i * 3) + 1],
 		           obb_rot_matrix[(i * 3) + 2]);
-		double distance = Point::dot(dir, axis);
+		float distance = Point::dot(dir, axis);
 		if (distance > obb.half_size[i]) {
 			distance = obb.half_size[i];
 		}
@@ -120,14 +119,14 @@ Point closestPoint(const OBB& obb, const Point& point)
 
 Point closestPoint(const Plane& plane, const Point& point)
 {
-	double distance = Point::dot(plane.normal, point) - plane.distance;
+	float distance = Point::dot(plane.normal, point) - plane.distance;
 	return point - plane.normal * distance;
 }
 
 Point closestPoint(const LineSegment& line_segement, const Point& point)
 {
 	Point direction = line_segement.end - line_segement.start;
-	double t = Point::dot(point - line_segement.start, direction) /
+	float t = Point::dot(point - line_segement.start, direction) /
 	           Point::dot(direction, direction);
 	t = fmaxf(t, 0.0f);
 	t = fminf(t, 1.0f);
@@ -136,18 +135,18 @@ Point closestPoint(const LineSegment& line_segement, const Point& point)
 
 Point closestPoint(const Ray& ray, const Point& point)
 {
-	double t = Point::dot(point - ray.origin, ray.direction);
+	float t = Point::dot(point - ray.origin, ray.direction);
 	t = fmaxf(t, 0.0f);
 	return ray.origin + ray.direction * t;
 }
 
 // Classify
-double classify(const AABB& aabb, const Plane& plane)
+float classify(const AABB& aabb, const Plane& plane)
 {
-	double r = std::abs(aabb.half_size.x() * plane.normal.x()) +
+	float r = std::abs(aabb.half_size.x() * plane.normal.x()) +
 	           std::abs(aabb.half_size.y() * plane.normal.y()) +
 	           std::abs(aabb.half_size.z() * plane.normal.z());
-	double d = Point::dot(plane.normal, aabb.center) + plane.distance;
+	float d = Point::dot(plane.normal, aabb.center) + plane.distance;
 	if (std::abs(d) < r) {
 		return 0.0f;
 	} else if (d < 0.0f) {
@@ -156,24 +155,27 @@ double classify(const AABB& aabb, const Plane& plane)
 	return d - r;
 }
 
-double classify(const OBB& obb, const Plane& plane)
+float classify(const OBB& obb, const Plane& plane)
 {
 	// TODO: Implement
 	throw std::logic_error("Function not yet implemented");
 	// Point normal = plane.normal * obb.rotation;
-	// double r = std::abs(obb.half_size.x() * normal.x()) +
-	//            std::abs(obb.half_size.y() * normal.y()) +
-	//            std::abs(obb.half_size.z() * normal.z());
-	// double d = Point::dot(plane.normal, obb.center) + plane.distance;
-	// if (std::abs(d) < r) {
+	// float r = std::abs(obb.half_size.x() * normal.x()) +
+	// 					std::abs(obb.half_size.y() * normal.y())
+	// + 					std::abs(obb.half_size.z() * normal.z()); float d
+	// = Point::dot(plane.normal, obb.center) + plane.distance; if (std::abs(d)
+	// < r)
+	// {
 	// 	return 0.0f;
-	// } else if (d < 0.0f) {
+	// }
+	// else if (d < 0.0f)
+	// {
 	// 	return d + r;
 	// }
 	// return d - r;
 }
 
-std::pair<double, double> getInterval(const AABB& aabb, const Point& axis)
+std::pair<float, float> getInterval(const AABB& aabb, const Point& axis)
 {
 	Point i = aabb.getMin();
 	Point a = aabb.getMax();
@@ -183,11 +185,11 @@ std::pair<double, double> getInterval(const AABB& aabb, const Point& axis)
 	                   Point(a.x(), a.y(), a.z()), Point(a.x(), a.y(), i.z()),
 	                   Point(a.x(), i.y(), a.z()), Point(a.x(), i.y(), i.z())};
 
-	std::pair<double, double> result;
+	std::pair<float, float> result;
 	result.first = result.second = Point::dot(axis, vertex[0]);
 
 	for (int i = 1; i < 8; ++i) {
-		double projection = Point::dot(axis, vertex[i]);
+		float projection = Point::dot(axis, vertex[i]);
 		result.first = std::min(result.first, projection);
 		result.second = std::max(result.second, projection);
 	}
@@ -195,14 +197,14 @@ std::pair<double, double> getInterval(const AABB& aabb, const Point& axis)
 	return result;
 }
 
-std::pair<double, double> getInterval(const OBB& obb, const Point& axis)
+std::pair<float, float> getInterval(const OBB& obb, const Point& axis)
 {
 	Point vertex[8];
 
 	Point C = obb.center;     // OBB Center
 	Point E = obb.half_size;  // OBB Extents
 
-	std::vector<double> obb_rot_matrix;
+	std::vector<float> obb_rot_matrix;
 	obb.rotation.toRotMatrix(obb_rot_matrix);
 
 	Point A[] = {
@@ -221,11 +223,11 @@ std::pair<double, double> getInterval(const OBB& obb, const Point& axis)
 	vertex[6] = C - A[0] * E[0] + A[1] * E[1] - A[2] * E[2];
 	vertex[7] = C - A[0] * E[0] - A[1] * E[1] + A[2] * E[2];
 
-	std::pair<double, double> result;
+	std::pair<float, float> result;
 	result.first = result.second = Point::dot(axis, vertex[0]);
 
 	for (int i = 1; i < 8; ++i) {
-		double projection = Point::dot(axis, vertex[i]);
+		float projection = Point::dot(axis, vertex[i]);
 		result.first = std::min(result.first, projection);
 		result.second = std::max(result.second, projection);
 	}
@@ -271,7 +273,7 @@ bool intersects(const AABB& aabb, const Frustum& frustum)
 {
 	// FIXME:
 	for (int i = 0; i < 6; ++i) {
-		double side = classify(aabb, frustum.planes[i]);
+		float side = classify(aabb, frustum.planes[i]);
 		if (side < 0) {
 			return false;
 		}
@@ -284,7 +286,7 @@ bool intersects(const AABB& aabb, const LineSegment& line_segment)
 	Ray ray;
 	ray.origin = line_segment.start;
 	ray.direction = (line_segment.end - line_segment.start);
-	double length = ray.direction.norm();
+	float length = ray.direction.norm();
 	ray.direction /= length;
 	return intersectsLine(aabb, ray, 0.0, length);
 }
@@ -294,7 +296,7 @@ bool intersects(const AABB& aabb, const OBB& obb)
 	// ufo::geometry::OBB obb_2(aabb.center, aabb.half_size, ufo::math::Point(0, 0,
 	// 0)); return intersects(obb, obb_2);
 
-	std::vector<double> obb_rot_matrix;
+	std::vector<float> obb_rot_matrix;
 	obb.rotation.toRotMatrix(obb_rot_matrix);
 
 	Point test[15] = {Point(1, 0, 0),  // AABB axis 1
@@ -321,10 +323,10 @@ bool intersects(const AABB& aabb, const OBB& obb)
 
 bool intersects(const AABB& aabb, const Plane& plane)
 {
-	double p_len = aabb.half_size.x() * std::abs(plane.normal.x()) +
+	float p_len = aabb.half_size.x() * std::abs(plane.normal.x()) +
 	               aabb.half_size.y() * std::abs(plane.normal.y()) +
 	               aabb.half_size.z() * std::abs(plane.normal.z());
-	double distance = Point::dot(plane.normal, aabb.center) - plane.distance;
+	float distance = Point::dot(plane.normal, aabb.center) - plane.distance;
 	return std::abs(distance) <= p_len;
 }
 
@@ -342,15 +344,15 @@ bool intersects(const AABB& aabb, const Point& point)
 bool intersects(const AABB& aabb, const Ray& ray)
 {
 	return intersectsLine(aabb, ray, 0.0,
-	                      std::numeric_limits<double>::infinity());  // TODO: infinity or
+	                      std::numeric_limits<float>::infinity());  // TODO: infinity or
 	                                                                 // max?
 }
 
 bool intersects(const AABB& aabb, const Sphere& sphere)
 {
 	Point closest_point = closestPoint(aabb, sphere.center);
-	double distance_squared = (sphere.center - closest_point).squaredNorm();
-	double radius_squared = sphere.radius * sphere.radius;
+	float distance_squared = (sphere.center - closest_point).squaredNorm();
+	float radius_squared = sphere.radius * sphere.radius;
 	return distance_squared < radius_squared;
 }
 
@@ -375,7 +377,7 @@ bool intersects(const Frustum& frustum, const LineSegment& line_segment)
 bool intersects(const Frustum& frustum, const OBB& obb)
 {
 	for (int i = 0; i < 6; ++i) {
-		double side = classify(obb, frustum.planes[i]);
+		float side = classify(obb, frustum.planes[i]);
 		if (side < 0) {
 			return false;
 		}
@@ -405,8 +407,8 @@ bool intersects(const Frustum& frustum, const Sphere& sphere)
 {
 	for (int i = 0; i < 6; ++i) {
 		const Point& normal = frustum.planes[i].normal;
-		const double& distance = frustum.planes[i].distance;
-		const double side = Point::dot(sphere.center, normal) + distance;
+		const float& distance = frustum.planes[i].distance;
+		const float side = Point::dot(sphere.center, normal) + distance;
 		if (side < -sphere.radius) {
 			return false;
 		}
@@ -436,7 +438,7 @@ bool intersects(const LineSegment& line_segment, const OBB& obb)
 	Ray ray;
 	ray.origin = line_segment.start;
 	ray.direction = line_segment.end - line_segment.start;
-	double line_length_squared = ray.direction.squaredNorm();
+	float line_length_squared = ray.direction.squaredNorm();
 	if (line_length_squared < 0.0000001f) {
 		return intersects(obb, line_segment.start);
 	}
@@ -455,7 +457,7 @@ bool intersects(const LineSegment& line_segment, const OBB& obb)
 
 	Point e(Point::dot(X, p), Point::dot(Y, p), Point::dot(Z, p));
 
-	double t[6] = {0, 0, 0, 0, 0, 0};
+	float t[6] = {0, 0, 0, 0, 0, 0};
 	for (int i = 0; i < 3; ++i) {
 		if (0.0 == f[i])  // TODO: Should be approximate equal
 		{
@@ -468,9 +470,9 @@ bool intersects(const LineSegment& line_segment, const OBB& obb)
 		t[i * 2 + 1] = (e[i] - obb.half_size[i]) / f[i];  // tmax[x, y, z]
 	}
 
-	double tmin = std::max(std::max(std::min(t[0], t[1]), std::min(t[2], t[3])),
+	float tmin = std::max(std::max(std::min(t[0], t[1]), std::min(t[2], t[3])),
 	                       std::min(t[4], t[5]));
-	double tmax = std::min(std::min(std::max(t[0], t[1]), std::max(t[2], t[3])),
+	float tmax = std::min(std::min(std::max(t[0], t[1]), std::max(t[2], t[3])),
 	                       std::max(t[4], t[5]));
 
 	// if tmax < 0, ray is intersecting AABB
@@ -485,7 +487,7 @@ bool intersects(const LineSegment& line_segment, const OBB& obb)
 	}
 
 	// If tmin is < 0, tmax is closer
-	double t_result = tmin;
+	float t_result = tmin;
 
 	if (tmin < 0.0f) {
 		t_result = tmax;
@@ -498,20 +500,20 @@ bool intersects(const LineSegment& line_segment, const OBB& obb)
 bool intersects(const LineSegment& line_segment, const Plane& plane)
 {
 	Point ab = line_segment.end - line_segment.start;
-	double n_A = Point::dot(plane.normal, line_segment.start);
-	double n_AB = Point::dot(plane.normal, ab);
+	float n_A = Point::dot(plane.normal, line_segment.start);
+	float n_AB = Point::dot(plane.normal, ab);
 	if (0.0 == n_AB)  // TODO: Almost equal?
 	{
 		return false;
 	}
-	double t = (plane.distance - n_A) / n_AB;
+	float t = (plane.distance - n_A) / n_AB;
 	return t >= 0.0 && t <= 1.0;
 }
 
 bool intersects(const LineSegment& line_segment, const Point& point)
 {
 	Point closest_point = closestPoint(line_segment, point);
-	double distance_squared = (closest_point - point).squaredNorm();
+	float distance_squared = (closest_point - point).squaredNorm();
 	return 0.0 == distance_squared;  // TODO: Almost equal?
 }
 
@@ -524,7 +526,7 @@ bool intersects(const LineSegment& line_segment, const Ray& ray)
 bool intersects(const LineSegment& line_segment, const Sphere& sphere)
 {
 	Point closest_point = closestPoint(line_segment, sphere.center);
-	double distance_squared = (sphere.center - closest_point).squaredNorm();
+	float distance_squared = (sphere.center - closest_point).squaredNorm();
 	return distance_squared <= (sphere.radius * sphere.radius);
 }
 
@@ -543,10 +545,10 @@ bool intersects(const OBB& obb, const LineSegment& line_segment)
 
 bool intersects(const OBB& obb_1, const OBB& obb_2)
 {
-	std::vector<double> obb_1_rot_matrix;
+	std::vector<float> obb_1_rot_matrix;
 	obb_1.rotation.toRotMatrix(obb_1_rot_matrix);
 
-	std::vector<double> obb_2_rot_matrix;
+	std::vector<float> obb_2_rot_matrix;
 	obb_2.rotation.toRotMatrix(obb_2_rot_matrix);
 
 	Point test[15] = {Point(obb_1_rot_matrix[0], obb_1_rot_matrix[1], obb_1_rot_matrix[2]),
@@ -581,11 +583,11 @@ bool intersects(const OBB& obb, const Plane& plane)
 	Point normal = plane.normal;
 
 	// Project the half extents of the AABB onto the plane normal
-	double p_len = obb.half_size.x() * std::fabs(Point::dot(normal, rot[0])) +
+	float p_len = obb.half_size.x() * std::fabs(Point::dot(normal, rot[0])) +
 	               obb.half_size.y() * std::fabs(Point::dot(normal, rot[1])) +
 	               obb.half_size.z() * std::fabs(Point::dot(normal, rot[2]));
 	// Find the distance from the center of the OBB to the plane
-	double distance = Point::dot(plane.normal, obb.center) - plane.distance;
+	float distance = Point::dot(plane.normal, obb.center) - plane.distance;
 	// Intersection occurs if the distance falls within the projected side
 	return std::fabs(distance) <= p_len;
 }
@@ -594,12 +596,12 @@ bool intersects(const OBB& obb, const Point& point)
 {
 	// TODO: Implement look earlier. THIS IS WRONG!
 	Point dir = point - obb.center;
-	std::vector<double> obb_rot_matrix;
+	std::vector<float> obb_rot_matrix;
 	obb.rotation.toRotMatrix(obb_rot_matrix);
 	for (int i = 0; i < 3; ++i) {
 		Point axis(obb_rot_matrix[i * 3], obb_rot_matrix[i * 3 + 1],
 		           obb_rot_matrix[i * 3 + 2]);
-		double distance = Point::dot(dir, axis);
+		float distance = Point::dot(dir, axis);
 		if (distance > obb.half_size[i]) {
 			return false;
 		}
@@ -624,7 +626,7 @@ bool intersects(const OBB& obb, const Ray& ray)
 
 	Point e(Point::dot(X, p), Point::dot(Y, p), Point::dot(Z, p));
 
-	double t[6] = {0, 0, 0, 0, 0, 0};
+	float t[6] = {0, 0, 0, 0, 0, 0};
 	for (int i = 0; i < 3; ++i) {
 		if (0.0 == f[i])  // TODO: Should be approximate equal?
 		{
@@ -638,9 +640,9 @@ bool intersects(const OBB& obb, const Ray& ray)
 		t[i * 2 + 1] = (e[i] - obb.half_size[i]) / f[i];  // tmax[x, y, z]
 	}
 
-	double tmin = std::max(std::max(std::min(t[0], t[1]), std::min(t[2], t[3])),
+	float tmin = std::max(std::max(std::min(t[0], t[1]), std::min(t[2], t[3])),
 	                       std::min(t[4], t[5]));
-	double tmax = std::min(std::min(std::max(t[0], t[1]), std::max(t[2], t[3])),
+	float tmax = std::min(std::min(std::max(t[0], t[1]), std::max(t[2], t[3])),
 	                       std::max(t[4], t[5]));
 
 	// if tmax < 0, ray is intersecting AABB
@@ -658,7 +660,7 @@ bool intersects(const OBB& obb, const Ray& ray)
 bool intersects(const OBB& obb, const Sphere& sphere)
 {
 	Point closest_point = closestPoint(obb, sphere.center);
-	double distance_squared = (sphere.center - closest_point).squaredNorm();
+	float distance_squared = (sphere.center - closest_point).squaredNorm();
 	return distance_squared < sphere.radius * sphere.radius;
 }
 
@@ -690,19 +692,19 @@ bool intersects(const Plane& plane, const Point& point)
 
 bool intersects(const Plane& plane, const Ray& ray)
 {
-	double nd = Point::dot(ray.direction, plane.normal);
-	double pn = Point::dot(ray.origin, plane.normal);
+	float nd = Point::dot(ray.direction, plane.normal);
+	float pn = Point::dot(ray.origin, plane.normal);
 	if (nd >= 0.0f) {
 		return false;
 	}
-	double t = (plane.distance - pn) / nd;
+	float t = (plane.distance - pn) / nd;
 	return t >= 0.0;
 }
 
 bool intersects(const Plane& plane, const Sphere& sphere)
 {
 	Point closest_point = closestPoint(plane, sphere.center);
-	double distance_squared = (sphere.center - closest_point).squaredNorm();
+	float distance_squared = (sphere.center - closest_point).squaredNorm();
 	return distance_squared < sphere.radius * sphere.radius;
 }
 
@@ -774,9 +776,9 @@ bool intersects(const Ray& ray_1, const Ray& ray_2)
 bool intersects(const Ray& ray, const Sphere& sphere)
 {
 	Point e = sphere.center - ray.origin;
-	double rSq = sphere.radius * sphere.radius;
-	double eSq = e.squaredNorm();
-	double a = Point::dot(e, ray.direction);
+	float rSq = sphere.radius * sphere.radius;
+	float eSq = e.squaredNorm();
+	float a = Point::dot(e, ray.direction);
 	return rSq - (eSq - a * a) >= 0.0;
 }
 
@@ -812,8 +814,8 @@ bool intersects(const Sphere& sphere, const Ray& ray) { return intersects(ray, s
 
 bool intersects(const Sphere& sphere_1, const Sphere& sphere_2)
 {
-	double radius_sum = sphere_1.radius + sphere_2.radius;
-	double distance_squared = (sphere_1.center - sphere_2.center).squaredNorm();
+	float radius_sum = sphere_1.radius + sphere_2.radius;
+	float distance_squared = (sphere_1.center - sphere_2.center).squaredNorm();
 	return distance_squared < radius_sum * radius_sum;
 }
 

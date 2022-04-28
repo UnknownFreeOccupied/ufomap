@@ -1,0 +1,47 @@
+material ufomap_rviz_plugins/Point
+{
+	technique gp
+	{
+		pass
+		{
+			alpha_rejection greater_equal 1
+			point_size_attenuation on
+			point_sprites on
+			vertex_program_ref ufomap_rviz_plugins/glsl/point.vert {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/flat_color_circle.frag {}
+		}
+	}
+
+	technique depth
+	{
+		scheme Depth
+		pass
+		{
+			point_size_attenuation on
+			vertex_program_ref ufomap_rviz_plugins/glsl/point.vert(with_depth) {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/depth_circle.frag {}
+		}
+	}
+
+	technique selection_first_pass
+	{
+		scheme Pick
+		pass
+		{
+			point_size_attenuation on
+			vertex_program_ref ufomap_rviz_plugins/glsl/point.vert {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/pick_color_circle.frag {}
+		}
+	}
+
+	technique selection_second_pass
+	{
+		scheme Pick1
+		pass
+		{
+			point_size_attenuation on
+			vertex_program_ref ufomap_rviz_plugins/glsl/point.vert {}
+			fragment_program_ref ufomap_rviz_plugins/glsl/pass_color_circle.frag {}
+		}
+	}
+}

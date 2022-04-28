@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -46,7 +45,7 @@
 #include <ufo/geometry/plane.h>
 #include <ufo/geometry/point.h>
 
-// STD
+// STL
 #include <array>
 #include <cmath>
 
@@ -55,22 +54,37 @@ namespace ufo::geometry
 struct Frustum {
 	std::array<Plane, 6> planes;
 
-	Frustum() {}
+	// TODO: Make private
+	Point position;
+	Point target;
+	Point up;
+	float vertical_angle;
+	float horizontal_angle;
+	float near_distance;
+	float far_distance;
 
-	Frustum(Frustum const& frustum) : planes(frustum.planes) {}
+	inline Frustum() = default;
 
 	// TODO: Horizontal or vertical angle?
-	Frustum(Point const& pos, Point const& target, Point const& up, double vertical_angle,
-	        double horizontal_angle, double near_distance, double far_distance)
+	inline Frustum(Point const& pos, Point const& target, Point const& up,
+	               float vertical_angle, float horizontal_angle, float near_distance,
+	               float far_distance)
+	    : position(pos),
+	      target(target),
+	      up(up),
+	      vertical_angle(vertical_angle),
+	      horizontal_angle(horizontal_angle),
+	      near_distance(near_distance),
+	      far_distance(far_distance)
 	{
-		double ratio = horizontal_angle / vertical_angle;
+		float ratio = horizontal_angle / vertical_angle;
 
 		// TODO: Check if correct
-		double tang = tan(vertical_angle * 0.5);
-		double near_height = near_distance * tang;
-		double near_width = near_height * ratio;
-		double far_height = far_distance * tang;
-		double far_width = far_height * ratio;
+		float tang = tan(vertical_angle * 0.5);
+		float near_height = near_distance * tang;
+		float near_width = near_height * ratio;
+		float far_height = far_distance * tang;
+		float far_width = far_height * ratio;
 
 		Point Z = pos - target;
 		Z.normalize();
@@ -101,29 +115,29 @@ struct Frustum {
 		far() = Plane(far_top_right, far_top_left, far_bottom_left);
 	}
 
-	Plane const& top() const { return planes[0]; }
+	inline Plane const& top() const { return planes[0]; }
 
-	Plane& top() { return planes[0]; }
+	inline Plane& top() { return planes[0]; }
 
-	Plane const& bottom() const { return planes[1]; }
+	inline Plane const& bottom() const { return planes[1]; }
 
-	Plane& bottom() { return planes[1]; }
+	inline Plane& bottom() { return planes[1]; }
 
-	Plane const& left() const { return planes[2]; }
+	inline Plane const& left() const { return planes[2]; }
 
-	Plane& left() { return planes[2]; }
+	inline Plane& left() { return planes[2]; }
 
-	Plane const& right() const { return planes[3]; }
+	inline Plane const& right() const { return planes[3]; }
 
-	Plane& right() { return planes[3]; }
+	inline Plane& right() { return planes[3]; }
 
-	Plane const& near() const { return planes[4]; }
+	inline Plane const& near() const { return planes[4]; }
 
-	Plane& near() { return planes[4]; }
+	inline Plane& near() { return planes[4]; }
 
-	Plane const& far() const { return planes[5]; }
+	inline Plane const& far() const { return planes[5]; }
 
-	Plane& far() { return planes[5]; }
+	inline Plane& far() { return planes[5]; }
 };
 }  // namespace ufo::geometry
 

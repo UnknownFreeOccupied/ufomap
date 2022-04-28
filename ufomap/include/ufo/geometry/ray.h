@@ -1,10 +1,9 @@
-/**
- * UFOGeometry - the geometry library used in UFO
+/*
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufogeometry
+ * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
- *
  */
 
 /*
@@ -50,11 +49,9 @@ struct Ray {
 	Point origin;
 	Point direction;
 
-	Ray() : direction(0.0, 0.0, 1.0) {}
+	inline Ray() : direction(0.0, 0.0, 1.0) {}
 
-	Ray(Ray const& ray) : origin(ray.origin), direction(ray.direction) {}
-
-	Ray(Point const& origin, Point const& direction)
+	inline Ray(Point const& origin, Point const& direction)
 	    : origin(origin), direction(direction.normalized())
 	{
 	}
