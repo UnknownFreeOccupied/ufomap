@@ -48,13 +48,34 @@ namespace ufo::geometry
 struct Cylinder {
 	Point start;
 	Point end;
-	float radius;
+	float radius = 0;
 
-	Cylinder() : start(0.0, 0.0, 0.0), end(0.0, 0.0, 0.0), radius(0.0) {}
+	constexpr Cylinder() = default;
 
-	Cylinder(Point const& start, Point const& end, float radius)
+	constexpr Cylinder(Point const& start, Point const& end, float radius)
 	    : start(start), end(end), radius(radius)
 	{
+	}
+
+	constexpr bool operator==(Cylinder const& rhs) const
+	{
+		return rhs.start == start && rhs.end == end && rhs.radius == radius;
+	}
+
+	constexpr bool operator!=(Cylinder const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const
+	{
+		// FIXME: Make correct
+		return Point(std::min(start.x, end.x) - radius, std::min(start.y, end.y) - radius,
+		             std::min(start.z, end.z) - radius);
+	}
+
+	constexpr Point max() const
+	{
+		// FIXME: Make correct
+		return Point(std::max(start.x, end.x) + radius, std::max(start.y, end.y) + radius,
+		             std::max(start.z, end.z) + radius);
 	}
 };
 }  // namespace ufo::geometry

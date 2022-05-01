@@ -46,46 +46,31 @@
 namespace ufo::geometry
 {
 struct AAEBB {
-	std::array<float, 4> values;
+	Point center;
+	float half_size = 0;
 
-	inline AAEBB() = default;
+	constexpr AAEBB() = default;
 
-	inline AAEBB(Point const& center, float half_size)
-	    : values{center[0], center[1], center[2], half_size}
+	constexpr AAEBB(Point const& center, float half_size)
+	    : center(center), half_size(half_size)
 	{
 	}
 
-	inline AAEBB(float center_x, float center_y, float center_z, float half_size)
-	    : values{center_x, center_y, center_z, half_size}
+	constexpr AAEBB(float center_x, float center_y, float center_z, float half_size)
+	    : center(center_x, center_y, center_z), half_size(half_size)
 	{
 	}
 
-	inline float operator[](size_t idx) const { return values[idx]; }
-	inline float& operator[](size_t idx) { return values[idx]; }
-
-	constexpr float x() const { return values[0]; }
-	constexpr float& x() { return values[0]; }
-
-	constexpr float y() const { return values[1]; }
-	constexpr float& y() { return values[1]; }
-
-	constexpr float z() const { return values[2]; }
-	constexpr float& z() { return values[2]; }
-
-	constexpr float halfSize() const { return values[3]; }
-	constexpr float& halfSize() { return values[3]; }
-
-	inline Point center() const { return Point(x(), y(), z()); }
-
-	inline Point getMin() const
+	constexpr bool operator==(AAEBB const& rhs) const
 	{
-		return Point(x() - halfSize(), y() - halfSize(), z() - halfSize());
+		return rhs.center == center && rhs.half_size == half_size;
 	}
 
-	inline Point getMax() const
-	{
-		return Point(x() + halfSize(), y() + halfSize(), z() + halfSize());
-	}
+	constexpr bool operator!=(AAEBB const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const { return center - half_size; }
+
+	constexpr Point max() const { return center + half_size; }
 };
 }  // namespace ufo::geometry
 

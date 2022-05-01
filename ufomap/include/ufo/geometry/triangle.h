@@ -46,20 +46,32 @@
 namespace ufo::geometry
 {
 struct Triangle {
-	Point points[3];
+	std::array<Point, 3> points;
 
-	Triangle() {}
+	constexpr Triangle() = default;
 
-	Triangle(Point const& point_1, Point const& point_2, Point const& point_3)
+	constexpr Triangle(Point const& point_1, Point const& point_2, Point const& point_3)
 	    : points{point_1, point_2, point_3}
 	{
 	}
 
-	Triangle(Triangle const& other) = default;
-	Triangle(Triangle&& other) = default;
+	constexpr bool operator==(Triangle const& rhs) const { return rhs.points == points; }
 
-	Triangle& operator=(Triangle const& rhs) = default;
-	Triangle& operator=(Triangle&& rhs) = default;
+	constexpr bool operator!=(Triangle const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const
+	{
+		return Point(std::min({points[0].x, points[1].x, points[2].x}),
+		             std::min({points[0].y, points[1].y, points[2].y}),
+		             std::min({points[0].z, points[1].z, points[2].z}));
+	}
+
+	constexpr Point max() const
+	{
+		return Point(std::max({points[0].x, points[1].x, points[2].x}),
+		             std::max({points[0].y, points[1].y, points[2].y}),
+		             std::max({points[0].z, points[1].z, points[2].z}));
+	}
 };
 }  // namespace ufo::geometry
 

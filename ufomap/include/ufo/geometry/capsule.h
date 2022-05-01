@@ -48,17 +48,32 @@ namespace ufo::geometry
 struct Capsule {
 	Point start;
 	Point end;
-	float radius;
+	float radius = 0;
 
-	Capsule() : start(0.0, 0.0, 0.0), end(0.0, 0.0, 0.0), radius(0.0) {}
+	constexpr Capsule() = default;
 
-	Capsule(Point const& start, Point const& end, float radius)
+	constexpr Capsule(Point const& start, Point const& end, float radius)
 	    : start(start), end(end), radius(radius)
 	{
 	}
 
-	Capsule(Capsule const& other) : start(other.start), end(other.end), radius(other.radius)
+	constexpr bool operator==(Capsule const& rhs) const
 	{
+		return rhs.start == start && rhs.end == end && rhs.radius == radius;
+	}
+
+	constexpr bool operator!=(Capsule const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const
+	{
+		return Point(std::min(start.x, end.x) - radius, std::min(start.y, end.y) - radius,
+		             std::min(start.z, end.z) - radius);
+	}
+
+	constexpr Point max() const
+	{
+		return Point(std::max(start.x, end.x) + radius, std::max(start.y, end.y) + radius,
+		             std::max(start.z, end.z) + radius);
 	}
 };
 }  // namespace ufo::geometry

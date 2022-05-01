@@ -41,6 +41,7 @@
 #ifndef UFO_MATH_VECTOR3_H
 #define UFO_MATH_VECTOR3_H
 
+// STL
 #include <stddef.h>
 
 #include <algorithm>
@@ -49,277 +50,294 @@
 
 namespace ufo::math
 {
-class Vector3
-{
- public:
-	inline Vector3() = default;
+template <typename T>
+struct Vector3 {
+	T x = 0;
+	T y = 0;
+	T z = 0;
 
-	inline Vector3(float x, float y, float z) : data_{x, y, z} {}
+	constexpr Vector3() = default;
 
-	Vector3 cross(Vector3 const& other) const { return cross(*this, other); }
-	static Vector3 cross(Vector3 const& first, Vector3 const& second)
+	constexpr Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
+
+	constexpr Vector3 cross(Vector3 const& other) const { return cross(*this, other); }
+	
+	static constexpr Vector3 cross(Vector3 const& first, Vector3 const& second)
 	{
-		return Vector3(
-		    (first.data_[1] * second.data_[2]) - (first.data_[2] * second.data_[1]),
-		    (first.data_[2] * second.data_[0]) - (first.data_[0] * second.data_[2]),
-		    (first.data_[0] * second.data_[1]) - (first.data_[1] * second.data_[0]));
+		return Vector3((first.y * second.z) - (first.z * second.y),
+		               (first.z * second.x) - (first.x * second.z),
+		               (first.x * second.y) - (first.y * second.x));
 	}
 
-	float dot(Vector3 const& other) const { return dot(*this, other); }
-	static float dot(Vector3 const& first, Vector3 const& second)
+	constexpr T dot(Vector3 const& other) const { return dot(*this, other); }
+
+	static constexpr T dot(Vector3 const& first, Vector3 const& second)
 	{
-		return (first.data_[0] * second.data_[0]) + (first.data_[1] * second.data_[1]) +
-		       (first.data_[2] * second.data_[2]);
+		return (first.x * second.x) + (first.y * second.y) + (first.z * second.z);
 	}
 
-	constexpr float& operator()(size_t idx) { return data_[idx]; }
+	constexpr T& operator()(size_t idx) { return *(&x + idx); }
 
-	constexpr float const& operator()(size_t idx) const { return data_[idx]; }
-	constexpr float& operator[](size_t idx) { return data_[idx]; }
-	constexpr float const& operator[](size_t idx) const { return data_[idx]; }
+	constexpr T const& operator()(size_t idx) const { return *(&x + idx); }
 
-	constexpr float& x() noexcept { return data_[0]; }
-	constexpr float const& x() const noexcept { return data_[0]; }
-	constexpr float& y() noexcept { return data_[1]; }
-	constexpr float const& y() const noexcept { return data_[1]; }
-	constexpr float& z() noexcept { return data_[2]; }
-	constexpr float const& z() const noexcept { return data_[2]; }
+	constexpr T& operator[](size_t idx) { return *(&x + idx); }
 
-	constexpr float& roll() noexcept { return data_[0]; }
-	constexpr float const& roll() const noexcept { return data_[0]; }
-	constexpr float& pitch() noexcept { return data_[1]; }
-	constexpr float const& pitch() const noexcept { return data_[1]; }
-	constexpr float& yaw() noexcept { return data_[2]; }
-	constexpr float const& yaw() const noexcept { return data_[2]; }
+	constexpr T const& operator[](size_t idx) const { return *(&x + idx); }
 
-	Vector3 operator-() const { return Vector3(-data_[0], -data_[1], -data_[2]); }
+	constexpr T& roll() noexcept { return x; }
 
-	Vector3 operator-(Vector3 const& other) const
+	constexpr T const& roll() const noexcept { return x; }
+
+	constexpr T& pitch() noexcept { return y; }
+
+	constexpr T const& pitch() const noexcept { return y; }
+
+	constexpr T& yaw() noexcept { return z; }
+
+	constexpr T const& yaw() const noexcept { return z; }
+
+	constexpr Vector3 operator-() const { return Vector3(-x, -y, -z); }
+
+	constexpr Vector3 operator-(Vector3 const& other) const
 	{
-		return Vector3(data_[0] - other.data_[0], data_[1] - other.data_[1],
-		               data_[2] - other.data_[2]);
+		return Vector3(x - other.x, y - other.y, z - other.z);
 	}
-	Vector3 operator-(float value) const
+
+	constexpr Vector3 operator-(T value) const
 	{
-		return Vector3(data_[0] - value, data_[1] - value, data_[2] - value);
+		return Vector3(x - value, y - value, z - value);
 	}
-	Vector3 operator+(Vector3 const& other) const
+
+	constexpr Vector3 operator+(Vector3 const& other) const
 	{
-		return Vector3(data_[0] + other.data_[0], data_[1] + other.data_[1],
-		               data_[2] + other.data_[2]);
+		return Vector3(x + other.x, y + other.y, z + other.z);
 	}
-	Vector3 operator+(float value) const
+
+	constexpr Vector3 operator+(T value) const
 	{
-		return Vector3(data_[0] + value, data_[1] + value, data_[2] + value);
+		return Vector3(x + value, y + value, z + value);
 	}
-	Vector3 operator*(Vector3 const& other) const
+
+	constexpr Vector3 operator*(Vector3 const& other) const
 	{
-		return Vector3(data_[0] * other.data_[0], data_[1] * other.data_[1],
-		               data_[2] * other.data_[2]);
+		return Vector3(x * other.x, y * other.y, z * other.z);
 	}
-	Vector3 operator*(float value) const
+
+	constexpr Vector3 operator*(T value) const
 	{
-		return Vector3(data_[0] * value, data_[1] * value, data_[2] * value);
+		return Vector3(x * value, y * value, z * value);
 	}
-	Vector3 operator/(Vector3 const& other) const
+
+	constexpr Vector3 operator/(Vector3 const& other) const
 	{
-		return Vector3(data_[0] / other.data_[0], data_[1] / other.data_[1],
-		               data_[2] / other.data_[2]);
+		return Vector3(x / other.x, y / other.y, z / other.z);
 	}
-	Vector3 operator/(float value) const
+
+	constexpr Vector3 operator/(T value) const
 	{
-		return Vector3(data_[0] / value, data_[1] / value, data_[2] / value);
+		return Vector3(x / value, y / value, z / value);
 	}
 
 	constexpr void operator-=(Vector3 const& other) noexcept
 	{
-		data_[0] -= other.data_[0];
-		data_[1] -= other.data_[1];
-		data_[2] -= other.data_[2];
+		x -= other.x;
+		y -= other.y;
+		z -= other.z;
 	}
+
 	constexpr void operator+=(Vector3 const& other) noexcept
 	{
-		data_[0] += other.data_[0];
-		data_[1] += other.data_[1];
-		data_[2] += other.data_[2];
+		x += other.x;
+		y += other.y;
+		z += other.z;
 	}
+
 	constexpr void operator*=(Vector3 const& other) noexcept
 	{
-		data_[0] *= other.data_[0];
-		data_[1] *= other.data_[1];
-		data_[2] *= other.data_[2];
+		x *= other.x;
+		y *= other.y;
+		z *= other.z;
 	}
+
 	constexpr void operator/=(Vector3 const& other) noexcept
 	{
-		data_[0] /= other.data_[0];
-		data_[1] /= other.data_[1];
-		data_[2] /= other.data_[2];
+		x /= other.x;
+		y /= other.y;
+		z /= other.z;
 	}
 
-	constexpr void operator-=(float value) noexcept
+	constexpr void operator-=(T value) noexcept
 	{
-		data_[0] -= value;
-		data_[1] -= value;
-		data_[2] -= value;
-	}
-	constexpr void operator+=(float value) noexcept
-	{
-		data_[0] += value;
-		data_[1] += value;
-		data_[2] += value;
-	}
-	constexpr void operator*=(float value) noexcept
-	{
-		data_[0] *= value;
-		data_[1] *= value;
-		data_[2] *= value;
-	}
-	constexpr void operator/=(float value) noexcept
-	{
-		data_[0] /= value;
-		data_[1] /= value;
-		data_[2] /= value;
+		x -= value;
+		y -= value;
+		z -= value;
 	}
 
-	bool operator==(Vector3 const& other) const noexcept
+	constexpr void operator+=(T value) noexcept
 	{
-		return data_[0] == other.data_[0] && data_[1] == other.data_[1] &&
-		       data_[2] == other.data_[2];
-	}
-	bool operator!=(Vector3 const& other) const noexcept
-	{
-		return data_[0] != other.data_[0] || data_[1] != other.data_[1] ||
-		       data_[2] != other.data_[2];
+		x += value;
+		y += value;
+		z += value;
 	}
 
-	float norm() const { return std::sqrt(squaredNorm()); }
-	float squaredNorm() const noexcept
+	constexpr void operator*=(T value) noexcept
 	{
-		return (data_[0] * data_[0]) + (data_[1] * data_[1]) + (data_[2] * data_[2]);
+		x *= value;
+		y *= value;
+		z *= value;
 	}
 
-	Vector3& normalize()
+	constexpr void operator/=(T value) noexcept
+	{
+		x /= value;
+		y /= value;
+		z /= value;
+	}
+
+	constexpr bool operator==(Vector3 const& other) const noexcept
+	{
+		return x == other.x && y == other.y && z == other.z;
+	}
+
+	constexpr bool operator!=(Vector3 const& other) const noexcept
+	{
+		return !(*this == other);
+	}
+
+	constexpr T norm() const { return std::sqrt(squaredNorm()); }
+
+	constexpr T squaredNorm() const noexcept { return (x * x) + (y * y) + (z * z); }
+
+	constexpr Vector3& normalize()
 	{
 		*this /= norm();
 		return *this;
 	}
-	Vector3 normalized() const
-	{
-		Vector3 temp(*this);
-		return temp.normalize();
-	}
 
-	float angleTo(Vector3 const& other) const
+	constexpr Vector3 normalized() const { return Vector3(*this).normalize(); }
+
+	constexpr T angleTo(Vector3 const& other) const
 	{
 		return std::acos(dot(other) / (norm() * other.norm()));
 	}
 
-	float squaredDistance(Vector3 const& other) const
+	constexpr T squaredDistance(Vector3 const& other) const
 	{
-		float x = data_[0] - other.data_[0];
-		float y = data_[1] - other.data_[1];
-		float z = data_[2] - other.data_[2];
+		T x = x - other.x;
+		T y = y - other.y;
+		T z = z - other.z;
 		return (x * x) + (y * y) + (z * z);
 	}
-	float distance(Vector3 const& other) const { return sqrt(squaredDistance(other)); }
-	float squaredDistanceXY(Vector3 const& other) const
+
+	constexpr T distance(Vector3 const& other) const
 	{
-		float x = data_[0] - other.data_[0];
-		float y = data_[1] - other.data_[1];
+		return std::sqrt(squaredDistance(other));
+	}
+
+	constexpr T squaredDistanceXY(Vector3 const& other) const
+	{
+		T x = x - other.x;
+		T y = y - other.y;
 		return (x * x) + (y * y);
 	}
-	float distanceXY(Vector3 const& other) const { return sqrt(squaredDistanceXY(other)); }
 
-	constexpr size_t size() const noexcept { return 3; }
-
-	constexpr float min() const { return std::min(std::min(data_[0], data_[1]), data_[2]); }
-	constexpr float max() const { return std::max(std::max(data_[0], data_[1]), data_[2]); }
-
-	size_t minElementIndex() const
+	constexpr T distanceXY(Vector3 const& other) const
 	{
-		if (data_[0] <= data_[1]) {
-			return data_[0] <= data_[2] ? 0 : 2;
-		} else {
-			return data_[1] <= data_[2] ? 1 : 2;
-		}
-	}
-	size_t maxElementIndex() const
-	{
-		if (data_[0] >= data_[1]) {
-			return data_[0] >= data_[2] ? 0 : 2;
-		} else {
-			return data_[1] >= data_[2] ? 1 : 2;
-		}
+		return std::sqrt(squaredDistanceXY(other));
 	}
 
-	Vector3& ceil()
+	static constexpr size_t size() noexcept { return 3; }
+
+	constexpr T min() const { return x <= y && x <= z ? x : (y <= z ? y : z); }
+
+	constexpr T min() const { return x >= y && x >= z ? x : (y >= z ? y : z); }
+
+	constexpr size_t minElementIndex() const
 	{
-		for (int i = 0; 3 != i; ++i) {
-			data_[i] = std::ceil(data_[i]);
-		}
-		return *this;
-	}
-	Vector3 ceil() const
-	{
-		return Vector3(std::ceil(data_[0]), std::ceil(data_[1]), std::ceil(data_[2]));
-	}
-	Vector3& floor()
-	{
-		for (int i = 0; 3 != i; ++i) {
-			data_[i] = std::floor(data_[i]);
-		}
-		return *this;
-	}
-	Vector3 floor() const
-	{
-		return Vector3(std::floor(data_[0]), std::floor(data_[1]), std::floor(data_[2]));
-	}
-	Vector3& trunc()
-	{
-		for (int i = 0; 3 != i; ++i) {
-			data_[i] = std::trunc(data_[i]);
-		}
-		return *this;
-	}
-	Vector3 trunc() const
-	{
-		return Vector3(std::trunc(data_[0]), std::trunc(data_[1]), std::trunc(data_[2]));
-	}
-	Vector3& round()
-	{
-		for (int i = 0; 3 != i; ++i) {
-			data_[i] = std::round(data_[i]);
-		}
-		return *this;
-	}
-	Vector3 round() const
-	{
-		return Vector3(std::round(data_[0]), std::round(data_[1]), std::round(data_[2]));
+		return x <= y && x <= z ? 0 : (y <= z ? 1 : 2);
 	}
 
-	Vector3& clamp(Vector3 const& min, Vector3 const& max)
+	constexpr size_t maxElementIndex() const
 	{
-		for (int i = 0; 3 != i; ++i) {
-			data_[i] = std::clamp(data_[i], min[i], max[i]);
-		}
+		return x >= y && x >= z ? 0 : (y >= z ? 1 : 2);
+	}
+
+	constexpr Vector3& ceil()
+	{
+		x = std::ceil(x);
+		y = std::ceil(y);
+		z = std::ceil(z);
 		return *this;
 	}
 
-	Vector3 clamp(Vector3 const& min, Vector3 const& max) const
+	constexpr Vector3 ceil() const
+	{
+		return Vector3(std::ceil(x), std::ceil(y), std::ceil(z));
+	}
+
+	constexpr Vector3& floor()
+	{
+		x = std::floor(x);
+		y = std::floor(y);
+		z = std::floor(z);
+		return *this;
+	}
+
+	constexpr Vector3 floor() const
+	{
+		return Vector3(std::floor(x), std::floor(y), std::floor(z));
+	}
+
+	constexpr Vector3& trunc()
+	{
+		x = std::trunc(x);
+		y = std::trunc(y);
+		z = std::trunc(z);
+		return *this;
+	}
+
+	constexpr Vector3 trunc() const
+	{
+		return Vector3(std::trunc(x), std::trunc(y), std::trunc(z));
+	}
+
+	constexpr Vector3& round()
+	{
+		x = std::round(x);
+		y = std::round(y);
+		z = std::round(z);
+		return *this;
+	}
+
+	constexpr Vector3 round() const
+	{
+		return Vector3(std::round(x), std::round(y), std::round(z));
+	}
+
+	constexpr Vector3& clamp(Vector3 const& min, Vector3 const& max)
+	{
+		x = std::clamp(x);
+		y = std::clamp(y);
+		z = std::clamp(z);
+		return *this;
+	}
+
+	constexpr Vector3 clamp(Vector3 const& min, Vector3 const& max) const
 	{
 		return clamp(*this, min, max);
 	}
 
-	static Vector3 clamp(Vector3 const& value, Vector3 const& min, Vector3 const& max)
+	static constexpr Vector3 clamp(Vector3 const& value, Vector3 const& min,
+	                               Vector3 const& max)
 	{
 		return Vector3(std::clamp(value[0], min[0], max[0]),
 		               std::clamp(value[1], min[1], max[1]),
 		               std::clamp(value[2], min[2], max[2]));
 	}
-
- protected:
-	std::array<float, 3> data_;
 };
+
+using Vector3f = Vector3<float>;
+using Vector3d = Vector3<double>;
 }  // namespace ufo::math
 
 #endif  // UFO_MATH_VECTOR3_H

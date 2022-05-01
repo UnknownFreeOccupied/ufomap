@@ -51,122 +51,109 @@
 
 namespace ufo::math
 {
+template <typename T>
 class Pose6
 {
- public:
-	inline Pose6() = default;
+	Vector3<T> translation;
+	Quaternion<T> rotation;
 
-	inline Pose6(Vector3 const& translation, Quaternion const& rotation)
-	    : translation_(translation), rotation_(rotation)
+	constexpr Pose6() = default;
+
+	template <typename T1, typename T2>
+	constexpr Pose6(Vector3<T1> const& translation, Quaternion<T2> const& rotation)
+	    : translation(translation), rotation(rotation)
 	{
 	}
 
-	inline Pose6(float x, float y, float z, float roll, float pitch, float yaw)
-	    : translation_(x, y, z), rotation_(roll, pitch, yaw)
+	constexpr Pose6(T x, T y, T z, T roll, T pitch, T yaw)
+	    : translation(x, y, z), rotation(roll, pitch, yaw)
 	{
 	}
 
-	inline Pose6(float t_x, float t_y, float t_z, float r_w, float r_x, float r_y,
-	             float r_z)
-	    : translation_(t_x, t_y, t_z), rotation_(r_w, r_x, r_y, r_z)
+	constexpr Pose6(T t_x, T t_y, T t_z, T r_w, T r_x, T r_y, T r_z)
+	    : translation(t_x, t_y, t_z), rotation(r_w, r_x, r_y, r_z)
 	{
 	}
 
-	bool operator==(Pose6 const& rhs)
+	constexpr bool operator==(Pose6 const& rhs)
 	{
-		return translation_ == rhs.translation_ && rotation_ == rhs.rotation_;
+		return translation == rhs.translation && rotation == rhs.rotation;
 	}
 
-	bool operator!=(Pose6 const& rhs)
+	constexpr bool operator!=(Pose6 const& rhs) { return !(*this == rhs); }
+
+	constexpr T& x() noexcept { return translation[0]; }
+
+	constexpr T x() const noexcept { return translation[0]; }
+
+	constexpr T& y() noexcept { return translation[1]; }
+
+	constexpr T y() const noexcept { return translation[1]; }
+
+	constexpr T& z() noexcept { return translation[2]; }
+
+	constexpr T z() const noexcept { return translation[2]; }
+
+	constexpr T roll() const noexcept { return rotation.roll(); }
+
+	constexpr T pitch() const noexcept { return rotation.pitch(); }
+
+	constexpr T yaw() const noexcept { return rotation.yaw(); }
+
+	template <class P>
+	constexpr P transform(P point) const
 	{
-		return translation_ != rhs.translation_ || rotation_ != rhs.rotation_;
-	}
-
-	Vector3& translation() noexcept { return translation_; }
-	Vector3 translation() const noexcept { return translation_; }
-	Quaternion& rotation() noexcept { return rotation_; }
-	Quaternion rotation() const noexcept { return rotation_; }
-
-	constexpr float& x() noexcept { return translation_[0]; }
-	constexpr float x() const noexcept { return translation_[0]; }
-	constexpr float& y() noexcept { return translation_[1]; }
-	constexpr float y() const noexcept { return translation_[1]; }
-	constexpr float& z() noexcept { return translation_[2]; }
-	constexpr float z() const noexcept { return translation_[2]; }
-
-	float roll() const noexcept { return rotation_.toEuler()[0]; }
-	float pitch() const noexcept { return rotation_.toEuler()[1]; }
-	float yaw() const noexcept { return rotation_.toEuler()[2]; }
-
-	template <typename T, typename = std::enable_if_t<std::is_base_of_v<Vector3, T>>>
-	T transform(T point) const
-	{
-		// TODO: Improve
-		point = rotation_.rotate(point);
-		point += translation_;
+		point = rotation.rotate(point);
+		point += translation;
 		return point;
-		// T new_v = v;
-		// Vector3 result = rotation_.rotate(v);
-		// new_v.x() = result.x();
-		// new_v.y() = result.y();
-		// new_v.z() = result.z();
-		// new_v += translation_;
-		// return new_v;
 	}
 
-	template <typename T, typename = std::enable_if_t<std::is_base_of_v<Vector3, T>>>
-	void transformInPlace(T& point) const
+	template <class P>
+	constexpr void transformInPlace(P& point) const
 	{
-		rotation_.rotateInPlace(point);
-		point += translation_;
+		rotation.rotateInPlace(point);
+		point += translation;
 	}
 
-	Pose6 inversed() const
+	constexpr Pose6 inversed() const
 	{
 		Pose6 result(*this);
-		result.rotation_ = result.rotation_.inversed().normalized();
-		result.translation_ = result.rotation_.rotate(-translation_);
+		result.rotation.inverse().normalize();
+		result.rotation.rotateInPlace(-result.translation);
 		return result;
 	}
 
-	Pose6& inverse()
+	constexpr Pose6& inverse()
 	{
-		rotation_ = rotation_.inversed().normalized();
-		translation_ = rotation_.rotate(-translation_);
+		rotation.inverse().normalize();
+		rotation.rotateInPlace(-translation);
 		return *this;
 	}
 
-	Pose6 operator*(Pose6 const& other) const
+	constexpr Pose6 operator*(Pose6 const& other) const
 	{
-		Quaternion rotation_new = rotation_ * other.rotation_;
-		Vector3 transation_new = rotation_.rotate(other.translation_) + translation_;
-		return Pose6(transation_new, rotation_new.normalized());
+		Quaternion<T> rotationnew = rotation * other.rotation;
+		Vector3<T> transation_new = rotation.rotate(other.translation) + translation;
+		return Pose6(transation_new, rotationnew.normalize());
 	}
 
-	Pose6& operator*=(Pose6 const& other)
+	constexpr Pose6& operator*=(Pose6 const& other)
 	{
-		translation_ += rotation_.rotate(other.translation_);
-		rotation_ = rotation_ * other.rotation_;
+		translation += rotation.rotate(other.translation);
+		rotation = rotation * other.rotation;
 		return *this;
 	}
 
-	float distance(Pose6 const& other) const
+	constexpr T distance(Pose6 const& other) const
 	{
-		float dist_x = x() - other.x();
-		float dist_y = y() - other.y();
-		float dist_z = z() - other.z();
-		return sqrt((dist_x * dist_x) + (dist_y * dist_y) + (dist_z * dist_z));
+		return translation.distance(other.translation);
 	}
 
-	float translationLength() const
-	{
-		return sqrt((x() * x()) + (y() * y()) + (z() * z()));
-	}
-
- private:
-	Vector3 translation_;
-	Quaternion rotation_;
+	constexpr T translationLength() const { return translation.norm(); }
 };
+
+using Pose6f = Pose6<float>;
+using Pose6d = Pose6<double>;
 }  // namespace ufo::math
 
 #endif  // UFO_MATH_POSE6_H

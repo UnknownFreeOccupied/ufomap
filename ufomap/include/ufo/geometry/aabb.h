@@ -49,28 +49,28 @@ struct AABB {
 	Point center;
 	Point half_size;
 
-	inline AABB() = default;
+	constexpr AABB() = default;
 
-	inline AABB(Point const& center, float half_size)
+	constexpr AABB(Point const& center, float half_size)
 	    : center(center), half_size(half_size, half_size, half_size)
 	{
 	}
 
-	inline AABB(Point const& min, Point const& max) : half_size((max - min) / 2.0)
+	constexpr AABB(Point const& min, Point const& max) : half_size((max - min) / 2.0)
 	{
 		center = min + half_size;
 	}
 
-	bool operator==(AABB const& rhs) const
+	constexpr bool operator==(AABB const& rhs) const
 	{
 		return rhs.center == center && rhs.half_size == half_size;
 	}
 
-	bool operator!=(AABB const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(AABB const& rhs) const { return !(*this == rhs); }
 
-	inline Point getMin() const { return center - half_size; }
+	constexpr Point min() const { return center - half_size; }
 
-	inline Point getMax() const { return center + half_size; }
+	constexpr Point max() const { return center + half_size; }
 };
 }  // namespace ufo::geometry
 

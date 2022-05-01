@@ -47,11 +47,22 @@ namespace ufo::geometry
 {
 struct Sphere {
 	Point center;
-	float radius;
+	float radius = 0;
 
-	inline Sphere() = default;
+	constexpr Sphere() = default;
 
-	inline Sphere(Point const& center, float radius) : center(center), radius(radius) {}
+	constexpr Sphere(Point const& center, float radius) : center(center), radius(radius) {}
+
+	constexpr bool operator==(Sphere const& rhs) const
+	{
+		return rhs.center == center && rhs.radius == radius;
+	}
+
+	constexpr bool operator!=(Sphere const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const { return center - radius; }
+
+	constexpr Point max() const { return center + radius; }
 };
 }  // namespace ufo::geometry
 

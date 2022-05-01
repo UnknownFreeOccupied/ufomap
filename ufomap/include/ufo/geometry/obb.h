@@ -53,36 +53,36 @@ namespace ufo::geometry
 struct OBB {
 	Point center;
 	Point half_size;
-	math::Quaternion rotation;
+	math::Quaternionf rotation;
 
-	inline OBB() = default;
+	constexpr OBB() = default;
 
-	inline OBB(Point const& center, Point const& half_size)
+	constexpr OBB(Point const& center, Point const& half_size)
 	    : center(center), half_size(half_size)
 	{
 	}
 
-	inline OBB(Point const& center, Point const& half_size,
-	           math::Quaternion const& rotation)
+	constexpr OBB(Point const& center, Point const& half_size,
+	              math::Quaternionf const& rotation)
 	    : center(center), half_size(half_size), rotation(rotation)
 	{
 	}
 
-	inline OBB(Point const& center, Point const& half_size, Point const& rotation)
+	constexpr OBB(Point const& center, Point const& half_size, Point const& rotation)
 	    : center(center),
 	      half_size(half_size),
 	      rotation(rotation[0], rotation[1], rotation[2])
 	{
 	}
 
-  bool operator==(OBB const& rhs) const {
-    return rhs.center == center && rhs.half_size == half_size &&
-           rhs.rotation == rotation;
-  }
+	constexpr bool operator==(OBB const& rhs) const
+	{
+		return rhs.center == center && rhs.half_size == half_size && rhs.rotation == rotation;
+	}
 
-  bool operator!=(OBB const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(OBB const& rhs) const { return !(*this == rhs); }
 
-	inline Point getMin() const
+	constexpr Point min() const
 	{
 		Point rot_half_size = rotation.rotate(half_size);
 		Point corners[8]{
@@ -113,7 +113,7 @@ struct OBB {
 		return minimum;
 	}
 
-	inline Point getMax() const
+	constexpr Point max() const
 	{
 		Point rot_half_size = rotation.rotate(half_size);
 		Point corners[8]{

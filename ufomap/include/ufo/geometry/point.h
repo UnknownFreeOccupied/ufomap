@@ -44,7 +44,7 @@
 #include <ufo/math/vector3.h>
 
 namespace ufo::geometry {
-using Point = math::Vector3;
+using Point = math::Vector3f;
 }  // namespace ufo::geometry
 
 #endif  // UFO_GEOMETRY_POINT_H

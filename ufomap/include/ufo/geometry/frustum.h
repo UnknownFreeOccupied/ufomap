@@ -52,23 +52,18 @@
 namespace ufo::geometry
 {
 struct Frustum {
-	std::array<Plane, 6> planes;
+	Plane top;
+	Plane bottom;
+	Plane left;
+	Plane right;
+	Plane far;
+	Plane near;
 
-	// TODO: Make private
-	Point position;
-	Point target;
-	Point up;
-	float vertical_angle;
-	float horizontal_angle;
-	float near_distance;
-	float far_distance;
+	constexpr Frustum() = default;
 
-	inline Frustum() = default;
-
-	// TODO: Horizontal or vertical angle?
-	inline Frustum(Point const& pos, Point const& target, Point const& up,
-	               float vertical_angle, float horizontal_angle, float near_distance,
-	               float far_distance)
+	constexpr Frustum(Point const& pos, Point const& target, Point const& up,
+	                  float vertical_angle, float horizontal_angle, float near_distance,
+	                  float far_distance)
 	    : position(pos),
 	      target(target),
 	      up(up),
@@ -107,37 +102,42 @@ struct Frustum {
 		Point far_bottom_left = fc - Y * far_height - X * far_width;
 		Point far_bottom_right = fc - Y * far_height + X * far_width;
 
-		top() = Plane(near_top_right, near_top_left, far_top_left);
-		bottom() = Plane(near_bottom_left, near_bottom_right, far_bottom_right);
-		left() = Plane(near_top_left, near_bottom_left, far_bottom_left);
-		right() = Plane(near_bottom_right, near_top_right, far_bottom_right);
-		near() = Plane(near_top_left, near_top_right, near_bottom_right);
-		far() = Plane(far_top_right, far_top_left, far_bottom_left);
+		top = Plane(near_top_right, near_top_left, far_top_left);
+		bottom = Plane(near_bottom_left, near_bottom_right, far_bottom_right);
+		left = Plane(near_top_left, near_bottom_left, far_bottom_left);
+		right = Plane(near_bottom_right, near_top_right, far_bottom_right);
+		near = Plane(near_top_left, near_top_right, near_bottom_right);
+		far = Plane(far_top_right, far_top_left, far_bottom_left);
 	}
 
-	inline Plane const& top() const { return planes[0]; }
+	constexpr bool operator==(Frustum const& rhs) const
+	{
+		return rhs.top == top && rhs.bottom == bottom && rhs.left == left &&
+		       rhs.right == right && rhs.far == far && rhs.near == near;
+	}
 
-	inline Plane& top() { return planes[0]; }
+	constexpr bool operator!=(Frustum const& rhs) const { return !(*this == rhs); }
 
-	inline Plane const& bottom() const { return planes[1]; }
+	constexpr Point min() const
+	{
+		// TODO: Implement
+		return Point();
+	}
 
-	inline Plane& bottom() { return planes[1]; }
+	constexpr Point max() const
+	{
+		// TODO: Implement
+		return Point();
+	}
 
-	inline Plane const& left() const { return planes[2]; }
-
-	inline Plane& left() { return planes[2]; }
-
-	inline Plane const& right() const { return planes[3]; }
-
-	inline Plane& right() { return planes[3]; }
-
-	inline Plane const& near() const { return planes[4]; }
-
-	inline Plane& near() { return planes[4]; }
-
-	inline Plane const& far() const { return planes[5]; }
-
-	inline Plane& far() { return planes[5]; }
+ private:
+	Point position;
+	Point target;
+	Point up;
+	float vertical_angle = 0;
+	float horizontal_angle = 0;
+	float near_distance = 0;
+	float far_distance = 0;
 };
 }  // namespace ufo::geometry
 

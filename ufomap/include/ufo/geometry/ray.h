@@ -49,11 +49,30 @@ struct Ray {
 	Point origin;
 	Point direction;
 
-	inline Ray() : direction(0.0, 0.0, 1.0) {}
+	constexpr Ray() = default;
 
-	inline Ray(Point const& origin, Point const& direction)
+	constexpr Ray(Point const& origin, Point const& direction)
 	    : origin(origin), direction(direction.normalized())
 	{
+	}
+
+	constexpr bool operator==(Ray const& rhs) const
+	{
+		return rhs.origin == origin && rhs.direction == direction;
+	}
+
+	constexpr bool operator!=(Ray const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const
+	{
+		// TODO: Implement
+		return Point();
+	}
+
+	constexpr Point max() const
+	{
+		// TODO: Implement
+		return Point();
 	}
 };
 }  // namespace ufo::geometry

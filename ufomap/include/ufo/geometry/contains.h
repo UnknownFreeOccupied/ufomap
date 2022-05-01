@@ -59,197 +59,467 @@ namespace ufo::geometry
 // AABB
 //
 
-bool contains(AABB const& aabb_1, AABB const& aabb_2);
-inline bool contains(AABB const& aabb, AAEBB const& aaebb)
+constexpr bool contains(AABB const& aabb_1, AABB const& aabb_2)
+{
+	Point min_1 = aabb_1.min();
+	Point max_1 = aabb_1.max();
+	Point min_2 = aabb_2.min();
+	Point max_2 = aabb_2.max();
+	return min_1.x <= min_2.x && min_1.y <= min_2.y && min_1.z <= min_2.z &&
+	       max_1.x >= max_2.x && max_1.y >= max_2.y && max_1.z >= max_2.z;
+}
+
+constexpr bool contains(AABB const& aabb, AAEBB const& aaebb)
 {
 	Point min_1 = aabb.getMin();
 	Point max_1 = aabb.getMax();
 	Point min_2 = aaebb.getMin();
 	Point max_2 = aaebb.getMax();
-	for (size_t i : {0, 1, 2}) {
-		if (min_1[i] > min_2[i] || max_1[i] < max_2[i]) {
-			return false;
-		}
-	}
-	return true;
+	return min_1.x <= min_2.x && min_1.y <= min_2.y && min_1.z <= min_2.z &&
+	       max_1.x >= max_2.x && max_1.y >= max_2.y && max_1.z >= max_2.z;
 }
-bool contains(AABB const& aabb, Frustum const& frustum);
-bool contains(AABB const& aabb, LineSegment const& line_segment);
-bool contains(AABB const& aabb, OBB const& obb);
-bool contains(AABB const& aabb, Plane const& plane);
-bool contains(AABB const& aabb, Point const& point);
-bool contains(AABB const& aabb, Ray const& ray);
-bool contains(AABB const& aabb, Sphere const& sphere);
+
+// constexpr bool contains(AABB const& aabb, Frustum const& frustum)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AABB const& aabb, LineSegment const& line_segment)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AABB const& aabb, OBB const& obb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AABB const& aabb, Plane const& plane)
+// {
+// 	// TODO: Implement
+// }
+
+constexpr bool contains(AABB const& aabb, Point const& point)
+{
+	Point min = aabb.min();
+	Point max = aabb.max();
+	return min.x <= point.x && min.y <= point.y && min.z <= point.z && max.x >= point.x &&
+	       max.y >= point.y && max.z >= point.z;
+}
+
+// constexpr bool contains(AABB const& aabb, Ray const& ray)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AABB const& aabb, Sphere const& sphere)
+// {
+// 	// TODO: Implement
+// }
 
 //
 // AAEBB
 //
 
-inline bool contains(AAEBB const& aaebb, AABB const& aabb)
+constexpr bool contains(AAEBB const& aaebb, AABB const& aabb)
 {
 	Point min_1 = aaebb.getMin();
 	Point max_1 = aaebb.getMax();
 	Point min_2 = aabb.getMin();
 	Point max_2 = aabb.getMax();
-	for (size_t i : {0, 1, 2}) {
-		if (min_1[i] > min_2[i] || max_1[i] < max_2[i]) {
-			return false;
-		}
-	}
-	return true;
+	return min_1.x <= min_2.x && min_1.y <= min_2.y && min_1.z <= min_2.z &&
+	       max_1.x >= max_2.x && max_1.y >= max_2.y && max_1.z >= max_2.z;
 }
-inline bool contains(AAEBB const& aaebb_1, AAEBB const& aaebb_2)
+
+constexpr bool contains(AAEBB const& aaebb_1, AAEBB const& aaebb_2)
 {
+	if (aaebb_1.half_size < aaebb_2.half_size) {
+		// FIXME: Check if this optimization is worth it and then apply for other
+		return false;
+	}
+
 	Point min_1 = aaebb_1.getMin();
 	Point max_1 = aaebb_1.getMax();
 	Point min_2 = aaebb_2.getMin();
 	Point max_2 = aaebb_2.getMax();
-	for (size_t i : {0, 1, 2}) {
-		if (min_1[i] > min_2[i] || max_1[i] < max_2[i]) {
-			return false;
-		}
-	}
-	return true;
+	return min_1.x <= min_2.x && min_1.y <= min_2.y && min_1.z <= min_2.z &&
+	       max_1.x >= max_2.x && max_1.y >= max_2.y && max_1.z >= max_2.z;
 }
-inline bool contains(AAEBB const& aaebb, Frustum const& frustum)
-{
-	throw std::logic_error("Function not yet implemented.");
-	// TODO: Implement
-}
-inline bool contains(AAEBB const& aaebb, LineSegment const& line_segment)
-{
-	throw std::logic_error("Function not yet implemented.");
-	// TODO: Implement
-}
-inline bool contains(AAEBB const& aaebb, OBB const& obb)
-{
-	throw std::logic_error("Function not yet implemented.");
-	// TODO: Implement
-}
-inline bool contains(AAEBB const& aaebb, Plane const& plane)
-{
-	throw std::logic_error("Function not yet implemented.");
-	// TODO: Implement
-}
-inline bool contains(AAEBB const& aaebb, Point const& point)
+
+// constexpr bool contains(AAEBB const& aaebb, Frustum const& frustum)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AAEBB const& aaebb, LineSegment const& line_segment)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AAEBB const& aaebb, OBB const& obb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AAEBB const& aaebb, Plane const& plane)
+// {
+// 	// TODO: Implement
+// }
+
+constexpr bool contains(AAEBB const& aaebb, Point const& point)
 {
 	Point min = aaebb.getMin();
 	Point max = aaebb.getMax();
-	for (size_t i : {0, 1, 2}) {
-		if (min[i] > point[i] || max[i] < point[i]) {
-			return false;
-		}
-	}
-	return true;
+	return min.x <= point.x && min.y <= point.y && min.z <= point.z && max.x >= point.x &&
+	       max.y >= point.y && max.z >= point.z;
 }
-inline bool contains(AAEBB const& aaebb, Ray const& ray)
-{
-	throw std::logic_error("Function not yet implemented.");
-	// TODO: Implement
-}
-inline bool contains(AAEBB const& aaebb, Sphere const& sphere)
-{
-	throw std::logic_error("Function not yet implemented.");
-	// TODO: Implement
-}
+
+// constexpr bool contains(AAEBB const& aaebb, Ray const& ray)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(AAEBB const& aaebb, Sphere const& sphere)
+// {
+// 	// TODO: Implement
+// }
 
 //
 // Frustum
 //
 
-bool contains(Frustum const& frustum, AABB const& aabb);
-bool contains(Frustum const& frustum, AAEBB const& aaebb);
-bool contains(Frustum const& frustum_1, Frustum const& frustum_2);
-bool contains(Frustum const& frustum, LineSegment const& line_segment);
-bool contains(Frustum const& frustum, OBB const& obb);
-bool contains(Frustum const& frustum, Plane const& plane);
-bool contains(Frustum const& frustum, Point const& point);
-bool contains(Frustum const& frustum, Ray const& ray);
-bool contains(Frustum const& frustum, Sphere const& sphere);
+// constexpr bool contains(Frustum const& frustum, AABB const& aabb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum, AAEBB const& aaebb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum_1, Frustum const& frustum_2)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum, LineSegment const& line_segment)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum, OBB const& obb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum, Plane const& plane)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum, Point const& point)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum, Ray const& ray)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Frustum const& frustum, Sphere const& sphere)
+// {
+// 	// TODO: Implement
+// }
 
 //
 // Line segment
 //
 
-bool contains(LineSegment const& line_segment, AABB const& aabb);
-bool contains(LineSegment const& line_segment, AAEBB const& aaebb);
-bool contains(LineSegment const& line_segment, Frustum const& frustum);
-bool contains(LineSegment const& line_segment_1, LineSegment const& line_segment_2);
-bool contains(LineSegment const& line_segment, OBB const& obb);
-bool contains(LineSegment const& line_segment, Plane const& plane);
-bool contains(LineSegment const& line_segment, Point const& point);
-bool contains(LineSegment const& line_segment, Ray const& ray);
-bool contains(LineSegment const& line_segment, Sphere const& sphere);
+// constexpr bool contains(LineSegment const& line_segment, AABB const& aabb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment, AAEBB const& aaebb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment, Frustum const& frustum)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment_1,
+//                         LineSegment const& line_segment_2)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment, OBB const& obb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment, Plane const& plane)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment, Point const& point)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment, Ray const& ray)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(LineSegment const& line_segment, Sphere const& sphere)
+// {
+// 	// TODO: Implement
+// }
 
 //
 // OBB
 //
 
-bool contains(OBB const& obb, AABB const& aabb);
-bool contains(OBB const& obb, AAEBB const& aaebb);
-bool contains(OBB const& obb, Frustum const& frustum);
-bool contains(OBB const& obb, LineSegment const& line_segment);
-bool contains(OBB const& obb_1, OBB const& obb_2);
-bool contains(OBB const& obb, Plane const& plane);
-bool contains(OBB const& obb, Point const& point);
-bool contains(OBB const& obb, Ray const& ray);
-bool contains(OBB const& obb, Sphere const& sphere);
+// constexpr bool contains(OBB const& obb, AABB const& aabb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb, AAEBB const& aaebb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb, Frustum const& frustum)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb, LineSegment const& line_segment)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb_1, OBB const& obb_2)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb, Plane const& plane)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb, Point const& point)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb, Ray const& ray)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(OBB const& obb, Sphere const& sphere)
+// {
+// 	// TODO: Implement
+// }
 
 //
 // Plane
 //
 
-bool contains(Plane const& plane, AABB const& aabb);
-bool contains(Plane const& plane, AAEBB const& aaebb);
-bool contains(Plane const& plane, Frustum const& frustum);
-bool contains(Plane const& plane, LineSegment const& line_segment);
-bool contains(Plane const& plane, OBB const& obb);
-bool contains(Plane const& plane_1, Plane const& plane_2);
-bool contains(Plane const& plane, Point const& point);
-bool contains(Plane const& plane, Ray const& ray);
-bool contains(Plane const& plane, Sphere const& sphere);
+// constexpr bool contains(Plane const& plane, AABB const& aabb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane, AAEBB const& aaebb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane, Frustum const& frustum)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane, LineSegment const& line_segment)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane, OBB const& obb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane_1, Plane const& plane_2)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane, Point const& point)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane, Ray const& ray)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Plane const& plane, Sphere const& sphere)
+// {
+// 	// TODO: Implement
+// }
 
 //
 // Point
 //
 
-bool contains(Point const& point, AABB const& aabb);
-bool contains(Point const& point, AAEBB const& aaebb);
-bool contains(Point const& point, Frustum const& frustum);
-bool contains(Point const& point, LineSegment const& line_segment);
-bool contains(Point const& point, OBB const& obb);
-bool contains(Point const& point, Plane const& plane);
-bool contains(Point const& point_1, Point const& point_2);
-bool contains(Point const& point, Ray const& ray);
-bool contains(Point const& point, Sphere const& sphere);
+constexpr bool contains(Point const& point, AABB const& aabb)
+{
+	return point == aabb.center && 0 == aabb.half_size.x && 0 == aabb.half_size.y &&
+	       0 == aabb.half_size.z;
+}
+
+constexpr bool contains(Point const& point, AAEBB const& aaebb)
+{
+	return point == aabb.center && 0 == aabb.half_size;
+}
+
+constexpr bool contains(Point const& point, Frustum const& frustum)
+{
+	return false;  // TODO: Check
+}
+
+constexpr bool contains(Point const& point, LineSegment const& line_segment)
+{
+	return point == line_segment.start && point == line_segment.end;
+}
+
+constexpr bool contains(Point const& point, OBB const& obb)
+{
+	return point == aabb.center && 0 == aabb.half_size.x && 0 == aabb.half_size.y &&
+	       0 == aabb.half_size.z;
+}
+
+constexpr bool contains(Point const& point, Plane const& plane)
+{
+	return false;  // TODO: Check
+}
+
+constexpr bool contains(Point const& point_1, Point const& point_2)
+{
+	return point_1 == point_2;
+}
+
+constexpr bool contains(Point const& point, Ray const& ray) { return false; }
+
+constexpr bool contains(Point const& point, Sphere const& sphere)
+{
+	return 0 == sphere.radius && point == sphere.center;
+}
 
 //
 // Ray
 //
 
-bool contains(Ray const& ray, AABB const& aabb);
-bool contains(Ray const& ray, AAEBB const& aaebb);
-bool contains(Ray const& ray, Frustum const& frustum);
-bool contains(Ray const& ray, LineSegment const& line_segment);
-bool contains(Ray const& ray, OBB const& obb);
-bool contains(Ray const& ray, Plane const& plane);
-bool contains(Ray const& ray, Point const& point);
-bool contains(Ray const& ray_1, Ray const& ray_2);
-bool contains(Ray const& ray, Sphere const& sphere);
+// constexpr bool contains(Ray const& ray, AABB const& aabb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray, AAEBB const& aaebb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray, Frustum const& frustum)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray, LineSegment const& line_segment)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray, OBB const& obb)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray, Plane const& plane)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray, Point const& point)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray_1, Ray const& ray_2)
+// {
+// 	// TODO: Implement
+// }
+
+// constexpr bool contains(Ray const& ray, Sphere const& sphere)
+// {
+// 	// TODO: Implement
+// }
 
 //
 // Sphere
 //
 
-bool contains(Sphere const& sphere, AABB const& aabb);
-bool contains(Sphere const& sphere, AAEBB const& aaebb);
-bool contains(Sphere const& sphere, Frustum const& frustum);
-bool contains(Sphere const& sphere, LineSegment const& line_segment);
-bool contains(Sphere const& sphere, OBB const& obb);
-bool contains(Sphere const& sphere, Plane const& plane);
-bool contains(Sphere const& sphere, Point const& point);
-bool contains(Sphere const& sphere, Ray const& ray);
-bool contains(Sphere const& sphere_1, Sphere const& sphere_2);
+constexpr bool contains(Sphere const& sphere, AABB const& aabb)
+{
+	return contains(sphere, aabb.min()) && contains(sphere, aabb.max());
+}
+
+constexpr bool contains(Sphere const& sphere, AAEBB const& aaebb)
+{
+	return contains(sphere, aaebb.min()) && contains(sphere, aaebb.max());
+}
+
+// constexpr bool contains(Sphere const& sphere, Frustum const& frustum)
+// {
+// 	// TODO: Implement
+// }
+
+constexpr bool contains(Sphere const& sphere, LineSegment const& line_segment)
+{
+	return contains(sphere, line_segment.start) && contains(sphere, line_segment.end);
+}
+
+constexpr bool contains(Sphere const& sphere, OBB const& obb)
+{
+	return contains(sphere, obb.min()) && contains(sphere, obb.max());
+}
+
+constexpr bool contains(Sphere const& sphere, Plane const& plane) { return false; }
+
+constexpr bool contains(Sphere const& sphere, Point const& point)
+{
+	return minDistance(sphere, point) <= sphere.radius;
+}
+
+constexpr bool contains(Sphere const& sphere, Ray const& ray) { return false; }
+
+constexpr bool contains(Sphere const& sphere_1, Sphere const& sphere_2)
+{
+	return sphere_1.radius >= sphere_2.radius + sphere_1.center.distance(sphere_2.center);
+}
 
 //
 // Bounding volume

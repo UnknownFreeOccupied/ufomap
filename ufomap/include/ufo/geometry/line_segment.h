@@ -49,9 +49,28 @@ struct LineSegment {
 	Point start;
 	Point end;
 
-	inline LineSegment() = default;
+	constexpr LineSegment() = default;
 
-	inline LineSegment(Point const& start, Point const& end) : start(start), end(end) {}
+	constexpr LineSegment(Point const& start, Point const& end) : start(start), end(end) {}
+
+	constexpr bool operator==(LineSegment const& rhs) const
+	{
+		return rhs.start == start && rhs.end == end;
+	}
+
+	constexpr bool operator!=(LineSegment const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const
+	{
+		return Point(std::min(start.x, end.x), std::min(start.y, end.y),
+		             std::min(start.z, end.z));
+	}
+
+	constexpr Point max() const
+	{
+		return Point(std::max(start.x, end.x), std::max(start.y, end.y),
+		             std::max(start.z, end.z));
+	}
 };
 }  // namespace ufo::geometry
 

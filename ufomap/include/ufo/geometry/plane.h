@@ -47,19 +47,41 @@ namespace ufo::geometry
 {
 struct Plane {
 	Point normal;
-	float distance;
+	float distance = 0;
 
-	inline Plane() : normal(1.0, 0.0, 0.0) {}
+	constexpr Plane() = default;
 
-	inline Plane(Point const& normal, float distance) : normal(normal), distance(distance) {}
+	constexpr Plane(Point const& normal, float distance)
+	    : normal(normal), distance(distance)
+	{
+	}
 
-	inline Plane(Point const& v_1, Point const& v_2, Point const& v_3)
+	constexpr Plane(Point const& v_1, Point const& v_2, Point const& v_3)
 	{
 		Point aux_1 = v_1 - v_2;
 		Point aux_2 = v_3 - v_2;
 		normal = aux_2.cross(aux_1);
 		normal.normalize();
 		distance = -normal.dot(v_2);
+	}
+
+	constexpr bool operator==(Plane const& rhs) const
+	{
+		return rhs.normal == normal && rhs.distance == distance;
+	}
+
+	constexpr bool operator!=(Plane const& rhs) const { return !(*this == rhs); }
+
+	constexpr Point min() const
+	{
+		// TODO: Implement
+		return Point();
+	}
+
+	constexpr Point max() const
+	{
+		// TODO: Implement
+		return Point();
 	}
 };
 }  // namespace ufo::geometry

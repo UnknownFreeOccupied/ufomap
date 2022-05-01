@@ -41,6 +41,7 @@
 #ifndef UFO_GEOMETRY_TYPES_H
 #define UFO_GEOMETRY_TYPES_H
 
+// UFO
 #include <ufo/geometry/aabb.h>
 #include <ufo/geometry/aaebb.h>
 #include <ufo/geometry/frustum.h>
@@ -51,6 +52,7 @@
 #include <ufo/geometry/ray.h>
 #include <ufo/geometry/sphere.h>
 
+// STL
 #include <variant>
 
 namespace ufo::geometry
