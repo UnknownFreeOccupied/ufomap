@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
-  roscpp
   sensor_msgs
   ufomap_msgs
 )
@@ -15,7 +14,7 @@ find_package(ufomap REQUIRED)
 catkin_package(
   INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
   LIBRARIES ${PROJECT_NAME} ${catkin_LIBRARIES}
-  CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs ufomap_msgs
+  CATKIN_DEPENDS geometry_msgs sensor_msgs ufomap_msgs
 )
 
 include_directories(
