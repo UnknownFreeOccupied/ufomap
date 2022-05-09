@@ -198,8 +198,9 @@ class FlatMap
 	FlatMap() {}
 
 	template <class InputIt>
-	FlatMap(InputIt first, InputIt last) : FlatMap(std::execution::seq, first, last)
+	FlatMap(InputIt first, InputIt last)
 	{
+		insert(first, last);
 	}
 
 	template <class ExecutionPolicy, class InputIt,
@@ -294,7 +295,8 @@ class FlatMap
 	template <class InputIt>
 	void setOrdered(InputIt first, InputIt last)
 	{
-		setOrdered(std::execution::seq, first, last);
+		resize(std::distance(first, last));
+		std::copy(first, last, begin());
 	}
 
 	template <class ExecutionPolicy, class InputIt,
@@ -319,7 +321,8 @@ class FlatMap
 	template <class InputIt>
 	void insert(InputIt first, InputIt last)
 	{
-		insert_impl(std::execution::seq, first, last);
+		std::vector<typename std::iterator_traits<InputIt>::value_type> temp(first, last);
+		insert_impl(temp);
 	}
 
 	template <class ExecutionPolicy, class InputIt,
@@ -333,7 +336,8 @@ class FlatMap
 
 	void insert(std::initializer_list<value_type> ilist)
 	{
-		insert(std::execution::seq, ilist);
+		std::vector<value_type> temp(ilist);
+		insert_impl(temp);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -966,7 +970,8 @@ class FlatMap
 	{
 		size_type num = size();
 		out_stream.write(reinterpret_cast<char *>(&num), sizeof(size_type));
-		return out_stream.write(reinterpret_cast<char *>(std::next(data_, 1)), sizeof(Element) * num);
+		return out_stream.write(reinterpret_cast<char *>(std::next(data_, 1)),
+		                        sizeof(Element) * num);
 	}
 
 	std::istream &readData(std::istream &in_stream)
@@ -978,7 +983,8 @@ class FlatMap
 			return in_stream;
 		}
 		resize(num);
-		return in_stream.read(reinterpret_cast<char *>(std::next(data_, 1)), sizeof(Element) * num);
+		return in_stream.read(reinterpret_cast<char *>(std::next(data_, 1)),
+		                      sizeof(Element) * num);
 	}
 
 	friend std::ostream &operator<<(std::ostream &os, FlatMap const &map)
@@ -1076,7 +1082,25 @@ class FlatMap
 	template <InsertType InsertT = InsertType::NORMAL, class T>
 	void insert_impl(std::vector<T> &vec)
 	{
-		insert_impl<InsertT>(std::execution::seq, vec);
+		// Sort based on key and such highest value first if same key
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate keys, saving the highest value for each key
+		auto r_last = std::unique(
+		    std::rbegin(vec), std::rend(vec),
+		    [](auto const &v1, auto const &v2) { return v1.getKey() == v2.getKey(); });
+		vec.erase(std::begin(vec), r_last.base());
+
+		if (empty()) {
+			// Optimized insert
+			setOrdered(std::begin(vec), std::end(vec));
+		} else {
+			// Normal insert
+			auto hint = begin();
+			for (auto const &elem : vec) {
+				hint = insert<InsertT>(hint, elem.getKey(), elem.getValue()).first;
+			}
+		}
 	}
 
 	template <InsertType InsertT = InsertType::NORMAL, class ExecutionPolicy, class T,
