@@ -49,23 +49,26 @@ struct Ellipsoid {
 	Point center;
 	Point radius;
 
-	constexpr Ellipsoid() = default;
+	constexpr Ellipsoid() noexcept = default;
 
-	constexpr Ellipsoid(Point const& center, Point const& radius)
+	constexpr Ellipsoid(Point const& center, Point const& radius) noexcept
 	    : center(center), radius(radius)
 	{
 	}
 
-	constexpr bool operator==(Ellipsoid const& rhs) const
+	constexpr bool operator==(Ellipsoid const& rhs) const noexcept
 	{
 		return rhs.center == center && rhs.radius == radius;
 	}
 
-	constexpr bool operator!=(Ellipsoid const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Ellipsoid const& rhs) const noexcept
+	{
+		return !(*this == rhs);
+	}
 
-	constexpr Point min() const { return center - radius; }
+	constexpr Point min() const noexcept { return center - radius; }
 
-	constexpr Point max() const { return center + radius; }
+	constexpr Point max() const noexcept { return center + radius; }
 };
 }  // namespace ufo::geometry
 

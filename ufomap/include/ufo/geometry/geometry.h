@@ -42,20 +42,9 @@
 #define UFO_GEOMETRY_H
 
 // UFO
-#include <ufo/geometry/aabb.h>
+#include <ufo/geometry/bounding_volume.h>
 #include <ufo/geometry/contains.h>
-#include <ufo/geometry/frustum.h>
 #include <ufo/geometry/intersects.h>
-#include <ufo/geometry/line_segment.h>
-#include <ufo/geometry/obb.h>
-#include <ufo/geometry/plane.h>
-#include <ufo/geometry/point.h>
-#include <ufo/geometry/ray.h>
-#include <ufo/geometry/sphere.h>
-#include <ufo/geometry/types.h>
-
-namespace ufo::geometry
-{
-}  // namespace ufo::geometry
+#include <ufo/geometry/minimum_distance.h>
 
 #endif  // UFO_GEOMETRY_H

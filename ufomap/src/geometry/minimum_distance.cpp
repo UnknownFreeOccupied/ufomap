@@ -49,10 +49,10 @@ namespace ufo::geometry
 
 float minDistance(AABB const& aabb_1, AABB const& aabb_2)
 {
-	Point a_min = aabb_1.getMin();
-	Point a_max = aabb_1.getMax();
-	Point b_min = aabb_2.getMin();
-	Point b_max = aabb_2.getMax();
+	Point a_min = aabb_1.min();
+	Point a_max = aabb_1.max();
+	Point b_min = aabb_2.min();
+	Point b_max = aabb_2.max();
 
 	float result = 0.0;
 	for (size_t i = 0; i != 3; ++i) {
@@ -75,10 +75,10 @@ float minDistance(AABB const& aabb_1, AABB const& aabb_2)
 
 // float minDistance(AABB const& aabb, AAEBB const& aaebb)
 // {
-// 	Point a_min = aabb.getMin();
-// 	Point a_max = aabb.getMax();
-// 	Point b_min = aaebb.getMin();
-// 	Point b_max = aaebb.getMax();
+// 	Point a_min = aabb.min();
+// 	Point a_max = aabb.max();
+// 	Point b_min = aaebb.min();
+// 	Point b_max = aaebb.max();
 
 // 	float result = 0.0;
 // 	for (size_t i = 0; i != 3; ++i) {
@@ -121,8 +121,8 @@ float minDistance(AABB const& aabb_1, AABB const& aabb_2)
 
 float minDistance(AABB const& aabb, Point const& point)
 {
-	Point min = aabb.getMin();
-	Point max = aabb.getMax();
+	Point min = aabb.min();
+	Point max = aabb.max();
 	Point p = Point::clamp(point, min, max);
 	return point.distance(p);
 }
@@ -148,10 +148,10 @@ float minDistance(AABB const& aabb, Sphere const& sphere)
 
 // float minDistance(AAEBB const& aaebb_1, AAEBB const& aaebb_2)
 // {
-// 	Point a_min = aaebb_1.getMin();
-// 	Point a_max = aaebb_1.getMax();
-// 	Point b_min = aaebb_2.getMin();
-// 	Point b_max = aaebb_2.getMax();
+// 	Point a_min = aaebb_1.min();
+// 	Point a_max = aaebb_1.max();
+// 	Point b_min = aaebb_2.min();
+// 	Point b_max = aaebb_2.max();
 
 // 	float result = 0.0;
 // 	for (size_t i = 0; i != 3; ++i) {
@@ -194,8 +194,8 @@ float minDistance(AABB const& aabb, Sphere const& sphere)
 
 // float minDistance(AAEBB const& aaebb, Point const& point)
 // {
-// 	Point min = aaebb.getMin();
-// 	Point max = aaebb.getMax();
+// 	Point min = aaebb.min();
+// 	Point max = aaebb.max();
 // 	Point p = Point::clamp(point, min, max);
 // 	return point.distance(p);
 // }

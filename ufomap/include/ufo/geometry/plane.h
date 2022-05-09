@@ -49,14 +49,14 @@ struct Plane {
 	Point normal;
 	float distance = 0;
 
-	constexpr Plane() = default;
+	constexpr Plane()  noexcept= default;
 
-	constexpr Plane(Point const& normal, float distance)
+	constexpr Plane(Point const& normal, float distance) noexcept
 	    : normal(normal), distance(distance)
 	{
 	}
 
-	constexpr Plane(Point const& v_1, Point const& v_2, Point const& v_3)
+	constexpr Plane(Point const& v_1, Point const& v_2, Point const& v_3) noexcept
 	{
 		Point aux_1 = v_1 - v_2;
 		Point aux_2 = v_3 - v_2;
@@ -65,20 +65,20 @@ struct Plane {
 		distance = -normal.dot(v_2);
 	}
 
-	constexpr bool operator==(Plane const& rhs) const
+	constexpr bool operator==(Plane const& rhs) const noexcept
 	{
 		return rhs.normal == normal && rhs.distance == distance;
 	}
 
-	constexpr bool operator!=(Plane const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Plane const& rhs) const  noexcept{ return !(*this == rhs); }
 
-	constexpr Point min() const
+	constexpr Point min() const noexcept
 	{
 		// TODO: Implement
 		return Point();
 	}
 
-	constexpr Point max() const
+	constexpr Point max() const noexcept
 	{
 		// TODO: Implement
 		return Point();

@@ -38,29 +38,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <ufo/geometry/bounding_volume.h>
+#ifndef UFO_GEOMETRY_LINE_H
+#define UFO_GEOMETRY_LINE_H
+
+// UFO
+#include <ufo/geometry/point.h>
+
+// STL
+#include <limits>
 
 namespace ufo::geometry
 {
-bool BoundingVolume::intersects(BoundingVar const& bv) const
-{
-	for (BoundingVar const& bv_2 : bounding_volume_) {
-		if (std::visit([](auto&& arg_1, auto&& arg_2)
-		                   -> bool { return geometry::intersects(arg_1, arg_2); },
-		               bv, bv_2)) {
-			return true;
-		}
-	}
-	return false;
-}
+struct Line {
+	// Point origin;
+	// Point direction;
 
-bool BoundingVolume::intersects(BoundingVolume const& other) const
-{
-	for (BoundingVar const& other_bv : other.bounding_volume_) {
-		if (intersects(other_bv)) {
-			return true;
-		}
+	constexpr Line() noexcept = default;
+
+	// constexpr Line(Point const& origin, Point const& direction) noexcept
+	//     : origin(origin), direction(direction.normalized())
+	// {
+	// }
+
+	// constexpr bool operator==(Line const& rhs) const noexcept
+	// {
+	// }
+
+	// constexpr bool operator!=(Line const& rhs) const noexcept { return !(*this == rhs); }
+
+	constexpr Point min() const noexcept
+	{
+		return Point(-std::numeric_limits<float>::infinity(),
+		             -std::numeric_limits<float>::infinity(),
+		             -std::numeric_limits<float>::infinity());
 	}
-	return false;
-}
+
+	constexpr Point max() const noexcept
+	{
+		return Point(std::numeric_limits<float>::infinity(),
+		             std::numeric_limits<float>::infinity(),
+		             std::numeric_limits<float>::infinity());
+	}
+};
 }  // namespace ufo::geometry
+
+#endif  // UFO_GEOMETRY_LINE_H

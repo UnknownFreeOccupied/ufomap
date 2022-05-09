@@ -49,20 +49,23 @@ struct Sphere {
 	Point center;
 	float radius = 0;
 
-	constexpr Sphere() = default;
+	constexpr Sphere() noexcept = default;
 
-	constexpr Sphere(Point const& center, float radius) : center(center), radius(radius) {}
+	constexpr Sphere(Point const& center, float radius) noexcept
+	    : center(center), radius(radius)
+	{
+	}
 
-	constexpr bool operator==(Sphere const& rhs) const
+	constexpr bool operator==(Sphere const& rhs) const noexcept
 	{
 		return rhs.center == center && rhs.radius == radius;
 	}
 
-	constexpr bool operator!=(Sphere const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Sphere const& rhs) const noexcept { return !(*this == rhs); }
 
-	constexpr Point min() const { return center - radius; }
+	constexpr Point min() const noexcept { return center - radius; }
 
-	constexpr Point max() const { return center + radius; }
+	constexpr Point max() const noexcept { return center + radius; }
 };
 }  // namespace ufo::geometry
 

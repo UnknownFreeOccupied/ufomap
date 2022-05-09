@@ -59,11 +59,11 @@ struct Frustum {
 	Plane far;
 	Plane near;
 
-	constexpr Frustum() = default;
+	constexpr Frustum() noexcept = default;
 
 	constexpr Frustum(Point const& pos, Point const& target, Point const& up,
 	                  float vertical_angle, float horizontal_angle, float near_distance,
-	                  float far_distance)
+	                  float far_distance) noexcept
 	    : position(pos),
 	      target(target),
 	      up(up),
@@ -75,7 +75,7 @@ struct Frustum {
 		float ratio = horizontal_angle / vertical_angle;
 
 		// TODO: Check if correct
-		float tang = tan(vertical_angle * 0.5);
+		float tang = std::tan(vertical_angle * 0.5);
 		float near_height = near_distance * tang;
 		float near_width = near_height * ratio;
 		float far_height = far_distance * tang;
@@ -110,21 +110,25 @@ struct Frustum {
 		far = Plane(far_top_right, far_top_left, far_bottom_left);
 	}
 
-	constexpr bool operator==(Frustum const& rhs) const
+	constexpr bool operator==(Frustum const& rhs) const noexcept
 	{
 		return rhs.top == top && rhs.bottom == bottom && rhs.left == left &&
 		       rhs.right == right && rhs.far == far && rhs.near == near;
 	}
 
-	constexpr bool operator!=(Frustum const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Frustum const& rhs) const noexcept { return !(*this == rhs); }
 
-	constexpr Point min() const
+	constexpr Plane operator[](std::size_t idx) const noexcept { return *(&top + idx); }
+
+	constexpr Plane& operator[](std::size_t idx) noexcept { return *(&top + idx); }
+
+	constexpr Point min() const noexcept
 	{
 		// TODO: Implement
 		return Point();
 	}
 
-	constexpr Point max() const
+	constexpr Point max() const noexcept
 	{
 		// TODO: Implement
 		return Point();

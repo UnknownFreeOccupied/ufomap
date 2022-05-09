@@ -55,91 +55,92 @@ struct OBB {
 	Point half_size;
 	math::Quaternionf rotation;
 
-	constexpr OBB() = default;
+	constexpr OBB() noexcept = default;
 
-	constexpr OBB(Point const& center, Point const& half_size)
+	constexpr OBB(Point const& center, Point const& half_size) noexcept
 	    : center(center), half_size(half_size)
 	{
 	}
 
 	constexpr OBB(Point const& center, Point const& half_size,
-	              math::Quaternionf const& rotation)
+	              math::Quaternionf const& rotation) noexcept
 	    : center(center), half_size(half_size), rotation(rotation)
 	{
 	}
 
-	constexpr OBB(Point const& center, Point const& half_size, Point const& rotation)
+	constexpr OBB(Point const& center, Point const& half_size,
+	              Point const& rotation) noexcept
 	    : center(center),
 	      half_size(half_size),
 	      rotation(rotation[0], rotation[1], rotation[2])
 	{
 	}
 
-	constexpr bool operator==(OBB const& rhs) const
+	constexpr bool operator==(OBB const& rhs) const noexcept
 	{
 		return rhs.center == center && rhs.half_size == half_size && rhs.rotation == rotation;
 	}
 
-	constexpr bool operator!=(OBB const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(OBB const& rhs) const noexcept { return !(*this == rhs); }
 
-	constexpr Point min() const
+	constexpr Point min() const noexcept
 	{
 		Point rot_half_size = rotation.rotate(half_size);
 		Point corners[8]{
-		    Point(center.x() - rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() - rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
-		    Point(center.x() - rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() - rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
+		    Point(center.x - rot_half_size.x, center.y - rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x - rot_half_size.x, center.y - rot_half_size.y,
+		          center.z + rot_half_size.z),
+		    Point(center.x - rot_half_size.x, center.y + rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x - rot_half_size.x, center.y + rot_half_size.y,
+		          center.z + rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y - rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y - rot_half_size.y,
+		          center.z + rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y + rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y + rot_half_size.y,
+		          center.z + rot_half_size.z),
 		};
 
 		Point minimum = corners[0];
 		for (int i = 1; i < 8; ++i) {
-			minimum.x() = std::min(minimum.x(), corners[i].x());
-			minimum.y() = std::min(minimum.y(), corners[i].y());
-			minimum.z() = std::min(minimum.z(), corners[i].z());
+			minimum.x = std::min(minimum.x, corners[i].x);
+			minimum.y = std::min(minimum.y, corners[i].y);
+			minimum.z = std::min(minimum.z, corners[i].z);
 		}
 		return minimum;
 	}
 
-	constexpr Point max() const
+	constexpr Point max() const noexcept
 	{
 		Point rot_half_size = rotation.rotate(half_size);
 		Point corners[8]{
-		    Point(center.x() - rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() - rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
-		    Point(center.x() - rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() - rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() - rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() - rot_half_size.z()),
-		    Point(center.x() + rot_half_size.x(), center.y() + rot_half_size.y(),
-		          center.z() + rot_half_size.z()),
+		    Point(center.x - rot_half_size.x, center.y - rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x - rot_half_size.x, center.y - rot_half_size.y,
+		          center.z + rot_half_size.z),
+		    Point(center.x - rot_half_size.x, center.y + rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x - rot_half_size.x, center.y + rot_half_size.y,
+		          center.z + rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y - rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y - rot_half_size.y,
+		          center.z + rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y + rot_half_size.y,
+		          center.z - rot_half_size.z),
+		    Point(center.x + rot_half_size.x, center.y + rot_half_size.y,
+		          center.z + rot_half_size.z),
 		};
 
 		Point maximum = corners[0];
 		for (int i = 1; i < 8; ++i) {
-			maximum.x() = std::max(maximum.x(), corners[i].x());
-			maximum.y() = std::max(maximum.y(), corners[i].y());
-			maximum.z() = std::max(maximum.z(), corners[i].z());
+			maximum.x = std::max(maximum.x, corners[i].x);
+			maximum.y = std::max(maximum.y, corners[i].y);
+			maximum.z = std::max(maximum.z, corners[i].z);
 		}
 		return maximum;
 	}

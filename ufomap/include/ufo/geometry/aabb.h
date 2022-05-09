@@ -45,32 +45,60 @@
 
 namespace ufo::geometry
 {
+/**
+ * @brief Something something
+ * @author Daniel Duberg
+ *
+ */
 struct AABB {
+	// The center point of the AABB.
 	Point center;
+	// Half the size of a side of the AABB.
 	Point half_size;
 
-	constexpr AABB() = default;
+	constexpr AABB() noexcept = default;
 
-	constexpr AABB(Point const& center, float half_size)
+	constexpr AABB(Point const& center, float half_size) noexcept
 	    : center(center), half_size(half_size, half_size, half_size)
 	{
 	}
 
-	constexpr AABB(Point const& min, Point const& max) : half_size((max - min) / 2.0)
+	constexpr AABB(Point const& min, Point const& max) noexcept
+	    : half_size((max - min) / 2.0)
 	{
 		center = min + half_size;
 	}
 
-	constexpr bool operator==(AABB const& rhs) const
+	/**
+	 * @brief Compare two AABBs.
+	 *
+	 * @param lhs,rhs The AABBs to compare.
+	 * @return Whether lhs and rhs are equal.
+	 */
+	friend constexpr bool operator==(AABB const& lhs, AABB const& rhs) noexcept
 	{
-		return rhs.center == center && rhs.half_size == half_size;
+		return lhs.center == rhs.center && lhs.half_size == rhs.half_size;
 	}
 
-	constexpr bool operator!=(AABB const& rhs) const { return !(*this == rhs); }
+	/**
+	 * @brief Compare two AABBs.
+	 *
+	 * @param lhs,rhs The AABBs to compare.
+	 * @return Whether lhs and rhs are different.
+	 */
+	friend constexpr bool operator!=(AABB const& lhs, AABB const& rhs) noexcept
+	{
+		return !(lhs == rhs);
+	}
 
-	constexpr Point min() const { return center - half_size; }
+	/**
+	 * @brief
+	 *
+	 * @return
+	 */
+	constexpr Point min() const noexcept { return center - half_size; }
 
-	constexpr Point max() const { return center + half_size; }
+	constexpr Point max() const noexcept { return center + half_size; }
 };
 }  // namespace ufo::geometry
 

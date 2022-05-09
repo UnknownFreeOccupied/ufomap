@@ -50,27 +50,27 @@ struct Capsule {
 	Point end;
 	float radius = 0;
 
-	constexpr Capsule() = default;
+	constexpr Capsule() noexcept = default;
 
-	constexpr Capsule(Point const& start, Point const& end, float radius)
+	constexpr Capsule(Point const& start, Point const& end, float radius) noexcept
 	    : start(start), end(end), radius(radius)
 	{
 	}
 
-	constexpr bool operator==(Capsule const& rhs) const
+	constexpr bool operator==(Capsule const& rhs) const noexcept
 	{
 		return rhs.start == start && rhs.end == end && rhs.radius == radius;
 	}
 
-	constexpr bool operator!=(Capsule const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Capsule const& rhs) const noexcept { return !(*this == rhs); }
 
-	constexpr Point min() const
+	constexpr Point min() const noexcept
 	{
 		return Point(std::min(start.x, end.x) - radius, std::min(start.y, end.y) - radius,
 		             std::min(start.z, end.z) - radius);
 	}
 
-	constexpr Point max() const
+	constexpr Point max() const noexcept
 	{
 		return Point(std::max(start.x, end.x) + radius, std::max(start.y, end.y) + radius,
 		             std::max(start.z, end.z) + radius);

@@ -41,7 +41,11 @@
 #ifndef UFO_GEOMETRY_RAY_H
 #define UFO_GEOMETRY_RAY_H
 
+// UFO
 #include <ufo/geometry/point.h>
+
+// STL
+#include <limits>
 
 namespace ufo::geometry
 {
@@ -49,30 +53,32 @@ struct Ray {
 	Point origin;
 	Point direction;
 
-	constexpr Ray() = default;
+	constexpr Ray() noexcept = default;
 
-	constexpr Ray(Point const& origin, Point const& direction)
+	constexpr Ray(Point const& origin, Point const& direction) noexcept
 	    : origin(origin), direction(direction.normalized())
 	{
 	}
 
-	constexpr bool operator==(Ray const& rhs) const
+	constexpr bool operator==(Ray const& rhs) const noexcept
 	{
 		return rhs.origin == origin && rhs.direction == direction;
 	}
 
-	constexpr bool operator!=(Ray const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Ray const& rhs) const noexcept { return !(*this == rhs); }
 
-	constexpr Point min() const
+	constexpr Point min() const noexcept
 	{
-		// TODO: Implement
-		return Point();
+		return Point(0 <= direction.x ? origin.x : -std::numeric_limits<float>::infinity(),
+		             0 <= direction.y ? origin.y : -std::numeric_limits<float>::infinity(),
+		             0 <= direction.z ? origin.z : -std::numeric_limits<float>::infinity());
 	}
 
-	constexpr Point max() const
+	constexpr Point max() const noexcept
 	{
-		// TODO: Implement
-		return Point();
+		return Point(0 >= direction.x ? origin.x : std::numeric_limits<float>::infinity(),
+		             0 >= direction.y ? origin.y : std::numeric_limits<float>::infinity(),
+		             0 >= direction.z ? origin.z : std::numeric_limits<float>::infinity());
 	}
 };
 }  // namespace ufo::geometry

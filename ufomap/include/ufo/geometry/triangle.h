@@ -48,25 +48,32 @@ namespace ufo::geometry
 struct Triangle {
 	std::array<Point, 3> points;
 
-	constexpr Triangle() = default;
+	constexpr Triangle() noexcept = default;
 
-	constexpr Triangle(Point const& point_1, Point const& point_2, Point const& point_3)
+	constexpr Triangle(Point const& point_1, Point const& point_2,
+	                   Point const& point_3) noexcept
 	    : points{point_1, point_2, point_3}
 	{
 	}
 
-	constexpr bool operator==(Triangle const& rhs) const { return rhs.points == points; }
+	constexpr bool operator==(Triangle const& rhs) const noexcept
+	{
+		return rhs.points == points;
+	}
 
-	constexpr bool operator!=(Triangle const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Triangle const& rhs) const noexcept
+	{
+		return !(*this == rhs);
+	}
 
-	constexpr Point min() const
+	constexpr Point min() const noexcept
 	{
 		return Point(std::min({points[0].x, points[1].x, points[2].x}),
 		             std::min({points[0].y, points[1].y, points[2].y}),
 		             std::min({points[0].z, points[1].z, points[2].z}));
 	}
 
-	constexpr Point max() const
+	constexpr Point max() const noexcept
 	{
 		return Point(std::max({points[0].x, points[1].x, points[2].x}),
 		             std::max({points[0].y, points[1].y, points[2].y}),

@@ -49,24 +49,30 @@ struct LineSegment {
 	Point start;
 	Point end;
 
-	constexpr LineSegment() = default;
+	constexpr LineSegment() noexcept = default;
 
-	constexpr LineSegment(Point const& start, Point const& end) : start(start), end(end) {}
+	constexpr LineSegment(Point const& start, Point const& end) noexcept
+	    : start(start), end(end)
+	{
+	}
 
-	constexpr bool operator==(LineSegment const& rhs) const
+	constexpr bool operator==(LineSegment const& rhs) const noexcept
 	{
 		return rhs.start == start && rhs.end == end;
 	}
 
-	constexpr bool operator!=(LineSegment const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(LineSegment const& rhs) const noexcept
+	{
+		return !(*this == rhs);
+	}
 
-	constexpr Point min() const
+	constexpr Point min() const noexcept
 	{
 		return Point(std::min(start.x, end.x), std::min(start.y, end.y),
 		             std::min(start.z, end.z));
 	}
 
-	constexpr Point max() const
+	constexpr Point max() const noexcept
 	{
 		return Point(std::max(start.x, end.x), std::max(start.y, end.y),
 		             std::max(start.z, end.z));

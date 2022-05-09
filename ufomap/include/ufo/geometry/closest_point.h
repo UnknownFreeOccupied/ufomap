@@ -51,12 +51,12 @@
 // AABB
 //
 
-constexpr Point closestPoint(AABB const& aabb, Point const& point)
+constexpr Point closestPoint(AABB const& aabb, Point const& point) noexcept
 {
 	return Point::clamp(point, aabb.min(), aabb.max());
 }
 
-constexpr Point closestPoint(AAEBB const& aaebb, Point const& point)
+constexpr Point closestPoint(AAEBB const& aaebb, Point const& point) noexcept
 {
 	return Point::clamp(point, aaebb.min(), aaebb.max());
 }
@@ -65,7 +65,8 @@ constexpr Point closestPoint(AAEBB const& aaebb, Point const& point)
 // Line segment
 //
 
-constexpr Point closestPoint(LineSegment const& line_segement, Point const& point)
+constexpr Point closestPoint(LineSegment const& line_segement,
+                             Point const& point) noexcept
 {
 	Point direction = line_segement.end - line_segement.start;
 	float t = Point::dot(point - line_segement.start, direction) /
@@ -77,7 +78,7 @@ constexpr Point closestPoint(LineSegment const& line_segement, Point const& poin
 // OBB
 //
 
-constexpr Point closestPoint(OBB const& obb, Point const& point)
+constexpr Point closestPoint(OBB const& obb, Point const& point) noexcept
 {
 	Point result = obb.center;
 	Point dir = point - obb.center;
@@ -105,7 +106,7 @@ constexpr Point closestPoint(OBB const& obb, Point const& point)
 // Plane
 //
 
-constexpr Point closestPoint(Plane const& plane, Point const& point)
+constexpr Point closestPoint(Plane const& plane, Point const& point) noexcept
 {
 	float distance = Point::dot(plane.normal, point) - plane.distance;
 	return point - plane.normal * distance;
@@ -115,7 +116,7 @@ constexpr Point closestPoint(Plane const& plane, Point const& point)
 // Ray
 //
 
-constexpr Point closestPoint(Ray const& ray, Point const& point)
+constexpr Point closestPoint(Ray const& ray, Point const& point) noexcept
 {
 	float t = Point::dot(point - ray.origin, ray.direction);
 	return ray.origin + ray.direction * std::max(t, 0.0f);
@@ -125,7 +126,7 @@ constexpr Point closestPoint(Ray const& ray, Point const& point)
 // Sphere
 //
 
-constexpr Point closestPoint(Sphere const& sphere, Point const& point)
+constexpr Point closestPoint(Sphere const& sphere, Point const& point) noexcept
 {
 	Point sphere_to_point = point - sphere.center;
 	sphere_to_point.normalize();

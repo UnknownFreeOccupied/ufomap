@@ -49,8 +49,8 @@ namespace ufo::geometry
 
 bool intersectsLine(AABB const& aabb, Ray const& ray, float t_near, float t_far)
 {
-	Point min = aabb.getMin();
-	Point max = aabb.getMax();
+	Point min = aabb.min();
+	Point max = aabb.max();
 
 	for (int i = 0; i < 3; ++i) {
 		if (0 != ray.direction[i]) {
@@ -78,8 +78,8 @@ bool intersectsLine(AABB const& aabb, Ray const& ray, float t_near, float t_far)
 
 // bool intersectsLine(AAEBB const& aaebb, Ray const& ray, float t_near, float t_far)
 // {
-// 	Point min = aaebb.getMin();
-// 	Point max = aaebb.getMax();
+// 	Point min = aaebb.min();
+// 	Point max = aaebb.max();
 
 // 	for (int i = 0; i < 3; ++i) {
 // 		if (0 != ray.direction[i]) {
@@ -111,9 +111,9 @@ bool intersectsLine(AABB const& aabb, Ray const& ray, float t_near, float t_far)
 
 float classify(AABB const& aabb, Plane const& plane)
 {
-	float r = std::abs(aabb.half_size.x() * plane.normal.x()) +
-	          std::abs(aabb.half_size.y() * plane.normal.y()) +
-	          std::abs(aabb.half_size.z() * plane.normal.z());
+	float r = std::abs(aabb.half_size.x * plane.normal.x) +
+	          std::abs(aabb.half_size.y * plane.normal.y) +
+	          std::abs(aabb.half_size.z * plane.normal.z);
 	float d = Point::dot(plane.normal, aabb.center) + plane.distance;
 	if (std::abs(d) < r) {
 		return 0.0f;
@@ -163,13 +163,13 @@ float classify(OBB const& obb, Plane const& plane)
 
 std::pair<float, float> getInterval(AABB const& aabb, Point const& axis)
 {
-	Point i = aabb.getMin();
-	Point a = aabb.getMax();
+	Point i = aabb.min();
+	Point a = aabb.max();
 
-	Point vertex[8] = {Point(i.x(), a.y(), a.z()), Point(i.x(), a.y(), i.z()),
-	                   Point(i.x(), i.y(), a.z()), Point(i.x(), i.y(), i.z()),
-	                   Point(a.x(), a.y(), a.z()), Point(a.x(), a.y(), i.z()),
-	                   Point(a.x(), i.y(), a.z()), Point(a.x(), i.y(), i.z())};
+	Point vertex[8] = {Point(i.x, a.y, a.z), Point(i.x, a.y, i.z),
+	                   Point(i.x, i.y, a.z), Point(i.x, i.y, i.z),
+	                   Point(a.x, a.y, a.z), Point(a.x, a.y, i.z),
+	                   Point(a.x, i.y, a.z), Point(a.x, i.y, i.z)};
 
 	std::pair<float, float> result;
 	result.first = result.second = Point::dot(axis, vertex[0]);
@@ -185,8 +185,8 @@ std::pair<float, float> getInterval(AABB const& aabb, Point const& axis)
 
 // std::pair<float, float> getInterval(AAEBB const& aaebb, Point const& axis)
 // {
-// 	Point i = aaebb.getMin();
-// 	Point a = aaebb.getMax();
+// 	Point i = aaebb.min();
+// 	Point a = aaebb.max();
 
 // 	Point vertex[8] = {Point(i.x(), a.y(), a.z()), Point(i.x(), a.y(), i.z()),
 // 	                   Point(i.x(), i.y(), a.z()), Point(i.x(), i.y(), i.z()),

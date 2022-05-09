@@ -38,94 +38,37 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_GEOMETRY_BOUDING_VOLUME_H
-#define UFO_GEOMETRY_BOUDING_VOLUME_H
+#ifndef UFO_GEOMETRY_BOUNDING_VOLUME_H
+#define UFO_GEOMETRY_BOUNDING_VOLUME_H
 
-// #include <ufo/geometry/collision_checks.h>
-#include <ufo/geometry/types.h>
+// UFO
+#include <ufo/geometry/aabb.h>
+#include <ufo/geometry/aaebb.h>
+#include <ufo/geometry/capsule.h>
+#include <ufo/geometry/cone.h>
+#include <ufo/geometry/cylinder.h>
+#include <ufo/geometry/ellipsoid.h>
+#include <ufo/geometry/frustum.h>
+#include <ufo/geometry/line.h>
+#include <ufo/geometry/line_segment.h>
+#include <ufo/geometry/obb.h>
+#include <ufo/geometry/plane.h>
+#include <ufo/geometry/point.h>
+#include <ufo/geometry/ray.h>
+#include <ufo/geometry/rectangle.h>
+#include <ufo/geometry/sphere.h>
+#include <ufo/geometry/triangle.h>
+
+// STL
+#include <variant>
+#include <vector>
 
 namespace ufo::geometry
 {
-class BoundingVolume
-{
- public:
-	void add(BoundingVar const& bv) { bounding_volume_.push_back(bv); }
+using BoundingVolume = std::variant<AABB, AAEBB, Frustum, LineSegment, OBB, Plane, Point,
+                                    Ray, Sphere, Triangle>;
 
-	void clear() noexcept { bounding_volume_.clear(); }
-
-	size_t size() const noexcept { return bounding_volume_.size(); }
-
-	bool empty() const noexcept { return bounding_volume_.empty(); }
-
-	// bool intersects(BoundingVar const& bv) const;
-
-	// bool intersects(BoundingVolume const& other) const;
-
-	std::vector<BoundingVar>::iterator begin() noexcept
-	{
-		return std::begin(bounding_volume_);
-	}
-
-	std::vector<BoundingVar>::const_iterator begin() const noexcept
-	{
-		return std::begin(bounding_volume_);
-	}
-
-	std::vector<BoundingVar>::const_iterator cbegin() const noexcept
-	{
-		return bounding_volume_.cbegin();
-	}
-
-	std::vector<BoundingVar>::iterator end() noexcept { return std::end(bounding_volume_); }
-
-	std::vector<BoundingVar>::const_iterator end() const noexcept
-	{
-		return std::end(bounding_volume_);
-	}
-
-	std::vector<BoundingVar>::const_iterator cend() const noexcept
-	{
-		return bounding_volume_.cend();
-	}
-
-	std::vector<BoundingVar>::reverse_iterator rbegin() noexcept
-	{
-		return bounding_volume_.rbegin();
-	}
-
-	std::vector<BoundingVar>::const_reverse_iterator rbegin() const noexcept
-	{
-		return bounding_volume_.rbegin();
-	}
-
-	std::vector<BoundingVar>::const_reverse_iterator crbegin() const noexcept
-	{
-		return bounding_volume_.crbegin();
-	}
-
-	std::vector<BoundingVar>::reverse_iterator rend() noexcept
-	{
-		return bounding_volume_.rend();
-	}
-
-	std::vector<BoundingVar>::const_reverse_iterator rend() const noexcept
-	{
-		return bounding_volume_.rend();
-	}
-
-	std::vector<BoundingVar>::const_reverse_iterator crend() const noexcept
-	{
-		return bounding_volume_.crend();
-	}
-
-	void swap(BoundingVolume& other) noexcept
-	{
-		bounding_volume_.swap(other.bounding_volume_);
-	}
-
- private:
-	std::vector<BoundingVar> bounding_volume_;
-};
+using BoundingVolumes = std::vector<BoundingVolume>;
 }  // namespace ufo::geometry
 
-#endif  // UFO_GEOMETRY_BOUDING_VOLUME_H
+#endif  // UFO_GEOMETRY_BOUNDING_VOLUME_H

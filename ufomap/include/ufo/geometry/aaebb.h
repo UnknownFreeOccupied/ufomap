@@ -49,28 +49,29 @@ struct AAEBB {
 	Point center;
 	float half_size = 0;
 
-	constexpr AAEBB() = default;
+	constexpr AAEBB() noexcept = default;
 
-	constexpr AAEBB(Point const& center, float half_size)
+	constexpr AAEBB(Point const& center, float half_size) noexcept
 	    : center(center), half_size(half_size)
 	{
 	}
 
-	constexpr AAEBB(float center_x, float center_y, float center_z, float half_size)
+	constexpr AAEBB(float center_x, float center_y, float center_z,
+	                float half_size) noexcept
 	    : center(center_x, center_y, center_z), half_size(half_size)
 	{
 	}
 
-	constexpr bool operator==(AAEBB const& rhs) const
+	constexpr bool operator==(AAEBB const& rhs) const noexcept
 	{
 		return rhs.center == center && rhs.half_size == half_size;
 	}
 
-	constexpr bool operator!=(AAEBB const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(AAEBB const& rhs) const noexcept { return !(*this == rhs); }
 
-	constexpr Point min() const { return center - half_size; }
+	constexpr Point min() const noexcept { return center - half_size; }
 
-	constexpr Point max() const { return center + half_size; }
+	constexpr Point max() const noexcept { return center + half_size; }
 };
 }  // namespace ufo::geometry
 
