@@ -871,7 +871,7 @@ class FlatMap
 		}
 		typename RangeSet<uint32_t>::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
-			// Is it possible that all range elemnts are in the map?
+			// Is it possible that all range elements are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
 			if (checked_elems > size()) {
 				return false;

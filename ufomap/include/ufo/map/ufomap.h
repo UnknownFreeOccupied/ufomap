@@ -156,13 +156,13 @@ inline bool canMergeMap(UFOMap const& map, std::filesystem::path const& filename
 	return canMergeMap(map, file);
 }
 
-constexpr std::string_view getMapType(UFOMap const& map)
+constexpr std::string_view mapType(UFOMap const& map)
 {
 	return std::visit(
 	    [](auto const& arg) -> std::string_view {
 		    using T = std::decay_t<decltype(arg)>;
 		    if constexpr (!std::is_same_v<std::monostate, T>) {
-			    return T::getMapType();
+			    return T::mapType();
 		    }
 		    return "";
 	    },
@@ -203,7 +203,7 @@ inline bool isSameMapType(UFOMap const& map, std::istream& in_stream)
 	FileInfo header = readHeader(in_stream);
 	in_stream.seekg(pos);
 
-	return getMapType(map) == header.at("map_type").at(0);
+	return mapType(map) == header.at("map_type").at(0);
 }
 
 inline bool isSameMapType(UFOMap const& map, std::filesystem::path const& filename)
@@ -245,7 +245,7 @@ inline UFOMap createMap(std::istream& in_stream, std::string const& map_type,
 	if constexpr (I < std::variant_size_v<UFOMap>) {
 		using Map = std::variant_alternative_t<I, UFOMap>;
 		if constexpr (!std::is_same_v<std::monostate, Map>) {
-			return map_type == Map::getMapType()
+			return map_type == Map::mapType()
 			           ? Map(in_stream, std::forward<Args>(args)...)
 			           : createMap<I + 1>(in_stream, map_type, std::forward<Args>(args)...);
 		} else {

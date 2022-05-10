@@ -1,9 +1,10 @@
-/*
+/**
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
+ *
  */
 
 /*
@@ -38,28 +39,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_COLOR_H
-#define UFO_MAP_OCCUPANCY_MAP_COLOR_H
+#ifndef UFO_MAP_OCCUPANCY_MAP_SEMANTIC_H
+#define UFO_MAP_OCCUPANCY_MAP_SEMANTIC_H
 
 // UFO
-#include <ufo/map/color/color_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/semantic/semantic_map_base.h>
 
 namespace ufo::map
 {
-template <class OccupancyType>
-class OccupancyMapColorT final
-    : public OccupancyMapBase<OccupancyMapColorT<OccupancyType>,
-                              OccupancyColorNode<OccupancyType>>,
-      public ColorMapBase<OccupancyMapColorT<OccupancyType>,
-                          OccupancyColorNode<OccupancyType>, OccupancyIndicators>
+template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
+class OccupancyMapSemanticT final
+    : public OccupancyMapBase<
+          OccupancyMapSemanticT<OccupancyType, SemanticType, SemanticValueWidth>,
+          OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>>,
+      public SemanticMapBase<
+          OccupancyMapSemanticT<OccupancyType, SemanticType, SemanticValueWidth>,
+          OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+          OccupancyIndicators>
 {
  protected:
-	using OctreeNode = OccupancyColorNode<OccupancyType>;
-	using OccupancyBase = OccupancyMapBase<OccupancyMapColorT, OctreeNode>;
+	using OctreeNode =
+	    OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>;
+	using OccupancyBase = OccupancyMapBase<OccupancyMapSemanticT, OctreeNode>;
 	using OctreeBase = typename OccupancyBase::Base;
-	using ColorBase = ColorMapBase<OccupancyMapColorT, OctreeNode, OccupancyIndicators>;
+	using SemanticBase =
+	    SemanticMapBase<OccupancyMapSemanticT, OctreeNode, OccupancyIndicators>;
 	using LeafNode = typename OctreeBase::LeafNode;
 	using InnerNode = typename OctreeBase::InnerNode;
 
@@ -68,40 +74,43 @@ class OccupancyMapColorT final
 	// Constructors
 	//
 
-	OccupancyMapColorT(float resolution, Depth depth_levels = 16,
-	                   bool automatic_pruning = true, float occupied_thres = 0.5,
-	                   float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	                   float clamping_thres_max = 0.971)
+	OccupancyMapSemanticT(float resolution, Depth depth_levels = 16,
+	                      bool automatic_pruning = true, float occupied_thres = 0.5,
+	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	                      float clamping_thres_max = 0.971)
 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
 	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
 	                    free_thres, clamping_thres_min, clamping_thres_max),
-	      ColorBase(resolution, depth_levels, automatic_pruning)
-	{  // TODO: Implement
+	      SemanticBase(resolution, depth_levels, automatic_pruning)
+	{
+		//  TODO: Implement
 		initRoot();
 	}
 
-	OccupancyMapColorT(std::filesystem::path const& filename, bool automatic_pruning = true,
-	                   float occupied_thres = 0.5, float free_thres = 0.5,
-	                   float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : OccupancyMapColorT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                         clamping_thres_min, clamping_thres_max)
+	OccupancyMapSemanticT(std::filesystem::path const& filename,
+	                      bool automatic_pruning = true, float occupied_thres = 0.5,
+	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	                      float clamping_thres_max = 0.971)
+	    : OccupancyMapSemanticT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                            clamping_thres_min, clamping_thres_max)
 	{
 		OctreeBase::read(filename);
 		// TODO: Throw if cannot read
 	}
 
-	OccupancyMapColorT(std::istream& in_stream, bool automatic_pruning = true,
-	                   float occupied_thres = 0.5, float free_thres = 0.5,
-	                   float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : OccupancyMapColorT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                         clamping_thres_min, clamping_thres_max)
+	OccupancyMapSemanticT(std::istream& in_stream, bool automatic_pruning = true,
+	                      float occupied_thres = 0.5, float free_thres = 0.5,
+	                      float clamping_thres_min = 0.1192,
+	                      float clamping_thres_max = 0.971)
+	    : OccupancyMapSemanticT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                            clamping_thres_min, clamping_thres_max)
 	{
 		OctreeBase::read(in_stream);
 		// TODO: Throw if cannot read
 	}
 
-	OccupancyMapColorT(OccupancyMapColorT const& other)
-	    : OctreeBase(other), OccupancyBase(other), ColorBase(other)
+	OccupancyMapSemanticT(OccupancyMapSemanticT const& other)
+	    : OctreeBase(other), OccupancyBase(other), SemanticBase(other)
 	{
 		initRoot();
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
@@ -111,8 +120,8 @@ class OccupancyMapColorT final
 	}
 
 	template <class T2>
-	OccupancyMapColorT(OccupancyMapColorT<T2> const& other)
-	    : OctreeBase(other), OccupancyBase(other), ColorBase(other)
+	OccupancyMapSemanticT(OccupancyMapSemanticT<T2> const& other)
+	    : OctreeBase(other), OccupancyBase(other), SemanticBase(other)
 	{
 		initRoot();
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
@@ -121,18 +130,18 @@ class OccupancyMapColorT final
 		OctreeBase::read(io_stream);
 	}
 
-	OccupancyMapColorT(OccupancyMapColorT&& other)
+	OccupancyMapSemanticT(OccupancyMapSemanticT&& other)
 	    : OctreeBase(std::move(other)),
 	      OccupancyBase(std::move(other)),
-	      ColorBase(std::move(other))
+	      SemanticBase(std::move(other))
 	{
 	}
 
-	OccupancyMapColorT& operator=(OccupancyMapColorT const& rhs)
+	OccupancyMapSemanticT& operator=(OccupancyMapSemanticT const& rhs)
 	{
 		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
-		ColorBase::operator=(rhs);
+		SemanticBase::operator=(rhs);
 
 		initRoot();
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
@@ -144,11 +153,11 @@ class OccupancyMapColorT final
 	}
 
 	template <class T2>
-	OccupancyMapColorT& operator=(OccupancyMapColorT<T2> const& rhs)
+	OccupancyMapSemanticT& operator=(OccupancyMapSemanticT<T2> const& rhs)
 	{
 		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
-		ColorBase::operator=(rhs);
+		SemanticBase::operator=(rhs);
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
@@ -158,11 +167,11 @@ class OccupancyMapColorT final
 		return *this;
 	}
 
-	OccupancyMapColorT& operator=(OccupancyMapColorT&& rhs)
+	OccupancyMapSemanticT& operator=(OccupancyMapSemanticT&& rhs)
 	{
 		OctreeBase::operator=(std::move(rhs));
 		OccupancyBase::operator=(std::move(rhs));
-		ColorBase::operator=(std::move(rhs));
+		SemanticBase::operator=(std::move(rhs));
 		return *this;
 	}
 
@@ -170,7 +179,10 @@ class OccupancyMapColorT final
 	// Destructor
 	//
 
-	virtual ~OccupancyMapColorT() override { printf("OccupancyMapColorT destructor\n"); }
+	virtual ~OccupancyMapSemanticT() override
+	{
+		printf("OccupancyMapSemanticT destructor\n");
+	}
 
 	//
 	// Initilize root
@@ -178,9 +190,9 @@ class OccupancyMapColorT final
 
 	virtual void initRoot() override
 	{
-		printf("OccupancyMapColorT initRoot\n");
+		printf("OccupancyMapSemanticT initRoot\n");
 		OccupancyBase::initRoot();
-		ColorBase::initRoot();
+		SemanticBase::initRoot();
 	}
 
 	//
@@ -190,7 +202,7 @@ class OccupancyMapColorT final
 	virtual void updateNode(InnerNode& node, Depth depth) override
 	{
 		OccupancyBase::updateNode(node, depth);
-		ColorBase::updateNode(node, depth);
+		SemanticBase::updateNode(node, depth);
 	}
 
 	//
@@ -200,9 +212,11 @@ class OccupancyMapColorT final
 	static constexpr std::string_view mapType()
 	{
 		if constexpr (std::is_same_v<typename OccupancyBase::LogitType, uint8_t>) {
-			return "occupancy_map_color_small";
+			// FIXME: Update
+			return "occupancy_map_semantic_small";
 		} else {
-			return "occupancy_map_color";
+			// FIXME: Update
+			return "occupancy_map_semantic";
 		}
 	}
 
@@ -213,7 +227,7 @@ class OccupancyMapColorT final
 	virtual void addFileInfo(FileInfo& info) const override
 	{
 		OccupancyBase::addFileInfo(info);
-		ColorBase::addFileInfo(info);
+		SemanticBase::addFileInfo(info);
 		info["map_type"].emplace_back(mapType());
 	}
 
@@ -222,7 +236,7 @@ class OccupancyMapColorT final
 	                       uint64_t num) override
 	{
 		return OccupancyBase::readNodes(in_stream, nodes, field, type, size, num) ||
-		       ColorBase::readNodes(in_stream, nodes, field, type, size, num);
+		       SemanticBase::readNodes(in_stream, nodes, field, type, size, num);
 	}
 
 	virtual void writeNodes(std::ostream& out_stream,
@@ -232,13 +246,14 @@ class OccupancyMapColorT final
 	{
 		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
 		                          compression_level);
-		ColorBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-		                      compression_level);
+		SemanticBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
+		                         compression_level);
 	}
-};
+}
 
-using OccupancyMapColor = OccupancyMapColorT<float>;
-using OccupancyMapColorSmall = OccupancyMapColorT<uint8_t>;
+using OccupancyMapSemantic = OccupancyMapSemanticT<float, ..., ...>;
+using OccupancyMapSemanticSmall = OccupancyMapSemanticT<uint8_t, ..., ...>;
+
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_H
+#endif  // UFO_MAP_OCCUPANCY_MAP_SEMANTIC_H

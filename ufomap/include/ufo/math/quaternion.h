@@ -59,17 +59,17 @@ struct Quaternion {
 	T y = 0;
 	T z = 0;
 
-	constexpr Quaternion() = default;
+	constexpr Quaternion() noexcept = default;
 
-	constexpr Quaternion(T w, T x, T y, T z) : w(w), x(x), y(y), z(z) {}
+	constexpr Quaternion(T w, T x, T y, T z) noexcept : w(w), x(x), y(y), z(z) {}
 
 	template <typename T2>
-	constexpr Quaternion(Vector3<T2> const& other)
+	constexpr Quaternion(Vector3<T2> const& other) noexcept
 	    : Quaternion(other.roll(), other.pitch(), other.yaw())
 	{
 	}
 
-	constexpr Quaternion(T roll, T pitch, T yaw)
+	constexpr Quaternion(T roll, T pitch, T yaw) noexcept
 	{
 		T sroll = std::sin(roll);
 		T spitch = std::sin(pitch);
@@ -97,7 +97,7 @@ struct Quaternion {
 	}
 
 	template <typename T2>
-	constexpr Quaternion(Vector3<T2> const& axis, T angle)
+	constexpr Quaternion(Vector3<T2> const& axis, T angle) noexcept
 	{
 		T sa = std::sin(angle / T(2));
 		x = axis.x * sa;
@@ -106,7 +106,27 @@ struct Quaternion {
 		w = std::cos(angle / T(2));
 	}
 
-	constexpr Vector3<T> toEuler() const
+	constexpr Quaternion(Quaternion const&) noexcept = default;  // Redundant
+
+	template <typename T2, class = std::enable_if_t<not std::is_same_v<T, T2>>>
+	constexpr Quaternion(Quaternion<T2> const other) noexcept
+	    : w(other.w), x(other.x), y(other.y), z(other.z)
+	{
+	}
+
+	constexpr Quaternion& operator=(Quaternion const&) noexcept = default;  // Redundant
+
+	template <typename T2, class = std::enable_if_t<not std::is_same_v<T, T2>>>
+	constexpr Quaternion& operator=(Quaternion<T2> const rhs) noexcept
+	{
+		w = rhs.w;
+		x = rhs.x;
+		y = rhs.y;
+		z = rhs.z;
+		return *this;
+	}
+
+	constexpr Vector3<T> toEuler() const noexcept
 	{  // create rotational matrix
 		T n = norm();
 		T s = n > T(0) ? T(2) / (n * n) : T(0);
@@ -148,7 +168,7 @@ struct Quaternion {
 		return Vector3<T>(roll, pitch, yaw);
 	}
 
-	constexpr void toRotMatrix(std::array<T, 9>& rot_matrix_3_3) const
+	constexpr void toRotMatrix(std::array<T, 9>& rot_matrix_3_3) const noexcept
 	{
 		// create rotational matrix
 		T n = norm();
@@ -190,18 +210,18 @@ struct Quaternion {
 		}
 	}
 
-	constexpr std::array<T, 9> getRotMatrix() const
+	constexpr std::array<T, 9> getRotMatrix() const noexcept
 	{
 		std::array<T, 9> rot_matrix_3_3;
 		toRotMatrix(rot_matrix_3_3);
 		return rot_matrix_3_3;
 	}
 
-	constexpr T const& operator[](size_t index) const { return *(&w + idx); }
+	constexpr T const& operator[](size_t index) const noexcept { return *(&w + index); }
 
-	constexpr T& operator[](size_t index) { return *(&w + idx); }
+	constexpr T& operator[](size_t index) noexcept { return *(&w + index); }
 
-	constexpr T norm() const
+	constexpr T norm() const noexcept
 	{
 		T n = 0;
 		for (unsigned int i = 0; i < 4; i++) {
@@ -210,28 +230,28 @@ struct Quaternion {
 		return std::sqrt(n);
 	}
 
-	constexpr Quaternion normalized() const
+	constexpr Quaternion normalized() const noexcept
 	{
 		Quaternion result(*this);
 		result.normalize();
 		return result;
 	}
 
-	constexpr Quaternion& normalize()
+	constexpr Quaternion& normalize() noexcept
 	{
 		T len = norm();
 		if (len > T(0)) *this /= len;
 		return *this;
 	}
 
-	constexpr void operator/=(T x)
+	constexpr void operator/=(T x) noexcept
 	{
 		for (unsigned int i = 0; i < 4; ++i) {
 			operator[](i) /= x;
 		}
 	}
 
-	constexpr bool operator==(Quaternion const& rhs) const
+	constexpr bool operator==(Quaternion const& rhs) const noexcept
 	{
 		for (unsigned int i = 0; i < 4; i++) {
 			if (operator[](i) != rhs[i]) {
@@ -241,9 +261,12 @@ struct Quaternion {
 		return true;
 	}
 
-	constexpr bool operator!=(Quaternion const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Quaternion const& rhs) const noexcept
+	{
+		return !(*this == rhs);
+	}
 
-	constexpr Quaternion operator*(Quaternion const& rhs) const
+	constexpr Quaternion operator*(Quaternion const& rhs) const noexcept
 	{
 		return Quaternion(w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z,
 		                  w * rhs.x + x * rhs.w + y * rhs.z - z * rhs.y,
@@ -252,14 +275,14 @@ struct Quaternion {
 	}
 
 	template <typename T2>
-	constexpr Quaternion operator*(Vector3<T2> const& v) const
+	constexpr Quaternion operator*(Vector3<T2> const& v) const noexcept
 	{
 		return *this * Quaternion(0, v(0), v(1), v(2));
 	}
 
-	constexpr Quaternion inversed() const { return Quaternion(w, -x, -y, -z); }
+	constexpr Quaternion inversed() const noexcept { return Quaternion(w, -x, -y, -z); }
 
-	constexpr Quaternion& inverse()
+	constexpr Quaternion& inverse() noexcept
 	{
 		x = -x;
 		y = -y;
@@ -268,7 +291,7 @@ struct Quaternion {
 	}
 
 	template <class P>
-	constexpr P rotate(P point) const
+	constexpr P rotate(P point) const noexcept
 	{
 		Quaternion q = *this * point * this->inversed();
 		point.x = q.x;
@@ -278,7 +301,7 @@ struct Quaternion {
 	}
 
 	template <class P>
-	constexpr void rotateInPlace(P& point) const
+	constexpr void rotateInPlace(P& point) const noexcept
 	{
 		Quaternion q = *this * point * this->inversed();
 		point.x = q.x;

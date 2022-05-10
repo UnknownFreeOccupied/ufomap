@@ -54,19 +54,19 @@ namespace ufo::math
 //
 
 template <typename F, typename = std::enable_if_t<std::is_floating_point_v<F>>>
-constexpr F logit(F probability)
+constexpr F logit(F probability) noexcept
 {
 	return std::log(probability / (F(1.0) - probability));
 }
 
 template <typename F, typename = std::enable_if_t<std::is_floating_point_v<F>>>
-constexpr F logit(F probability, F min_logit, F max_logit)
+constexpr F logit(F probability, F min_logit, F max_logit) noexcept
 {
 	return std::clamp(logit(probability), min_logit, max_logit);
 }
 
 template <typename F, typename = std::enable_if_t<std::is_floating_point_v<F>>>
-constexpr F probability(F logit)
+constexpr F probability(F logit) noexcept
 {
 	return F(1.0) / (F(1.0) + std::exp(-logit));
 }
@@ -78,7 +78,7 @@ constexpr F probability(F logit)
 template <
     typename U, typename F,
     typename = std::enable_if_t<std::is_unsigned_v<U> && std::is_floating_point_v<F>>>
-constexpr F convertLogit(U logit, F min_logit, F max_logit)
+constexpr F convertLogit(U logit, F min_logit, F max_logit) noexcept
 {
 	return ((logit * (max_logit - min_logit)) / std::numeric_limits<U>::max()) + min_logit;
 }
@@ -86,7 +86,7 @@ constexpr F convertLogit(U logit, F min_logit, F max_logit)
 template <
     typename U, typename F,
     typename = std::enable_if_t<std::is_unsigned_v<U> && std::is_floating_point_v<F>>>
-constexpr U convertLogit(F logit, F min_logit, F max_logit)
+constexpr U convertLogit(F logit, F min_logit, F max_logit) noexcept
 {
 	return std::llround((logit - min_logit) * std::numeric_limits<U>::max() /
 	                    (max_logit - min_logit));
@@ -95,7 +95,7 @@ constexpr U convertLogit(F logit, F min_logit, F max_logit)
 template <
     typename U, typename F,
     typename = std::enable_if_t<std::is_unsigned_v<U> && std::is_floating_point_v<F>>>
-constexpr U logit(F probability, F min_logit, F max_logit)
+constexpr U logit(F probability, F min_logit, F max_logit) noexcept
 {
 	return convertLogit<U>(logit(probability, min_logit, max_logit), min_logit, max_logit);
 }
@@ -103,7 +103,7 @@ constexpr U logit(F probability, F min_logit, F max_logit)
 template <
     typename U, typename F,
     typename = std::enable_if_t<std::is_unsigned_v<U> && std::is_floating_point_v<F>>>
-constexpr F probability(U logit, F min_logit, F max_logit)
+constexpr F probability(U logit, F min_logit, F max_logit) noexcept
 {
 	return probability(convertLogit(logit, min_logit, max_logit));
 }
@@ -112,7 +112,7 @@ constexpr F probability(U logit, F min_logit, F max_logit)
 template <
     typename U, typename F,
     typename = std::enable_if_t<std::is_unsigned_v<U> && std::is_floating_point_v<F>>>
-constexpr U logitChangeValue(F probability, F min_logit, F max_logit)
+constexpr U logitChangeValue(F probability, F min_logit, F max_logit) noexcept
 {
 	probability = F(0.5) > probability ? probability : F(1.0) - probability;
 	return logit<U>(F(0.5), min_logit, max_logit) -
@@ -120,14 +120,14 @@ constexpr U logitChangeValue(F probability, F min_logit, F max_logit)
 }
 
 template <typename U, typename = std::enable_if_t<std::is_unsigned_v<U>>>
-constexpr U increaseLogit(U cur, U inc)
+constexpr U increaseLogit(U cur, U inc) noexcept
 {
 	return std::numeric_limits<U>::max() - cur > inc ? cur + inc
 	                                                 : std::numeric_limits<U>::max();
 }
 
 template <typename U, typename = std::enable_if_t<std::is_unsigned_v<U>>>
-constexpr U decreaseLogit(U cur, U dec)
+constexpr U decreaseLogit(U cur, U dec) noexcept
 {
 	return cur - std::min(cur, dec);
 }

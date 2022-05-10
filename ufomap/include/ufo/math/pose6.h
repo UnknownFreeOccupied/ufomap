@@ -52,35 +52,52 @@
 namespace ufo::math
 {
 template <typename T>
-class Pose6
-{
+struct Pose6 {
 	Vector3<T> translation;
 	Quaternion<T> rotation;
 
-	constexpr Pose6() = default;
+	constexpr Pose6() noexcept = default;
 
 	template <typename T1, typename T2>
-	constexpr Pose6(Vector3<T1> const& translation, Quaternion<T2> const& rotation)
+	constexpr Pose6(Vector3<T1> const& translation, Quaternion<T2> const& rotation) noexcept
 	    : translation(translation), rotation(rotation)
 	{
 	}
 
-	constexpr Pose6(T x, T y, T z, T roll, T pitch, T yaw)
+	constexpr Pose6(T x, T y, T z, T roll, T pitch, T yaw) noexcept
 	    : translation(x, y, z), rotation(roll, pitch, yaw)
 	{
 	}
 
-	constexpr Pose6(T t_x, T t_y, T t_z, T r_w, T r_x, T r_y, T r_z)
+	constexpr Pose6(T t_x, T t_y, T t_z, T r_w, T r_x, T r_y, T r_z) noexcept
 	    : translation(t_x, t_y, t_z), rotation(r_w, r_x, r_y, r_z)
 	{
 	}
 
-	constexpr bool operator==(Pose6 const& rhs)
+	constexpr Pose6(Pose6 const&) noexcept = default;  // Redundant
+
+	template <typename T2, class = std::enable_if_t<not std::is_same_v<T, T2>>>
+	constexpr Pose6(Pose6<T2> const other) noexcept
+	    : translation(other.translation), rotation(other.rotation)
+	{
+	}
+
+	constexpr Pose6& operator=(Pose6 const&) noexcept = default;  // Redundant
+
+	template <typename T2, class = std::enable_if_t<not std::is_same_v<T, T2>>>
+	constexpr Pose6& operator=(Pose6<T2> const rhs) noexcept
+	{
+		translation = rhs.translation;
+		rotation = rhs.rotation;
+		return *this;
+	}
+
+	constexpr bool operator==(Pose6 const& rhs) noexcept
 	{
 		return translation == rhs.translation && rotation == rhs.rotation;
 	}
 
-	constexpr bool operator!=(Pose6 const& rhs) { return !(*this == rhs); }
+	constexpr bool operator!=(Pose6 const& rhs) noexcept { return !(*this == rhs); }
 
 	constexpr T& x() noexcept { return translation[0]; }
 
@@ -101,7 +118,7 @@ class Pose6
 	constexpr T yaw() const noexcept { return rotation.yaw(); }
 
 	template <class P>
-	constexpr P transform(P point) const
+	constexpr P transform(P point) const noexcept
 	{
 		point = rotation.rotate(point);
 		point += translation;
@@ -109,13 +126,13 @@ class Pose6
 	}
 
 	template <class P>
-	constexpr void transformInPlace(P& point) const
+	constexpr void transformInPlace(P& point) const noexcept
 	{
 		rotation.rotateInPlace(point);
 		point += translation;
 	}
 
-	constexpr Pose6 inversed() const
+	constexpr Pose6 inversed() const noexcept
 	{
 		Pose6 result(*this);
 		result.rotation.inverse().normalize();
@@ -123,33 +140,33 @@ class Pose6
 		return result;
 	}
 
-	constexpr Pose6& inverse()
+	constexpr Pose6& inverse() noexcept
 	{
 		rotation.inverse().normalize();
 		rotation.rotateInPlace(-translation);
 		return *this;
 	}
 
-	constexpr Pose6 operator*(Pose6 const& other) const
+	constexpr Pose6 operator*(Pose6 const& other) const noexcept
 	{
 		Quaternion<T> rotationnew = rotation * other.rotation;
 		Vector3<T> transation_new = rotation.rotate(other.translation) + translation;
 		return Pose6(transation_new, rotationnew.normalize());
 	}
 
-	constexpr Pose6& operator*=(Pose6 const& other)
+	constexpr Pose6& operator*=(Pose6 const& other) noexcept
 	{
 		translation += rotation.rotate(other.translation);
 		rotation = rotation * other.rotation;
 		return *this;
 	}
 
-	constexpr T distance(Pose6 const& other) const
+	constexpr T distance(Pose6 const& other) const noexcept
 	{
 		return translation.distance(other.translation);
 	}
 
-	constexpr T translationLength() const { return translation.norm(); }
+	constexpr T translationLength() const noexcept { return translation.norm(); }
 };
 
 using Pose6f = Pose6<float>;

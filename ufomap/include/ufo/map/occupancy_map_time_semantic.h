@@ -1,9 +1,10 @@
-/*
+/**
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
+ *
  */
 
 /*
@@ -38,39 +39,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_MAP_BASE_H
-#define UFO_MAP_MAP_BASE_H
+#ifndef UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
+#define UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
 
-// STL
-#include <string_view>
-#include <type_traits>
+// UFO
+#include <ufo/map/color/color_map_base.h>
+#include <ufo/map/occupancy/occupancy_map_time_base.h>
+#include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/semantic/semantic_map_base.h>
 
 namespace ufo::map
 {
-template <class Derived>
-class MapBase
-{
-	template <typename T>
-	struct is_function : public std::false_type {
-	};
-
-	template <typename Ret>
-	struct is_function<Ret (*)()> : public std::true_type {
-		static_assert(std::is_same_v<std::string_view, Ret>,
-		              "Derived's static member function 'getMapType()' must have return type "
-		              "'std::string_view'.");
-	};
-
- public:
-	virtual ~MapBase()
-	{
-		// These assertions are here to ensure that Derived is complete before evaluating
-		// them.
-
-		static_assert(
-		    is_function<decltype(&Derived::getMapType)>::value,
-		    "Derived must implement function 'static std::string_view getMapType()'.");
-	}
-};
+// class OccupancyMapTimeSemantic final
+//     : public OccupancyMapTimeBase<OccupancyMapTimeColorSemantic,
+//                                   OccupancyTimeColorSemanticNode>,
+//       public ColorMapBase<OccupancyMapTimeColorSemantic, OccupancyTimeColorSemanticNode,
+//                           OccupancyIndicators>,
+//       public SemanticMapBase<OccupancyMapTimeColorSemantic,
+//                              OccupancyTimeColorSemanticNode, OccupancyIndicators>
+// {
+// }
 }  // namespace ufo::map
-#endif  // UFO_MAP_MAP_BASE_H
+
+#endif  // UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H

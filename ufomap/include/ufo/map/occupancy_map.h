@@ -67,7 +67,7 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 
 	using OccupancyBase::OccupancyBase;
 
-	// OccupancyMapT(float resolution, DepthType depth_levels = 16,
+	// OccupancyMapT(float resolution, Depth depth_levels = 16,
 	//               bool automatic_pruning = true, float occupied_thres = 0.5,
 	//               float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	//               float clamping_thres_max = 0.971)
@@ -171,7 +171,7 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 	// Get map type
 	//
 
-	static constexpr std::string_view getMapType()
+	static constexpr std::string_view mapType()
 	{
 		if constexpr (std::is_same_v<typename OccupancyBase::LogitType, uint8_t>) {
 			return "occupancy_map_small";
@@ -187,7 +187,7 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 	virtual void addFileInfo(FileInfo& info) const override
 	{
 		OccupancyBase::addFileInfo(info);
-		info["map_type"].emplace_back(getMapType());
+		info["map_type"].emplace_back(mapType());
 	}
 
 	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,

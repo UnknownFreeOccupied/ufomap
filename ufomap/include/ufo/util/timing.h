@@ -43,12 +43,12 @@
 
 // STL
 #include <chrono>
+#include <cmath>
 #include <limits>
 #include <map>
 #include <queue>
 #include <string>
 #include <vector>
-#include <cmath>
 
 namespace ufo::util
 {
@@ -95,7 +95,7 @@ class TimerObject
 
 	double getTotal() const { return total_time_; }
 
-	std::optional<double> getMin() const
+	std::optional<double> min() const
 	{
 		if (0 == samples_) {
 			return std::nullopt;
@@ -103,7 +103,7 @@ class TimerObject
 		return min_time_;
 	}
 
-	std::optional<double> getMax() const
+	std::optional<double> max() const
 	{
 		if (0 == samples_) {
 			return std::nullopt;
@@ -234,50 +234,50 @@ class Timing
 		return timers_.at(tag).getTotal() / 1000.0;
 	}
 
-	double getMinSeconds(std::string const& tag) const
+	double minSeconds(std::string const& tag) const
 	{
-		auto min = timers_.at(tag).getMin();
+		auto min = timers_.at(tag).min();
 		if (!min) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return *min / 1000000000.0;
 	}
-	double getMinMilliseconds(std::string const& tag) const
+	double minMilliseconds(std::string const& tag) const
 	{
-		auto min = timers_.at(tag).getMin();
+		auto min = timers_.at(tag).min();
 		if (!min) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return *min / 1000000.0;
 	}
-	double getMinMicroseconds(std::string const& tag) const
+	double minMicroseconds(std::string const& tag) const
 	{
-		auto min = timers_.at(tag).getMin();
+		auto min = timers_.at(tag).min();
 		if (!min) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return *min / 1000.0;
 	}
 
-	double getMaxSeconds(std::string const& tag) const
+	double maxSeconds(std::string const& tag) const
 	{
-		auto max = timers_.at(tag).getMax();
+		auto max = timers_.at(tag).max();
 		if (!max) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return *max / 1000000000.0;
 	}
-	double getMaxMilliseconds(std::string const& tag) const
+	double maxMilliseconds(std::string const& tag) const
 	{
-		auto max = timers_.at(tag).getMax();
+		auto max = timers_.at(tag).max();
 		if (!max) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return *max / 1000000.0;
 	}
-	double getMaxMicroseconds(std::string const& tag) const
+	double maxMicroseconds(std::string const& tag) const
 	{
-		auto max = timers_.at(tag).getMax();
+		auto max = timers_.at(tag).max();
 		if (!max) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
@@ -333,7 +333,7 @@ class Timing
 	}
 
  private:
-	std::map<std::string, TimerObject, std::less<std::string>> timers_;
+	std::map<std::string, TimerObject> timers_;
 };
 }  // namespace ufo::util
 

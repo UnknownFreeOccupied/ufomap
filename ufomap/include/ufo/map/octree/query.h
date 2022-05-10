@@ -43,6 +43,12 @@
 
 namespace ufo::map
 {
+/**
+ * @brief Wrapper for a query making it possible for write queries such as
+ * @code for (auto node : map.query(...)) {} @endcode
+ *
+ * @tparam The iterator that should be wrapped.
+ */
 template <class Iterator>
 class Query
 {
@@ -54,9 +60,13 @@ class Query
 	{
 	}
 
-	Iterator begin() const { return first_; }
+	constexpr Iterator& begin() noexcept { return first_; }
 
-	Iterator end() const { return last_; }
+	constexpr Iterator begin() const noexcept { return first_; }
+
+	constexpr Iterator& end() noexcept { return last_; }
+
+	constexpr Iterator end() const noexcept { return last_; }
 
  private:
 	Iterator first_;

@@ -41,9 +41,6 @@
 #ifndef UFO_MAP_PREDICATE_PREDICATES_H
 #define UFO_MAP_PREDICATE_PREDICATES_H
 
-// UFO
-#include <ufo/map/octree/node.h>
-
 // STL
 #include <tuple>
 
@@ -188,20 +185,8 @@ template <class... Preds>
 struct PredicateValueCheck<std::tuple<Preds...>> {
 	using Pred = std::tuple<Preds...>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
-	{
-		return std::apply(
-		    [&m, &n](auto const&... preds) {
-			    return (
-			        (PredicateValueCheck<std::decay_t<decltype(preds)>>::apply(preds, m, n)) &&
-			        ...);
-		    },
-		    p);
-	}
-
-	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, MinimalNode const& n)
 	{
 		return std::apply(
 		    [&m, &n](auto const&... preds) {
@@ -217,15 +202,8 @@ template <class PredLeft, class PredRight>
 struct PredicateValueCheck<OR<PredLeft, PredRight>> {
 	using Pred = OR<PredLeft, PredRight>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
-	{
-		return PredicateValueCheck<PredLeft>::apply(p.left, m, n) ||
-		       PredicateValueCheck<PredRight>::apply(p.right, m, n);
-	}
-
-	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, MinimalNode const& n)
 	{
 		return PredicateValueCheck<PredLeft>::apply(p.left, m, n) ||
 		       PredicateValueCheck<PredRight>::apply(p.right, m, n);
@@ -236,16 +214,8 @@ template <class PredPre, class PredPost>
 struct PredicateValueCheck<THEN<PredPre, PredPost>> {
 	using Pred = THEN<PredPre, PredPost>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr auto apply(Pred const& p, Map const& m, Node const& n)
-	    -> decltype(PredicateValueCheck<PredPre>::apply(p.pre, m, n), bool())
-	{
-		return !PredicateValueCheck<PredPre>::apply(p.pre, m, n) ||
-		       PredicateValueCheck<PredPost>::apply(p.post, m, n);
-	}
-
-	template <class Map>
-	static constexpr auto apply(Pred const& p, Map const& m, MinimalNode const& n)
 	    -> decltype(PredicateValueCheck<PredPre>::apply(p.pre, m, n), bool())
 	{
 		return !PredicateValueCheck<PredPre>::apply(p.pre, m, n) ||
@@ -259,8 +229,8 @@ template <>
 struct PredicateValueCheck<TRUE> {
 	using Pred = TRUE;
 
-	template <class Map>
-	static constexpr bool apply(Pred const&, Map const&, MinimalNode const&)
+	template <class Map, class Node>
+	static constexpr bool apply(Pred const&, Map const&, Node const&)
 	{
 		return true;
 	}
@@ -270,8 +240,8 @@ template <>
 struct PredicateValueCheck<FALSE> {
 	using Pred = FALSE;
 
-	template <class Map>
-	static constexpr bool apply(Pred const&, Map const&, MinimalNode const&)
+	template <class Map, class Node>
+	static constexpr bool apply(Pred const&, Map const&, Node const&)
 	{
 		return false;
 	}
@@ -292,20 +262,8 @@ template <class... Preds>
 struct PredicateInnerCheck<std::tuple<Preds...>> {
 	using Pred = std::tuple<Preds...>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
-	{
-		return std::apply(
-		    [&m, &n](auto const&... preds) {
-			    return (
-			        (PredicateInnerCheck<std::decay_t<decltype(preds)>>::apply(preds, m, n)) &&
-			        ...);
-		    },
-		    p);
-	}
-
-	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, MinimalNode const& n)
 	{
 		return std::apply(
 		    [&m, &n](auto const&... preds) {
@@ -321,15 +279,8 @@ template <class PredLeft, class PredRight>
 struct PredicateInnerCheck<OR<PredLeft, PredRight>> {
 	using Pred = OR<PredLeft, PredRight>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
-	{
-		return PredicateInnerCheck<PredLeft>::apply(p.left, m, n) ||
-		       PredicateInnerCheck<PredRight>::apply(p.right, m, n);
-	}
-
-	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, MinimalNode const& n)
 	{
 		return PredicateInnerCheck<PredLeft>::apply(p.left, m, n) ||
 		       PredicateInnerCheck<PredRight>::apply(p.right, m, n);
@@ -340,16 +291,8 @@ template <class PredPre, class PredPost>
 struct PredicateInnerCheck<THEN<PredPre, PredPost>> {
 	using Pred = THEN<PredPre, PredPost>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr auto apply(Pred const& p, Map const& m, Node const& n)
-	    -> decltype(PredicateInnerCheck<PredPre>::apply(p.pre, m, n), bool())
-	{
-		return !PredicateInnerCheck<PredPre>::apply(p.pre, m, n) ||
-		       PredicateInnerCheck<PredPost>::apply(p.post, m, n);
-	}
-
-	template <class Map>
-	static constexpr auto apply(Pred const& p, Map const& m, MinimalNode const& n)
 	    -> decltype(PredicateInnerCheck<PredPre>::apply(p.pre, m, n), bool())
 	{
 		return !PredicateInnerCheck<PredPre>::apply(p.pre, m, n) ||
@@ -363,8 +306,8 @@ template <>
 struct PredicateInnerCheck<TRUE> {
 	using Pred = TRUE;
 
-	template <class Map>
-	static constexpr bool apply(Pred const&, Map const&, MinimalNode const&)
+	template <class Map, class Node>
+	static constexpr bool apply(Pred const&, Map const&, Node const&)
 	{
 		return true;
 	}
@@ -374,8 +317,8 @@ template <>
 struct PredicateInnerCheck<FALSE> {
 	using Pred = FALSE;
 
-	template <class Map>
-	static constexpr bool apply(Pred const&, Map const&, MinimalNode const&)
+	template <class Map, class Node>
+	static constexpr bool apply(Pred const&, Map const&, Node const&)
 	{
 		return false;
 	}

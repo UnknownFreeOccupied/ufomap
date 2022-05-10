@@ -73,84 +73,81 @@ template <typename OccupancyType>
 struct OccupancyNode {
 	OccupancyType occupancy;
 
-	bool operator==(OccupancyNode const& rhs) const noexcept
+	constexpr bool operator==(OccupancyNode const& rhs) const
 	{
 		return rhs.occupancy == occupancy;
 	}
-	bool operator!=(OccupancyNode const& rhs) const noexcept
-	{
-		return rhs.occupancy != occupancy;
-	}
+
+	constexpr bool operator!=(OccupancyNode const& rhs) const { return !(*this == rhs); }
 };
 
 struct OccupancyTimeNode {
 	uint32_t occupancy : 8;
 	uint32_t time_step : 24;
 
-	bool operator==(OccupancyTimeNode const& rhs) const noexcept
+	constexpr bool operator==(OccupancyTimeNode const& rhs) const
 	{
 		return rhs.occupancy == occupancy && rhs.time_step == time_step;
 	}
-	bool operator!=(OccupancyTimeNode const& rhs) const noexcept
+
+	constexpr bool operator!=(OccupancyTimeNode const& rhs) const
 	{
-		return rhs.occupancy != occupancy && rhs.time_step != time_step;
+		return !(*this == rhs);
 	}
 };
 
 template <typename OccupancyType>
 struct OccupancyColorNode : OccupancyNode<OccupancyType>, ColorNode {
-	bool operator==(OccupancyColorNode const& rhs) const noexcept
+	constexpr bool operator==(OccupancyColorNode const& rhs) const
 	{
 		return OccupancyNode<OccupancyType>::operator==(rhs) && ColorNode::operator==(rhs);
 	}
 
-	bool operator!=(OccupancyColorNode const& rhs) const noexcept
+	constexpr bool operator!=(OccupancyColorNode const& rhs) const
 	{
-		return OccupancyNode<OccupancyType>::operator!=(rhs) || ColorNode::operator!=(rhs);
+		return !(*this == rhs);
 	}
 };
 
 template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
 struct OccupancySemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
                                OccupancyNode<OccupancyType> {
-	bool operator==(OccupancySemanticNode const& rhs) const noexcept
+	constexpr bool operator==(OccupancySemanticNode const& rhs) const
 	{
 		return OccupancyNode<OccupancyType>::operator==(rhs) &&
 		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
 	}
 
-	bool operator!=(OccupancySemanticNode const& rhs) const noexcept
+	constexpr bool operator!=(OccupancySemanticNode const& rhs) const
 	{
-		return OccupancyNode<OccupancyType>::operator!=(rhs) ||
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator!=(rhs);
+		return !(*this == rhs);
 	}
 };
 
 struct OccupancyTimeColorNode : OccupancyTimeNode, ColorNode {
-	bool operator==(OccupancyTimeColorNode const& rhs) const noexcept
+	constexpr bool operator==(OccupancyTimeColorNode const& rhs) const
 	{
 		return OccupancyTimeNode::operator==(rhs) && ColorNode::operator==(rhs);
 	}
 
-	bool operator!=(OccupancyTimeColorNode const& rhs) const noexcept
+	constexpr bool operator!=(OccupancyTimeColorNode const& rhs) const
 	{
-		return OccupancyTimeNode::operator!=(rhs) && ColorNode::operator!=(rhs);
+		return !(*this == rhs);
 	}
 };
 
 template <typename SemanticType, size_t SemanticValueWidth>
 struct OccupancyTimeSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
                                    OccupancyTimeNode {
-	bool operator==(OccupancyTimeSemanticNode const& rhs) const noexcept
+	constexpr bool operator==(OccupancyTimeSemanticNode const& rhs) const
 	{
 		return OccupancyTimeNode::operator==(rhs) &&
 		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
 	}
 
-	bool operator!=(OccupancyTimeSemanticNode const& rhs) const noexcept
+	constexpr bool operator!=(OccupancyTimeSemanticNode const& rhs) const
 	{
-		return OccupancyTimeNode::operator!=(rhs) ||
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator!=(rhs);
+		return !(*this == rhs);
 	}
 };
 
@@ -158,38 +155,32 @@ template <typename OccupancyType, typename SemanticType, size_t SemanticValueWid
 struct OccupancyColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
                                     OccupancyNode<OccupancyType>,
                                     ColorNode {
-	bool operator==(OccupancyColorSemanticNode const& rhs) const noexcept
+	constexpr bool operator==(OccupancyColorSemanticNode const& rhs) const
 	{
 		return OccupancyNode<OccupancyType>::operator==(rhs) && ColorNode::operator==(rhs) &&
 		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
 	}
 
-	bool operator!=(OccupancyColorSemanticNode const& rhs) const noexcept
+	constexpr bool operator!=(OccupancyColorSemanticNode const& rhs) const
 	{
-		return OccupancyNode<OccupancyType>::operator!=(rhs) || ColorNode::operator!=(rhs) ||
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator!=(rhs);
+		return !(*this == rhs);
 	}
 };
 
 template <typename SemanticType, size_t SemanticValueWidth>
 struct OccupancyTimeColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                        OccupancyTimeNode,
-                                        Color {
-	bool operator==(OccupancyTimeColorSemanticNode const& rhs) const noexcept
+                                        OccupancyTimeColorNode {
+	constexpr bool operator==(OccupancyTimeColorSemanticNode const& rhs) const
 	{
-		return OccupancyTimeNode::operator==(rhs) && ColorNode::operator==(rhs) &&
+		return OccupancyTimeColorNode::operator==(rhs) &&
 		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
 	}
 
-	bool operator!=(OccupancyTimeColorSemanticNode const& rhs) const noexcept
+	constexpr bool operator!=(OccupancyTimeColorSemanticNode const& rhs) const
 	{
-		return OccupancyTimeNode::operator!=(rhs) || ColorNode::operator!=(rhs) ||
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator!=(rhs);
+		return !(*this == rhs);
 	}
 };
-
-// TODO: Create tiny semantic node where occupancy, color and time is inside semantic
-// container
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_NODE_H

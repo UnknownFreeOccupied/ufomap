@@ -55,7 +55,7 @@ namespace ufo::map
 template <class Derived, class DataType, class Indicators = OccupancyIndicators>
 class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicators>
 {
-	static constexpr bool PropagateMax = true;  // TODO: Fix
+	static constexpr bool PropagateMax = true;  // FIXME: Fix
 
  protected:
 	using OccupancyBase = OccupancyMapBase<Derived, DataType, Indicators>;
@@ -75,7 +75,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	// Get time step
 	//
 
-	constexpr TimeStepType getTimeStep(MinimalNode const& node) const noexcept
+	constexpr TimeStepType getTimeStep(Node const& node) const noexcept
 	{
 		return OctreeBase::getLeafNode(node).time_step;
 	}
@@ -87,12 +87,12 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 
 	TimeStepType getTimeStep(Key key) const { return getTimeStep(OctreeBase::toCode(key)); }
 
-	TimeStepType getTimeStep(Point3 coord, DepthType depth = 0) const
+	TimeStepType getTimeStep(Point3 coord, Depth depth = 0) const
 	{
 		return getTimeStep(OctreeBase::toCode(coord, depth));
 	}
 
-	TimeStepType getTimeStep(float x, float y, float z, DepthType depth = 0) const
+	TimeStepType getTimeStep(Coord x, Coord y, Coord z, Depth depth = 0) const
 	{
 		return getTimeStep(OctreeBase::toCode(x, y, z, depth));
 	}
@@ -101,7 +101,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	// Set time step
 	//
 
-	void setTimeStep(MinimalNode& node, TimeStepType time_step, bool propagate = true)
+	void setTimeStep(Node& node, TimeStepType time_step, bool propagate = true)
 	{
 		OctreeBase::apply(
 		    node, [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
@@ -121,20 +121,20 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	}
 
 	void setTimeStep(Point3 coord, TimeStepType time_step, bool propagate = true,
-	                 DepthType depth = 0)
+	                 Depth depth = 0)
 	{
 		setTimeStep(OctreeBase::toCode(coord, depth), time_step, propagate);
 	}
 
-	void setTimeStep(float x, float y, float z, TimeStepType time_step,
-	                 bool propagate = true, DepthType depth = 0)
+	void setTimeStep(Coord x, Coord y, Coord z, TimeStepType time_step,
+	                 bool propagate = true, Depth depth = 0)
 	{
 		setTimeStep(OctreeBase::toCode(x, y, z, depth), time_step, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setTimeStep(ExecutionPolicy policy, MinimalNode& node, TimeStepType time_step,
+	void setTimeStep(ExecutionPolicy policy, Node& node, TimeStepType time_step,
 	                 bool propagate = true)
 	{
 		OctreeBase::apply(
@@ -165,15 +165,15 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setTimeStep(ExecutionPolicy policy, Point3 coord, TimeStepType time_step,
-	                 bool propagate = true, DepthType depth = 0)
+	                 bool propagate = true, Depth depth = 0)
 	{
 		setTimeStep(policy, OctreeBase::toCode(coord, depth), time_step, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setTimeStep(ExecutionPolicy policy, float x, float y, float z,
-	                 TimeStepType time_step, bool propagate = true, DepthType depth = 0)
+	void setTimeStep(ExecutionPolicy policy, Coord x, Coord y, Coord z,
+	                 TimeStepType time_step, bool propagate = true, Depth depth = 0)
 	{
 		setTimeStep(policy, OctreeBase::toCode(x, y, z, depth), time_step, propagate);
 	}
@@ -185,7 +185,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 
 	// using OccupancyBase::OccupancyBase
 
-	OccupancyMapTimeBase(float resolution, DepthType depth_levels, bool automatic_pruning,
+	OccupancyMapTimeBase(float resolution, Depth depth_levels, bool automatic_pruning,
 	                     float occupied_thres, float free_thres, float clamping_thres_min,
 	                     float clamping_thres_max)
 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
@@ -241,7 +241,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	{
 		printf("OccupancyMapTimeBase initRoot\n");
 		OccupancyBase::initRoot();
-		OctreeBase::getRoot().time_step = 0;
+		OctreeBase::getRootImpl().time_step = 0;
 	}
 
 	//
@@ -257,7 +257,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, DepthType depth) override
+	virtual void updateNode(InnerNode& node, Depth depth) override
 	{
 		OccupancyBase::updateNode(node, depth);
 
@@ -305,7 +305,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 		if ("time_step" != field) {
 			return false;
 		}
-		// TODO: Make parallel
+		// FIXME: Make parallel
 
 		if ('U' == type && 4 == size) {
 			std::vector<uint32_t> data(nodes.size());
@@ -316,7 +316,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 				nodes[i]->time_step = data[i];
 			}
 		} else {
-			// TODO: Error
+			// FIXME: Error
 			return false;
 		}
 		return true;

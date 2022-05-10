@@ -87,7 +87,7 @@ struct PredicateValueCheck<TimeStepMap> {
 	using Pred = TimeStepMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred const&, Map const& m, MinimalNode const& n)
+	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
 	    -> decltype(m.getTimeStep(n), true)
 	{
 		return true;
@@ -101,7 +101,7 @@ struct PredicateValueCheck<THEN<TimeStepMap, PredPost>> {
 	using Pred = THEN<TimeStepMap, PredPost>;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, MinimalNode const& n)
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		if constexpr (PredicateValueCheck<TimeStepMap>::apply(p.pre, m, n)) {
 			return PredicateValueCheck<PredPost>::apply(p.post, m, n);
@@ -116,7 +116,7 @@ struct PredicateValueCheck<TimeStep<PC>> {
 	using Pred = TimeStep<PC>;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, MinimalNode const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		if constexpr (PredicateCompare::EQUAL == PC) {
 			return m.getTimeStep(n) == p.time_step;
@@ -139,7 +139,7 @@ struct PredicateValueCheck<TimeStepInterval> {
 	using Pred = TimeStepInterval;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, MinimalNode const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -155,7 +155,7 @@ struct PredicateInnerCheck<TimeStepMap> {
 	using Pred = TimeStepMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred const&, Map const& m, MinimalNode const& n)
+	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
 	    -> decltype(m.getTimeStep(n), true)
 	{
 		return true;
@@ -169,7 +169,7 @@ struct PredicateInnerCheck<THEN<TimeStepMap, PredPost>> {
 	using Pred = THEN<TimeStepMap, PredPost>;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, MinimalNode const& n)
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		if constexpr (PredicateInnerCheck<TimeStepMap>::apply(p.pre, m, n)) {
 			return PredicateInnerCheck<PredPost>::apply(p.post, m, n);
@@ -184,7 +184,7 @@ struct PredicateInnerCheck<TimeStep<PC>> {
 	using Pred = TimeStep<PC>;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, MinimalNode const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		// FIXME: Check how time step is propagated to determine
 
@@ -209,7 +209,7 @@ struct PredicateInnerCheck<TimeStepInterval> {
 	using Pred = TimeStepInterval;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, MinimalNode const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);

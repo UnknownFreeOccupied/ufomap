@@ -47,7 +47,6 @@
 // STL
 #include <immintrin.h>
 
-#include <array>
 #include <cstddef>
 #include <unordered_map>
 #include <unordered_set>
@@ -62,104 +61,138 @@ namespace ufo::map
 class Key
 {
  public:
-	inline Key() = default;
+	using KeyType = uint32_t;
 
-	inline Key(KeyType x, KeyType y, KeyType z, DepthType depth) : key_{x, y, z}, depth_(depth) {}
+	constexpr Key() = default;
+
+	constexpr Key(KeyType const x, KeyType const y, KeyType const z, Depth const depth)
+	    : x_((x >> depth) << depth),
+	      y_((y >> depth) << depth),
+	      z_((z >> depth) << depth),
+	      depth_(depth)
+	{
+	}
+
+	constexpr Key(Key const key, Depth const depth)
+	    : x_((key.x_ >> depth) << depth),
+	      y_((key.y_ >> depth) << depth),
+	      z_((key.z_ >> depth) << depth),
+	      depth_(depth)
+	{
+	}
+
+	friend constexpr bool operator==(Key const lhs, Key const rhs) noexcept
+	{
+		return lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_ && lhs.z_ == rhs.z_ &&
+		       lhs.depth_ == rhs.depth_;
+	}
+
+	friend constexpr bool operator!=(Key const lhs, Key const rhs) noexcept
+	{
+		return !(lhs == rhs);
+	}
+
+	friend constexpr bool operator<(Key const lhs, Key const rhs) noexcept
+	{
+		return lhs.x_ < rhs.x_ || (lhs.x_ == rhs.x_ && lhs.y_ < rhs.y_) ||
+		       (lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_ && lhs.z_ < rhs.z_);
+	}
+
+	friend constexpr bool operator<=(Key const lhs, Key const rhs) noexcept
+	{
+		return lhs.x_ < rhs.x_ || (lhs.x_ == rhs.x_ && lhs.y_ < rhs.y_) ||
+		       (lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_ && lhs.z_ <= rhs.z_);
+	}
+
+	friend constexpr bool operator>(Key const lhs, Key const rhs) noexcept
+	{
+		return lhs.x_ > rhs.x_ || (lhs.x_ == rhs.x_ && lhs.y_ > rhs.y_) ||
+		       (lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_ && lhs.z_ > rhs.z_);
+	}
+
+	friend constexpr bool operator>=(Key const lhs, Key const rhs) noexcept
+	{
+		return lhs.x_ > rhs.x_ || (lhs.x_ == rhs.x_ && lhs.y_ > rhs.y_) ||
+		       (lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_ && lhs.z_ >= rhs.z_);
+	}
 
 	/**
-	 * @brief Get the depth that this key is specified at
+	 * @brief Get the depth of the key.
 	 *
-	 * @return DepthType The depth this key is specified at
+	 * @return The depth the key.
 	 */
-	constexpr DepthType getDepth() const noexcept { return depth_; }
+	constexpr Depth depth() const noexcept { return depth_; }
 
 	/**
-	 * @brief Set the depth that this key is specified at
-	 */
-	constexpr void setDepth(DepthType depth) noexcept { depth_ = depth; }
-
-	/**
-	 * @brief Returns if this key is equal to another key at a certain depth
+	 * @brief Change the depth of the key.
 	 *
-	 * @param other The other key to compare to
-	 * @param depth The depth to do the comparison at
-	 * @return true If the keys are equal at the specified depth
-	 * @return false If the keys are not equal at the specified depth
+	 * @note This will change the x, y, z components of the key.
 	 */
-	bool equals(Key const& other, DepthType depth = 0) const
+	constexpr void depth(Depth depth) noexcept
 	{
-		return (key_[0] >> depth) == (other.key_[0] >> depth) &&
-		       (key_[1] >> depth) == (other.key_[1] >> depth) &&
-		       (key_[2] >> depth) == (other.key_[2] >> depth);
+		x_ = (x_ >> depth) << depth;
+		y_ = (y_ >> depth) << depth;
+		z_ = (z_ >> depth) << depth;
+		depth_ = depth;
 	}
 
-	bool operator==(Key const& rhs) const
-	{
-		return (rhs.depth_ == depth_) && (rhs.key_ == key_);
-	}
+	constexpr KeyType operator[](std::size_t idx) const { return *(&x_ + idx); }
 
-	bool operator!=(Key const& rhs) const
-	{
-		return (rhs.depth_ != depth_) || (rhs.key_ != key_);
-	}
-
-	constexpr KeyType const& operator[](std::size_t index) const { return key_[index]; }
-
-	constexpr KeyType& operator[](std::size_t index) { return key_[index]; }
+	constexpr KeyType& operator[](std::size_t idx) { return *(&x_ + idx); }
 
 	/**
 	 * @brief Returns the x component of the key
 	 *
 	 * @return const KeyType& The x component of the key
 	 */
-	constexpr KeyType const& x() const noexcept { return key_[0]; }
+	constexpr KeyType x() const noexcept { return x_; }
 
 	/**
 	 * @brief Returns the y component of the key
 	 *
 	 * @return const KeyType& The y component of the key
 	 */
-	constexpr KeyType const& y() const noexcept { return key_[1]; }
+	constexpr KeyType y() const noexcept { return y_; }
 
 	/**
 	 * @brief Returns the z component of the key
 	 *
 	 * @return const KeyType& The z component of the key
 	 */
-	constexpr KeyType const& z() const noexcept { return key_[2]; }
+	constexpr KeyType z() const noexcept { return z_; }
 
 	/**
 	 * @brief Returns the x component of the key
 	 *
 	 * @return KeyType& The x component of the key
 	 */
-	constexpr KeyType& x() noexcept { return key_[0]; }
+	constexpr KeyType& x() noexcept { return x_; }
 
 	/**
 	 * @brief Returns the y component of the key
 	 *
 	 * @return KeyType& The y component of the key
 	 */
-	constexpr KeyType& y() noexcept { return key_[1]; }
+	constexpr KeyType& y() noexcept { return y_; }
 
 	/**
 	 * @brief Returns the z component of the key
 	 *
 	 * @return KeyType& The z component of the key
 	 */
-	constexpr KeyType& z() noexcept { return key_[2]; }
+	constexpr KeyType& z() noexcept { return z_; }
 
 	/**
 	 * @brief
 	 *
 	 */
 	struct Hash {
-		std::size_t operator()(Key const& key) const
+		constexpr std::size_t operator()(Key const& key) const
 		{
-#if defined(__BMI2__)  // TODO: Is correct?
-			return _pdep_u64(static_cast<CodeType>(key[0]), 0x9249249249249249) |
-			       _pdep_u64(static_cast<CodeType>(key[1]), 0x2492492492492492) |
-			       _pdep_u64(static_cast<CodeType>(key[2]), 0x4924924924924924);
+#if defined(__BMI2__)
+			return _pdep_u64(key[0], 0x9249249249249249) |
+			       _pdep_u64(key[1], 0x2492492492492492) |
+			       _pdep_u64(key[2], 0x4924924924924924);
 #else
 			return splitBy3(key[0]) | (splitBy3(key[1]) << 1) | (splitBy3(key[2]) << 2);
 #endif
@@ -167,10 +200,10 @@ class Key
 	};
 
  private:
-	static uint64_t splitBy3(KeyType a)
+	static constexpr uint64_t splitBy3(KeyType a)
 	{
-#if defined(__BMI2__)  // TODO: Is correct?
-		return _pdep_u64(static_cast<uint64_t>(a), 0x9249249249249249);
+#if defined(__BMI2__)
+		return _pdep_u64(a, 0x9249249249249249);
 #else
 		uint64_t code = static_cast<uint64_t>(a) & 0x1fffff;
 		code = (code | code << 32) & 0x1f00000000ffff;
@@ -184,15 +217,16 @@ class Key
 
  private:
 	// The key
-	std::array<KeyType, 3> key_;
+	KeyType x_ = 0;
+	KeyType y_ = 0;
+	KeyType z_ = 0;
 	// The depth of the key
-	DepthType depth_;
+	Depth depth_ = 0;
 };
 
 using KeySet = std::unordered_set<Key, Key::Hash>;
 template <typename T>
 using KeyMap = std::unordered_map<Key, T, Key::Hash>;
-using KeyRay = std::vector<Key>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_KEY_H

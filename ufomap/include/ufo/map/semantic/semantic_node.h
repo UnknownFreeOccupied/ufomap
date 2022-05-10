@@ -1,9 +1,10 @@
-/*
+/**
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
  * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * License: BSD 3
+ *
  */
 
 /*
@@ -38,55 +39,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCTREE_OCTREE_NODE_H
-#define UFO_MAP_OCTREE_OCTREE_NODE_H
+#ifndef UFO_MAP_SEMANTIC_NODE_H
+#define UFO_MAP_SEMANTIC_NODE_H
 
-// STL
-#include <cstdint>
-#include <iostream>
-#include <type_traits>
+// UFO
+#include <ufo/container/flat_map.h>
 
 namespace ufo::map
 {
-struct OctreeIndicators {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	uint8_t is_leaf : 1;
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	uint8_t modified : 1;
-};
+template <typename SemanticType, size_t SemanticValueWidth>
+struct SemanticNode {
+	container::FlatMap<SemanticType, SemanticValueWidth> semantics;
 
-template <typename Data, class Indicators>
-struct OctreeDataLeafNode : Indicators {
-	Data value;
-
-	constexpr bool operator==(OctreeDataLeafNode const& rhs) const
+	constexpr bool operator==(SemanticNode const& rhs) const
 	{
-		return static_cast<Data const&>(rhs.value) == value;
+		return rhs.semantics == semantics;
 	}
 
-	constexpr bool operator!=(OctreeDataLeafNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
+	constexpr bool operator!=(SemanticNode const& rhs) const { return !(*this == rhs); }
 
-template <class Data, class Indicators>
-struct OctreeLeafNode : Data, Indicators {
-	constexpr bool operator==(OctreeLeafNode const& rhs) const
+	static constexpr size_t getSemanticLabelBits()
 	{
-		return static_cast<Data const&>(rhs) == static_cast<Data const&>(*this);
+		return std::numeric_limits<SemanticType>::digits - getSemanticValueBits();
 	}
 
-	constexpr bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
-};
-
-template <class LeafNode>
-struct OctreeInnerNode : LeafNode {
-	// Pointer to children
-	void* children = nullptr;
+	static constexpr size_t getSemanticValueBits() { return SemanticValueWidth; }
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCTREE_OCTREE_NODE_H
+#endif  // UFO_MAP_SEMANTIC_NODE_H

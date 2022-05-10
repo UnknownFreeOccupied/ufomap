@@ -50,120 +50,92 @@
 
 namespace ufo::map
 {
-using Point3 = math::Vector3;
+using Coord = float;
+using Point3 = math::Vector3<Coord>;
 
-class Point3Color : public Point3, public Color
-{
- public:
-	Point3Color() = default;
+struct Point3Color : public Point3, public RGBColor {
+	constexpr Point3Color() = default;
 
-	Point3Color(Point3 const& point, Color const& color) : Point3(point), Color(color) {}
-
-	Point3Color(float x, float y, float z, uint8_t red, uint8_t green, uint8_t blue)
-	    : Point3(x, y, z), Color(red, green, blue)
+	constexpr Point3Color(Point3 const& point, RGBColor const& color = RGBColor())
+	    : Point3(point), RGBColor(color)
 	{
 	}
 
-	Point3Color(Point3 const& point) : Point3(point) {}
+	constexpr Point3Color(Point3 const& point, RGBColorType red, RGBColorType green,
+	                      RGBColorType blue)
+	    : Point3(point), RGBColor(red, green, blue)
+	{
+	}
 
-	Point3Color(float x, float y, float z) : Point3(x, y, z) {}
+	constexpr Point3Color(Coord x, Coord y, Coord z, RGBColor const& color = RGBColor())
+	    : Point3(x, y, z), RGBColor(color)
+	{
+	}
 
-	Point3Color(Color const& color) : Color(color) {}
+	constexpr Point3Color(Coord x, Coord y, Coord z, RGBColorType red, RGBColorType green,
+	                      RGBColorType blue)
+	    : Point3(x, y, z), RGBColor(red, green, blue)
+	{
+	}
 };
 
-class Point3Label : public Point3, public SemanticLabelC
-{
- public:
-	Point3Label() = default;
+struct Point3Semantic : public Point3, public SemanticPair {
+	constexpr Point3Semantic() = default;
 
-	Point3Label(Point3 const& point, SemanticLabel const& label)
-	    : Point3(point), SemanticLabelC(label)
-	{
-	}
-
-	Point3Label(float x, float y, float z, SemanticLabel label)
-	    : Point3(x, y, z), SemanticLabelC(label)
-	{
-	}
-
-	Point3Label(Point3 const& point) : Point3(point) {}
-
-	Point3Label(float x, float y, float z) : Point3(x, y, z) {}
-
-	Point3Label(SemanticLabel const& label) : SemanticLabelC(label) {}
-};
-
-class Point3Semantic : public Point3, public SemanticPair
-{
- public:
-	Point3Semantic() = default;
-
-	Point3Semantic(Point3 const& point, SemanticPair const& semantic)
+	constexpr Point3Semantic(Point3 const& point,
+	                         SemanticPair const& semantic = SemanticPair())
 	    : Point3(point), SemanticPair(semantic)
 	{
 	}
 
-	Point3Semantic(float x, float y, float z, SemanticLabel label, SemanticValue value)
+	constexpr Point3Semantic(Point3 const& point, SemanticLabel label = 0,
+	                         SemanticValue value = 0)
+	    : Point3(point), SemanticPair(label, value)
+	{
+	}
+
+	constexpr Point3Semantic(Coord x, Coord y, Coord z,
+	                         SemanticPair const& semantic = SemanticPair())
+	    : Point3(x, y, z), SemanticPair(semantic)
+	{
+	}
+
+	constexpr Point3Semantic(Coord x, Coord y, Coord z, SemanticLabel label = 0,
+	                         SemanticValue value = 0)
 	    : Point3(x, y, z), SemanticPair(label, value)
 	{
 	}
-
-	Point3Semantic(Point3 const& point) : Point3(point) {}
-
-	Point3Semantic(float x, float y, float z) : Point3(x, y, z) {}
-
-	Point3Semantic(SemanticPair const& semantic) : SemanticPair(semantic) {}
 };
 
-class Point3ColorLabel : public Point3, public Color, public SemanticLabelC
-{
- public:
-	Point3ColorLabel() = default;
+struct Point3ColorSemantic : public Point3Color, public SemanticPair {
+	constexpr Point3ColorSemantic() = default;
 
-	Point3ColorLabel(Point3 const& point, Color const& color, SemanticLabel const& label)
-	    : Point3(point), Color(color), SemanticLabelC(label)
+	constexpr Point3ColorSemantic(Point3 const& point, RGBColor const& color = RGBColor(),
+	                              SemanticPair const& semantic = SemanticPair())
+	    : Point3Color(point, color), SemanticPair(semantic)
 	{
 	}
 
-	Point3ColorLabel(float x, float y, float z, ColorType red, ColorType green,
-	                 ColorType blue, SemanticLabel label)
-	    : Point3(x, y, z), Color(red, green, blue), SemanticLabelC(label)
+	constexpr Point3ColorSemantic(Point3 const& point, RGBColorType red, RGBColorType green,
+	                              RGBColorType blue, SemanticLabel label = 0,
+	                              SemanticValue value = 0)
+	    : Point3Color(point, red, green, blue), SemanticPair(label, value)
 	{
 	}
 
-	Point3ColorLabel(Point3 const& point) : Point3(point) {}
-
-	Point3ColorLabel(float x, float y, float z) : Point3(x, y, z) {}
-
-	Point3ColorLabel(Color const& color) : Color(color) {}
-
-	Point3ColorLabel(SemanticLabel const& label) : SemanticLabelC(label) {}
-};
-
-class Point3ColorSemantic : public Point3, public Color, public SemanticPair
-{
- public:
-	Point3ColorSemantic() = default;
-
-	Point3ColorSemantic(Point3 const& point, Color const& color,
-	                    SemanticPair const& semantic)
-	    : Point3(point), Color(color), SemanticPair(semantic)
+	constexpr Point3ColorSemantic(Coord x, Coord y, Coord z,
+	                              RGBColor const& color = RGBColor(),
+	                              SemanticPair const& semantic = SemanticPair())
+	    : Point3Color(x, y, z, color), SemanticPair(semantic)
 	{
 	}
 
-	Point3ColorSemantic(float x, float y, float z, ColorType red, ColorType green,
-	                    ColorType blue, SemanticLabel label, SemanticValue value)
-	    : Point3(x, y, z), Color(red, green, blue), SemanticPair(label, value)
+	constexpr Point3ColorSemantic(Coord x, Coord y, Coord z, RGBColorType red,
+	                              RGBColorType green, RGBColorType blue,
+	                              SemanticLabel label = 0, SemanticValue value = 0)
+	    : Point3Color(x, y, z, red, green, blue), SemanticPair(label, value)
 	{
 	}
-
-	Point3ColorSemantic(Point3 const& point) : Point3(point) {}
-
-	Point3ColorSemantic(float x, float y, float z) : Point3(x, y, z) {}
-
-	Point3ColorSemantic(Color const& color) : Color(color) {}
-
-	Point3ColorSemantic(SemanticPair const& semantic) : SemanticPair(semantic) {}
 };
 
 }  // namespace ufo::map

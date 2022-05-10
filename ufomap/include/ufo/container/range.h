@@ -395,7 +395,7 @@ class RangeSet
 	template <typename Key2>
 	RangeSet(RangeSet<Key2> const &other)
 	{
-		// TODO: Make sure it does not throw
+		// FIXME: Make sure it does not throw
 		insert(std::cbegin(other), std::cend(other));
 	}
 
@@ -422,7 +422,7 @@ class RangeSet
 	template <typename Key2>
 	RangeSet &operator=(RangeSet<Key2> const &other)
 	{
-		// TODO: Make sure it does not throw
+		// FIXME: Make sure it does not throw
 		clear();
 		insert(std::cbegin(other), std::cend(other));
 		return *this;
@@ -1291,7 +1291,7 @@ class RangeMap
 	template <typename Key2>
 	RangeMap(RangeMap<Key2, T> const &other)
 	{
-		// TODO: Make sure it does not throw
+		// FIXME: Make sure it does not throw
 		insert(std::cbegin(other), std::cend(other));
 	}
 
@@ -1318,7 +1318,7 @@ class RangeMap
 	template <typename Key2>
 	RangeMap &operator=(RangeMap<Key2, T> const &other)
 	{
-		// TODO: Make sure it does not throw
+		// FIXME: Make sure it does not throw
 		clear();
 		insert(std::cbegin(other), std::cend(other));
 		return *this;
@@ -1452,7 +1452,7 @@ class RangeMap
 
 		bool inserted = false;
 
-		// TODO: Fix inserted
+		// FIXME: Fix inserted
 
 		//
 		// Fix beginning
@@ -1820,7 +1820,7 @@ class RangeMap
 			}
 		}
 
-		bool inserted = false;  // TODO: Update
+		bool inserted = false;  // FIXME: Update
 
 		// Fix lower
 		if (lower->first.lower() < key.lower()) {

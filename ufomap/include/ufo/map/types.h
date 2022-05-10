@@ -41,8 +41,6 @@
 #ifndef UFO_MAP_TYPES_H
 #define UFO_MAP_TYPES_H
 
-// UFO
-
 // STL
 #include <cstdint>
 #include <utility>
@@ -52,9 +50,7 @@ namespace ufo::map
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
 enum class PropagationCriteria { Max, Min, Mean, Sum, Custom };
 
-using CodeType = uint64_t;
-using KeyType = uint32_t;
-using DepthType = uint8_t;
+using Depth = uint8_t;
 using TimeStepType = uint32_t;
 
 // Check if

@@ -68,29 +68,46 @@ namespace ufo::map
 class Code
 {
  public:
-	inline Code() = default;
+	using CodeType = uint64_t;
 
-	inline Code(CodeType code, DepthType depth = 0) : code_(code), depth_(depth) {}
+	constexpr Code() = default;
 
-	inline Code(Key const& key) : code_(toCode(key)), depth_(key.getDepth()) {}
+	constexpr Code(CodeType code, Depth depth = 0)
+	    : code_((code >> depth) << depth), depth_(depth)
+	{
+	}
+
+	constexpr Code(Key const& key) : code_(toCode(key)), depth_(key.depth()) {}
+
+	/**
+	 * @brief Get the corresponding key to code
+	 *
+	 * @return The corresponding key to code
+	 */
+	constexpr operator Key() const noexcept
+	{
+#if defined(__BMI2__)
+		return Key(_pext_u64(code_, 0x9249249249249249), _pext_u64(code_, 0x2492492492492492),
+		           _pext_u64(code_, 0x4924924924924924), depth_);
+#else
+		return Key(toKey(code_, 0), toKey(code_, 1), toKey(code_, 2), depth_);
+#endif
+	}
 
 	constexpr bool operator==(Code const& rhs) const
 	{
 		return code_ == rhs.code_ && depth_ == rhs.depth_;
 	}
 
-	constexpr bool operator!=(Code const& rhs) const
-	{
-		return code_ != rhs.code_ || depth_ != rhs.depth_;
-	}
+	constexpr bool operator!=(Code const& rhs) const { return !(*this == rhs); }
 
-	bool operator<(Code const& rhs) const { return code_ < rhs.code_; }
+	constexpr bool operator<(Code const& rhs) const { return code_ < rhs.code_; }
 
-	bool operator<=(Code const& rhs) const { return code_ <= rhs.code_; }
+	constexpr bool operator<=(Code const& rhs) const { return code_ <= rhs.code_; }
 
-	bool operator>(Code const& rhs) const { return code_ > rhs.code_; }
+	constexpr bool operator>(Code const& rhs) const { return code_ > rhs.code_; }
 
-	bool operator>=(Code const& rhs) const { return code_ >= rhs.code_; }
+	constexpr bool operator>=(Code const& rhs) const { return code_ >= rhs.code_; }
 
 	/**
 	 * @brief Return the code at a specified depth
@@ -98,49 +115,10 @@ class Code
 	 * @param depth The depth of the code
 	 * @return Code The code at the specified depth
 	 */
-	Code toDepth(DepthType depth) const
+	constexpr Code toDepth(Depth depth) const
 	{
 		CodeType temp = 3 * depth;
 		return Code((code_ >> temp) << temp, depth);
-	}
-
-	void moveX(int offset)
-	{
-#if defined(__BMI2__)  // TODO: Is correct?
-		KeyType x = static_cast<KeyType>(_pext_u64(code_, 0x9249249249249249)) + offset;
-		code_ &= 0x6DB6DB6DB6DB6DB6;
-		code_ |= _pdep_u64(static_cast<CodeType>(x), 0x9249249249249249);
-#else
-		KeyType x = toKey(0) + offset;
-		code_ &= 0x6DB6DB6DB6DB6DB6;
-		code_ |= splitBy3(x);
-#endif
-	}
-
-	void moveY(int offset)
-	{
-#if defined(__BMI2__)  // TODO: Is correct?
-		KeyType y = static_cast<KeyType>(_pext_u64(code_, 0x2492492492492492)) + offset;
-		code_ &= 0x5B6DB6DB6DB6DB6D;
-		code_ |= _pdep_u64(static_cast<CodeType>(y), 0x2492492492492492);
-#else
-		KeyType y = toKey(1) + offset;
-		code_ &= 0x5B6DB6DB6DB6DB6D;
-		code_ |= (splitBy3(y) << 1);
-#endif
-	}
-
-	void moveZ(int offset)
-	{
-#if defined(__BMI2__)  // TODO: Is correct?
-		KeyType z = static_cast<KeyType>(_pext_u64(code_, 0x4924924924924924)) + offset;
-		code_ &= 0xB6DB6DB6DB6DB6DB;
-		code_ |= _pdep_u64(static_cast<CodeType>(z), 0x4924924924924924);
-#else
-		KeyType z = toKey(2) + offset;
-		code_ &= 0xB6DB6DB6DB6DB6DB;
-		code_ |= (splitBy3(z) << 2);
-#endif
 	}
 
 	/**
@@ -149,9 +127,9 @@ class Code
 	 * @param key The key to convert
 	 * @return uint64_t The code corresponding to the key
 	 */
-	static CodeType toCode(Key const& key)
+	static constexpr CodeType toCode(Key const& key)
 	{
-#if defined(__BMI2__)  // TODO: Is correct?
+#if defined(__BMI2__)
 		return _pdep_u64(static_cast<CodeType>(key[0]), 0x9249249249249249) |
 		       _pdep_u64(static_cast<CodeType>(key[1]), 0x2492492492492492) |
 		       _pdep_u64(static_cast<CodeType>(key[2]), 0x4924924924924924);
@@ -165,9 +143,9 @@ class Code
 	 *
 	 * @param code The code to generate the key component from
 	 * @param index The index of the key component
-	 * @return KeyType The key component value
+	 * @return The key component value
 	 */
-	static KeyType toKey(Code const& code, std::size_t index)
+	static Key::KeyType toKey(Code const& code, std::size_t index)
 	{
 		return get3Bits(code.code_ >> index);
 	}
@@ -176,42 +154,17 @@ class Code
 	 * @brief Get the key component from this code
 	 *
 	 * @param index The index of the key component
-	 * @return KeyType The key component value
+	 * @return The key component value
 	 */
-	KeyType toKey(std::size_t index) const { return toKey(*this, index); }
+	Key::KeyType toKey(std::size_t index) const { return toKey(*this, index); }
 
 	/**
-	 * @brief Get the corresponding key to code
+	 * @brief Get the index at a specific depth for this code.
 	 *
-	 * @param code The code the corresponding key should be returned
-	 * @return Key The corresponding key to code
+	 * @param depth The depth the index is requested for.
+	 * @return The index at the specified depth.
 	 */
-	static Key toKey(Code const& code)
-	{
-#if defined(__BMI2__)  // TODO: Is correct?
-		return Key(static_cast<KeyType>(_pext_u64(code.code_, 0x9249249249249249)),
-		           static_cast<KeyType>(_pext_u64(code.code_, 0x2492492492492492)),
-		           static_cast<KeyType>(_pext_u64(code.code_, 0x4924924924924924)),
-		           code.getDepth());
-#else
-		return Key(toKey(code, 0), toKey(code, 1), toKey(code, 2), code.getDepth());
-#endif
-	}
-
-	/**
-	 * @brief Get the corresponding key to this code
-	 *
-	 * @return Key The corresponding key to this code
-	 */
-	Key toKey() const { return toKey(*this); }
-
-	/**
-	 * @brief Get the child index at a specific depth for this code
-	 *
-	 * @param depth The depth the child index is requested for
-	 * @return std::size_t The child index at the specified depth
-	 */
-	constexpr std::size_t getChildIdx(DepthType depth) const
+	constexpr std::size_t indexAtDepth(Depth depth) const
 	{
 		return (code_ >> static_cast<CodeType>(3 * depth)) & ((CodeType)0x7);
 	}
@@ -222,14 +175,14 @@ class Code
 	 * @param index The index of the child
 	 * @return Code The child code
 	 */
-	inline Code getChild(std::size_t index) const
+	constexpr Code child(std::size_t index) const
 	{
 		if (0 == depth_) {
-			// TODO: Throw error?
+			// FIXME: Throw error?
 			return *this;
 		}
 
-		DepthType child_depth = depth_ - 1;
+		Depth child_depth = depth_ - 1;
 		return Code(
 		    code_ + (static_cast<CodeType>(index) << static_cast<CodeType>(3 * child_depth)),
 		    child_depth);
@@ -241,7 +194,7 @@ class Code
 	 * @param index The index of the sibling
 	 * @return Code The sibling code
 	 */
-	inline Code getSibling(std::size_t index) const
+	inline Code sibling(std::size_t index) const
 	{
 		CodeType sibling_code = (code_ >> static_cast<CodeType>(3 * (depth_ + 1)))
 		                        << static_cast<CodeType>(3 * (depth_ + 1));
@@ -251,78 +204,35 @@ class Code
 	}
 
 	/**
-	 * @brief Get the eight child codes that comes from this code
-	 *
-	 * @return std::vector<Code> The eight child codes
-	 */
-	std::vector<Code> getChildren() const
-	{
-		std::vector<Code> children;
-		if (0 == depth_) {
-			return children;
-		}
-
-		children.reserve(8);
-
-		DepthType child_depth = depth_ - 1;
-		CodeType offset = 3 * child_depth;
-		for (CodeType i = 0; i < 8; ++i) {
-			children.emplace_back(code_ + (i << offset), child_depth);
-		}
-		return children;
-	}
-
-	/**
-	 * @brief Get all children that this code can have from this code's depth to
-	 * depth 0
-	 *
-	 * @return std::vector<Code> Collection of all possible child codes of this
-	 * code
-	 */
-	std::vector<Code> getAllChildren() const
-	{
-		std::vector<Code> children;
-		CodeType max = 8 << (3 * depth_);
-		children.reserve(max);
-		for (CodeType i = 0; i < max; ++i) {
-			children.emplace_back(code_ + i, 0);
-		}
-		return children;
-	}
-
-	/**
 	 * @brief Get the code
 	 *
 	 * @return CodeType The code
 	 */
-	constexpr CodeType getCode() const noexcept { return code_; }
+	constexpr CodeType code() const noexcept { return code_; }
 
 	/**
 	 * @brief Get the depth that this code is specified at
 	 *
-	 * @return DepthType The depth this code is specified at
+	 * @return Depth The depth this code is specified at
 	 */
-	constexpr DepthType getDepth() const noexcept { return depth_; }
+	constexpr Depth depth() const noexcept { return depth_; }
 
 	/**
 	 * @brief
 	 *
 	 */
 	struct Hash {
-		constexpr std::size_t operator()(Code const& code) const noexcept
-		{
-			return static_cast<std::size_t>(code.getCode());
-		}
+		static constexpr CodeType hash(Code const& code) { return code.code(); }
 
-		static constexpr size_t hash(Code const& code) { return code.getCode(); }
+		constexpr CodeType operator()(Code const& code) const { return hash(code); }
 
-		static constexpr bool equal(Code const& a, Code const& b) { return a == b; }
+		static constexpr bool equal(Code const& lhs, Code const& rhs) { return lhs == rhs; }
 	};
 
  private:
-	static CodeType splitBy3(KeyType a)
+	static CodeType splitBy3(Key::KeyType a)
 	{
-#if defined(__BMI2__)  // TODO: Is correct?
+#if defined(__BMI2__)
 		return _pdep_u64(static_cast<CodeType>(a), 0x9249249249249249);
 #else
 		CodeType code = static_cast<CodeType>(a) & 0x1fffff;
@@ -335,10 +245,10 @@ class Code
 #endif
 	}
 
-	static KeyType get3Bits(CodeType code)
+	static Key::KeyType get3Bits(CodeType code)
 	{
-#if defined(__BMI2__)  // TODO: Is correct?
-		return static_cast<KeyType>(_pext_u64(code, 0x9249249249249249));
+#if defined(__BMI2__)
+		return static_cast<Key::KeyType>(_pext_u64(code, 0x9249249249249249));
 #else
 		CodeType a = code & 0x1249249249249249;
 		a = (a ^ (a >> 2)) & 0x10c30c30c30c30c3;
@@ -346,15 +256,15 @@ class Code
 		a = (a ^ (a >> 8)) & 0x1f0000ff0000ff;
 		a = (a ^ (a >> 16)) & 0x1f00000000ffff;
 		a = (a ^ a >> 32) & 0x1fffff;
-		return static_cast<KeyType>(a);
+		return static_cast<Key::KeyType>(a);
 #endif
 	}
 
  private:
 	// The Morton code
-	CodeType code_;
+	CodeType code_ = 0;
 	// The depth of the Morton code
-	DepthType depth_;
+	Depth depth_ = 0;
 };
 
 // using CodeSet = std::unordered_set<Code, Code::Hash>;
@@ -381,16 +291,16 @@ class CodeSet
 			if (set_->data_.empty()) {
 				set_ = nullptr;
 			} else {
-				outer_iter_ = set_->data_.begin();
-				outer_iter_end_ = set_->data_.end();
+				outer_iter_ = std::begin(set_->data_);
+				outer_iter_end_ = std::end(set_->data_);
 				while (outer_iter_ != outer_iter_end_ && outer_iter_->empty()) {
 					++outer_iter_;
 				}
 				if (outer_iter_ == outer_iter_end_) {
 					set_ = nullptr;
 				} else {
-					inner_iter_ = outer_iter_->begin();
-					inner_iter_end_ = outer_iter_->end();
+					inner_iter_ = std::begin(*outer_iter_);
+					inner_iter_end_ = std::end(*outer_iter_);
 				}
 			}
 		}
@@ -443,7 +353,7 @@ class CodeSet
 	std::pair<int, bool> insert(Code const& value)
 	{
 		size_t hash = getBucket(value);
-		if (std::any_of(std::execution::seq, data_[hash].begin(), data_[hash].end(),
+		if (std::any_of(std::cbegin(data_[hash]), std::cend(data_[hash]),
 		                [&value](auto const& elem) { return value == elem; })) {
 			return {0, false};  // TODO: Fix
 		}
@@ -462,7 +372,7 @@ class CodeSet
 
 	void clear()
 	{
-		std::for_each(std::execution::seq, data_.begin(), data_.end(),
+		std::for_each(std::begin(data_), std::end(data_),
 		              [](auto& bucket) { bucket.clear(); });
 		size_ = 0;
 	}
@@ -535,7 +445,7 @@ class CodeSet
  private:
 	std::size_t getBucket(Code const& key) const
 	{
-		unsigned int offset = 3 * key.getDepth();
+		unsigned int offset = 3 * key.depth();
 		unsigned int modder = (num_buckets_ - 1) << offset;
 		return (Code::Hash()(key) & modder) >> offset;
 	}
@@ -564,7 +474,7 @@ class CodeMap
 
 	struct CodeMapIterator {
 		// Tags
-		// TODO: Fix these
+		// FIXME: Fix these
 		using iterator_category = std::forward_iterator_tag;
 		using difference_type = std::ptrdiff_t;
 		using value_type = std::pair<Code, T>;
@@ -648,7 +558,7 @@ class CodeMap
 
 	struct CodeMapBucketIterator {
 		// Tags
-		// TODO: Fix these
+		// FIXME: Fix these
 		using iterator_category = std::forward_iterator_tag;
 		using difference_type = std::ptrdiff_t;
 		using value_type = std::vector<std::pair<Code, T>>;
@@ -718,9 +628,9 @@ class CodeMap
 	T& operator[](Code const& key)
 	{
 		std::size_t hash = getBucket(key);
-		auto it = std::find_if(std::execution::seq, data_[hash].begin(), data_[hash].end(),
+		auto it = std::find_if(std::begin(data_[hash]), std::end(data_[hash]),
 		                       [&key](auto const& elem) { return key == elem.first; });
-		if (it != data_[hash].end()) {
+		if (it != std::end(data_[hash])) {
 			return it->second;
 		}
 
@@ -731,7 +641,7 @@ class CodeMap
 			hash = getBucket(key);
 		}
 
-		return std::get<1>(data_[hash].emplace_back(key, T()));  // TODO: How to
+		return std::get<1>(data_[hash].emplace_back(key, T()));  // FIXME: How to
 		                                                         // call default?
 	}
 
@@ -739,7 +649,7 @@ class CodeMap
 	                                 T const& value)  // TODO: Fix
 	{
 		std::size_t hash = getBucket(key);
-		if (std::any_of(std::execution::seq, data_[hash].begin(), data_[hash].end(),
+		if (std::any_of(std::cbegin(data_[hash]), std::cend(data_[hash]),
 		                [&key](auto const& elem) { return key == elem.first; })) {
 			return {0, false};  // TODO: Fix
 		}
@@ -758,7 +668,7 @@ class CodeMap
 
 	void clear()
 	{
-		std::for_each(std::execution::seq, data_.begin(), data_.end(),
+		std::for_each(std::begin(data_), std::end(data_),
 		              [](auto& bucket) { bucket.clear(); });
 		size_ = 0;
 	}
@@ -771,7 +681,7 @@ class CodeMap
 
 	unsigned int bucket_count_power() const { return power_; }
 
-	double load_factor() const { return size_ / ((double)num_buckets_); }
+	double load_factor() const { return size_ / static_cast<double>(num_buckets_); }
 
 	double max_load_factor() const { return max_load_factor_; }
 
@@ -786,9 +696,10 @@ class CodeMap
 
 	void rehash(std::size_t count)
 	{
-		std::size_t min_count = std::max((double)count, size() / max_load_factor());
-		unsigned int power =
-		    std::max(power_, std::min((unsigned int)std::log2(min_count) + 1, MAX_POWER));
+		std::size_t min_count =
+		    std::max(static_cast<double>(count), size() / max_load_factor());
+		unsigned int power = std::max(
+		    power_, std::min(static_cast<unsigned int>(std::log2(min_count) + 1), MAX_POWER));
 
 		if (power_ == power) {
 			return;
@@ -834,7 +745,7 @@ class CodeMap
  private:
 	std::size_t getBucket(Code const& key) const
 	{
-		unsigned int offset = 3 * key.getDepth();
+		unsigned int offset = 3 * key.depth();
 		unsigned int modder = (bucket_count() - 1) << offset;
 		return (Code::Hash()(key) & modder) >> offset;
 	}
@@ -846,7 +757,7 @@ class CodeMap
 	std::size_t size_ = 0;
 	double max_load_factor_ = 1.0;
 
-	inline static const unsigned int MAX_POWER = 28;
+	static constexpr unsigned int MAX_POWER = 28;
 
 	friend struct CodeMapIterator;
 };

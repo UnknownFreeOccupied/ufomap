@@ -56,33 +56,54 @@ struct Vector3 {
 	T y = 0;
 	T z = 0;
 
-	constexpr Vector3() = default;
+	constexpr Vector3() noexcept = default;
 
-	constexpr Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
+	constexpr Vector3(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
 
-	constexpr Vector3 cross(Vector3 const& other) const { return cross(*this, other); }
-	
-	static constexpr Vector3 cross(Vector3 const& first, Vector3 const& second)
+	constexpr Vector3(Vector3 const&) noexcept = default;  // Redundant
+
+	template <typename T2, class = std::enable_if_t<not std::is_same_v<T, T2>>>
+	constexpr Vector3(Vector3<T2> const other) noexcept : x(other.x), y(other.y), z(other.z)
+	{
+	}
+
+	constexpr Vector3& operator=(Vector3 const&) noexcept = default;  // Redundant
+
+	template <typename T2, class = std::enable_if_t<not std::is_same_v<T, T2>>>
+	constexpr Vector3& operator=(Vector3<T2> const rhs) noexcept
+	{
+		x = rhs.x;
+		y = rhs.y;
+		z = rhs.z;
+		return *this;
+	}
+
+	constexpr Vector3 cross(Vector3 const& other) const noexcept
+	{
+		return cross(*this, other);
+	}
+
+	static constexpr Vector3 cross(Vector3 const& first, Vector3 const& second) noexcept
 	{
 		return Vector3((first.y * second.z) - (first.z * second.y),
 		               (first.z * second.x) - (first.x * second.z),
 		               (first.x * second.y) - (first.y * second.x));
 	}
 
-	constexpr T dot(Vector3 const& other) const { return dot(*this, other); }
+	constexpr T dot(Vector3 const& other) const noexcept { return dot(*this, other); }
 
-	static constexpr T dot(Vector3 const& first, Vector3 const& second)
+	static constexpr T dot(Vector3 const& first, Vector3 const& second) noexcept
 	{
 		return (first.x * second.x) + (first.y * second.y) + (first.z * second.z);
 	}
 
-	constexpr T& operator()(size_t idx) { return *(&x + idx); }
+	constexpr T& operator()(size_t idx) noexcept { return *(&x + idx); }
 
-	constexpr T const& operator()(size_t idx) const { return *(&x + idx); }
+	constexpr T const& operator()(size_t idx) const noexcept { return *(&x + idx); }
 
-	constexpr T& operator[](size_t idx) { return *(&x + idx); }
+	constexpr T& operator[](size_t idx) noexcept { return *(&x + idx); }
 
-	constexpr T const& operator[](size_t idx) const { return *(&x + idx); }
+	constexpr T const& operator[](size_t idx) const noexcept { return *(&x + idx); }
 
 	constexpr T& roll() noexcept { return x; }
 
@@ -96,44 +117,44 @@ struct Vector3 {
 
 	constexpr T const& yaw() const noexcept { return z; }
 
-	constexpr Vector3 operator-() const { return Vector3(-x, -y, -z); }
+	constexpr Vector3 operator-() const noexcept { return Vector3(-x, -y, -z); }
 
-	constexpr Vector3 operator-(Vector3 const& other) const
+	constexpr Vector3 operator-(Vector3 const& other) const noexcept
 	{
 		return Vector3(x - other.x, y - other.y, z - other.z);
 	}
 
-	constexpr Vector3 operator-(T value) const
+	constexpr Vector3 operator-(T value) const noexcept
 	{
 		return Vector3(x - value, y - value, z - value);
 	}
 
-	constexpr Vector3 operator+(Vector3 const& other) const
+	constexpr Vector3 operator+(Vector3 const& other) const noexcept
 	{
 		return Vector3(x + other.x, y + other.y, z + other.z);
 	}
 
-	constexpr Vector3 operator+(T value) const
+	constexpr Vector3 operator+(T value) const noexcept
 	{
 		return Vector3(x + value, y + value, z + value);
 	}
 
-	constexpr Vector3 operator*(Vector3 const& other) const
+	constexpr Vector3 operator*(Vector3 const& other) const noexcept
 	{
 		return Vector3(x * other.x, y * other.y, z * other.z);
 	}
 
-	constexpr Vector3 operator*(T value) const
+	constexpr Vector3 operator*(T value) const noexcept
 	{
 		return Vector3(x * value, y * value, z * value);
 	}
 
-	constexpr Vector3 operator/(Vector3 const& other) const
+	constexpr Vector3 operator/(Vector3 const& other) const noexcept
 	{
 		return Vector3(x / other.x, y / other.y, z / other.z);
 	}
 
-	constexpr Vector3 operator/(T value) const
+	constexpr Vector3 operator/(T value) const noexcept
 	{
 		return Vector3(x / value, y / value, z / value);
 	}
@@ -204,24 +225,24 @@ struct Vector3 {
 		return !(*this == other);
 	}
 
-	constexpr T norm() const { return std::sqrt(squaredNorm()); }
+	constexpr T norm() const noexcept { return std::sqrt(squaredNorm()); }
 
 	constexpr T squaredNorm() const noexcept { return (x * x) + (y * y) + (z * z); }
 
-	constexpr Vector3& normalize()
+	constexpr Vector3& normalize() noexcept
 	{
 		*this /= norm();
 		return *this;
 	}
 
-	constexpr Vector3 normalized() const { return Vector3(*this).normalize(); }
+	constexpr Vector3 normalized() const noexcept { return Vector3(*this).normalize(); }
 
-	constexpr T angleTo(Vector3 const& other) const
+	constexpr T angleTo(Vector3 const& other) const noexcept
 	{
 		return std::acos(dot(other) / (norm() * other.norm()));
 	}
 
-	constexpr T squaredDistance(Vector3 const& other) const
+	constexpr T squaredDistance(Vector3 const& other) const noexcept
 	{
 		T x = x - other.x;
 		T y = y - other.y;
@@ -229,40 +250,40 @@ struct Vector3 {
 		return (x * x) + (y * y) + (z * z);
 	}
 
-	constexpr T distance(Vector3 const& other) const
+	constexpr T distance(Vector3 const& other) const noexcept
 	{
 		return std::sqrt(squaredDistance(other));
 	}
 
-	constexpr T squaredDistanceXY(Vector3 const& other) const
+	constexpr T squaredDistanceXY(Vector3 const& other) const noexcept
 	{
 		T x = x - other.x;
 		T y = y - other.y;
 		return (x * x) + (y * y);
 	}
 
-	constexpr T distanceXY(Vector3 const& other) const
+	constexpr T distanceXY(Vector3 const& other) const noexcept
 	{
 		return std::sqrt(squaredDistanceXY(other));
 	}
 
 	static constexpr size_t size() noexcept { return 3; }
 
-	constexpr T min() const { return x <= y && x <= z ? x : (y <= z ? y : z); }
+	constexpr T min() const noexcept { return std::min({x, y, z}); }
 
-	constexpr T min() const { return x >= y && x >= z ? x : (y >= z ? y : z); }
+	constexpr T max() const noexcept { return std::max({x, y, z}); }
 
-	constexpr size_t minElementIndex() const
+	constexpr size_t minElementIndex() const noexcept
 	{
-		return x <= y && x <= z ? 0 : (y <= z ? 1 : 2);
+		return x <= y ? (x <= z ? 0 : 2) : (y <= z ? 1 : 2);
 	}
 
-	constexpr size_t maxElementIndex() const
+	constexpr size_t maxElementIndex() const noexcept
 	{
-		return x >= y && x >= z ? 0 : (y >= z ? 1 : 2);
+		return x >= y ? (x >= z ? 0 : 2) : (y >= z ? 1 : 2);
 	}
 
-	constexpr Vector3& ceil()
+	constexpr Vector3& ceil() noexcept
 	{
 		x = std::ceil(x);
 		y = std::ceil(y);
@@ -270,12 +291,12 @@ struct Vector3 {
 		return *this;
 	}
 
-	constexpr Vector3 ceil() const
+	constexpr Vector3 ceil() const noexcept
 	{
 		return Vector3(std::ceil(x), std::ceil(y), std::ceil(z));
 	}
 
-	constexpr Vector3& floor()
+	constexpr Vector3& floor() noexcept
 	{
 		x = std::floor(x);
 		y = std::floor(y);
@@ -283,12 +304,12 @@ struct Vector3 {
 		return *this;
 	}
 
-	constexpr Vector3 floor() const
+	constexpr Vector3 floor() const noexcept
 	{
 		return Vector3(std::floor(x), std::floor(y), std::floor(z));
 	}
 
-	constexpr Vector3& trunc()
+	constexpr Vector3& trunc() noexcept
 	{
 		x = std::trunc(x);
 		y = std::trunc(y);
@@ -296,12 +317,12 @@ struct Vector3 {
 		return *this;
 	}
 
-	constexpr Vector3 trunc() const
+	constexpr Vector3 trunc() const noexcept
 	{
 		return Vector3(std::trunc(x), std::trunc(y), std::trunc(z));
 	}
 
-	constexpr Vector3& round()
+	constexpr Vector3& round() noexcept
 	{
 		x = std::round(x);
 		y = std::round(y);
@@ -309,30 +330,29 @@ struct Vector3 {
 		return *this;
 	}
 
-	constexpr Vector3 round() const
+	constexpr Vector3 round() const noexcept
 	{
 		return Vector3(std::round(x), std::round(y), std::round(z));
 	}
 
-	constexpr Vector3& clamp(Vector3 const& min, Vector3 const& max)
+	constexpr Vector3& clamp(Vector3 const& min, Vector3 const& max) noexcept
 	{
-		x = std::clamp(x);
-		y = std::clamp(y);
-		z = std::clamp(z);
+		x = std::clamp(x, min.x, max.x);
+		y = std::clamp(y, min.y, max.y);
+		z = std::clamp(z, min.z, max.z);
 		return *this;
 	}
 
-	constexpr Vector3 clamp(Vector3 const& min, Vector3 const& max) const
+	constexpr Vector3 clamp(Vector3 const& min, Vector3 const& max) const noexcept
 	{
 		return clamp(*this, min, max);
 	}
 
 	static constexpr Vector3 clamp(Vector3 const& value, Vector3 const& min,
-	                               Vector3 const& max)
+	                               Vector3 const& max) noexcept
 	{
-		return Vector3(std::clamp(value[0], min[0], max[0]),
-		               std::clamp(value[1], min[1], max[1]),
-		               std::clamp(value[2], min[2], max[2]));
+		return Vector3(std::clamp(value.x, min.x, max.x), std::clamp(value.y, min.y, max.y),
+		               std::clamp(value.z, min.z, max.z));
 	}
 };
 

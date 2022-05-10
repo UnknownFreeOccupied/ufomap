@@ -42,12 +42,12 @@
 #include <ufo/map/io.h>
 
 // STD
-#include <iostream>
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 
-// Compression
+// LZ4 compression
 #include <lz4.h>
 #include <lz4hc.h>
 

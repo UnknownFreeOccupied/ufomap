@@ -109,18 +109,8 @@ template <class Fun, bool Negated>
 struct PredicateValueCheck<Satisfies<Fun, Negated>> {
 	using Pred = Satisfies<Fun, Negated>;
 
-	template <class Tree>
+	template <class Tree, class Node>
 	static inline bool apply(Pred const& p, Tree const&, Node const& n)
-	{
-		if constexpr (Negated) {
-			return !p.fun(n);
-		} else {
-			return p.fun(n);
-		}
-	}
-
-	template <class Tree>
-	static inline bool apply(Pred const& p, Tree const&, MinimalNode const& n)
 	{
 		if constexpr (Negated) {
 			return !p.fun(n);
@@ -134,14 +124,8 @@ template <class Fun, bool Negated>
 struct PredicateValueCheck<SatisfiesInner<Fun, Negated>> {
 	using Pred = SatisfiesInner<Fun, Negated>;
 
-	template <class Tree>
-	static inline constexpr bool apply(Pred const&, Tree const&, MinimalNode const&)
-	{
-		return true;
-	}
-
-	template <class Tree>
-	static inline constexpr bool apply(Pred const&, Tree const&, Node const&)
+	template <class Tree, class Node>
+	static constexpr bool apply(Pred const&, Tree const&, Node const&)
 	{
 		return true;
 	}
@@ -156,7 +140,7 @@ struct PredicateInnerCheck<Satisfies<Fun, Negated>> {
 	using Pred = Satisfies<Fun, Negated>;
 
 	template <class Tree, class Node>
-	static inline constexpr bool apply(Pred const&, Tree const&, Node const&)
+	static constexpr bool apply(Pred const&, Tree const&, Node const&)
 	{
 		return true;
 	}

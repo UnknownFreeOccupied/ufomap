@@ -52,6 +52,56 @@
 
 namespace ufo::map
 {
+
+void rayCast(Point3 origin, Point3 goal)
+{
+	// TODO: Implement
+}
+
+void rayCast(Key origin, Key goal)
+{
+	// if (origin.depth() != goal.depth()) {
+	// 	throw std::invalid_argument("origin and goal need to be at the same depth.");
+	// }
+
+	// math::Vector3<int> step;
+	// Point3 t_delta;
+	// Point3 t_max;
+
+	// Point3 direction(goal.x() - origin.x(), goal.y() - origin.y(), goal.z() -
+	// origin.z()); float distance = direction.norm(); direction /= distance;
+
+	// for (std::size_t i = 0; i != 3; ++i) {
+	// 	if (0 == direction[i]) {
+	// 		step[i] = 0;
+	// 		t_delta[i] = std::numeric_limits<decltype(t_delta[i])>::max();
+	// 		t_max[i] = std::numeric_limits<decltype(t_max[i])>::max();
+	// 		continue;
+	// 	}
+
+	// 	if (0 < direction[i]) {
+	// 		step[i] = static_cast<int>(1U << origin.depth());
+	// 		voxel_border[i] += (node_size / 2.0);
+	// 	} else {
+	// 		step[i] = -static_cast<int>(1U << origin.depth());
+	// 		voxel_border[i] -= (node_size / 2.0);
+	// 	}
+
+	// 	t_delta[i] = node_size / std::abs(direction[i]);
+	// 	t_max[i] = voxel_border[i] / direction[i];
+	// }
+
+	// std::vector<> something;
+
+	// while (origin != goal && t_max_.min() < distance) {
+	// 	size_t advance_dim = t_max.minElementIndex();
+	// 	origin[advance_dim] += step[advance_dim];
+	// 	t_max[advance_dim] += t_delta[advance_dim];
+	// }
+
+	// return something;
+}
+
 class RayCaster
 {
  public:
@@ -59,7 +109,7 @@ class RayCaster
 	          float node_size)
 	    : current_(current), end_(end)
 	{
-		if (current.getDepth() != end.getDepth()) {
+		if (current.depth() != end.depth()) {
 			throw std::invalid_argument("Current and end need to be on same depth.");
 		}
 
@@ -73,7 +123,7 @@ class RayCaster
 			return;
 		}
 
-		DepthType depth = current.getDepth();
+		Depth depth = current.depth();
 
 		Point3 direction = to - origin;
 		total_distance_ = direction.norm();

@@ -46,68 +46,204 @@
 #include <ufo/geometry/point.h>
 #include <ufo/map/code.h>
 
+// STL
+#include <utility>
+
 namespace ufo::map
 {
-
-struct MinimalNode {
+/**
+ * @brief A wrapper around a UFOMap inner/leaf node.
+ *
+ */
+struct Node {
  public:
-	bool operator==(MinimalNode const& rhs) const
+	/**
+	 * @brief Compare two nodes.
+	 *
+	 * @param lhs,rhs The nodes to compare.
+	 * @return Whether the two nodes are equal.
+	 */
+	friend constexpr bool operator==(Node const& lhs, Node const& rhs) noexcept
 	{
-		return rhs.data_ == data_ && rhs.code_ == code_;
+		return lhs.data_ == rhs.data_ && lhs.code_ == rhs.code_;
 	}
 
-	bool operator!=(MinimalNode const& rhs) const { return !operator==(rhs); }
+	/**
+	 * @brief Compare two nodes.
+	 *
+	 * @param lhs,rhs The nodes to compare.
+	 * @return Whether the two nodes are different.
+	 */
+	friend constexpr bool operator!=(Node const& lhs, Node const& rhs) noexcept
+	{
+		return !(lhs == rhs);
+	}
 
-	inline Code getCode() const noexcept { return code_; }
+	friend constexpr bool operator<(Node const& lhs, Node const& rhs) noexcept
+	{
+		return lhs.code() < rhs.code();
+	}
 
-	constexpr DepthType getDepth() const noexcept { return code_.getDepth(); }
+	friend constexpr bool operator<=(Node const& lhs, Node const& rhs) noexcept
+	{
+		return lhs.code() <= rhs.code();
+	}
+
+	friend constexpr bool operator>(Node const& lhs, Node const& rhs) noexcept
+	{
+		return lhs.code() > rhs.code();
+	}
+
+	friend constexpr bool operator>=(Node const& lhs, Node const& rhs) noexcept
+	{
+		return lhs.code() >= rhs.code();
+	}
+
+	/**
+	 * @brief Get the code for the node.
+	 *
+	 * @return The code for the node.
+	 */
+	constexpr Code code() const noexcept { return code_; }
+
+	/**
+	 * @brief Get the depth of the node.
+	 *
+	 * @return The depth of the node.
+	 */
+	constexpr Depth depth() const noexcept { return code_.depth(); }
+
+	struct Hash {
+		static constexpr Code::CodeType hash(Node const& node) { return node.code().code(); }
+
+		constexpr Code::CodeType operator()(Node const& node) const { return hash(node); }
+
+		static constexpr bool equal(Node const& lhs, Node const& rhs) { return lhs == rhs; }
+	};
 
  protected:
-	MinimalNode(void* data, Code code) : data_(data), code_(code) {}
+	constexpr Node() noexcept = default;
 
-	constexpr void* getData() noexcept { return data_; }
+	constexpr Node(void* data, Code code) noexcept : data_(data), code_(code) {}
 
-	constexpr void const* getData() const noexcept { return data_; }
+	/**
+	 * @brief Get the corresponding data.
+	 *
+	 * @note Use the octree that generate the node to read the data.
+	 *
+	 * @return The corresponding data.
+	 */
+	constexpr void* data() noexcept { return data_; }
+
+	/**
+	 * @brief Get the corresponding data.
+	 *
+	 * @note Use the octree that generate the node to read the data.
+	 *
+	 * @return The corresponding data.
+	 */
+	constexpr void const* data() const noexcept { return data_; }
 
  protected:
 	// Pointer to the actual node
-	void* data_;
+	void* data_ = nullptr;
 	// The code for the node
 	Code code_;
 
 	template <class D1, class D2, class I>
 	friend class OctreeBase;
 };
-struct Node : public MinimalNode {
+
+struct NodeBV : public Node {
  public:
-	bool operator==(Node const& rhs) const
+	friend constexpr bool operator==(NodeBV const& lhs, NodeBV const& rhs) noexcept
 	{
-		return static_cast<MinimalNode const&>(rhs) == static_cast<MinimalNode const&>(*this);
+		return static_cast<Node const&>(lhs) == static_cast<Node const&>(rhs);
 	}
 
-	bool operator!=(Node const& rhs) const { return !operator==(rhs); }
+	friend constexpr bool operator!=(NodeBV const& lhs, NodeBV const& rhs) noexcept
+	{
+		return !(lhs == rhs);
+	}
 
-	inline geometry::AAEBB getBoundingVolume() const noexcept { return aaebb_; }
+	/**
+	 * @brief The bounding volume of the node.
+	 *
+	 * @return The bounding volume of the node.
+	 */
+	constexpr geometry::AAEBB boundingVolume() const noexcept { return aaebb_; }
 
-	inline geometry::Point getCenter() const noexcept { return aaebb_.center(); }
+	/**
+	 * @brief The center coordinate of the node.
+	 *
+	 * @return The center coordinate of the node.
+	 */
+	constexpr geometry::Point center() const noexcept { return aaebb_.center; }
 
-	inline geometry::Point getMin() const { return aaebb_.getMin(); }
+	/**
+	 * @brief The minimum coordinate of the node.
+	 *
+	 * @return The minimum coordinate of the node.
+	 */
+	constexpr geometry::Point min() const noexcept { return aaebb_.min(); }
 
-	inline geometry::Point getMax() const { return aaebb_.getMax(); }
+	/**
+	 * @brief The maximum coordinate of the node.
+	 *
+	 * @return The maximum coordinte of the node.
+	 */
+	constexpr geometry::Point max() const noexcept { return aaebb_.max(); }
 
-	constexpr float getHalfSize() const noexcept { return aaebb_.halfSize(); }
+	/**
+	 * @brief Half the length of a side of the node.
+	 *
+	 * @return Half the length of a side of the node.
+	 */
+	constexpr float halfSize() const noexcept { return aaebb_.half_size; }
 
-	constexpr float getSize() const noexcept { return 2.0 * getHalfSize(); }
+	/**
+	 * @brief The length of a side of the node.
+	 *
+	 * @return The length of a side of the node.
+	 */
+	constexpr float size() const noexcept { return 2 * halfSize(); }
 
-	constexpr float getX() const noexcept { return aaebb_.x(); }
+	/**
+	 * @brief The center x coordinate of the node.
+	 *
+	 * @return The center x coordinate of the node.
+	 */
+	constexpr float x() const noexcept { return aaebb_.center.x; }
 
-	constexpr float getY() const noexcept { return aaebb_.y(); }
+	/**
+	 * @brief The center y coordinate of the node.
+	 *
+	 * @return The center y coordinate of the node.
+	 */
+	constexpr float y() const noexcept { return aaebb_.center.y; }
 
-	constexpr float getZ() const noexcept { return aaebb_.z(); }
+	/**
+	 * @brief The center z coordinate of the node.
+	 *
+	 * @return The center z coordinate of the node.
+	 */
+	constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	Node(geometry::AAEBB aaebb, void* data, Code code)
-	    : MinimalNode(data, code), aaebb_(aaebb)
+	constexpr NodeBV() noexcept = default;
+
+	constexpr NodeBV(void* data, Code code, geometry::AAEBB const& aaebb) noexcept
+	    : Node(data, code), aaebb_(aaebb)
+	{
+	}
+
+	constexpr NodeBV(Node const& node, geometry::AAEBB const& aaebb) noexcept
+	    : Node(node), aaebb_(aaebb)
+	{
+	}
+
+	constexpr NodeBV(Node&& node, geometry::AAEBB const& aaebb) noexcept
+	    : Node(std::forward<Node>(node)), aaebb_(aaebb)
 	{
 	}
 

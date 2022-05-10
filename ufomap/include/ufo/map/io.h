@@ -45,8 +45,7 @@
 
 // STL
 #include <filesystem>
-#include <fstream>
-#include <istream>
+#include <iostream>
 #include <map>
 #include <string>
 #include <string_view>
@@ -54,8 +53,10 @@
 
 namespace ufo::map
 {
-static constexpr std::string_view FILE_HEADER = "# UFOMap file";  // File header
-static constexpr std::string_view FILE_VERSION = "1.1.0";         // File version
+// File header
+static constexpr std::string_view FILE_HEADER = "# UFOMap file";
+// File version
+static constexpr std::string_view FILE_VERSION = "1.1.0";
 
 using FileInfo = std::map<std::string, std::vector<std::string>>;
 

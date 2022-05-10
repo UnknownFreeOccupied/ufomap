@@ -68,7 +68,7 @@ class OccupancyMapTime final
 
 	using OccupancyTimeBase::OccupancyTimeBase;
 
-	// OccupancyMapTime(float resolution, DepthType depth_levels = 16,
+	// OccupancyMapTime(float resolution, Depth depth_levels = 16,
 	//                  bool automatic_pruning = true, float occupied_thres = 0.5,
 	//                  float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	//                  float clamping_thres_max = 0.971)
@@ -156,7 +156,7 @@ class OccupancyMapTime final
 	// Get map type
 	//
 
-	static constexpr std::string_view getMapType() { return "occupancy_map_time"; }
+	static constexpr std::string_view mapType() { return "occupancy_map_time"; }
 
 	//
 	// Input/output (read/write)
@@ -165,7 +165,7 @@ class OccupancyMapTime final
 	virtual void addFileInfo(FileInfo& info) const override
 	{
 		OccupancyTimeBase::addFileInfo(info);
-		info["map_type"].emplace_back(getMapType());
+		info["map_type"].emplace_back(mapType());
 	}
 
 	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,

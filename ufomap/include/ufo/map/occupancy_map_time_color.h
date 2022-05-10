@@ -70,7 +70,7 @@ class OccupancyMapTimeColor final
 
 	// using OccupancyTimeBase::OccupancyTimeBase;
 
-	OccupancyMapTimeColor(float resolution, DepthType depth_levels = 16,
+	OccupancyMapTimeColor(float resolution, Depth depth_levels = 16,
 	                      bool automatic_pruning = true, float occupied_thres = 0.5,
 	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	                      float clamping_thres_max = 0.971)
@@ -184,7 +184,7 @@ class OccupancyMapTimeColor final
 		ColorBase::initRoot();
 	}
 
-	virtual void updateNode(InnerNode& node, DepthType depth) override
+	virtual void updateNode(InnerNode& node, Depth depth) override
 	{
 		OccupancyTimeBase::updateNode(node, depth);
 		ColorBase::updateNode(node, depth);
@@ -194,7 +194,7 @@ class OccupancyMapTimeColor final
 	// Get map type
 	//
 
-	static constexpr std::string_view getMapType() { return "occupancy_map_time_color"; }
+	static constexpr std::string_view mapType() { return "occupancy_map_time_color"; }
 
 	//
 	// Input/output (read/write)
@@ -204,7 +204,7 @@ class OccupancyMapTimeColor final
 	{
 		OccupancyTimeBase::addFileInfo(info);
 		ColorBase::addFileInfo(info);
-		info["map_type"].emplace_back(getMapType());
+		info["map_type"].emplace_back(mapType());
 	}
 
 	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
