@@ -46,182 +46,29 @@
 
 namespace ufo::geometry
 {
+
 //
 // AABB
 //
 
-constexpr float minDistance(AABB const& aabb_1, AABB const& aabb_2) noexcept
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AABB const& a, AABB const& b) noexcept
 {
-	Point a_min = aabb_1.min();
-	Point a_max = aabb_1.max();
-	Point b_min = aabb_2.min();
-	Point b_max = aabb_2.max();
+	Point a_min = a.min();
+	Point a_max = a.max();
+	Point b_min = b.min();
+	Point b_max = b.max();
 
-	float result = 0.0;
-	for (size_t i = 0; i != 3; ++i) {
-		float d_1 = std::fdim(b_max[i], a_min[i]);
-		float d_2 = std::fdim(a_max[i], b_min[i]);
-		result += (d_1 * d_1) + (d_2 * d_2);
-
-		// if (a_min[i] > b_max[i]) {
-		// 	float delta = b_max[i] - a_min[i];
-		// 	result += delta * delta;
-		// } else if (b_min[i] > a_max[i]) {
-		// 	float delta = a_max[i] - b_min[i];
-		// 	result += delta * delta;
-		// }
-		// else the projection intervals overlap.
-	}
-
-	return std::sqrt(result);
-}
-
-inline float minDistance(AABB const& aabb, AAEBB const& aaebb) noexcept
-{
-	Point a_min = aabb.min();
-	Point a_max = aabb.max();
-	Point b_min = aaebb.min();
-	Point b_max = aaebb.max();
-
-	float result = 0.0;
-	for (size_t i = 0; i != 3; ++i) {
-		float d_1 = std::fdim(b_max[i], a_min[i]);
-		float d_2 = std::fdim(a_max[i], b_min[i]);
-		result += (d_1 * d_1) + (d_2 * d_2);
-
-		// if (a_min[i] > b_max[i]) {
-		// 	float delta = b_max[i] - a_min[i];
-		// 	result += delta * delta;
-		// } else if (b_min[i] > a_max[i]) {
-		// 	float delta = a_max[i] - b_min[i];
-		// 	result += delta * delta;
-		// }
-		// else the projection intervals overlap.
-	}
-
-	return std::sqrt(result);
-}
-
-// constexpr float minDistance(AABB const& aabb, Frustum const& frustum) noexcept
-// {
-// 	// TODO: Implement
-// }
-
-// constexpr float minDistance(AABB const& aabb, LineSegment const& line_segment) noexcept
-// {
-// 	// TODO: Implement
-// }
-
-// constexpr float minDistance(AABB const& aabb, OBB const& obb) noexcept
-// {
-// 	// TODO: Implement
-// }
-
-// constexpr float minDistance(AABB const& aabb, Plane const& plane) noexcept
-// {
-// 	// TODO: Implement
-// }
-
-constexpr float minDistance(AABB const& aabb, Point const& point) noexcept
-{
-	Point min = aabb.min();
-	Point max = aabb.max();
-	Point p = Point::clamp(point, min, max);
-	return point.distance(p);
-}
-
-// constexpr float minDistance(AABB const& aabb, Ray const& ray)
-// {
-// 	// TODO: Implement
-// }
-
-constexpr float minDistance(AABB const& aabb, Sphere const& sphere) noexcept
-{
-	return std::fdim(minDistance(aabb, sphere.center), sphere.radius);
-}
-
-//
-// AAEBB
-//
-
-constexpr float minDistance(AAEBB const& aaebb, AABB const& aabb) noexcept
-{
-	return minDistance(aabb, aaebb);
-}
-
-constexpr float minDistance(AAEBB const& aaebb_1, AAEBB const& aaebb_2) noexcept
-{
-	Point a_min = aaebb_1.min();
-	Point a_max = aaebb_1.max();
-	Point b_min = aaebb_2.min();
-	Point b_max = aaebb_2.max();
-
-	float result = 0.0;
-	for (size_t i = 0; i != 3; ++i) {
-		float d_1 = std::fdim(b_max[i], a_min[i]);
-		float d_2 = std::fdim(a_max[i], b_min[i]);
-		result += (d_1 * d_1) + (d_2 * d_2);
-
-		// if (a_min[i] > b_max[i]) {
-		// 	float delta = b_max[i] - a_min[i];
-		// 	result += delta * delta;
-		// } else if (b_min[i] > a_max[i]) {
-		// 	float delta = a_max[i] - b_min[i];
-		// 	result += delta * delta;
-		// }
-		// else the projection intervals overlap.
-	}
-
-	return std::sqrt(result);
-}
-
-// constexpr float minDistance(AAEBB const& aaebb, Frustum const& frustum) noexcept
-// {
-// 	// TODO: Implement
-// }
-
-// constexpr float minDistance(AAEBB const& aaebb, LineSegment const& line_segment)
-// noexcept
-// {
-// 	// TODO: Implement
-// }
-
-// constexpr float minDistance(AAEBB const& aaebb, OBB const& obb) noexcept
-// {
-// 	// TODO: Implement
-// }
-
-// constexpr float minDistance(AAEBB const& aaebb, Plane const& plane) noexcept
-// {
-// 	// TODO: Implement
-// }
-
-constexpr float minDistance(AAEBB const& aaebb, Point const& point) noexcept
-{
-	Point min = aaebb.min();
-	Point max = aaebb.max();
-	Point p = Point::clamp(point, min, max);
-	return point.distance(p);
-}
-
-// constexpr float minDistance(AAEBB const& aaebb, Ray const& ray) noexcept
-// {
-// TODO: Implement
-// }
-
-constexpr float minDistance(AAEBB const& aaebb, Sphere const& sphere) noexcept
-{
-	return std::fdim(minDistance(aaebb, sphere.center), sphere.radius);
-}
-
-constexpr float minDistanceSquared(AAEBB const& aaebb, AABB const& aabb) noexcept
-{
-	Point a_min = aaebb.min();
-	Point a_max = aaebb.max();
-	Point b_min = aabb.min();
-	Point b_max = aabb.max();
-
-	float result = 0.0;
+	float result = 0;
 	for (size_t i = 0; i != 3; ++i) {
 		float d_1 = std::fdim(b_max[i], a_min[i]);
 		float d_2 = std::fdim(a_max[i], b_min[i]);
@@ -240,7 +87,324 @@ constexpr float minDistanceSquared(AAEBB const& aaebb, AABB const& aabb) noexcep
 	return result;
 }
 
-constexpr float minDistanceSquared(AAEBB const& aaebb_1, AAEBB const& aaebb_2) noexcept
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AABB const& a, AABB const& b) noexcept
+{
+	return std::sqrt(squaredDistance(a, b));
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AABB const& a, AAEBB const& b) noexcept
+{
+	Point a_min = a.min();
+	Point a_max = a.max();
+	Point b_min = b.min();
+	Point b_max = b.max();
+
+	float result = 0;
+	for (size_t i = 0; i != 3; ++i) {
+		float d_1 = std::fdim(b_max[i], a_min[i]);
+		float d_2 = std::fdim(a_max[i], b_min[i]);
+		result += (d_1 * d_1) + (d_2 * d_2);
+
+		// if (a_min[i] > b_max[i]) {
+		// 	float delta = b_max[i] - a_min[i];
+		// 	result += delta * delta;
+		// } else if (b_min[i] > a_max[i]) {
+		// 	float delta = a_max[i] - b_min[i];
+		// 	result += delta * delta;
+		// }
+		// else the projection intervals overlap.
+	}
+
+	return result;
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AABB const& a, AAEBB const& b) noexcept
+{
+	return std::sqrt(squaredDistance(a, b));
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AABB const& a, Frustum const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AABB const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return std::sqrt(squaredDistance(a, b));
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AABB const& a, LineSegment const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AABB const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return std::sqrt(squaredDistance(a, b));
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AABB const& a, OBB const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AABB const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return std::sqrt(squaredDistance(a, b));
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AABB const& a, Plane const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AABB const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return std::sqrt(squaredDistance(a, b));
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AABB const& a, Point const& b) noexcept
+{
+	return b.squaredDistance(Point::clamp(b, a.min(), a.max()));
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AABB const& a, Point const& b) noexcept
+{
+	return std::sqrt(squaredDistance(a, b));
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AABB const& a, Ray const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AABB const& a, Ray const& ray)
+// {
+// 	// FIXME: Enable
+// 	return std::sqrt(squaredDistance(a, b));
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AABB const& a, Sphere const& b) noexcept
+{
+	return std::fdim(distance(a, b.center), b.radius);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AABB const& a, Sphere const& b) noexcept
+{
+	// FIXME: Implement better
+	auto dist = distance(a, b);
+	return dist * dist;
+}
+
+//
+// AAEBB
+//
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AAEBB const& a, AABB const& b) noexcept
+{
+	return squaredDistance(b, a);
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AAEBB const& a, AABB const& b) noexcept
+{
+	return distance(b, a);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AAEBB const& a, AAEBB const& b) noexcept
 {
 	// FIXME: Is this actually correct?
 	// Point a;
@@ -255,10 +419,10 @@ constexpr float minDistanceSquared(AAEBB const& aaebb_1, AAEBB const& aaebb_2) n
 	// }
 	// return result + a.squaredNorm();
 
-	float hs = aaebb_1.half_size + aaebb_2.half_size;
-	float result = 0.0f;
+	float hs = a.half_size + b.half_size;
+	float result = 0;
 	for (size_t i = 0; i != 3; ++i) {
-		float tmp = std::fdim(std::abs(aaebb_1.center[i] - aaebb_2.center[i]), hs);
+		float tmp = std::fdim(std::abs(a.center[i] - b.center[i]), hs);
 		result += tmp * tmp;
 	}
 	return result;
@@ -285,24 +449,228 @@ constexpr float minDistanceSquared(AAEBB const& aaebb_1, AAEBB const& aaebb_2) n
 
 	// return result;
 }
-// float minDistanceSquared(AAEBB const& aaebb, Frustum const& frustum) noexcept;
-// float minDistanceSquared(AAEBB const& aaebb, LineSegment const& line_segment) noexcept;
-// float minDistanceSquared(AAEBB const& aaebb, OBB const& obb) noexcept;
-// float minDistanceSquared(AAEBB const& aaebb, Plane const& plane) noexcept;
 
-inline float minDistanceSquared(AAEBB const& aaebb, Point const& point) noexcept
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 {
-	Point min = aaebb.min();
-	Point max = aaebb.max();
-	Point p = Point::clamp(point, min, max);
-	return point.squaredDistance(p);
+	return std::sqrt(squaredDistance(a, b));
 }
 
-// float minDistanceSquared(AAEBB const& aaebb, Ray const& ray) noexcept;
-inline float minDistanceSquared(AAEBB const& aaebb, Sphere const& sphere) noexcept
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AAEBB const& a, Frustum const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AAEBB const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AAEBB const& a, LineSegment const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AAEBB const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AAEBB const& a, OBB const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AAEBB const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AAEBB const& a, Plane const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AAEBB const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AAEBB const& a, Point const& b) noexcept
+{
+	return b.squaredDistance(Point::clamp(b, a.min(), a.max()));
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AAEBB const& a, Point const& b) noexcept
+{
+	return b.distance(Point::clamp(b, a.min(), a.max()));
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(AAEBB const& a, Ray const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(AAEBB const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(AAEBB const& a, Sphere const& b) noexcept
+{
+	return std::fdim(distance(a, b.center), b.radius);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 {
 	// FIXME: Implement better
-	float dist = minDistance(aaebb, sphere);
+	auto dist = distance(a, b);
 	return dist * dist;
 }
 
@@ -310,101 +678,1944 @@ inline float minDistanceSquared(AAEBB const& aaebb, Sphere const& sphere) noexce
 // Frustum
 //
 
-// constexpr float minDistance(Frustum const& frustum, AABB const& aabb) noexcept;
-// constexpr float minDistance(Frustum const& frustum, AAEBB const& aaebb) noexcept;
-// constexpr float minDistance(Frustum const& frustum_1, Frustum const& frustum_2)
-// noexcept; constexpr float minDistance(Frustum const& frustum, LineSegment const&
-// line_segment) noexcept; constexpr float minDistance(Frustum const& frustum, OBB const&
-// obb) noexcept; constexpr float minDistance(Frustum const& frustum, Plane const& plane)
-// noexcept; constexpr float minDistance(Frustum const& frustum, Point const& point)
-// noexcept; constexpr float minDistance(Frustum const& frustum, Ray const& ray) noexcept;
-// constexpr float minDistance(Frustum const& frustum, Sphere const& sphere) noexcept;
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, Frustum const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, LineSegment const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, OBB const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, Plane const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, Point const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, Point const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, Ray const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Frustum const& a, Sphere const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Frustum const& a, Sphere const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
 
 //
 // Line segment
 //
 
-// constexpr float minDistance(LineSegment const& line_segment, AABB const& aabb)
-// noexcept; constexpr float minDistance(LineSegment const& line_segment, AAEBB const&
-// aaebb) noexcept; constexpr float minDistance(LineSegment const& line_segment, Frustum
-// const& frustum) noexcept; constexpr float minDistance(LineSegment const&
-// line_segment_1, LineSegment const& line_segment_2) noexcept; constexpr float
-// minDistance(LineSegment const& line_segment, OBB const& obb) noexcept; constexpr float
-// minDistance(LineSegment const& line_segment, Plane const& plane) noexcept; constexpr
-// float minDistance(LineSegment const& line_segment, Point const& point) noexcept;
-// constexpr float minDistance(LineSegment const& line_segment, Ray const& ray) noexcept;
-// constexpr float minDistance(LineSegment const& line_segment, Sphere const& sphere)
-// noexcept;
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, LineSegment const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, OBB const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, Plane const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, Point const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, Point const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, Ray const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(LineSegment const& a, Sphere const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(LineSegment const& a, Sphere const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
 
 //
 // OBB
 //
 
-// constexpr float minDistance(OBB const& obb, AABB const& aabb) noexcept;
-// constexpr float minDistance(OBB const& obb, AAEBB const& aaebb) noexcept;
-// constexpr float minDistance(OBB const& obb, Frustum const& frustum) noexcept;
-// constexpr float minDistance(OBB const& obb, LineSegment const& line_segment) noexcept;
-// constexpr float minDistance(OBB const& obb_1, OBB const& obb_2) noexcept;
-// constexpr float minDistance(OBB const& obb, Plane const& plane) noexcept;
-// constexpr float minDistance(OBB const& obb, Point const& point) noexcept;
-// constexpr float minDistance(OBB const& obb, Ray const& ray) noexcept;
-// constexpr float minDistance(OBB const& obb, Sphere const& sphere) noexcept;
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, OBB const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, Plane const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, Point const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, Point const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, Ray const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(OBB const& a, Sphere const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(OBB const& a, Sphere const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
 
 //
 // Plane
 //
 
-// constexpr float minDistance(Plane const& plane, AABB const& aabb) noexcept;
-// constexpr float minDistance(Plane const& plane, AAEBB const& aaebb) noexcept;
-// constexpr float minDistance(Plane const& plane, Frustum const& frustum) noexcept;
-// constexpr float minDistance(Plane const& plane, LineSegment const& line_segment)
-// noexcept; constexpr float minDistance(Plane const& plane, OBB const& obb) noexcept;
-// constexpr float minDistance(Plane const& plane_1, Plane const& plane_2) noexcept;
-// constexpr float minDistance(Plane const& plane, Point const& point) noexcept;
-// constexpr float minDistance(Plane const& plane, Ray const& ray) noexcept;
-// constexpr float minDistance(Plane const& plane, Sphere const& sphere) noexcept;
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, Plane const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, Point const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, Point const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, Ray const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Plane const& a, Sphere const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Plane const& a, Sphere const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
 
 //
 // Point
 //
 
-float minDistance(Point const& point, AABB const& aabb) noexcept;
-float minDistance(Point const& point, AAEBB const& aaebb) noexcept;
-// float minDistance(Point const& point, Frustum const& frustum) noexcept;
-// float minDistance(Point const& point, LineSegment const& line_segment) noexcept;
-// float minDistance(Point const& point, OBB const& obb) noexcept;
-// float minDistance(Point const& point, Plane const& plane) noexcept;
-float minDistance(Point const& point_1, Point const& point_2) noexcept;
-// float minDistance(Point const& point, Ray const& ray) noexcept;
-float minDistance(Point const& point, Sphere const& sphere) noexcept;
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Point const& a, AABB const& b) noexcept
+{
+	return squaredDistance(b, a);
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Point const& a, AABB const& b) noexcept
+{
+	return distance(b, a);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Point const& a, AAEBB const& b) noexcept
+{
+	return squaredDistance(b, a);
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Point const& a, AAEBB const& b) noexcept
+{
+	return distance(b, a);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Point const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Point const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Point const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Point const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Point const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Point const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Point const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Point const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Point const& a, Point const& b) noexcept
+{
+	return a.squaredDistance(b);
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Point const& a, Point const& b) noexcept
+{
+	return a.distance(b);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Point const& a, Ray const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Point const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Point const& a, Sphere const& b) noexcept
+{
+	return std::fdim(a.distance(b.center), b.radius);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
+{
+	auto dist = distance(a, b);
+	return dist * dist;
+}
 
 //
 // Ray
 //
 
-// constexpr float minDistance(Ray const& ray, AABB const& aabb) noexcept;
-// constexpr float minDistance(Ray const& ray, AAEBB const& aaebb) noexcept;
-// constexpr float minDistance(Ray const& ray, Frustum const& frustum) noexcept;
-// constexpr float minDistance(Ray const& ray, LineSegment const& line_segment) noexcept;
-// constexpr float minDistance(Ray const& ray, OBB const& obb) noexcept;
-// constexpr float minDistance(Ray const& ray, Plane const& plane) noexcept;
-// constexpr float minDistance(Ray const& ray, Point const& point) noexcept;
-// constexpr float minDistance(Ray const& ray_1, Ray const& ray_2) noexcept;
-// constexpr float minDistance(Ray const& ray, Sphere const& sphere) noexcept;
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, AABB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, AAEBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, Point const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, Point const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Ray const& a, AABB const& b) noexcept
+// {
+// 	// TODO: Implement
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Ray const& a, Sphere const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(a, b);
+// }
 
 //
 // Sphere
 //
 
-float minDistance(Sphere const& sphere, AABB const& aabb) noexcept;
-float minDistance(Sphere const& sphere, AAEBB const& aaebb) noexcept;
-// float minDistance(Sphere const& sphere, Frustum const& frustum) noexcept;
-// float minDistance(Sphere const& sphere, LineSegment const& line_segment) noexcept;
-// float minDistance(Sphere const& sphere, OBB const& obb) noexcept;
-// float minDistance(Sphere const& sphere, Plane const& plane) noexcept;
-float minDistance(Sphere const& sphere, Point const& point) noexcept;
-// float minDistance(Sphere const& sphere, Ray const& ray) noexcept;
-float minDistance(Sphere const& sphere_1, Sphere const& sphere_2) noexcept;
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Sphere const& a, AABB const& b) noexcept
+{
+	return squaredDistance(b, a);
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Sphere const& a, AABB const& b) noexcept
+{
+	return distance(b, a);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Sphere const& a, AAEBB const& b) noexcept
+{
+	return squaredDistance(b, a);
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
+{
+	return distance(b, a);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Sphere const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Sphere const& a, Frustum const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Sphere const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Sphere const& a, LineSegment const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Sphere const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Sphere const& a, OBB const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Sphere const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Sphere const& a, Plane const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Sphere const& a, Point const& b) noexcept
+{
+	return distance(b, a);
+}
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Sphere const& a, Point const& b) noexcept
+{
+	return distance(b, a);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+// constexpr float squaredDistance(Sphere const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return squaredDistance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+// constexpr float distance(Sphere const& a, Ray const& b) noexcept
+// {
+// 	// FIXME: Enable
+// 	return distance(b, a);
+// }
+
+/**
+ * @brief Computes the minimum distance between a and b.
+ *
+ * @note If only the relative distance is of importance, then the squared distance is
+ * recommended to use since it is generally faster to compute.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum distance between a and b.
+ */
+constexpr float distance(Sphere const& a, Sphere const& b) noexcept
+{
+	return std::fdim(a.center.distance(b.center), a.radius + b.radius);
+}
+
+/**
+ * @brief Computes the minimum squared distance between a and b.
+ *
+ * @note The squared distance is generally faster to compute than the distance. Therefore,
+ * if the relative distance is what is important then it is recommended to use this
+ * function.
+ *
+ * @param a,b Geometry objects.
+ * @return The minimum squared distance between a and b.
+ */
+constexpr float squaredDistance(Sphere const& a, Sphere const& b) noexcept
+{
+	auto dist = distance(a, b);
+	return dist * dist;
+}
 
 }  // namespace ufo::geometry
 
