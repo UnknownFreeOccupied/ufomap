@@ -44,6 +44,7 @@
 // UFO
 #include <ufo/geometry/bounding_volume.h>
 #include <ufo/geometry/minimum_distance.h>
+#include <ufo/geometry/point.h>
 #include <ufo/map/code.h>
 #include <ufo/map/octree/node.h>
 #include <ufo/map/predicate/octree.h>
@@ -75,66 +76,67 @@ class IteratorBase
 	using const_pointer = value_type const*;    // or also value_type*
 	using const_reference = value_type const&;  // or also value_type&
 
-	IteratorBase() : tree_(nullptr) {}
+	constexpr IteratorBase() = default;
 
-	IteratorBase(Tree const* tree) : tree_(tree) {}
+	constexpr IteratorBase(Tree const* tree) : tree_(tree) {}
 
 	virtual IteratorBase& next() = 0;
 
-	virtual IteratorBase* getCopy() = 0;
+	virtual IteratorBase* copy() = 0;
 
-	// virtual reference getData() = 0;
-	virtual const_reference getData() const = 0;
+	// virtual reference data() = 0;
+	virtual const_reference data() const = 0;
 
-	Tree const* getTree() const { return tree_; }
+	constexpr Tree const* tree() const { return tree_; }
 
 	virtual bool equal(IteratorBase const& other) const = 0;
 
  protected:
-	DepthType getDepth(Node const& node) const { return node.getDepth(); }
+	constexpr Depth depth(Node const& node) const { return node.depth(); }
 
-	Code getCode(Node const& node) const { return node.getCode(); }
+	constexpr Code code(Node const& node) const { return node.code(); }
 
-	size_t getIdx(Node const& node) const
+	constexpr std::size_t indexAtDepth(Node const& node) const
 	{
-		return getCode(node).getChildIdx(getDepth(node));
+		return code(node).indexAtDepth(depth(node));
 	}
 
-	bool hasChildren(Node const& node) const { return tree_->hasChildren(node); }
+	constexpr bool isParent(Node const& node) const { return tree_->isParent(node); }
 
-	bool hasParent(Node const& node) const { return tree_->hasParent(node); }
+	constexpr bool hasParent(Node const& node) const { return tree_->hasParent(node); }
 
-	Node getChild(Node const& node, unsigned int idx) const
+	constexpr Node child(Node const& node, unsigned int idx) const
 	{
-		return tree_->getChild(node, idx);
+		return tree_->child(node, idx);
 	}
 
-	Node getSibling(Node const& node, unsigned int idx) const
+	constexpr Node sibling(Node const& node, unsigned int idx) const
 	{
-		return tree_->getSibling(node, idx);
-	}
-
-	template <class Predicates>
-	bool validInnerNode(Node const& node, Predicates const& predicates) const
-	{
-		return hasChildren(node) && validInnerNodeOnlyLeaves(node, predicates);
+		return tree_->sibling(node, idx);
 	}
 
 	template <class Predicates>
-	bool validInnerNodeOnlyLeaves(Node const& node, Predicates const& predicates) const
+	constexpr bool validInnerNode(Node const& node, Predicates const& predicates) const
+	{
+		return isParent(node) && validInnerNodeOnlyLeaves(node, predicates);
+	}
+
+	template <class Predicates>
+	constexpr bool validInnerNodeOnlyLeaves(Node const& node,
+	                                        Predicates const& predicates) const
 	{
 		return predicate::PredicateInnerCheck<Predicates>::apply(predicates, *tree_, node);
 	}
 
 	template <class Predicates>
-	bool validReturnNode(Node const& node, Predicates const& predicates) const
+	constexpr bool validReturnNode(Node const& node, Predicates const& predicates) const
 	{
 		return predicate::PredicateValueCheck<Predicates>::apply(predicates, *tree_, node);
 	}
 
  protected:
 	// The UFOMap
-	Tree const* tree_;
+	Tree const* tree_ = nullptr;
 };
 
 template <class Tree, typename T>
@@ -155,7 +157,7 @@ class IteratorWrapper
 
 	IteratorWrapper(Base* it_base) : it_base_(it_base) {}
 
-	IteratorWrapper(IteratorWrapper const& other) : it_base_(other.it_base_->getCopy()) {}
+	IteratorWrapper(IteratorWrapper const& other) : it_base_(other.it_base_->copy()) {}
 
 	IteratorWrapper& operator++()
 	{
@@ -165,18 +167,18 @@ class IteratorWrapper
 
 	IteratorWrapper operator++(int)
 	{
-		IteratorWrapper result(it_base_->getCopy());
+		IteratorWrapper result(it_base_->copy());
 		++(*this);
 		return result;
 	}
 
-	// pointer operator->() { return &(it_base_->getData()); }
+	// pointer operator->() { return &(it_base_->data()); }
 
-	// reference operator*() { return it_base_->getData(); }
+	// reference operator*() { return it_base_->data(); }
 
-	const_pointer operator->() const { return &(it_base_->getData()); }
+	const_pointer operator->() const { return &(it_base_->data()); }
 
-	const_reference operator*() const { return it_base_->getData(); }
+	const_reference operator*() const { return it_base_->data(); }
 
 	friend bool operator==(IteratorWrapper const& lhs, IteratorWrapper const& rhs)
 	{
@@ -233,15 +235,15 @@ class Iterator : public IteratorBase<Tree, Node>
 		return *this;
 	}
 
-	Iterator* getCopy() override { return new Iterator(*this); }
+	Iterator* copy() override { return new Iterator(*this); }
 
-	// reference getData() override { return node_; }
+	// reference data() override { return node_; }
 
-	const_reference getData() const override { return node_; }
+	const_reference data() const override { return node_; }
 
-	bool equal(Base const& other) const
+	bool equal(Base const& other) const override
 	{
-		return other.getTree() == this->getTree() && other.getData() == getData();
+		return other.tree() == this->tree() && other.data() == data();
 	}
 
  private:
@@ -284,9 +286,9 @@ class Iterator : public IteratorBase<Tree, Node>
 		// Go down the tree
 		if (valid_inner_) {
 			if constexpr (OnlyLeaves) {
-				Node current = this->getChild(node_, 0);
+				Node current = this->child(node_, 0);
 				for (unsigned int idx = 0; idx != 8; ++idx) {
-					current = this->getSibling(current, idx);
+					current = this->sibling(current, idx);
 
 					if (this->validReturnNode(current, predicates_)) {
 						parents_.push(node_);
@@ -301,10 +303,10 @@ class Iterator : public IteratorBase<Tree, Node>
 					}
 				}
 			} else {
-				Node current = this->getChild(node_, 0);
-				
+				Node current = this->child(node_, 0);
+
 				for (unsigned int idx = 0; idx != 8; ++idx) {
-					current = this->getSibling(current, idx);
+					current = this->sibling(current, idx);
 
 					bool valid_inner = this->validInnerNode(current, predicates_);
 
@@ -323,9 +325,9 @@ class Iterator : public IteratorBase<Tree, Node>
 		}
 
 		// Go diagonal and up in the tree
-		while (this->getDepth(node_) != this->tree_->getTreeDepthLevels()) {
-			for (auto idx = this->getIdx(node_) + 1; 8 != idx; ++idx) {
-				node_ = this->getSibling(node_, idx);
+		while (this->depth(node_) != this->tree_->depthLevels()) {
+			for (auto idx = this->indexAtDepth(node_) + 1; 8 != idx; ++idx) {
+				node_ = this->sibling(node_, idx);
 
 				if constexpr (OnlyLeaves) {
 					if (this->validReturnNode(node_, predicates_)) {
@@ -370,36 +372,37 @@ class Iterator : public IteratorBase<Tree, Node>
 };
 
 struct NearestNode {
-	NearestNode(Node const& node, double squared_distance)
+	Node node;
+	float squared_distance;
+
+	constexpr NearestNode(Node const& node, float squared_distance)
 	    : node(node), squared_distance(squared_distance)
 	{
 	}
 
-	friend bool operator<(NearestNode const& v1, NearestNode const v2)
+	friend constexpr bool operator<(NearestNode const& a, NearestNode const b)
 	{
-		return v1.squared_distance < v2.squared_distance;
+		return a.squared_distance < b.squared_distance;
 	}
 
-	friend bool operator<=(NearestNode const& v1, NearestNode const v2)
+	friend constexpr bool operator<=(NearestNode const& a, NearestNode const b)
 	{
-		return v1.squared_distance <= v2.squared_distance;
+		return a.squared_distance <= b.squared_distance;
 	}
 
-	friend bool operator>(NearestNode const& v1, NearestNode const v2)
+	friend constexpr bool operator>(NearestNode const& a, NearestNode const b)
 	{
-		return v1.squared_distance > v2.squared_distance;
+		return a.squared_distance > b.squared_distance;
 	}
 
-	friend bool operator>=(NearestNode const& v1, NearestNode const v2)
+	friend constexpr bool operator>=(NearestNode const& a, NearestNode const b)
 	{
-		return v1.squared_distance >= v2.squared_distance;
+		return a.squared_distance >= b.squared_distance;
 	}
-
-	Node node;
-	double squared_distance;
 };
 
-template <class Tree, class Geometry = math::Vector3, class Predicates = predicate::TRUE>
+template <class Tree, class Geometry = geometry::Point,
+          class Predicates = predicate::TRUE>
 class NearestIterator : public IteratorBase<Tree, NearestNode>
 {
  private:
@@ -439,28 +442,28 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 		return *this;
 	}
 
-	NearestIterator* getCopy() override { return new NearestIterator(*this); }
+	NearestIterator* copy() override { return new NearestIterator(*this); }
 
-	// reference getData() override { return return_nodes_.top(); }
+	// reference data() override { return return_nodes_.top(); }
 
-	const_reference getData() const override { return return_nodes_.top(); }
+	const_reference data() const override { return return_nodes_.top(); }
 
-	bool equal(Base const& other) const
+	bool equal(Base const& other) const override
 	{
-		return other.getTree() == this->getTree() && other.getData() == getData();
+		return other.tree() == this->tree() && other.data() == data();
 	}
 
  private:
-	double distanceSquared(Node const& node) const
+	double squaredDistance(NodeBV const& node) const
 	{
-		return geometry::minDistanceSquared(node.getBoundingVolume(), geometry_);
+		return geometry::squaredDistance(node.boundingVolume(), geometry_);
 	}
 
 	void init(Node const& node)
 	{
 		if constexpr (OnlyLeaves) {
 			if (this->validReturnNode(node, predicates_)) {
-				return_nodes_.emplace(node, distanceSquared(node));
+				return_nodes_.emplace(node, squaredDistance(node));
 			} else if (this->validInnerNodeOnlyLeaves(node, predicates_)) {
 				std::vector<value_type> container;
 				container.reserve(256);
@@ -469,7 +472,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				    std::greater<value_type>(), std::move(container));
 				inner_nodes_ = return_nodes_;
 
-				inner_nodes_.emplace(node, distanceSquared(node) + epsilon_);
+				inner_nodes_.emplace(node, squaredDistance(node) + epsilon_);
 				increment();
 			} else {
 				this->tree_ = nullptr;
@@ -486,7 +489,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				    std::greater<value_type>(), std::move(container));
 				inner_nodes_ = return_nodes_;
 
-				float dist_sq = distanceSquared(node);
+				float dist_sq = squaredDistance(node);
 
 				if (valid_inner) {
 					inner_nodes_.emplace(node, dist_sq + epsilon_);
@@ -514,17 +517,17 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				return;
 			}
 
-			Node current = this->getChild(inner_nodes_.top().node, 0);
+			Node current = this->child(inner_nodes_.top().node, 0);
 			inner_nodes_.pop();
 
 			for (unsigned int idx = 0; 8 != idx; ++idx) {
-				current = this->getSibling(current, idx);
+				current = this->sibling(current, idx);
 
 				if constexpr (OnlyLeaves) {
 					if (this->validInnerNodeOnlyLeaves(current, predicates_)) {
-						inner_nodes_.emplace(current, distanceSquared(current) + epsilon_);
+						inner_nodes_.emplace(current, squaredDistance(current) + epsilon_);
 					} else if (this->validReturnNode(current, predicates_)) {
-						return_nodes_.emplace(current, distanceSquared(current));
+						return_nodes_.emplace(current, squaredDistance(current));
 					}
 				} else {
 					// No need to add inner nodes that does not have children
@@ -532,7 +535,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 					bool const valid_return = this->validReturnNode(current, predicates_);
 
 					if (valid_inner || valid_return) {
-						float dist_sq = distanceSquared(current);
+						float dist_sq = squaredDistance(current);
 						if (valid_inner) {
 							inner_nodes_.emplace(current, dist_sq + epsilon_);
 						}

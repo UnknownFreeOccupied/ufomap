@@ -50,18 +50,18 @@
 
 namespace ufo::map
 {
-template <DepthType Depth>
+template <Depth Depth>
 class Grid
 {
  private:
-	static constexpr std::size_t ipow(DepthType pow)
+	static constexpr std::size_t ipow(Depth pow)
 	{
 		return 0 == pow ? 1 : 8 * ipow(pow - 1);
 	}
 	static constexpr std::size_t NumIndices = ipow(Depth);
 
-	static constexpr KeyType Mask =
-	    ~((std::numeric_limits<KeyType>::max() >> Depth) << Depth);
+	static constexpr Key::KeyType Mask =
+	    ~((std::numeric_limits<Key::KeyType>::max() >> Depth) << Depth);
 
  public:
 	using reference = typename std::bitset<NumIndices>::reference;
@@ -89,12 +89,12 @@ class Grid
 
 	static constexpr std::size_t getIndex(Key const& key)
 	{
-		DepthType const depth = key.getDepth();
+		Depth const depth = key.depth();
 		return ((key.x() >> depth) & Mask) | (((key.y() >> depth) & Mask) << Depth) |
 		       (((key.z() >> depth) & Mask) << (2 * Depth));
 	}
 
-	static Key getKey(std::size_t index, DepthType depth)
+	static Key getKey(std::size_t index, Depth depth)
 	{
 		return Key((index & Mask) << depth, ((index >> Depth) & Mask) << depth,
 		           ((index >> (2 * Depth)) & Mask) << depth, depth);

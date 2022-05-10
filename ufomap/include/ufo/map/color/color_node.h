@@ -47,10 +47,11 @@
 namespace ufo::map
 {
 struct ColorNode {
-	Color color;
+	RGBColor color;
 
-	bool operator==(ColorNode const& rhs) const noexcept { return color == rhs.color; }
-	bool operator!=(ColorNode const& rhs) const noexcept { return color != rhs.color; }
+	constexpr bool operator==(ColorNode const& rhs) const { return color == rhs.color; }
+
+	constexpr bool operator!=(ColorNode const& rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 
