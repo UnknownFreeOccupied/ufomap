@@ -58,8 +58,38 @@ namespace ufo::geometry
 // Intersects line
 //
 
-bool intersectsLine(AABB const& aabb, Ray const& ray, float t_near, float t_far);
-inline bool intersectsLine(AAEBB const& aaebb, Ray const& ray, float t_near, float t_far)
+constexpr bool intersectsLine(AABB const& aabb, Ray const& ray, float t_near,
+                              float t_far) noexcept
+{
+	Point min = aabb.min();
+	Point max = aabb.max();
+
+	for (int i = 0; i < 3; ++i) {
+		if (0 != ray.direction[i]) {
+			float reciprocal_direction = 1.0 / ray.direction[i];
+			float t1 = (min[i] - ray.origin[i]) * reciprocal_direction;
+			float t2 = (max[i] - ray.origin[i]) * reciprocal_direction;
+
+			if (t1 < t2) {
+				t_near = std::max(t1, t_near);
+				t_far = std::min(t2, t_far);
+			} else {
+				t_near = std::max(t2, t_near);
+				t_far = std::min(t1, t_far);
+			}
+
+			if (t_near > t_far) {
+				return false;
+			}
+		} else if (min[i] > ray.origin[i] || max[i] < ray.origin[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+constexpr bool intersectsLine(AAEBB const& aaebb, Ray const& ray, float t_near,
+                              float t_far) noexcept
 {
 	Point min = aaebb.min();
 	Point max = aaebb.max();
@@ -89,48 +119,81 @@ inline bool intersectsLine(AAEBB const& aaebb, Ray const& ray, float t_near, flo
 }
 
 //
-// Closest point
-//
-
-Point closestPoint(AABB const& aabb, Point const& point);
-inline Point closestPoint(AAEBB const& aaebb, Point const& point)
-{
-	Point min = aaebb.min();
-	Point max = aaebb.max();
-	return Point::clamp(point, min, max);
-}
-Point closestPoint(LineSegment const& line_segement, Point const& point);
-Point closestPoint(OBB const& obb, Point const& point);
-Point closestPoint(Plane const& plane, Point const& point);
-Point closestPoint(Ray const& ray, Point const& point);
-Point closestPoint(Sphere const& sphere, Point const& point);
-
-//
 // Classify
 //
 
-float classify(AABB const& aabb, Plane const& plane);
-inline float classify(AAEBB const& aaebb, Plane const& plane)
+constexpr float classify(AABB const& aabb, Plane const& plane) noexcept
+{
+	float r = std::abs(aabb.half_size.x * plane.normal.x) +
+	          std::abs(aabb.half_size.y * plane.normal.y) +
+	          std::abs(aabb.half_size.z * plane.normal.z);
+	float d = Point::dot(plane.normal, aabb.center) + plane.distance;
+	if (std::abs(d) < r) {
+		return 0;
+	} else if (d < 0) {
+		return d + r;
+	}
+	return d - r;
+}
+
+constexpr float classify(AAEBB const& aaebb, Plane const& plane) noexcept
 {
 	float r = std::abs(aaebb.half_size * plane.normal.x) +
 	          std::abs(aaebb.half_size * plane.normal.y) +
 	          std::abs(aaebb.half_size * plane.normal.z);
 	float d = Point::dot(plane.normal, aaebb.center) + plane.distance;
 	if (std::abs(d) < r) {
-		return 0.0f;
-	} else if (d < 0.0f) {
+		return 0;
+	} else if (d < 0) {
 		return d + r;
 	}
 	return d - r;
 }
-float classify(OBB const& obb, Plane const& plane);
+
+// constexpr float classify(OBB const& obb, Plane const& plane) noexcept
+// {
+// 	// FIXME: Check if correct
+// 	Point normal = plane.normal * obb.rotation;
+// 	float r = std::abs(obb.half_size.x() * normal.x()) +
+// 	          std::abs(obb.half_size.y() * normal.y()) +
+// 	          std::abs(obb.half_size.z() * normal.z());
+// 	float d = Point::dot(plane.normal, obb.center) + plane.distance;
+// 	if (std::abs(d) < r) {
+// 		return 0;
+// 	} else if (d < 0) {
+// 		return d + r;
+// 	}
+// 	return d - r;
+// }
 
 //
 // Get interval
 //
 
-std::pair<float, float> getInterval(AABB const& aabb, Point const& axis);
-inline std::pair<float, float> getInterval(AAEBB const& aaebb, Point const& axis)
+constexpr std::pair<float, float> getInterval(AABB const& aabb,
+                                              Point const& axis) noexcept
+{
+	Point i = aabb.min();
+	Point a = aabb.max();
+
+	Point vertex[8] = {Point(i.x, a.y, a.z), Point(i.x, a.y, i.z), Point(i.x, i.y, a.z),
+	                   Point(i.x, i.y, i.z), Point(a.x, a.y, a.z), Point(a.x, a.y, i.z),
+	                   Point(a.x, i.y, a.z), Point(a.x, i.y, i.z)};
+
+	std::pair<float, float> result;
+	result.first = result.second = Point::dot(axis, vertex[0]);
+
+	for (int i = 1; i < 8; ++i) {
+		float projection = Point::dot(axis, vertex[i]);
+		result.first = std::min(result.first, projection);
+		result.second = std::max(result.second, projection);
+	}
+
+	return result;
+}
+
+constexpr std::pair<float, float> getInterval(AAEBB const& aaebb,
+                                              Point const& axis) noexcept
 {
 	Point i = aaebb.min();
 	Point a = aaebb.max();
@@ -150,20 +213,70 @@ inline std::pair<float, float> getInterval(AAEBB const& aaebb, Point const& axis
 
 	return result;
 }
-std::pair<float, float> getInterval(OBB const& obb, Point const& axis);
+
+constexpr std::pair<float, float> getInterval(OBB const& obb, Point const& axis) noexcept
+{
+	Point vertex[8];
+
+	Point C = obb.center;     // OBB Center
+	Point E = obb.half_size;  // OBB Extents
+
+	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
+
+	Point A[] = {
+	    // OBB Axis
+	    Point(obb_rot_matrix[0], obb_rot_matrix[1], obb_rot_matrix[2]),
+	    Point(obb_rot_matrix[3], obb_rot_matrix[4], obb_rot_matrix[5]),
+	    Point(obb_rot_matrix[6], obb_rot_matrix[7], obb_rot_matrix[8]),
+	};
+
+	vertex[0] = C + A[0] * E[0] + A[1] * E[1] + A[2] * E[2];
+	vertex[1] = C - A[0] * E[0] + A[1] * E[1] + A[2] * E[2];
+	vertex[2] = C + A[0] * E[0] - A[1] * E[1] + A[2] * E[2];
+	vertex[3] = C + A[0] * E[0] + A[1] * E[1] - A[2] * E[2];
+	vertex[4] = C - A[0] * E[0] - A[1] * E[1] - A[2] * E[2];
+	vertex[5] = C + A[0] * E[0] - A[1] * E[1] - A[2] * E[2];
+	vertex[6] = C - A[0] * E[0] + A[1] * E[1] - A[2] * E[2];
+	vertex[7] = C - A[0] * E[0] - A[1] * E[1] + A[2] * E[2];
+
+	std::pair<float, float> result;
+	result.first = result.second = Point::dot(axis, vertex[0]);
+
+	for (int i = 1; i < 8; ++i) {
+		float projection = Point::dot(axis, vertex[i]);
+		result.first = std::min(result.first, projection);
+		result.second = std::max(result.second, projection);
+	}
+
+	return result;
+}
 
 //
 // Overlap on axis
 //
 
-bool overlapOnAxis(AABB const& aabb, OBB const& obb, Point const& axis);
-inline bool overlapOnAxis(AAEBB const& aaebb, OBB const& obb, Point const& axis)
+constexpr bool overlapOnAxis(AABB const& aabb, OBB const& obb, Point const& axis) noexcept
+{
+	auto [a_min, a_max] = getInterval(aabb, axis);
+	auto [b_min, b_max] = getInterval(obb, axis);
+	return ((b_min <= a_max) && (a_min <= b_max));
+}
+
+constexpr bool overlapOnAxis(AAEBB const& aaebb, OBB const& obb,
+                             Point const& axis) noexcept
 {
 	auto [a_min, a_max] = getInterval(aaebb, axis);
 	auto [b_min, b_max] = getInterval(obb, axis);
 	return ((b_min <= a_max) && (a_min <= b_max));
 }
-bool overlapOnAxis(OBB const& obb_1, OBB const& obb_2, Point const& axis);
+
+constexpr bool overlapOnAxis(OBB const& obb_1, OBB const& obb_2,
+                             Point const& axis) noexcept
+{
+	auto [a_min, a_max] = getInterval(obb_1, axis);
+	auto [b_min, b_max] = getInterval(obb_2, axis);
+	return ((b_min <= a_max) && (a_min <= b_max));
+}
 
 }  // namespace ufo::geometry
 

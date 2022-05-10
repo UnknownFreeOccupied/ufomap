@@ -440,7 +440,7 @@ constexpr bool contains(Point const& a, AAEBB const& b) noexcept
  */
 constexpr bool contains(Point const& a, Frustum const& b) noexcept
 {
-	return false;  // TODO: Check
+	return false;  // FIXME: Check
 }
 
 /**
@@ -473,7 +473,7 @@ constexpr bool contains(Point const& a, OBB const& b) noexcept
  */
 constexpr bool contains(Point const& a, Plane const& b) noexcept
 {
-	return false;  // TODO: Check
+	return false;  // FIXME: Check
 }
 
 /**
@@ -564,7 +564,7 @@ constexpr bool contains(Point const& a, Sphere const& b) noexcept
  */
 constexpr bool contains(Sphere const& a, Point const& b) noexcept
 {
-	return minDistance(a, b) <= a.radius;
+	return distance(a, b) <= a.radius;
 }
 
 /**

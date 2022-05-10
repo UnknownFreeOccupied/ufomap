@@ -42,23 +42,30 @@
 #define UFO_GEOMETRY_CLOSEST_POINT_H
 
 // UFO
-#include <ufo/geometry/geometry.h>
+#include <ufo/geometry/bounding_volume.h>
 
 // STL
 #include <algorithm>
+
+namespace ufo::geometry
+{
 
 //
 // AABB
 //
 
-constexpr Point closestPoint(AABB const& aabb, Point const& point) noexcept
+constexpr Point closestPoint(AABB const& a, Point b) noexcept
 {
-	return Point::clamp(point, aabb.min(), aabb.max());
+	return b.clamp(a.min(), a.max());
 }
 
-constexpr Point closestPoint(AAEBB const& aaebb, Point const& point) noexcept
+//
+// AAEBB
+//
+
+constexpr Point closestPoint(AAEBB const& a, Point b) noexcept
 {
-	return Point::clamp(point, aaebb.min(), aaebb.max());
+	return b.clamp(a.min(), a.max());
 }
 
 //
@@ -83,8 +90,7 @@ constexpr Point closestPoint(OBB const& obb, Point const& point) noexcept
 	Point result = obb.center;
 	Point dir = point - obb.center;
 
-	std::array<float, 9> obb_rot_matrix;
-	obb.rotation.toRotMatrix(obb_rot_matrix);
+	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
 
 	for (int i = 0; i < 3; ++i) {
 		Point axis(obb_rot_matrix[i * 3], obb_rot_matrix[(i * 3) + 1],
@@ -93,7 +99,7 @@ constexpr Point closestPoint(OBB const& obb, Point const& point) noexcept
 		if (distance > obb.half_size[i]) {
 			distance = obb.half_size[i];
 		}
-		if (distance < -obb.half_size[i])  // TODO: Should this be else if?
+		if (distance < -obb.half_size[i])  // FIXME: Should this be else if?
 		{
 			distance = -obb.half_size[i];
 		}
@@ -133,5 +139,6 @@ constexpr Point closestPoint(Sphere const& sphere, Point const& point) noexcept
 	sphere_to_point *= sphere.radius;
 	return sphere_to_point + sphere.center;
 }
+}  // namespace ufo::geometry
 
 #endif  // UFO_GEOMETRY_CLOSEST_POINT_H

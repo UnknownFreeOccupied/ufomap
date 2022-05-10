@@ -43,6 +43,7 @@
 
 // UFO
 #include <ufo/geometry/bounding_volume.h>
+#include <ufo/geometry/closest_point.h>
 #include <ufo/geometry/helper.h>
 
 // STL
@@ -450,12 +451,12 @@ constexpr bool intersects(OBB const& obb, AAEBB const& aaebb) noexcept
 	return intersects(aaebb, obb);
 }
 
-constexpr bool intersects(OBB const& obb, Frustum const& frustum) noexcept
-{
-	return 0 <= classify(obb, frustum.bottom) && 0 <= classify(obb, frustum.far) &&
-	       0 <= classify(obb, frustum.left) && 0 <= classify(obb, frustum.near) &&
-	       0 <= classify(obb, frustum.right) && 0 <= classify(obb, frustum.top);
-}
+// constexpr bool intersects(OBB const& obb, Frustum const& frustum) noexcept
+// {
+// 	return 0 <= classify(obb, frustum.bottom) && 0 <= classify(obb, frustum.far) &&
+// 	       0 <= classify(obb, frustum.left) && 0 <= classify(obb, frustum.near) &&
+// 	       0 <= classify(obb, frustum.right) && 0 <= classify(obb, frustum.top);
+// }
 
 constexpr bool intersects(OBB const& obb, LineSegment const& line_segment) noexcept
 {
@@ -513,7 +514,7 @@ constexpr bool intersects(OBB const& obb, LineSegment const& line_segment) noexc
 	// If tmin is < 0, tmax is closer
 	float t_result = tmin;
 
-	if (tmin < 0.0f) {
+	if (tmin < 0) {
 		t_result = tmax;
 	}
 
@@ -643,10 +644,11 @@ constexpr bool intersects(Frustum const& frustum, AAEBB const& aaebb) noexcept
 // TODO: Implement
 // }
 
-constexpr bool intersects(Frustum const& frustum, OBB const& obb) noexcept
-{
-	return intersects(obb, frustum);
-}
+// constexpr bool intersects(Frustum const& frustum, OBB const& obb) noexcept
+// {
+// FIXME: Enable
+// 	return intersects(obb, frustum);
+// }
 
 // constexpr bool intersects(Frustum const& frustum, Plane const& plane) noexcept
 // {
@@ -767,7 +769,7 @@ constexpr bool intersects(Plane const& plane_1, Plane const& plane_2) noexcept
 	Point d = Point::cross(plane_1.normal, plane_2.normal);
 
 	// FIXME: Almost not equal?
-	return 0.0 != Point::dot(d, d);
+	return 0 != Point::dot(d, d);
 }
 
 constexpr bool intersects(Plane const& plane, Point const& point) noexcept
@@ -779,11 +781,11 @@ constexpr bool intersects(Plane const& plane, Ray const& ray) noexcept
 {
 	float nd = Point::dot(ray.direction, plane.normal);
 	float pn = Point::dot(ray.origin, plane.normal);
-	if (nd >= 0.0f) {
+	if (nd >= 0) {
 		return false;
 	}
 	float t = (plane.distance - pn) / nd;
-	return t >= 0.0;
+	return t >= 0;
 }
 
 constexpr bool intersects(Plane const& plane, Sphere const& sphere) noexcept

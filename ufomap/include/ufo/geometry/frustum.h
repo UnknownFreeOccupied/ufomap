@@ -74,7 +74,7 @@ struct Frustum {
 	{
 		float ratio = horizontal_angle / vertical_angle;
 
-		// TODO: Check if correct
+		// FIXME: Check if correct
 		float tang = std::tan(vertical_angle * 0.5);
 		float near_height = near_distance * tang;
 		float near_width = near_height * ratio;
