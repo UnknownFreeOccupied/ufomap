@@ -82,10 +82,10 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 		             filter.filter_bounding_volume != voxels_filter_.filter_bounding_volume;
 
 		if (!regenerate && filter.filter_bounding_volume) {
-			auto new_min = filter.bounding_volume.getMin();
-			auto new_max = filter.bounding_volume.getMax();
-			auto old_min = voxels_filter_.bounding_volume.getMin();
-			auto old_max = voxels_filter_.bounding_volume.getMax();
+			auto new_min = filter.bounding_volume.min();
+			auto new_max = filter.bounding_volume.max();
+			auto old_min = voxels_filter_.bounding_volume.min();
+			auto old_max = voxels_filter_.bounding_volume.max();
 
 			for (size_t i = 0; 3 != i; ++i) {
 				double new_diff = new_max[i] - new_min[i];
@@ -130,25 +130,25 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 							                    static_cast<double>(heatmap.max_time_step));
 							break;
 						case ColoringMode::X_AXIS_COLOR:
-							new_diff = heatmap.max_position.x() - heatmap.min_position.x();
+							new_diff = heatmap.max_position.x - heatmap.min_position.x;
 							min_diff =
-							    std::abs(voxels_heatmap_.min_position.x() - heatmap.min_position.x());
+							    std::abs(voxels_heatmap_.min_position.x - heatmap.min_position.x);
 							max_diff =
-							    std::abs(voxels_heatmap_.max_position.x() - heatmap.max_position.x());
+							    std::abs(voxels_heatmap_.max_position.x - heatmap.max_position.x);
 							break;
 						case ColoringMode::Y_AXIS_COLOR:
-							new_diff = heatmap.max_position.y() - heatmap.min_position.y();
+							new_diff = heatmap.max_position.y - heatmap.min_position.y;
 							min_diff =
-							    std::abs(voxels_heatmap_.min_position.y() - heatmap.min_position.y());
+							    std::abs(voxels_heatmap_.min_position.y - heatmap.min_position.y);
 							max_diff =
-							    std::abs(voxels_heatmap_.max_position.y() - heatmap.max_position.y());
+							    std::abs(voxels_heatmap_.max_position.y - heatmap.max_position.y);
 							break;
 						case ColoringMode::Z_AXIS_COLOR:
-							new_diff = heatmap.max_position.z() - heatmap.min_position.z();
+							new_diff = heatmap.max_position.z - heatmap.min_position.z;
 							min_diff =
-							    std::abs(voxels_heatmap_.min_position.z() - heatmap.min_position.z());
+							    std::abs(voxels_heatmap_.min_position.z - heatmap.min_position.z);
 							max_diff =
-							    std::abs(voxels_heatmap_.max_position.z() - heatmap.max_position.z());
+							    std::abs(voxels_heatmap_.max_position.z - heatmap.max_position.z);
 							break;
 						default:
 							break;

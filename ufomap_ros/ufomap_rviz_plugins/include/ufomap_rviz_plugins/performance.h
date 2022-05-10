@@ -64,9 +64,9 @@ struct Performance {
 	bool render_free;
 	bool render_occupied;
 
-	ufo::map::DepthType min_depth_unknown;
-	ufo::map::DepthType min_depth_free;
-	ufo::map::DepthType min_depth_occupied;
+	ufo::map::Depth min_depth_unknown;
+	ufo::map::Depth min_depth_free;
+	ufo::map::Depth min_depth_occupied;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

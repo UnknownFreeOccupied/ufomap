@@ -177,11 +177,11 @@ void UFOMapDisplay::processMessages()
 		message_lock.unlock();
 
 		// TODO: Get parameters
-		ufo::map::DepthType depth = grid_size_depth_;
+		ufo::map::Depth depth = grid_size_depth_;
 
 		updateMap(local_queue);
 
-		map_.updateModifiedNodes(std::max(static_cast<ufo::map::DepthType>(1U), depth) -
+		map_.updateModifiedNodes(std::max(static_cast<ufo::map::Depth>(1U), depth) -
 		                         1);  // Reset modified up to depth-1
 
 		float duration = std::chrono::duration<float, std::chrono::seconds::period>(
@@ -202,7 +202,7 @@ void UFOMapDisplay::processMessages()
 	}
 }
 
-void UFOMapDisplay::generateObjects(ufo::map::DepthType depth)
+void UFOMapDisplay::generateObjects(ufo::map::Depth depth)
 {
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -212,7 +212,7 @@ void UFOMapDisplay::generateObjects(ufo::map::DepthType depth)
 	            ufo::map::predicate::Modified();
 
 	for (auto const& node : map_.query(pred)) {
-		codes.push_back(node.getCode());
+		codes.push_back(node.code());
 	}
 
 	Performance perf = performance_display_->getPerformance();
@@ -267,7 +267,7 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 		return;
 	}
 
-	ufo::map::DepthType depth = grid_size_depth_;
+	ufo::map::Depth depth = grid_size_depth_;
 
 	decltype(queued_objects_) queued_objects;
 	{
@@ -316,10 +316,10 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 				    obj_it->second.position_, obj_it->second.orientation_);
 
 				obj_it->second.generateVoxels(render_mode[s], filter, heatmap[s],
-				                              map_.getResolution());
+				                              map_.resolution());
 			} else {
 				obj_it->second.generateVoxels(render_mode[s], filter, heatmap[s],
-				                              map_.getResolution());
+				                              map_.resolution());
 
 				scene_node_->addChild(obj_it->second.scene_node_);
 			}
@@ -335,12 +335,12 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 }
 
 std::vector<ufo::map::Code> UFOMapDisplay::getCodesInFOV(
-    ufo::geometry::Frustum const& view, ufo::map::DepthType depth) const
+    ufo::geometry::Frustum const& view, ufo::map::Depth depth) const
 {
 	std::vector<ufo::map::Code> codes;
 	auto pred = ufo::map::predicate::Leaf(depth) && ufo::map::predicate::Intersects(view);
 	for (auto const& node : map_.query(pred)) {
-		codes.push_back(node.getCode());
+		codes.push_back(node.code());
 	}
 	return codes;
 }
@@ -366,14 +366,14 @@ std::vector<ufo::map::Code> UFOMapDisplay::getCodesInFOV(
 void UFOMapDisplay::updateMap(
     std::vector<ufomap_msgs::UFOMapStamped::ConstPtr> const& msgs)
 {
-	auto res = map_.getResolution();
-	auto depth = map_.getTreeDepthLevels();
+	auto res = map_.resolution();
+	auto depth = map_.depthLevels();
 
 	for (auto const& msg : msgs) {
 		msgToUfo(msg->map, map_, false);
 	}
 
-	if (map_.getResolution() != res || map_.getTreeDepthLevels() != depth) {
+	if (map_.resolution() != res || map_.depthLevels() != depth) {
 		clearObjects();
 		updateGridSizeDepth();
 		regenerate_ = true;
@@ -433,8 +433,8 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 	ufo::geometry::Point max_allowed_pos;
 
 	if (filter.filter_bounding_volume) {
-		min_allowed_pos = filter.bounding_volume.getMin();
-		max_allowed_pos = filter.bounding_volume.getMax();
+		min_allowed_pos = filter.bounding_volume.min();
+		max_allowed_pos = filter.bounding_volume.max();
 	} else {
 		for (size_t i = 0; 3 != i; ++i) {
 			min_allowed_pos[i] =
@@ -478,10 +478,10 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 			    std::numeric_limits<ufo::map::TimeStepType>::lowest();
 
 			for (auto const& [_, data] : obj.transformed_voxels_) {
-				auto min_pos = data.getMinPosition();
-				auto max_pos = data.getMaxPosition();
-				auto min_ts = data.getMinTimeStep();
-				auto max_ts = data.getMaxTimeStep();
+				auto min_pos = data.minPosition();
+				auto max_pos = data.maxPosition();
+				auto min_ts = data.minTimeStep();
+				auto max_ts = data.maxTimeStep();
 				for (size_t i = 0; 3 != i; ++i) {
 					min_cur_pos[i] = std::min(min_cur_pos[i], min_pos[i]);
 					max_cur_pos[i] = std::max(max_cur_pos[i], max_pos[i]);
@@ -494,12 +494,9 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 				continue;
 			}
 
-			if (min_cur_pos.x() > max_allowed_pos.x() ||
-			    min_cur_pos.y() > max_allowed_pos.y() ||
-			    min_cur_pos.z() > max_allowed_pos.z() ||
-			    max_cur_pos.x() < min_allowed_pos.x() ||
-			    max_cur_pos.y() < min_allowed_pos.y() ||
-			    max_cur_pos.z() < min_allowed_pos.z()) {
+			if (min_cur_pos.x > max_allowed_pos.x || min_cur_pos.y > max_allowed_pos.y ||
+			    min_cur_pos.z > max_allowed_pos.z || max_cur_pos.x < min_allowed_pos.x ||
+			    max_cur_pos.y < min_allowed_pos.y || max_cur_pos.z < min_allowed_pos.z) {
 				continue;
 			}
 
@@ -530,8 +527,8 @@ bool UFOMapDisplay::updateGridSizeDepth()
 
 	Performance perf = performance_display_->getPerformance();
 	grid_size_depth_ = 0;
-	for (; grid_size_depth_ < map_.getTreeDepthLevels() &&
-	       map_.getNodeSize(grid_size_depth_) < perf.grid_size;
+	for (; grid_size_depth_ < map_.depthLevels() &&
+	       map_.nodeSize(grid_size_depth_) < perf.grid_size;
 	     ++grid_size_depth_) {
 	}
 
@@ -552,7 +549,7 @@ void UFOMapDisplay::clearObjects()
 
 void UFOMapDisplay::updateStatus()
 {
-	double res = map_.getResolution();
+	double res = map_.resolution();
 
 	QString res_str;
 	if (0.01 > res) {
@@ -566,12 +563,12 @@ void UFOMapDisplay::updateStatus()
 		res_str += " m";
 	}
 	QLocale locale;
-	setStatusStd(rviz::StatusProperty::Ok, "Map type", std::string(map_.getMapType()));
+	setStatusStd(rviz::StatusProperty::Ok, "Map type", std::string(map_.mapType()));
 	setStatus(rviz::StatusProperty::Ok, "Resolution", res_str);
 	setStatus(rviz::StatusProperty::Ok, "Num. leaf nodes",
-	          QString("%L1").arg(map_.getNumLeafNodes()));
+	          QString("%L1").arg(map_.numLeafNodes()));
 	setStatus(rviz::StatusProperty::Ok, "Num. inner nodes",
-	          QString("%L1").arg(map_.getNumInnerNodes()));
+	          QString("%L1").arg(map_.numInnerNodes()));
 	setStatus(rviz::StatusProperty::Ok, "Memory usage",
 	          locale.formattedDataSize(map_.memoryUsage()));
 }

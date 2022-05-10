@@ -68,7 +68,7 @@ class Data
 
 	void addPosition(ufo::map::Point3 position)
 	{
-		position_.emplace_back(position.x(), position.y(), position.z());
+		position_.emplace_back(position.x, position.y, position.z);
 
 		for (size_t i = 0; 3 != i; ++i) {
 			min_position_[i] = std::min(min_position_[i], position[i]);
@@ -86,10 +86,10 @@ class Data
 		max_time_step_ = std::max(max_time_step_, time_step);
 	}
 
-	void addColor(ufo::map::Color color)
+	void addColor(ufo::map::RGBColor color)
 	{
-		color_.emplace_back(color_lut[color.blue()], color_lut[color.green()],
-		                    color_lut[color.red()], 1.0f);
+		color_.emplace_back(color_lut[color.blue], color_lut[color.green],
+		                    color_lut[color.red], 1.0f);
 	}
 
 	template <class SemanticContainer>
@@ -108,13 +108,13 @@ class Data
 	                                          Filter const& filter, double size,
 	                                          Heatmap const& heatmap) const;
 
-	ufo::map::Point3 getMinPosition() const { return min_position_; }
+	ufo::map::Point3 minPosition() const { return min_position_; }
 
-	ufo::map::Point3 getMaxPosition() const { return max_position_; }
+	ufo::map::Point3 maxPosition() const { return max_position_; }
 
-	ufo::map::TimeStepType getMinTimeStep() const { return min_time_step_; }
+	ufo::map::TimeStepType minTimeStep() const { return min_time_step_; }
 
-	ufo::map::TimeStepType getMaxTimeStep() const { return max_time_step_; }
+	ufo::map::TimeStepType maxTimeStep() const { return max_time_step_; }
 
 	void clear();
 

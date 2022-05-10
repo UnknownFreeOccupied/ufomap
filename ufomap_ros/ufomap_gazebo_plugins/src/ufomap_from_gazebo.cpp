@@ -91,8 +91,8 @@ void UFOMapFromGazebo::Load(gazebo::physics::WorldPtr _parent, sdf::ElementPtr _
 	getSdfParam<bool>(_sdf, "PubTopicLatched", pub_topic_latched, pub_topic_latched);
 
 	gzlog << "Advertising service: " << service_name << '\n';
-	get_map_srv_ = nh_priv_.advertiseService(service_name,
-	                                         &UFOMapFromGazebo::getMapCallback, this);
+	get_map_srv_ =
+	    nh_priv_.advertiseService(service_name, &UFOMapFromGazebo::getMapCallback, this);
 	pub_ = nh_priv_.advertise<ufomap_msgs::UFOMapStamped>(pub_topic_name, 1,
 	                                                      pub_topic_latched);
 }
@@ -136,11 +136,11 @@ bool UFOMapFromGazebo::getMapCallback(GetMap::Request& req, GetMap::Response& re
 }
 
 void UFOMapFromGazebo::createMap2(ufo::map::OccupancyMapColor& map,
-                                       ufo::geometry::AABB const& bv, bool as_unknown,
-                                       unsigned int depth)
+                                  ufo::geometry::AABB const& bv, bool as_unknown,
+                                  unsigned int depth)
 {
-	float size = map.getNodeSize(depth);
-	float half_size = map.getNodeHalfSize(depth);
+	float size = map.nodeSize(depth);
+	float half_size = map.nodeHalfSize(depth);
 
 	gazebo::common::MeshManager* mesh_manager = gazebo::common::MeshManager::Instance();
 
@@ -159,7 +159,7 @@ void UFOMapFromGazebo::createMap2(ufo::map::OccupancyMapColor& map,
 	}
 
 	std::for_each(
-	    std::execution::seq, std::begin(collisions), std::end(collisions),
+	    std::begin(collisions), std::end(collisions),
 	    [&](gazebo::physics::CollisionPtr const& collision) {
 		    gazebo::msgs::Geometry geometry_msg;
 		    collision->GetShape()->FillMsg(geometry_msg);
@@ -345,8 +345,8 @@ void UFOMapFromGazebo::createMap2(ufo::map::OccupancyMapColor& map,
 }
 
 void UFOMapFromGazebo::createMap(ufo::map::OccupancyMapColor& map,
-                                      ufo::geometry::AABB const& bv, bool as_unknown,
-                                      unsigned int depth)
+                                 ufo::geometry::AABB const& bv, bool as_unknown,
+                                 unsigned int depth)
 {
 	std::vector<ignition::math::Vector3d> points;
 
@@ -364,13 +364,13 @@ void UFOMapFromGazebo::createMap(ufo::map::OccupancyMapColor& map,
 	    boost::dynamic_pointer_cast<gazebo::physics::RayShape>(
 	        engine->CreateShape("ray", gazebo::physics::CollisionPtr()));
 
-	float step = map.getNodeSize(depth);
+	float step = map.nodeSize(depth);
 	float res = step;
-	float half_step = map.getNodeHalfSize(depth);
-	ufo::math::Vector3 min = bv.getMin() - half_step;
-	ufo::math::Vector3 max = bv.getMax() + half_step;
+	float half_step = map.nodeHalfSize(depth);
+	ufo::math::Vector3 min = bv.min() - half_step;
+	ufo::math::Vector3 max = bv.max() + half_step;
 
-	int num_samples = 1;  // TODO: Should this be a parameter?
+	int num_samples = 1;  // FIXME: Should this be a parameter?
 	step /= num_samples;
 
 	auto dim_steps = (max - min) / step;
@@ -421,7 +421,7 @@ void UFOMapFromGazebo::createMap(ufo::map::OccupancyMapColor& map,
 	// 	n += step;
 	// 	return t;
 	// });
-	// std::for_each(std::execution::seq, begin(x_indices), end(x_indices), [&](auto x) {
+	// std::for_each(begin(x_indices), end(x_indices), [&](auto x) {
 	// 	printf("\rProgress %3.0f%%", 100 * (x - min.x()) / (max.x() - min.x()));
 	// 	for (float y = min.y(); y < max.y(); y += step) {
 	// 		for (float z = min.z(); z < max.z(); z += step) {
@@ -440,9 +440,9 @@ void UFOMapFromGazebo::createMap(ufo::map::OccupancyMapColor& map,
 }
 
 void UFOMapFromGazebo::getHits(std::vector<ignition::math::Vector3d>& hits,
-                                    gazebo::physics::RayShapePtr ray,
-                                    ignition::math::Vector3d from,
-                                    ignition::math::Vector3d const& to, double resolution)
+                               gazebo::physics::RayShapePtr ray,
+                               ignition::math::Vector3d from,
+                               ignition::math::Vector3d const& to, double resolution)
 {
 	size_t idx = from.X() != to.X() ? 0 : from.Y() != to.Y() ? 1 : 2;
 
@@ -459,13 +459,13 @@ void UFOMapFromGazebo::getHits(std::vector<ignition::math::Vector3d>& hits,
 
 		from[idx] += dist;
 		hits.push_back(from);
-		from[idx] += resolution;  // TODO: What should this be?
+		from[idx] += resolution;  // FIXME: What should this be?
 	}
 }
 
 bool UFOMapFromGazebo::checkIfInterest(ignition::math::Vector3d const& central_point,
-                                            gazebo::physics::RayShapePtr ray,
-                                            double resolution)
+                                       gazebo::physics::RayShapePtr ray,
+                                       double resolution)
 {
 	ignition::math::Vector3d start_point = central_point;
 	ignition::math::Vector3d end_point = central_point;

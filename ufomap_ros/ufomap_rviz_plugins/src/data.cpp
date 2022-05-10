@@ -123,20 +123,20 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
 			return render.color;
 		case ColoringMode::X_AXIS_COLOR:
 			return render.normalized_value
-			           ? Heatmap::getColor(position_[index].x, heatmap.min_position.x(),
-			                               heatmap.max_position.x(), render.color_factor)
+			           ? Heatmap::getColor(position_[index].x, heatmap.min_position.x,
+			                               heatmap.max_position.x, render.color_factor)
 			           : Heatmap::getColor(position_[index].x, render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
 		case ColoringMode::Y_AXIS_COLOR:
 			return render.normalized_value
-			           ? Heatmap::getColor(position_[index].y, heatmap.min_position.y(),
-			                               heatmap.max_position.y(), render.color_factor)
+			           ? Heatmap::getColor(position_[index].y, heatmap.min_position.y,
+			                               heatmap.max_position.y, render.color_factor)
 			           : Heatmap::getColor(position_[index].y, render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
 		case ColoringMode::Z_AXIS_COLOR:
 			return render.normalized_value
-			           ? Heatmap::getColor(position_[index].z, heatmap.min_position.z(),
-			                               heatmap.max_position.z(), render.color_factor)
+			           ? Heatmap::getColor(position_[index].z, heatmap.min_position.z,
+			                               heatmap.max_position.z, render.color_factor)
 			           : Heatmap::getColor(position_[index].z, render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
 		case ColoringMode::TIME_STEP_COLOR:

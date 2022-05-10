@@ -95,11 +95,11 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
  private:
 	void processMessages();
 
-	void generateObjects(ufo::map::DepthType depth);
+	void generateObjects(ufo::map::Depth depth);
 
 	template <ufo::map::OccupancyState State>
 	void generateObjectsImpl(std::vector<ufo::map::Code> const& codes,
-	                         ufo::map::DepthType min_depth)
+	                         ufo::map::Depth min_depth)
 	{
 		std::for_each(
 		    std::execution::par, std::begin(codes), std::end(codes), [&](auto code) {
@@ -114,7 +114,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 			        Ogre::Quaternion(1, 0, 0, 0);  // FIXME: What should this be?
 
 			    for (auto const& node : map_.query(pred)) {
-				    fillData(render_data.transformed_voxels_[node.getDepth()], map_, node);
+				    fillData(render_data.transformed_voxels_[node.depth()], map_, node);
 			    }
 
 			    std::scoped_lock object_lock(object_mutex_);
@@ -124,9 +124,9 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	}
 
 	template <class Map>
-	void fillData(Data& data, Map const& map, ufo::map::Node const& node)
+	void fillData(Data& data, Map const& map, ufo::map::NodeBV const& node)
 	{
-		data.addPosition(node.getCenter());
+		data.addPosition(node.center());
 
 		data.addOccupancy(map.getOccupancy(node) * 100);
 
@@ -148,7 +148,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	void updateMap(std::vector<ufomap_msgs::UFOMapStamped::ConstPtr> const& msgs);
 
 	std::vector<ufo::map::Code> getCodesInFOV(ufo::geometry::Frustum const& view,
-	                                          ufo::map::DepthType depth) const;
+	                                          ufo::map::Depth depth) const;
 
 	ufo::geometry::Frustum getViewFrustum(Ogre::Real far_clip) const;
 
@@ -222,7 +222,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	// Performance
 	rviz::Property* performance_property_;
 	std::unique_ptr<PerformanceDisplay> performance_display_;
-	ufo::map::DepthType grid_size_depth_ = 12;
+	ufo::map::Depth grid_size_depth_ = 12;
 	Performance prev_performance_;
 };
 

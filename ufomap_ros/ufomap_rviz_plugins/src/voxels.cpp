@@ -115,13 +115,13 @@ Ogre::HardwareVertexBufferSharedPtr VoxelsRenderable::getBuffer()
 Ogre::Real VoxelsRenderable::getBoundingRadius() const
 {
 	return Ogre::Math::Sqrt(
-	    std::max(mBox.getMaximum().squaredLength(), mBox.getMinimum().squaredLength()));
+	    std::max(mBox.maximum().squaredLength(), mBox.minimum().squaredLength()));
 }
 
 Ogre::Real VoxelsRenderable::getSquaredViewDepth(Ogre::Camera const* cam) const
 {
-	Ogre::Vector3 min = mBox.getMinimum();
-	Ogre::Vector3 max = mBox.getMaximum();
+	Ogre::Vector3 min = mBox.minimum();
+	Ogre::Vector3 max = mBox.maximum();
 	Ogre::Vector3 mid = ((max - min) * 0.5) + min;
 	Ogre::Vector3 dist = cam->getDerivedPosition() - mid;
 	return dist.squaredLength();

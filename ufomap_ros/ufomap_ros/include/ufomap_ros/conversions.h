@@ -68,9 +68,9 @@ std::optional<sensor_msgs::PointField> getField(sensor_msgs::PointCloud2 const& 
                                                 std::string const& field_name);
 
 // Point clouds
-template <typename T>
+template <class P>
 void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
-              ufo::map::PointCloudT<T>& cloud_out, bool filter_nan = true)
+              ufo::map::PointCloudT<P>& cloud_out, bool filter_nan = true)
 {
 	if (0 == cloud_in.point_step || 0 == cloud_in.row_step || 0 == cloud_in.height) {
 		throw std::runtime_error("cloud_in point_step, height, and/or row_step is zero");
@@ -103,21 +103,17 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	std::optional<sensor_msgs::PointCloud2ConstIterator<uint32_t>> iter_value;
 
 	// Create optional iteraters if wanted and available
-	if constexpr (std::is_base_of_v<ufo::map::Color, T>) {
+	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
 		if (rgb_field) {
 			iter_rgb.emplace(cloud_in, rgb_field->name);
 		}
 	}
-	if constexpr (std::is_base_of_v<ufo::map::SemanticPair, T>) {
+	if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
 		if (label_field) {
 			iter_label.emplace(cloud_in, label_field->name);
 		}
 		if (value_field) {
 			iter_value.emplace(cloud_in, value_field->name);
-		}
-	} else if constexpr (std::is_base_of_v<ufo::map::SemanticLabelC, T>) {
-		if (label_field) {
-			iter_label.emplace(cloud_in, label_field->name);
 		}
 	}
 
@@ -129,40 +125,36 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	for (; iter_x.end() != iter_x; ++iter_x) {
 		if (!filter_nan ||
 		    (!std::isnan(iter_x[0]) && !std::isnan(iter_x[1]) && !std::isnan(iter_x[2]))) {
-			cloud_out[index].x() = iter_x[0];
-			cloud_out[index].y() = iter_x[1];
-			cloud_out[index].z() = iter_x[2];
+			cloud_out[index].x = iter_x[0];
+			cloud_out[index].y = iter_x[1];
+			cloud_out[index].z = iter_x[2];
 
-			if constexpr (std::is_base_of_v<ufo::map::Color, T>) {
+			if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
 				if (rgb_field) {
-					cloud_out[index].setColor((*iter_rgb)[0], (*iter_rgb)[1], (*iter_rgb)[2]);
+					cloud_out[index].red = (*iter_rgb)[0];
+					cloud_out[index].green = (*iter_rgb)[1];
+					cloud_out[index].blue = (*iter_rgb)[2];
 				}
 			}
-			if constexpr (std::is_base_of_v<ufo::map::SemanticPair, T>) {
-				cloud_out[index].setLabel(iter_label ? *(*iter_label) : 0);
-				cloud_out[index].setValue(iter_value ? *(*iter_value) : 0);
-			} else if constexpr (std::is_base_of_v<ufo::map::SemanticLabelC, T>) {
-				cloud_out[index].setLabel(iter_label ? *(*iter_label) : 0);
+			if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+				cloud_out[index].label = iter_label ? *(*iter_label) : 0;
+				cloud_out[index].value = iter_value ? *(*iter_value) : 0;
 			}
 			++index;
 		}
 
 		// Increment optional iterators
-		if constexpr (std::is_base_of_v<ufo::map::Color, T>) {
+		if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
 			if (rgb_field) {
 				++(*iter_rgb);
 			}
 		}
-		if constexpr (std::is_base_of_v<ufo::map::SemanticPair, T>) {
+		if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
 			if (iter_label) {
 				++(*iter_label);
 			}
 			if (iter_value) {
 				++(*iter_value);
-			}
-		} else if constexpr (std::is_base_of_v<ufo::map::SemanticLabelC, T>) {
-			if (iter_label) {
-				++(*iter_label);
 			}
 		}
 	}
@@ -171,13 +163,13 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	cloud_out.resize(index);
 }
 
-template <typename T>
-void ufoToRos(ufo::map::PointCloudT<T> const& cloud_in,
+template <class P>
+void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
               sensor_msgs::PointCloud2& cloud_out)
 {
 	sensor_msgs::PointCloud2Modifier cloud_out_modifier(cloud_out);
-	if constexpr (std::is_base_of_v<ufo::map::Color, T> &&
-	              std::is_base_of_v<ufo::map::SemanticPair, T>) {
+	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P> &&
+	              std::is_base_of_v<ufo::map::SemanticPair, P>) {
 		// clang-format off
 		cloud_out_modifier.setPointCloud2Fields(6, 
 														"x",     1, sensor_msgs::PointField::FLOAT32,
@@ -187,9 +179,9 @@ void ufoToRos(ufo::map::PointCloudT<T> const& cloud_in,
 														"label", 1, sensor_msgs::PointField::UINT32,
 														"value", 1, sensor_msgs::PointField::UINT32);
 		// clang-format on
-	} else if constexpr (std::is_base_of_v<ufo::map::Color, T>) {
+	} else if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
 		cloud_out_modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
-	} else if constexpr (std::is_base_of_v<ufo::map::SemanticPair, T>) {
+	} else if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
 		// clang-format off
 			cloud_out_modifier.setPointCloud2Fields(5, 
                             "x",     1, sensor_msgs::PointField::FLOAT32,
@@ -210,35 +202,30 @@ void ufoToRos(ufo::map::PointCloudT<T> const& cloud_in,
 	std::optional<sensor_msgs::PointCloud2Iterator<uint32_t>> iter_value;
 
 	// Create optional iterators
-	if constexpr (std::is_base_of_v<ufo::map::Color, T>) {
+	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
 		iter_rgb.emplace(cloud_out, "rgb");
 	}
-	if constexpr (std::is_base_of_v<ufo::map::SemanticPair, T>) {
+	if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
 		iter_label.emplace(cloud_out, "label");
 		iter_value.emplace(cloud_out, "value");
-	} else if constexpr (std::is_base_of_v<ufo::map::SemanticLabelC, T>) {
-		iter_label.emplace(cloud_out, "label");
 	}
 
 	for (auto const& point : cloud_in) {
-		iter_x[0] = point.x();
-		iter_x[1] = point.y();
-		iter_x[2] = point.z();
+		iter_x[0] = point.x;
+		iter_x[1] = point.y;
+		iter_x[2] = point.z;
 		++iter_x;
-		if constexpr (std::is_base_of_v<ufo::map::Color, T>) {
-			(*iter_rgb)[0] = point.red();
-			(*iter_rgb)[1] = point.green();
-			(*iter_rgb)[2] = point.blue();
+		if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
+			(*iter_rgb)[0] = point.red;
+			(*iter_rgb)[1] = point.green;
+			(*iter_rgb)[2] = point.blue;
 			++(*iter_rgb);
 		}
-		if constexpr (std::is_base_of_v<ufo::map::SemanticPair, T>) {
-			*(*iter_label) = static_cast<uint32_t>(point.getLabel());
-			*(*iter_value) = static_cast<uint32_t>(point.getValue());
+		if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+			*(*iter_label) = point.label;
+			*(*iter_value) = point.value;
 			++(*iter_label);
 			++(*iter_value);
-		} else if constexpr (std::is_base_of_v<ufo::map::SemanticLabelC, T>) {
-			*(*iter_label) = static_cast<uint32_t>(point.getLabel());
-			++(*iter_label);
 		}
 	}
 }
@@ -285,9 +272,9 @@ template <typename T>
 constexpr void ufoToRos(ufo::math::Vector3<T> const& point_in,
                         geometry_msgs::Vector3& point_out)
 {
-	point_out.x = point_in.x();
-	point_out.y = point_in.y();
-	point_out.z = point_in.z();
+	point_out.x = point_in.x;
+	point_out.y = point_in.y;
+	point_out.z = point_in.z;
 }
 
 template <typename P, typename T>
@@ -303,10 +290,10 @@ template <typename T>
 constexpr void rosToUfo(geometry_msgs::Quaternion const& quaternion_in,
                         ufo::math::Quaternion<T>& quaternion_out)
 {
-	quaternion_out.x() = quaternion_in.x;
-	quaternion_out.y() = quaternion_in.y;
-	quaternion_out.z() = quaternion_in.z;
-	quaternion_out.w() = quaternion_in.w;
+	quaternion_out.x = quaternion_in.x;
+	quaternion_out.y = quaternion_in.y;
+	quaternion_out.z = quaternion_in.z;
+	quaternion_out.w = quaternion_in.w;
 }
 
 constexpr ufo::math::Quaterniond rosToUfo(geometry_msgs::Quaternion const& quaternion)
@@ -318,14 +305,14 @@ template <typename T>
 constexpr void ufoToRos(ufo::math::Quaternion<T> const& quaternion_in,
                         geometry_msgs::Quaternion& quaternion_out)
 {
-	quaternion_out.x = quaternion_in.x();
-	quaternion_out.y = quaternion_in.y();
-	quaternion_out.z = quaternion_in.z();
-	quaternion_out.w = quaternion_in.w();
+	quaternion_out.x = quaternion_in.x;
+	quaternion_out.y = quaternion_in.y;
+	quaternion_out.z = quaternion_in.z;
+	quaternion_out.w = quaternion_in.w;
 }
 
 template <typename T>
-constexpr geometry_msgs::Quaternion ufoToRos(ufo::math::Quaternion<T> const& quaternion)
+geometry_msgs::Quaternion ufoToRos(ufo::math::Quaternion<T> const& quaternion)
 {
 	geometry_msgs::Quaternion q;
 	ufoToRos(quaternion, q);
@@ -337,15 +324,15 @@ template <typename T>
 constexpr void rosToUfo(geometry_msgs::Transform const& transform_in,
                         ufo::math::Pose6<T>& transform_out)
 {
-	rosToUfo(transform_in.translation, transform_out.translation());
-	rosToUfo(transform_in.rotation, transform_out.rotation());
+	rosToUfo(transform_in.translation, transform_out.translation);
+	rosToUfo(transform_in.rotation, transform_out.rotation);
 }
 
 template <typename T>
 constexpr void rosToUfo(geometry_msgs::Pose const& pose_in, ufo::math::Pose6<T>& pose_out)
 {
-	rosToUfo(pose_in.position, pose_out.translation());
-	rosToUfo(pose_in.orientation, pose_out.rotation());
+	rosToUfo(pose_in.position, pose_out.translation);
+	rosToUfo(pose_in.orientation, pose_out.rotation);
 }
 
 constexpr ufo::math::Pose6d rosToUfo(geometry_msgs::Transform const& transform)
@@ -367,15 +354,15 @@ template <typename T>
 constexpr void ufoToRos(ufo::math::Pose6<T> const& transform_in,
                         geometry_msgs::Transform& transform_out)
 {
-	ufoToRos(transform_in.translation(), transform_out.translation);
-	ufoToRos(transform_in.rotation(), transform_out.rotation);
+	ufoToRos(transform_in.translation, transform_out.translation);
+	ufoToRos(transform_in.rotation, transform_out.rotation);
 }
 
 template <typename T>
 constexpr void ufoToRos(ufo::math::Pose6<T> const& pose_in, geometry_msgs::Pose& pose_out)
 {
-	ufoToRos(pose_in.translation(), pose_out.position);
-	ufoToRos(pose_in.rotation(), pose_out.orientation);
+	ufoToRos(pose_in.translation, pose_out.position);
+	ufoToRos(pose_in.rotation, pose_out.orientation);
 }
 
 template <typename G, typename T>
