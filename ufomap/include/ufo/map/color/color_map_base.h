@@ -43,7 +43,6 @@
 
 // UFO
 #include <ufo/map/color/color_node.h>
-#include <ufo/map/map_base.h>
 #include <ufo/map/octree/octree_base.h>
 
 // STL

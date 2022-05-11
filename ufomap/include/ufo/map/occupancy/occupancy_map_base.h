@@ -43,7 +43,6 @@
 
 // UFO
 #include <ufo/geometry/aabb.h>
-#include <ufo/map/map_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
 #include <ufo/map/octree/octree_base.h>
 #include <ufo/map/predicate/occupancy.h>

@@ -44,7 +44,6 @@
 
 // UFO
 #include <ufo/container/flat_map.h>
-#include <ufo/map/map_base.h>
 #include <ufo/map/octree/octree_base.h>
 #include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/types.h>
