@@ -161,12 +161,12 @@ struct Pose6 {
 		return *this;
 	}
 
-	constexpr T distance(Pose6 const& other) const noexcept
+	constexpr auto distance(Pose6 const& other) const noexcept
 	{
 		return translation.distance(other.translation);
 	}
 
-	constexpr T translationLength() const noexcept { return translation.norm(); }
+	constexpr auto translationLength() const noexcept { return translation.norm(); }
 };
 
 using Pose6f = Pose6<float>;

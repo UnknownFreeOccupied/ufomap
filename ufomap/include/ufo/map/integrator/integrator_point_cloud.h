@@ -50,6 +50,28 @@
 
 namespace ufo::map
 {
+template <class P>
+struct DiscretePoint {
+	std::vector<P> points;
+	Code code;
+};
+
+template <class P>
+using DiscretePointCloud = PointCloudT<P>;
+
+template <class P>
+class DiscretePointCloud
+{
+ public:
+	template <class Map>
+	DiscretePointCloud(Map const& map, PointCloudT<P> const& cloud)
+	{
+	}
+
+ private:
+	PointCloudT<DiscretePoint> cloud_;
+};
+
 template <class T>
 struct IntegratorPoint {
 	IntegratorPoint() = default;

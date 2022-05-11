@@ -225,7 +225,7 @@ struct Vector3 {
 		return !(*this == other);
 	}
 
-	constexpr T norm() const noexcept { return std::sqrt(squaredNorm()); }
+	constexpr auto norm() const noexcept { return std::sqrt(squaredNorm()); }
 
 	constexpr T squaredNorm() const noexcept { return (x * x) + (y * y) + (z * z); }
 
@@ -237,7 +237,7 @@ struct Vector3 {
 
 	constexpr Vector3 normalized() const noexcept { return Vector3(*this).normalize(); }
 
-	constexpr T angleTo(Vector3 const& other) const noexcept
+	constexpr auto angleTo(Vector3 const& other) const noexcept
 	{
 		return std::acos(dot(other) / (norm() * other.norm()));
 	}
@@ -250,7 +250,7 @@ struct Vector3 {
 		return (x * x) + (y * y) + (z * z);
 	}
 
-	constexpr T distance(Vector3 const& other) const noexcept
+	constexpr auto distance(Vector3 const& other) const noexcept
 	{
 		return std::sqrt(squaredDistance(other));
 	}
@@ -262,7 +262,7 @@ struct Vector3 {
 		return (x * x) + (y * y);
 	}
 
-	constexpr T distanceXY(Vector3 const& other) const noexcept
+	constexpr auto distanceXY(Vector3 const& other) const noexcept
 	{
 		return std::sqrt(squaredDistanceXY(other));
 	}
@@ -354,10 +354,26 @@ struct Vector3 {
 		return Vector3(std::clamp(value.x, min.x, max.x), std::clamp(value.y, min.y, max.y),
 		               std::clamp(value.z, min.z, max.z));
 	}
+
+	constexpr Vector3& abs() noexcept
+	{
+		x = std::abs(x);
+		y = std::abs(y);
+		z = std::abs(z);
+		return *this;
+	}
+
+	constexpr Vector3 abs() const noexcept { return abs(*this); }
+
+	static constexpr Vector3 abs(Vector3 const& value)
+	{
+		return Vector3(std::abs(value.x), std::abs(value.y), std::abs(value.z));
+	}
 };
 
 using Vector3f = Vector3<float>;
 using Vector3d = Vector3<double>;
+using Vector3i = Vector3<int>;
 }  // namespace ufo::math
 
 #endif  // UFO_MATH_VECTOR3_H

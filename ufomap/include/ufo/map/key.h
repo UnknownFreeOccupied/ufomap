@@ -227,6 +227,8 @@ class Key
 using KeySet = std::unordered_set<Key, Key::Hash>;
 template <typename T>
 using KeyMap = std::unordered_map<Key, T, Key::Hash>;
+
+using KeyRay = std::vector<Key>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_KEY_H

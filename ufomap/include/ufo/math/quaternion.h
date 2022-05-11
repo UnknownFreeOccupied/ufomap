@@ -221,7 +221,7 @@ struct Quaternion {
 
 	constexpr T& operator[](size_t index) noexcept { return *(&w + index); }
 
-	constexpr T norm() const noexcept
+	constexpr auto norm() const noexcept
 	{
 		T n = 0;
 		for (unsigned int i = 0; i < 4; i++) {
