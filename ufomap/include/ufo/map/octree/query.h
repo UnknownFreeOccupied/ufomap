@@ -43,7 +43,7 @@
 
 namespace ufo::map
 {
-/**
+/*!
  * @brief Wrapper for a query making it possible for write queries such as
  * @code for (auto node : map.query(...)) {} @endcode
  *

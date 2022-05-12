@@ -61,7 +61,7 @@ using PointCloudColor = PointCloudT<Point3Color>;
 using PointCloudSemantic = PointCloudT<Point3Semantic>;
 using PointCloudColorSemantic = PointCloudT<Point3ColorSemantic>;
 
-/**
+/*!
  * @brief Transform each point in the point cloud
  *
  * @param transform The transformation to be applied to each point

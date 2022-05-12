@@ -1109,7 +1109,7 @@ std::ostream &operator<<(std::ostream &os, RangeSet<Key> const &range_set)
 	return os;
 }
 
-/**
+/*!
  * @brief Returns true if b is a subsequence of a.
  *
  * @tparam Key1
@@ -1139,7 +1139,7 @@ template <typename Key1, typename Key2>
 	return true;
 }
 
-/**
+/*!
  * @brief Creates a new RangeSet containing the ranges in a which are not find
  * in b.
  *

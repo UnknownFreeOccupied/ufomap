@@ -60,7 +60,7 @@ struct OccupancyNodeColor : OccupancyNode<T>, ColorNode {
 		return OccupancyNode<T>::operator!=(rhs) || ColorNode::operator!=(rhs);
 	}
 
-	/**
+	/*!
 	 * @brief Write the data from this node to stream s
 	 *
 	 * @param s The stream to write the data to
@@ -71,7 +71,7 @@ struct OccupancyNodeColor : OccupancyNode<T>, ColorNode {
 		return s.write(reinterpret_cast<char const*>(this), sizeof(OccupancyNodeColor));
 	}
 
-	/**
+	/*!
 	 * @brief Read the data for this node from stream s
 	 *
 	 * @param s The stream to read the data from
@@ -94,7 +94,7 @@ struct OccupancyTimeNodeColor : OccupancyTimeNode, ColorNode {
 		return OccupancyTimeNode::operator!=(rhs) && ColorNode::operator!=(rhs);
 	}
 
-	/**
+	/*!
 	 * @brief Write the data from this node to stream s
 	 *
 	 * @param s The stream to write the data to
@@ -105,7 +105,7 @@ struct OccupancyTimeNodeColor : OccupancyTimeNode, ColorNode {
 		return s.write(reinterpret_cast<char const*>(this), sizeof(OccupancyTimeNodeColor));
 	}
 
-	/**
+	/*!
 	 * @brief Read the data for this node from stream s
 	 *
 	 * @param s The stream to read the data from
@@ -129,7 +129,7 @@ struct OccupancyNodeSemantic : SemanticNode, OccupancyNode<T> {
 		return OccupancyNode<T>::operator!=(rhs) || SemanticNode::operator!=(rhs);
 	}
 
-	/**
+	/*!
 	 * @brief Write the data from this node to stream s
 	 *
 	 * @param s The stream to write the data to
@@ -140,7 +140,7 @@ struct OccupancyNodeSemantic : SemanticNode, OccupancyNode<T> {
 		return SemanticNode::writeData(OccupancyNode<T>::writeData(s));
 	}
 
-	/**
+	/*!
 	 * @brief Read the data for this node from stream s
 	 *
 	 * @param s The stream to read the data from
@@ -163,7 +163,7 @@ struct OccupancyTimeNodeSemantic : SemanticNode, OccupancyTimeNode {
 		return OccupancyTimeNode::operator!=(rhs) || SemanticNode::operator!=(rhs);
 	}
 
-	/**
+	/*!
 	 * @brief Write the data from this node to stream s
 	 *
 	 * @param s The stream to write the data to
@@ -174,7 +174,7 @@ struct OccupancyTimeNodeSemantic : SemanticNode, OccupancyTimeNode {
 		return SemanticNode::writeData(OccupancyTimeNode::writeData(s));
 	}
 
-	/**
+	/*!
 	 * @brief Read the data for this node from stream s
 	 *
 	 * @param s The stream to read the data from
@@ -198,7 +198,7 @@ struct OccupancyNodeColorSemantic : SemanticNode, OccupancyNodeColor<T> {
 		return OccupancyNodeColor<T>::operator!=(rhs) || SemanticNode::operator!=(rhs);
 	}
 
-	/**
+	/*!
 	 * @brief Write the data from this node to stream s
 	 *
 	 * @param s The stream to write the data to
@@ -209,7 +209,7 @@ struct OccupancyNodeColorSemantic : SemanticNode, OccupancyNodeColor<T> {
 		return SemanticNode::writeData(OccupancyNodeColor<T>::writeData(s));
 	}
 
-	/**
+	/*!
 	 * @brief Read the data for this node from stream s
 	 *
 	 * @param s The stream to read the data from
@@ -232,7 +232,7 @@ struct OccupancyTimeNodeColorSemantic : SemanticNode, OccupancyTimeNodeColor {
 		return OccupancyTimeNodeColor::operator!=(rhs) || SemanticNode::operator!=(rhs);
 	}
 
-	/**
+	/*!
 	 * @brief Write the data from this node to stream s
 	 *
 	 * @param s The stream to write the data to
@@ -243,7 +243,7 @@ struct OccupancyTimeNodeColorSemantic : SemanticNode, OccupancyTimeNodeColor {
 		return SemanticNode::writeData(OccupancyTimeNodeColor::writeData(s));
 	}
 
-	/**
+	/*!
 	 * @brief Read the data for this node from stream s
 	 *
 	 * @param s The stream to read the data from

@@ -51,7 +51,7 @@ namespace ufo::geometry
 // AABB
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -87,7 +87,7 @@ constexpr float squaredDistance(AABB const& a, AABB const& b) noexcept
 	return result;
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -101,7 +101,7 @@ constexpr float distance(AABB const& a, AABB const& b) noexcept
 	return std::sqrt(squaredDistance(a, b));
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -137,7 +137,7 @@ constexpr float squaredDistance(AABB const& a, AAEBB const& b) noexcept
 	return result;
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -151,7 +151,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 	return std::sqrt(squaredDistance(a, b));
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -166,7 +166,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -181,7 +181,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	return std::sqrt(squaredDistance(a, b));
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -196,7 +196,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -211,7 +211,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	return std::sqrt(squaredDistance(a, b));
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -226,7 +226,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -241,7 +241,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	return std::sqrt(squaredDistance(a, b));
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -256,7 +256,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -271,7 +271,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
 // 	return std::sqrt(squaredDistance(a, b));
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -286,7 +286,7 @@ constexpr float squaredDistance(AABB const& a, Point const& b) noexcept
 	return b.squaredDistance(Point::clamp(b, a.min(), a.max()));
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -300,7 +300,7 @@ constexpr float distance(AABB const& a, Point const& b) noexcept
 	return std::sqrt(squaredDistance(a, b));
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -315,7 +315,7 @@ constexpr float distance(AABB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -330,7 +330,7 @@ constexpr float distance(AABB const& a, Point const& b) noexcept
 // 	return std::sqrt(squaredDistance(a, b));
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -344,7 +344,7 @@ constexpr float distance(AABB const& a, Sphere const& b) noexcept
 	return std::fdim(distance(a, b.center), b.radius);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -365,7 +365,7 @@ constexpr float squaredDistance(AABB const& a, Sphere const& b) noexcept
 // AAEBB
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -380,7 +380,7 @@ constexpr float squaredDistance(AAEBB const& a, AABB const& b) noexcept
 	return squaredDistance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -394,7 +394,7 @@ constexpr float distance(AAEBB const& a, AABB const& b) noexcept
 	return distance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -450,7 +450,7 @@ constexpr float squaredDistance(AAEBB const& a, AAEBB const& b) noexcept
 	// return result;
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -464,7 +464,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 	return std::sqrt(squaredDistance(a, b));
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -479,7 +479,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -494,7 +494,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -509,7 +509,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -524,7 +524,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -539,7 +539,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -554,7 +554,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -569,7 +569,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -584,7 +584,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -599,7 +599,7 @@ constexpr float squaredDistance(AAEBB const& a, Point const& b) noexcept
 	return b.squaredDistance(Point::clamp(b, a.min(), a.max()));
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -613,7 +613,7 @@ constexpr float distance(AAEBB const& a, Point const& b) noexcept
 	return b.distance(Point::clamp(b, a.min(), a.max()));
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -628,7 +628,7 @@ constexpr float distance(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -643,7 +643,7 @@ constexpr float distance(AAEBB const& a, Point const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -657,7 +657,7 @@ constexpr float distance(AAEBB const& a, Sphere const& b) noexcept
 	return std::fdim(distance(a, b.center), b.radius);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -678,7 +678,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // Frustum
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -694,7 +694,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -709,7 +709,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -725,7 +725,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -740,7 +740,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -755,7 +755,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -770,7 +770,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -785,7 +785,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -800,7 +800,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -815,7 +815,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -830,7 +830,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -845,7 +845,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -860,7 +860,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -875,7 +875,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -890,7 +890,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -905,7 +905,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -920,7 +920,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -935,7 +935,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -954,7 +954,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // Line segment
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -970,7 +970,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -985,7 +985,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1001,7 +1001,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1016,7 +1016,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1032,7 +1032,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1047,7 +1047,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1062,7 +1062,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1077,7 +1077,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1092,7 +1092,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1107,7 +1107,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1122,7 +1122,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1137,7 +1137,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1152,7 +1152,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1167,7 +1167,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1182,7 +1182,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1197,7 +1197,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1212,7 +1212,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1231,7 +1231,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // OBB
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1247,7 +1247,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1262,7 +1262,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1278,7 +1278,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1293,7 +1293,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1309,7 +1309,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1324,7 +1324,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1340,7 +1340,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1355,7 +1355,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1370,7 +1370,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1385,7 +1385,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1400,7 +1400,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1415,7 +1415,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1430,7 +1430,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1445,7 +1445,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1460,7 +1460,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1475,7 +1475,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1490,7 +1490,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1509,7 +1509,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // Plane
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1525,7 +1525,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1540,7 +1540,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1556,7 +1556,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1571,7 +1571,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1587,7 +1587,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1602,7 +1602,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1618,7 +1618,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1633,7 +1633,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1649,7 +1649,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1664,7 +1664,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1679,7 +1679,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1694,7 +1694,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1709,7 +1709,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1724,7 +1724,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1739,7 +1739,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1754,7 +1754,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1769,7 +1769,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1788,7 +1788,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
 // Point
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1803,7 +1803,7 @@ constexpr float squaredDistance(Point const& a, AABB const& b) noexcept
 	return squaredDistance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1817,7 +1817,7 @@ constexpr float distance(Point const& a, AABB const& b) noexcept
 	return distance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1832,7 +1832,7 @@ constexpr float squaredDistance(Point const& a, AAEBB const& b) noexcept
 	return squaredDistance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1846,7 +1846,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 	return distance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1862,7 +1862,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1877,7 +1877,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1893,7 +1893,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1908,7 +1908,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1924,7 +1924,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1939,7 +1939,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1955,7 +1955,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1970,7 +1970,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -1985,7 +1985,7 @@ constexpr float squaredDistance(Point const& a, Point const& b) noexcept
 	return a.squaredDistance(b);
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -1999,7 +1999,7 @@ constexpr float distance(Point const& a, Point const& b) noexcept
 	return a.distance(b);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2014,7 +2014,7 @@ constexpr float distance(Point const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2029,7 +2029,7 @@ constexpr float distance(Point const& a, Point const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2043,7 +2043,7 @@ constexpr float distance(Point const& a, Sphere const& b) noexcept
 	return std::fdim(a.distance(b.center), b.radius);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2063,7 +2063,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // Ray
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2079,7 +2079,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2094,7 +2094,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2110,7 +2110,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2125,7 +2125,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2141,7 +2141,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2156,7 +2156,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2172,7 +2172,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2187,7 +2187,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2203,7 +2203,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2218,7 +2218,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2234,7 +2234,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2249,7 +2249,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2265,7 +2265,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2280,7 +2280,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2296,7 +2296,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2311,7 +2311,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	return squaredDistance(a, b);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2326,7 +2326,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2345,7 +2345,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
 // Sphere
 //
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2360,7 +2360,7 @@ constexpr float squaredDistance(Sphere const& a, AABB const& b) noexcept
 	return squaredDistance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2374,7 +2374,7 @@ constexpr float distance(Sphere const& a, AABB const& b) noexcept
 	return distance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2389,7 +2389,7 @@ constexpr float squaredDistance(Sphere const& a, AAEBB const& b) noexcept
 	return squaredDistance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2403,7 +2403,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 	return distance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2419,7 +2419,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2434,7 +2434,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2450,7 +2450,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2465,7 +2465,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2481,7 +2481,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2496,7 +2496,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2512,7 +2512,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2527,7 +2527,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2542,7 +2542,7 @@ constexpr float squaredDistance(Sphere const& a, Point const& b) noexcept
 	return distance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2556,7 +2556,7 @@ constexpr float distance(Sphere const& a, Point const& b) noexcept
 	return distance(b, a);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,
@@ -2572,7 +2572,7 @@ constexpr float distance(Sphere const& a, Point const& b) noexcept
 // 	return squaredDistance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2587,7 +2587,7 @@ constexpr float distance(Sphere const& a, Point const& b) noexcept
 // 	return distance(b, a);
 // }
 
-/**
+/*!
  * @brief Computes the minimum distance between a and b.
  *
  * @note If only the relative distance is of importance, then the squared distance is
@@ -2601,7 +2601,7 @@ constexpr float distance(Sphere const& a, Sphere const& b) noexcept
 	return std::fdim(a.center.distance(b.center), a.radius + b.radius);
 }
 
-/**
+/*!
  * @brief Computes the minimum squared distance between a and b.
  *
  * @note The squared distance is generally faster to compute than the distance. Therefore,

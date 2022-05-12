@@ -54,7 +54,7 @@
 
 namespace ufo::map
 {
-/**
+/*!
  * @brief A key represent an octree index at a specified depth
  *
  */
@@ -116,14 +116,14 @@ class Key
 		       (lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_ && lhs.z_ >= rhs.z_);
 	}
 
-	/**
+	/*!
 	 * @brief Get the depth of the key.
 	 *
 	 * @return The depth the key.
 	 */
 	constexpr Depth depth() const noexcept { return depth_; }
 
-	/**
+	/*!
 	 * @brief Change the depth of the key.
 	 *
 	 * @note This will change the x, y, z components of the key.
@@ -140,49 +140,49 @@ class Key
 
 	constexpr KeyType& operator[](std::size_t idx) { return *(&x_ + idx); }
 
-	/**
+	/*!
 	 * @brief Returns the x component of the key
 	 *
 	 * @return const KeyType& The x component of the key
 	 */
 	constexpr KeyType x() const noexcept { return x_; }
 
-	/**
+	/*!
 	 * @brief Returns the y component of the key
 	 *
 	 * @return const KeyType& The y component of the key
 	 */
 	constexpr KeyType y() const noexcept { return y_; }
 
-	/**
+	/*!
 	 * @brief Returns the z component of the key
 	 *
 	 * @return const KeyType& The z component of the key
 	 */
 	constexpr KeyType z() const noexcept { return z_; }
 
-	/**
+	/*!
 	 * @brief Returns the x component of the key
 	 *
 	 * @return KeyType& The x component of the key
 	 */
 	constexpr KeyType& x() noexcept { return x_; }
 
-	/**
+	/*!
 	 * @brief Returns the y component of the key
 	 *
 	 * @return KeyType& The y component of the key
 	 */
 	constexpr KeyType& y() noexcept { return y_; }
 
-	/**
+	/*!
 	 * @brief Returns the z component of the key
 	 *
 	 * @return KeyType& The z component of the key
 	 */
 	constexpr KeyType& z() noexcept { return z_; }
 
-	/**
+	/*!
 	 * @brief
 	 *
 	 */

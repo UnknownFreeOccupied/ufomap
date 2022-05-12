@@ -54,7 +54,7 @@ namespace ufo::map
 {
 using RGBColorType = uint8_t;
 
-/**
+/*!
  * @brief RGB color
  *
  */

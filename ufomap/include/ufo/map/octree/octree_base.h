@@ -98,7 +98,7 @@ class OctreeBase
 	// Clear
 	//
 
-	/**
+	/*!
 	 * @brief Erases the map. After this call, the map contains only the default constructed
 	 * root node.
 	 *
@@ -106,7 +106,7 @@ class OctreeBase
 	 */
 	void clear(bool prune = false) { clear(resolution(), depthLevels(), prune); }
 
-	/**
+	/*!
 	 * @brief Erases the map. After this call, the map contains only the default constructed
 	 * root node.
 	 *
@@ -121,7 +121,7 @@ class OctreeBase
 		clear(policy, resolution(), depthLevels(), prune);
 	}
 
-	/**
+	/*!
 	 * @brief Erases the map and change the resolution and the number of depth levels. After
 	 * this call, the map contains only the default constructed root node.
 	 *
@@ -141,7 +141,7 @@ class OctreeBase
 		initRoot();
 	}
 
-	/**
+	/*!
 	 * @brief Erases the map and change the resolution and the number of depth levels. After
 	 * this call, the map contains only the default constructed root node.
 	 *
@@ -169,7 +169,7 @@ class OctreeBase
 	// Get node size
 	//
 
-	/**
+	/*!
 	 * @brief Get the size of a node at a specific depth.
 	 *
 	 * @param depth The depth.
@@ -181,7 +181,7 @@ class OctreeBase
 	// Resolution
 	//
 
-	/**
+	/*!
 	 * @brief Get the resolution (leaf node size) of the octree.
 	 *
 	 * @return The resolution (leaf node size) of the octree.
@@ -192,7 +192,7 @@ class OctreeBase
 	// Automatic pruning
 	//
 
-	/**
+	/*!
 	 * @brief Check if autonomaic pruning is enabled.
 	 *
 	 * @return Whether automatic pruning is enabled.
@@ -202,7 +202,7 @@ class OctreeBase
 		return automatic_pruning_enabled_;
 	}
 
-	/**
+	/*!
 	 * @brief Set automatic pruning.
 	 *
 	 * @param enable New state of the automatic pruning.
@@ -216,7 +216,7 @@ class OctreeBase
 	// Parallel execution depth
 	//
 
-	/**
+	/*!
 	 * @brief Return the depth where parallel execution begins.
 	 *
 	 * @return The depth parallel execution begins.
@@ -226,7 +226,7 @@ class OctreeBase
 		return parallel_depth_;
 	}
 
-	/**
+	/*!
 	 * @brief Set the depth when parallel execution begins.
 	 *
 	 * @param new_parallel_depth The new depth where parallel execution begins.
@@ -240,21 +240,21 @@ class OctreeBase
 	// Depth levels
 	//
 
-	/**
+	/*!
 	 * @brief The octree depth levels.
 	 *
 	 * @return The number of octree depth levels.
 	 */
 	[[nodiscard]] constexpr Depth depthLevels() const noexcept { return depth_levels_; }
 
-	/**
+	/*!
 	 * @brief The minimum depth levels an octree can have.
 	 *
 	 * @return The minimum depth levels an octree can have.
 	 */
 	[[nodiscard]] static constexpr Depth minDepthLevels() { return MIN_DEPTH_LEVELS; }
 
-	/**
+	/*!
 	 * @brief The maximum depth levels an octree can have.
 	 *
 	 * @return The maximum depth levels an octree can have.
@@ -265,7 +265,7 @@ class OctreeBase
 	// Get min/max coordinate octree can store
 	//
 
-	/**
+	/*!
 	 * @return The minimum coordinate the octree can store.
 	 */
 	[[nodiscard]] Point3 min() const
@@ -274,7 +274,7 @@ class OctreeBase
 		return Point3(half_size, half_size, half_size);
 	}
 
-	/**
+	/*!
 	 * @return The maximum coordinate the octree can store.
 	 */
 	[[nodiscard]] Point3 max() const
@@ -287,7 +287,7 @@ class OctreeBase
 	// Center
 	//
 
-	/**
+	/*!
 	 * @return The center of the octree.
 	 */
 	[[nodiscard]] Point3 center() const { return Point3(0, 0, 0); }
@@ -296,7 +296,7 @@ class OctreeBase
 	// Bounding volume
 	//
 
-	/**
+	/*!
 	 * @return Minimum bounding volume convering the whole octree.
 	 */
 	[[nodiscard]] geometry::AAEBB boundingVolume() const
@@ -308,7 +308,7 @@ class OctreeBase
 	// Is within
 	//
 
-	/**
+	/*!
 	 * @brief Check if a coordinate is within the octree bounds.
 	 *
 	 * @param coord The coordinate.
@@ -319,7 +319,7 @@ class OctreeBase
 		return isWithin(coord.x, coord.y, coord.z);
 	}
 
-	/**
+	/*!
 	 * @brief Check if a coordinate is within the octree bounds.
 	 *
 	 * @param x,y,z The coordinate.
@@ -336,7 +336,7 @@ class OctreeBase
 	// Memory
 	//
 
-	/**
+	/*!
 	 * @return Number of inner nodes in the octree.
 	 */
 	[[nodiscard]] constexpr std::size_t numInnerNodes() const noexcept
@@ -344,7 +344,7 @@ class OctreeBase
 		return num_inner_nodes_ + num_inner_leaf_nodes_;
 	}
 
-	/**
+	/*!
 	 * @return Number of leaf nodes in the octree.
 	 */
 	[[nodiscard]] constexpr std::size_t numLeafNodes() const noexcept
@@ -352,7 +352,7 @@ class OctreeBase
 		return num_leaf_nodes_;
 	}
 
-	/**
+	/*!
 	 * @return Number of nodes in the octree.
 	 */
 	[[nodiscard]] constexpr std::size_t numNodes() const noexcept
@@ -360,7 +360,7 @@ class OctreeBase
 		return numInnerNodes() + numLeafNodes();
 	}
 
-	/**
+	/*!
 	 * @brief This is lower bound memeory usage of an inner node.
 	 *
 	 * @note Additional data accessed by pointers inside an inner node are not counted.
@@ -372,7 +372,7 @@ class OctreeBase
 		return sizeof(InnerNode);
 	}
 
-	/**
+	/*!
 	 * @brief This is lower bound memeory usage of a leaf node.
 	 *
 	 * @note Additional data accessed by pointers inside a leaf node are not counted.
@@ -384,7 +384,7 @@ class OctreeBase
 		return sizeof(LeafNode);
 	}
 
-	/**
+	/*!
 	 * @brief Lower bound memory usage for all nodes.
 	 *
 	 * @note Does not account for pointed to data inside nodes.
@@ -396,7 +396,7 @@ class OctreeBase
 		return (numInnerNodes() * memoryInnerNode()) + (numLeafNodes() * memoryLeafNode());
 	}
 
-	/**
+	/*!
 	 * @return Number of nodes in the octree.
 	 */
 	[[nodiscard]] constexpr std::size_t size() const noexcept
@@ -404,7 +404,7 @@ class OctreeBase
 		return numInnerNodes() + numLeafNodes();
 	}
 
-	/**
+	/*!
 	 * @return Number of allocated inner nodes.
 	 */
 	[[nodiscard]] constexpr std::size_t numInnerNodesAllocated() const noexcept
@@ -412,7 +412,7 @@ class OctreeBase
 		return num_allocated_inner_nodes_ + num_allocated_inner_leaf_nodes_;
 	}
 
-	/**
+	/*!
 	 * @return Number of allocated leaf nodes.
 	 */
 	[[nodiscard]] constexpr std::size_t numLeafNodesAllocated() const noexcept
@@ -420,7 +420,7 @@ class OctreeBase
 		return num_allocated_leaf_nodes_;
 	}
 
-	/**
+	/*!
 	 * @return Number of allocated nodes.
 	 */
 	[[nodiscard]] constexpr std::size_t numNodesAllocated() const noexcept
@@ -428,7 +428,7 @@ class OctreeBase
 		return numInnerNodesAllocated() + numLeafNodesAllocated();
 	}
 
-	/**
+	/*!
 	 * @brief Lower bound memory usage for all nodes.
 	 *
 	 * @note Does not account for pointed to data inside nodes.
@@ -441,7 +441,7 @@ class OctreeBase
 		       (numLeafNodesAllocated() * memoryLeafNode());
 	}
 
-	/**
+	/*!
 	 * @return Number of nodes in the octree.
 	 */
 	[[nodiscard]] constexpr std::size_t sizeAllocated() const noexcept
@@ -453,7 +453,7 @@ class OctreeBase
 	// Is pure leaf
 	//
 
-	/**
+	/*!
 	 * @brief Check if node is a pure leaf node (can never have children).
 	 *
 	 * @param node The node to check.
@@ -464,7 +464,7 @@ class OctreeBase
 		return 0 == node.depth();
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the code is a pure leaf node (can never
 	 * have children).
 	 *
@@ -478,7 +478,7 @@ class OctreeBase
 		return 0 == code.depth();
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the key is a pure leaf node (can never have
 	 * children).
 	 *
@@ -492,7 +492,7 @@ class OctreeBase
 		return 0 == key.depth();
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the coordinate at the specified depth is a
 	 * pure leaf node (can never have children).
 	 *
@@ -507,7 +507,7 @@ class OctreeBase
 		return 0 == depth;
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the coordinate at the specified depth is a
 	 * pure leaf node (can never have children).
 	 *
@@ -527,7 +527,7 @@ class OctreeBase
 	// Is leaf
 	//
 
-	/**
+	/*!
 	 * @brief Check if node is a leaf node (has no children).
 	 *
 	 * @param node The node to check.
@@ -538,7 +538,7 @@ class OctreeBase
 		return isPureLeaf(node) || isLeaf(innerNode(node));
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the code is a leaf node (has no children).
 	 *
 	 * @param code The code of the node to check.
@@ -549,7 +549,7 @@ class OctreeBase
 		return isPureLeaf(code) || isLeaf(innerNode(code));
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the key is a leaf node (has no children).
 	 *
 	 * @param key The key of the node to check.
@@ -560,7 +560,7 @@ class OctreeBase
 		return isPureLeaf(key) || isLeaf(innerNode(toCode(key)));
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the coordinate is a leaf node (has no
 	 * children).
 	 *
@@ -573,7 +573,7 @@ class OctreeBase
 		return isPureLeaf(coord, depth) || isLeaf(innerNode(toCode(coord, depth)));
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the coordinate is a leaf node (has no
 	 * children).
 	 *
@@ -590,7 +590,7 @@ class OctreeBase
 	// Is parent
 	//
 
-	/**
+	/*!
 	 * @brief Check if node is a parent, i.e., has children.
 	 *
 	 * @param node The node to check.
@@ -601,7 +601,7 @@ class OctreeBase
 		return !isLeaf(node);
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the code is a parent, i.e., has
 	 * children.
 	 *
@@ -613,7 +613,7 @@ class OctreeBase
 		return !isLeaf(code);
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the key is a parent, i.e., has
 	 * children.
 	 *
@@ -622,7 +622,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] static constexpr bool isParent(Key key) noexcept { return !isLeaf(key); }
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the coordinate is a parent, i.e., has
 	 * children.
 	 *
@@ -635,7 +635,7 @@ class OctreeBase
 		return !isLeaf(coord, depth);
 	}
 
-	/**
+	/*!
 	 * @brief Check if the node corresponding to the coordinate is a parent, i.e., has
 	 * children.
 	 *
@@ -653,7 +653,7 @@ class OctreeBase
 	// To code
 	//
 
-	/**
+	/*!
 	 * @brief Convert a key to a code.
 	 *
 	 * @param key The key to convert.
@@ -661,7 +661,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] static constexpr Code toCode(Key key) noexcept { return Code(key); }
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a code.
 	 *
 	 * @param coord The coordinate.
@@ -673,7 +673,7 @@ class OctreeBase
 		return toCode(toKey(coord, depth));
 	}
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a code.
 	 *
 	 * @param x,y,z The coordinate.
@@ -686,7 +686,7 @@ class OctreeBase
 		return toCode(toKey(x, y, z, depth));
 	}
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a code with bounds check.
 	 *
 	 * @param coord The coordinate.
@@ -700,7 +700,7 @@ class OctreeBase
 		return key ? std::optional<Code>(toCode(*key)) : std::nullopt;
 	}
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a code with bounds check.
 	 *
 	 * @param x,y,z The coordinate.
@@ -717,7 +717,7 @@ class OctreeBase
 	// To key
 	//
 
-	/**
+	/*!
 	 * @brief Convert a code to a key.
 	 *
 	 * @param code The code to convert.
@@ -725,7 +725,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] static constexpr Key toKey(Code code) noexcept { return code; }
 
-	/**
+	/*!
 	 * @brief COnvert a coordinate at a specific depth to a key.
 	 *
 	 * @param coord The coordinate.
@@ -738,7 +738,7 @@ class OctreeBase
 		           depth);
 	}
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a key.
 	 *
 	 * @param x,y,z The coordinate.
@@ -750,7 +750,7 @@ class OctreeBase
 		return Key(toKey(x, depth), toKey(y, depth), toKey(z, depth), depth);
 	}
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a key with bounds check.
 	 *
 	 * @param coord The coordinate.
@@ -764,7 +764,7 @@ class OctreeBase
 		           : std::nullopt;
 	}
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a key with bounds check.
 	 *
 	 * @param x,y,z The coordinate.
@@ -781,7 +781,7 @@ class OctreeBase
 	// To coordinate
 	//
 
-	/**
+	/*!
 	 * @brief Convert a code to a coordinate.
 	 *
 	 * @param code The code.
@@ -789,7 +789,7 @@ class OctreeBase
 	 */
 	constexpr Point3 toCoord(Code code) const noexcept { return toCoord(toKey(code)); }
 
-	/**
+	/*!
 	 * @brief Convert a key to a coordinate.
 	 *
 	 * @param key The key.
@@ -801,7 +801,7 @@ class OctreeBase
 		              toCoord(key[2], key.depth()));
 	}
 
-	/**
+	/*!
 	 * @brief Convert a code to a coordinate with bounds check.
 	 *
 	 * @param Code The code.
@@ -812,7 +812,7 @@ class OctreeBase
 		return toCoordChecked(toKey(code));
 	}
 
-	/**
+	/*!
 	 * @brief Convert a key to a coordinate with bounds check.
 	 *
 	 * @param key The key.
@@ -828,14 +828,14 @@ class OctreeBase
 	// Get root
 	//
 
-	/**
+	/*!
 	 * @brief Get the root node.
 	 *
 	 * @return The root node.
 	 */
 	constexpr Node getRoot() { return Node(&getRootImpl(), getRootCode()); }
 
-	/**
+	/*!
 	 * @brief Get the root node.
 	 *
 	 * @return The root node.
@@ -846,14 +846,14 @@ class OctreeBase
 		return Node(const_cast<InnerNode*>(&getRootImpl()), getRootCode());
 	}
 
-	/**
+	/*!
 	 * @brief Get the root node with bounding volume.
 	 *
 	 * @return The root node with bounding volume.
 	 */
 	constexpr NodeBV getRootBV() { return NodeBV(getRoot(), boundingVolume()); }
 
-	/**
+	/*!
 	 * @brief Get the root node with bounding volume.
 	 *
 	 * @return The root node with bounding volume.
@@ -864,7 +864,7 @@ class OctreeBase
 		return NodeBV(getRoot(), boundingVolume());
 	}
 
-	/**
+	/*!
 	 * @brief Get the code for the root node.
 	 *
 	 * @return The root node code.
@@ -875,7 +875,7 @@ class OctreeBase
 	// Get node
 	//
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the code.
 	 *
 	 * @param code The code for the node.
@@ -892,7 +892,7 @@ class OctreeBase
 		return node;
 	}
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the key.
 	 *
 	 * @param key The key for the node.
@@ -900,7 +900,7 @@ class OctreeBase
 	 */
 	Node getNode(Key key) const { return getNode(toCode(key)); }
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the coordinate at a specific depth.
 	 *
 	 * @param coord The coordinate for the node.
@@ -912,7 +912,7 @@ class OctreeBase
 		return getNode(toCode(coord, depth));
 	}
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the coordinate at a specific depth.
 	 *
 	 * @param x,y,z The coordinate for the node.
@@ -924,7 +924,7 @@ class OctreeBase
 		return getNode(toCode(x, y, z, depth));
 	}
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the code with bounds check.
 	 *
 	 * @param code The code for the node.
@@ -936,7 +936,7 @@ class OctreeBase
 		                                     : std::nullopt;
 	}
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the key with bounds check.
 	 *
 	 * @param key The key for the node.
@@ -947,7 +947,7 @@ class OctreeBase
 		return getNodeChecked(toCode(key));
 	}
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the coordinate at a specific depth with bounds
 	 * check.
 	 *
@@ -964,7 +964,7 @@ class OctreeBase
 		}
 	}
 
-	/**
+	/*!
 	 * @brief Get the corresponding node for the coordinate at a specific depth with bounds
 	 * check.
 	 *
@@ -2094,7 +2094,7 @@ class OctreeBase
 	// To key
 	//
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a key.
 	 *
 	 * @param coord The coordinate.
@@ -2107,7 +2107,7 @@ class OctreeBase
 		return ((val + max_value_) >> depth) << depth;
 	}
 
-	/**
+	/*!
 	 * @brief Convert a coordinate at a specific depth to a key with bounds check.
 	 *
 	 * @param coord The coordinate.
@@ -2127,7 +2127,7 @@ class OctreeBase
 	// To coordinate
 	//
 
-	/**
+	/*!
 	 * @brief Convert a key to a coordinate at a specific depth.
 	 *
 	 * @param key The key.

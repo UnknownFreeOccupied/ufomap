@@ -51,13 +51,13 @@
 
 namespace ufo::map
 {
-/**
+/*!
  * @brief A wrapper around a UFOMap inner/leaf node.
  *
  */
 struct Node {
  public:
-	/**
+	/*!
 	 * @brief Compare two nodes.
 	 *
 	 * @param lhs,rhs The nodes to compare.
@@ -68,7 +68,7 @@ struct Node {
 		return lhs.data_ == rhs.data_ && lhs.code_ == rhs.code_;
 	}
 
-	/**
+	/*!
 	 * @brief Compare two nodes.
 	 *
 	 * @param lhs,rhs The nodes to compare.
@@ -99,14 +99,14 @@ struct Node {
 		return lhs.code() >= rhs.code();
 	}
 
-	/**
+	/*!
 	 * @brief Get the code for the node.
 	 *
 	 * @return The code for the node.
 	 */
 	constexpr Code code() const noexcept { return code_; }
 
-	/**
+	/*!
 	 * @brief Get the depth of the node.
 	 *
 	 * @return The depth of the node.
@@ -126,7 +126,7 @@ struct Node {
 
 	constexpr Node(void* data, Code code) noexcept : data_(data), code_(code) {}
 
-	/**
+	/*!
 	 * @brief Get the corresponding data.
 	 *
 	 * @note Use the octree that generate the node to read the data.
@@ -135,7 +135,7 @@ struct Node {
 	 */
 	constexpr void* data() noexcept { return data_; }
 
-	/**
+	/*!
 	 * @brief Get the corresponding data.
 	 *
 	 * @note Use the octree that generate the node to read the data.
@@ -166,63 +166,63 @@ struct NodeBV : public Node {
 		return !(lhs == rhs);
 	}
 
-	/**
+	/*!
 	 * @brief The bounding volume of the node.
 	 *
 	 * @return The bounding volume of the node.
 	 */
 	constexpr geometry::AAEBB boundingVolume() const noexcept { return aaebb_; }
 
-	/**
+	/*!
 	 * @brief The center coordinate of the node.
 	 *
 	 * @return The center coordinate of the node.
 	 */
 	constexpr geometry::Point center() const noexcept { return aaebb_.center; }
 
-	/**
+	/*!
 	 * @brief The minimum coordinate of the node.
 	 *
 	 * @return The minimum coordinate of the node.
 	 */
 	constexpr geometry::Point min() const noexcept { return aaebb_.min(); }
 
-	/**
+	/*!
 	 * @brief The maximum coordinate of the node.
 	 *
 	 * @return The maximum coordinte of the node.
 	 */
 	constexpr geometry::Point max() const noexcept { return aaebb_.max(); }
 
-	/**
+	/*!
 	 * @brief Half the length of a side of the node.
 	 *
 	 * @return Half the length of a side of the node.
 	 */
 	constexpr float halfSize() const noexcept { return aaebb_.half_size; }
 
-	/**
+	/*!
 	 * @brief The length of a side of the node.
 	 *
 	 * @return The length of a side of the node.
 	 */
 	constexpr float size() const noexcept { return 2 * halfSize(); }
 
-	/**
+	/*!
 	 * @brief The center x coordinate of the node.
 	 *
 	 * @return The center x coordinate of the node.
 	 */
 	constexpr float x() const noexcept { return aaebb_.center.x; }
 
-	/**
+	/*!
 	 * @brief The center y coordinate of the node.
 	 *
 	 * @return The center y coordinate of the node.
 	 */
 	constexpr float y() const noexcept { return aaebb_.center.y; }
 
-	/**
+	/*!
 	 * @brief The center z coordinate of the node.
 	 *
 	 * @return The center z coordinate of the node.

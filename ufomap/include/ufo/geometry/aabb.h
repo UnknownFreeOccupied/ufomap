@@ -45,7 +45,7 @@
 
 namespace ufo::geometry
 {
-/**
+/*!
  * @brief Something something
  * @author Daniel Duberg
  *
@@ -69,7 +69,7 @@ struct AABB {
 		center = min + half_size;
 	}
 
-	/**
+	/*!
 	 * @brief Compare two AABBs.
 	 *
 	 * @param lhs,rhs The AABBs to compare.
@@ -80,7 +80,7 @@ struct AABB {
 		return lhs.center == rhs.center && lhs.half_size == rhs.half_size;
 	}
 
-	/**
+	/*!
 	 * @brief Compare two AABBs.
 	 *
 	 * @param lhs,rhs The AABBs to compare.
@@ -91,7 +91,7 @@ struct AABB {
 		return !(lhs == rhs);
 	}
 
-	/**
+	/*!
 	 * @brief
 	 *
 	 * @return

@@ -57,7 +57,7 @@
 
 namespace ufo::map
 {
-/**
+/*!
  * @brief A code is a single value for indexing a specific node in an octree at
  * a specific depth
  *
@@ -79,7 +79,7 @@ class Code
 
 	constexpr Code(Key const& key) : code_(toCode(key)), depth_(key.depth()) {}
 
-	/**
+	/*!
 	 * @brief Get the corresponding key to code
 	 *
 	 * @return The corresponding key to code
@@ -109,7 +109,7 @@ class Code
 
 	constexpr bool operator>=(Code const& rhs) const { return code_ >= rhs.code_; }
 
-	/**
+	/*!
 	 * @brief Return the code at a specified depth
 	 *
 	 * @param depth The depth of the code
@@ -121,7 +121,7 @@ class Code
 		return Code((code_ >> temp) << temp, depth);
 	}
 
-	/**
+	/*!
 	 * @brief Converts a key to a code
 	 *
 	 * @param key The key to convert
@@ -138,7 +138,7 @@ class Code
 #endif
 	}
 
-	/**
+	/*!
 	 * @brief Get the key component from a code
 	 *
 	 * @param code The code to generate the key component from
@@ -150,7 +150,7 @@ class Code
 		return get3Bits(code.code_ >> index);
 	}
 
-	/**
+	/*!
 	 * @brief Get the key component from this code
 	 *
 	 * @param index The index of the key component
@@ -158,7 +158,7 @@ class Code
 	 */
 	Key::KeyType toKey(std::size_t index) const { return toKey(*this, index); }
 
-	/**
+	/*!
 	 * @brief Get the index at a specific depth for this code.
 	 *
 	 * @param depth The depth the index is requested for.
@@ -169,7 +169,7 @@ class Code
 		return (code_ >> static_cast<CodeType>(3 * depth)) & ((CodeType)0x7);
 	}
 
-	/**
+	/*!
 	 * @brief Get the code of a specific child to this code
 	 *
 	 * @param index The index of the child
@@ -188,7 +188,7 @@ class Code
 		    child_depth);
 	}
 
-	/**
+	/*!
 	 * @brief Get the code of a specific sibling to this code
 	 *
 	 * @param index The index of the sibling
@@ -203,21 +203,21 @@ class Code
 		            depth_);
 	}
 
-	/**
+	/*!
 	 * @brief Get the code
 	 *
 	 * @return CodeType The code
 	 */
 	constexpr CodeType code() const noexcept { return code_; }
 
-	/**
+	/*!
 	 * @brief Get the depth that this code is specified at
 	 *
 	 * @return Depth The depth this code is specified at
 	 */
 	constexpr Depth depth() const noexcept { return depth_; }
 
-	/**
+	/*!
 	 * @brief
 	 *
 	 */
