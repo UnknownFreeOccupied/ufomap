@@ -66,7 +66,334 @@
 
 namespace ufo::map
 {
-enum class RayCastingMethod { PROPER, SIMPLE };
+class Integrator
+{
+ public:
+	//
+	// Insert point cloud
+	//
+
+	template <class Map, class P>
+	void insertPointCloud(Map& map, PointCloudT<P> cloud, bool const propagate = true)
+	{
+		// Get the corresponding code for each point
+		std::vector<Code> hits =
+		    toCodes(map, std::cbegin(cloud), std::cend(cloud), hit_depth_);
+
+		// Sort the codes and points based on the codes
+		sort(std::begin(hits), std::end(hits), std::begin(cloud), std::end(cloud));
+
+		// Get Equal indices
+		std::vector<std::pair<std::size_t, std::size_t>> indices =
+		    getEqualIndices(std::cbegin(hits), std::cend(hits));
+
+		// Integrate into the map
+		integrateHits(map, cloud, hits, indices);
+
+		if (propagate) {
+			// Propagate information in the map
+			map.updateModifiedNodes();
+		}
+	}
+
+	template <class Map, class P>
+	void insertPointCloud(Map& map, Point3 const sensor_origin, PointCloudT<P> cloud,
+	                      bool const propagate = true)
+	{
+		// Get the corresponding code for each point
+		std::vector<Code> hits =
+		    toCodes(map, std::cbegin(cloud), std::cend(cloud), hit_depth_);
+
+		// Sort the codes and points based on the codes
+		sort(std::begin(hits), std::end(hits), std::begin(cloud), std::end(cloud));
+
+		// Get Equal indices
+		std::vector<std::pair<std::size_t, std::size_t>> indices =
+		    getEqualIndices(std::cbegin(hits), std::cend(hits));
+
+		// Ray cast to get free space
+		std::vector<Code> misses = getMisses(map.toCode(sensor_origin, miss_depth_),
+		                                     std::cbegin(hits), std::cend(hits), max_length_);
+
+		// Integrate into the map
+		integrateMisses(map, misses);
+		integrateHits(map, cloud, hits, indices);
+
+		if (propagate) {
+			// Propagate information in the map
+			map.updateModifiedNodes();
+		}
+	}
+
+	template <class Map, class P>
+	void insertPointCloud(Map& map, Point3 sensor_origin, PointCloudT<P> cloud,
+	                      math::Pose6f frame_origin, bool const propagate = true)
+	{
+		applyTransform(cloud, frame_origin);
+		insertPointCloud(map, sensor_origin, cloud, propagate);
+	}
+
+	//
+	// Getters
+	//
+
+	[[nodiscard]] constexpr bool isDiscretize() const noexcept { return discretize_; }
+
+	[[nodiscard]] constexpr double maxRange() const noexcept { return max_range_; }
+
+	[[nodiscard]] constexpr Depth missDepth() const noexcept { return miss_depth_; }
+
+	[[nodiscard]] constexpr Depth hitDepth() const noexcept { return hit_depth_; }
+
+	[[nodiscard]] constexpr bool isWeighted() const noexcept { return weighted_; }
+
+	[[nodiscard]] constexpr float occupancyProbHit() const noexcept
+	{
+		return occupancy_prob_hit_;
+	}
+
+	[[nodiscard]] constexpr float occupancyProbMiss() const noexcept
+	{
+		return occupancy_prob_miss_;
+	}
+
+	[[nodiscard]] constexpr TimeStepType timeStep() const noexcept { return time_step_; }
+
+	[[nodiscard]] constexpr bool isTimeStepAutoInc() const noexcept
+	{
+		return 0 != time_step_auto_inc_;
+	}
+
+	[[nodiscard]] constexpr int timeStepAutoInc() const noexcept
+	{
+		return time_step_auto_inc_;
+	}
+
+	[[nodiscard]] constexpr SemanticValue semanticValueHit() const noexcept
+	{
+		return semantic_value_hit_;
+	}
+
+	[[nodiscard]] constexpr SemanticValue semanticValueMiss() const noexcept
+	{
+		return semantic_value_miss_;
+	}
+
+	//
+	// Setters
+	//
+
+	constexpr void setDiscretize(bool discretize) noexcept { discretize_ = discretize; }
+
+	constexpr void setMaxRange(double max_range) noexcept { max_range_ = max_range; }
+
+	constexpr void setMissDepth(Depth depth) noexcept { miss_depth_ = depth; }
+
+	constexpr void setHitDepth(Depth depth) noexcept { hit_depth_ = depth; }
+
+	constexpr void setWeighted(bool weighted) noexcept { weighted_ = weighted; }
+
+	constexpr void setOccupancyProbHit(float prob) noexcept { occupancy_prob_hit_ = prob; }
+
+	constexpr void setOccupancyProbMiss(float prob) noexcept
+	{
+		occupancy_prob_miss_ = prob;
+	}
+
+	constexpr void setTimeStep(TimeStepType time_step) noexcept { time_step_ = time_step; }
+
+	constexpr void setTimeStepAutoInc(int inc) noexcept { time_step_auto_inc_ = inc; }
+
+	constexpr void setSemanticValueHit(SemanticValue value) noexcept
+	{
+		semantic_value_hit_ = value;
+	}
+
+	constexpr void setSemanticValueMiss(SemanticValue value) noexcept
+	{
+		semantic_value_miss_ = value;
+	}
+
+ private:
+	//
+	// Get logit
+	//
+
+	template <class Map>
+	static auto getLogit(Map const& map, float prob)
+	{
+		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+			return math::logitChangeValue<uint8_t>(prob,
+			                                       map.getOccupancyClampingThresMinLogit(),
+			                                       map.getOccupancyClampingThresMaxLogit());
+		} else {
+			return math::logit(prob);
+		}
+	}
+
+	//
+	// Integrate hits
+	//
+
+	template <class Map, class P>
+	void integrateHits(
+	    Map& map, PointCloudT<P> const& cloud, std::vector<Code> const& codes,
+	    std::vector<std::pair<std::size_t, std::size_t>> const& indices) const
+	{
+		auto prob = getLogit(map, occupancy_prob_hit_);
+
+		std::for_each(std::cbegin(indices), std::cend(indices), [&](auto const& index) {
+			auto node = map.createNode(codes[index.first]);
+			auto logit = map.getOccupancyLogit(node);
+
+			map.increateOccupancyLogit(node, prob, false);
+
+			if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
+				map.setTimeStep(node, current_time_step_, false);
+			}
+
+			if constexpr (is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
+			              std::is_base_of_v<RGBColor, T>) {
+				RGBColor avg_color =
+				    RGBColor::average(std::next(std::cbegin(cloud), index.first),
+				                      std::next(std::cbegin(cloud), index.second));
+
+				if (avg_color.set()) {
+					double total_logit = logit + prob;
+					double weight = prob / total_logit;
+					map.updateColor(node, avg_color, weight, false);
+				}
+			}
+
+			if constexpr (is_base_of_template_v<SemanticMapBase, std::decay_t<Map>>) {
+				// TODO: Implement
+			}
+		});
+	}
+
+	//
+	// Integrate misses
+	//
+
+	template <class Map>
+	void integrateMisses(Map& map, std::vector<Code> const& codes) const
+	{
+		auto prob = getLogit(map, occupancy_prob_miss_);
+
+		std::for_each(std::cbegin(codes), std::cend(codes), [&map, prob](auto code) {
+			auto node = map.createNode(code);
+
+			map.decreaseOccupancyLogit(node, prob, false);
+
+			if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
+				map.setTimeStep(node, current_time_step_, false);
+			}
+		});
+	}
+
+	//
+	// To codes
+	//
+
+	template <class Map, class InputIt>
+	static std::vector<Code> toCodes(Map const& map, InputIt first, InputIt last,
+	                                 Depth const depth = 0)
+	{
+		std::vector<Code> codes;
+		codes.reserve(std::distance(first, last));
+		std::transform(first, last, std::back_inserter(codes),
+		               [&map, depth](auto const& p) { return map.toCode(p, depth); });
+		return codes;
+	}
+
+	//
+	// Sort
+	//
+
+	template <class RandomIt, class RandomIt2>
+	static void sort(RandomIt first, RandomIt last, RandomIt2 first_2, RandomIt2 last_2)
+	{
+		auto perm = sortPermutation(first, last);
+		applyPermutation(first, last, perm);
+		applyPermutation(first_2, last_2, perm);
+	}
+
+	//
+	// Get equal indices
+	//
+
+	template <class InputIt>
+	static std::vector<std::pair<std::size_t, std::size_t>> getEqualIndices(InputIt first,
+	                                                                        InputIt last)
+	{
+		std::vector<std::pair<std::size_t, std::size_t>> indices;
+		indices.reserve(std::distance(first, last));
+		for (auto it = first; it != last;) {
+			auto it_last = std::find_if_not(
+			    first, last, [value = *first](auto const& elem) { return value == elem; });
+			indices.emplace_back(std::distance(first, it), std::distance(first, it_last));
+			it = it_last;
+		}
+		return indices;
+	}
+
+	//
+	// Get misses
+	//
+
+	template <class InputIt>
+	static std::vector<Code> getMisses(Code sensor_origin, InputIt first, InputIt last,
+	                                   double const max_length)
+	{
+		Key const start = sensor_origin;
+
+		CodeSet indices;
+		Code prev;
+		while (first != last) {
+			Code cur = first->toDepth(start.depth());
+			if (cur == prev) {
+				continue;
+			}
+
+			prev = cur;
+			for (auto e : computeRay(start, cur)) {
+				indices.insert(e);
+			}
+		}
+
+		std::vector<Code> misses(std::cbegin(indices), std::cend(indices));
+		std::sort(std::begin(misses), std::end(misses));
+		return misses;
+	}
+
+ private:
+	// If there should be discretization
+	bool discretize_ = true;
+
+	// Max range to integrate
+	double max_range_ = -1;
+
+	// Miss depth
+	Depth miss_depth_ = 0;
+
+	// Hit depth
+	Depth hit_depth_ = 0;
+
+	// Weighted
+	bool weighted_ = false;
+
+	// Occupancy specific
+	float occupancy_prob_hit_ = 0.7;
+	float occupancy_prob_miss_ = 0.4;
+
+	// Time step specific
+	TimeStepType time_step_ = 1;
+	int time_step_auto_inc_ = 1;
+
+	// Semantic specific
+	SemanticValue semantic_value_hit_ = 2;   // Logodds probability of hit
+	SemanticValue semantic_value_miss_ = 1;  // Logodds probability of miss
+};
 
 struct DefaultIntegrator {
 	template <class Map, class P>
@@ -440,9 +767,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				}
 
 // 				// Increase time step
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					if (auto_inc_time_step_) {
-// 						current_time_step_ += time_step_inc_;
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					if (auto_inc_time_step_) { 						current_time_step_ +=
+// time_step_inc_;
 // 					}
 // 				}
 // 			});
@@ -503,9 +830,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				}
 
 // 				// Increase time step
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					if (auto_inc_time_step_) {
-// 						current_time_step_ += time_step_inc_;
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					if (auto_inc_time_step_) { 						current_time_step_ +=
+// time_step_inc_;
 // 					}
 // 				}
 
@@ -530,9 +857,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				}
 
 // 				// Increase time step
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					if (auto_inc_time_step_) {
-// 						current_time_step_ += time_step_inc_;
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					if (auto_inc_time_step_) { 						current_time_step_ +=
+// time_step_inc_;
 // 					}
 // 				}
 
@@ -557,8 +884,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				async_handler_.get();
 // 			}
 
-// 			async_handler_ = std::async(std::launch::async, [this, f, &map, integrator_cloud,
-// 			                                                 free_space, propagate]() {
+// 			async_handler_ = std::async(std::launch::async, [this, f, &map,
+// integrator_cloud, 			                                                 free_space,
+// propagate]() {
 // 				// Insert free space
 // 				integrateMisses(map, free_space, miss_depth_);
 
@@ -571,9 +899,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				}
 
 // 				// Increase time step
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					if (auto_inc_time_step_) {
-// 						current_time_step_ += time_step_inc_;
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					if (auto_inc_time_step_) { 						current_time_step_ +=
+// time_step_inc_;
 // 					}
 // 				}
 
@@ -587,8 +915,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				async_handler_.get();
 // 			}
 
-// 			async_handler_ = std::async(std::launch::async, [this, f, &map, integrator_cloud,
-// 			                                                 propagate]() {
+// 			async_handler_ = std::async(std::launch::async, [this, f, &map,
+// integrator_cloud, 			                                                 propagate]()
+// {
 // 				// Insert occupied space
 // 				integrateHits(map, integrator_cloud, hit_depth_);
 
@@ -598,9 +927,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				}
 
 // 				// Increase time step
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					if (auto_inc_time_step_) {
-// 						current_time_step_ += time_step_inc_;
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					if (auto_inc_time_step_) { 						current_time_step_ +=
+// time_step_inc_;
 // 					}
 // 				}
 
@@ -644,9 +973,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				}
 
 // 				// Increase time step
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					if (auto_inc_time_step_) {
-// 						current_time_step_ += time_step_inc_;
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					if (auto_inc_time_step_) { 						current_time_step_ +=
+// time_step_inc_;
 // 					}
 // 				}
 
@@ -661,7 +990,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 			}
 
 // 			async_handler_ = std::async(std::launch::async, [this, policy, f, &map,
-// 			                                                 integrator_cloud, propagate]() {
+// 			                                                 integrator_cloud, propagate]()
+// {
 // 				// Insert occupied space
 // 				integrateHits(policy, map, integrator_cloud, hit_depth_);
 
@@ -671,9 +1001,9 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				}
 
 // 				// Increase time step
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					if (auto_inc_time_step_) {
-// 						current_time_step_ += time_step_inc_;
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					if (auto_inc_time_step_) { 						current_time_step_ +=
+// time_step_inc_;
 // 					}
 // 				}
 
@@ -729,7 +1059,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 
 // 			// Key from_key = map.toKey(sensor_origin, miss_depth_);
 // 			// Point3 voxel_border = map.toCoord(from_key) - sensor_origin;
-// 			// for (auto it = std::begin(code_distance); std::end(code_distance) != it; ++it)
+// 			// for (auto it = std::begin(code_distance); std::end(code_distance) != it;
+// ++it)
 // {
 // 			// 	auto code = it->first;
 
@@ -904,16 +1235,16 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 					} else {
 // 						map.decreaseOccupancyLogit(node, value, false);
 // 					}
-// 					if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
-// { 						map.setTimeStep(node, current_time_step_, false);
+// 					if constexpr (is_base_of_template_v<OccupancyMapTimeBase,
+// std::decay_t<Map>>) { 						map.setTimeStep(node, current_time_step_, false);
 // 					}
 // 				}
 // 			} else {
 // 				for (auto const& [code, _] : free_space) {
 // 					Node node = map.createNode(code);
 // 					map.decreaseOccupancyLogit(node, value, false);
-// 					if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
-// { 						map.setTimeStep(node, current_time_step_, false);
+// 					if constexpr (is_base_of_template_v<OccupancyMapTimeBase,
+// std::decay_t<Map>>) { 						map.setTimeStep(node, current_time_step_, false);
 // 					}
 // 				}
 // 			}
@@ -942,8 +1273,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 				} else {
 // 					map.decreaseOccupancyLogit(node, value, false);
 // 				}
-// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-// 					map.setTimeStep(node, current_time_step_, false);
+// 				if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>)
+// { 					map.setTimeStep(node, current_time_step_, false);
 // 				}
 // 			}
 // 		}
@@ -976,8 +1307,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 		}
 
 // 		// FIXME: Check so implemented correctly
-// 		std::for_each(policy, free_space.cbegin(), free_space.cend(), [&](auto const& elem)
-// { 			Node node = map.createNode(elem.first);
+// 		std::for_each(policy, free_space.cbegin(), free_space.cend(), [&](auto const&
+// elem) { 			Node node = map.createNode(elem.first);
 
 // 			// FIXME: What execution policy?
 // 			if (weighted_) {
@@ -1005,7 +1336,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 	//
 
 // 	template <class Map, class T>
-// 	void integrateHits(Map& map, IntegratorPointCloud2<T> const& cloud, Depth depth) const
+// 	void integrateHits(Map& map, IntegratorPointCloud2<T> const& cloud, Depth depth)
+// const
 // 	{
 // 		using OccupancyLogitType = typename Map::LogitType;
 
@@ -1114,7 +1446,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 	}
 
 // 	template <class Map, class P>
-// 	void integrateHits(Map& map, IntegratorPointCloud<P> const& cloud, Depth depth) const
+// 	void integrateHits(Map& map, IntegratorPointCloud<P> const& cloud, Depth depth)
+// const
 // 	{
 // 		using OccupancyLogitType = typename Map::LogitType;
 
@@ -1430,7 +1763,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 		//           [](auto const& a, auto const& b) { return a.first < b.first; });
 // 		// free_space.erase(
 // 		//     std::unique(std::begin(free_space), std::end(free_space),
-// 		//                 [](auto const& a, auto const& b) { return a.first == b.first; }),
+// 		//                 [](auto const& a, auto const& b) { return a.first == b.first;
+// }),
 // 		//     end(free_space));
 
 // 		// pruneMissedSpace(free_space);
@@ -1457,7 +1791,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 		//           [](auto const& a, auto const& b) { return a.first < b.first; });
 // 		// free_space.erase(
 // 		//     std::unique(std::begin(free_space), std::end(free_space),
-// 		//                 [](auto const& a, auto const& b) { return a.first == b.first; }),
+// 		//                 [](auto const& a, auto const& b) { return a.first == b.first;
+// }),
 // 		//     end(free_space));
 
 // 		// pruneMissedSpace(free_space);
@@ -1513,7 +1848,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 
 // 			size_t max_size =
 // 			    std::transform_reduce(std::begin(codes_maps), std::end(codes_maps), 0,
-// 			                          std::plus<>(), [](auto const& c) { return c.size(); });
+// 			                          std::plus<>(), [](auto const& c) { return c.size();
+// });
 
 // 			free_space.resize(max_size);
 
@@ -1547,7 +1883,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 	}
 
 // 	template <class Map, class InputIt>
-// 	CodeMap<float> getMissesGetIndices(Map const& map, InputIt first, InputIt last) const
+// 	CodeMap<float> getMissesGetIndices(Map const& map, InputIt first, InputIt last)
+// const
 // 	{
 // 		// Set up parameters that will be used
 // 		Depth depth = miss_depth_;
@@ -1624,13 +1961,14 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 	}
 
 // 	template <class Map>
-// 	void getMissesProper(Map const& map, Key from_key, Key to_key, Point3 from, Point3 to,
-// 	                     MissedSpace& indices, Depth depth)
+// 	void getMissesProper(Map const& map, Key from_key, Key to_key, Point3 from, Point3
+// to, 	                     MissedSpace& indices, Depth depth)
 // 	{
 // 		Point3 voxel_border = map.toCoord(from_key) - from;
 
 // 		// Do it backwards
-// 		RayCaster ray_caster(to_key, from_key, to, from, voxel_border, map.nodeSize(depth));
+// 		RayCaster ray_caster(to_key, from_key, to, from, voxel_border,
+// map.nodeSize(depth));
 
 // 		if (!ray_caster.hasLeft()) {
 // 			if (0 != depth) {
@@ -1651,15 +1989,16 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 	}
 
 // 	template <class Map>
-// 	void getMissesProper(Map const& map, Point3 from, Point3 to, CodeMap<float>& indices,
-// 	                     Depth depth, size_t early_stopping) const
+// 	void getMissesProper(Map const& map, Point3 from, Point3 to, CodeMap<float>&
+// indices, 	                     Depth depth, size_t early_stopping) const
 // 	{
 // 		Key from_key = map.toKey(from, depth);
 // 		Key to_key = map.toKey(to, depth);
 // 		Point3 voxel_border = map.toCoord(from_key) - from;
 
 // 		// Do it backwards
-// 		RayCaster ray_caster(to_key, from_key, to, from, voxel_border, map.nodeSize(depth));
+// 		RayCaster ray_caster(to_key, from_key, to, from, voxel_border,
+// map.nodeSize(depth));
 
 // 		if (!ray_caster.hasLeft()) {
 // 			if (0 != depth) {
@@ -1689,8 +2028,8 @@ void integratePointCloud(Map& map, PointCloudT<P> const& cloud,
 // 	}
 
 // 	template <class Map>
-// 	void getMissesSimple(Map const& map, Point3 from, Point3 to, CodeMap<float>& indices,
-// 	                     Depth depth, size_t early_stopping) const
+// 	void getMissesSimple(Map const& map, Point3 from, Point3 to, CodeMap<float>&
+// indices, 	                     Depth depth, size_t early_stopping) const
 // 	{
 // 		// Do it backwards
 // 		SimpleRayCaster ray_caster(to, from, map.nodeSize(depth));
