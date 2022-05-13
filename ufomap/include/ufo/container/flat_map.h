@@ -1,32 +1,32 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
- * 
+ *
  * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
- * 
+ *
  * @copyright Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
- * 
+ *
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *     list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -59,20 +59,18 @@
 #include <utility>
 #include <vector>
 
-/*
+namespace ufo::container
+{
+
+/*!
  * Associative ordered container using a data-coherent implementation.
  * Elements of the container are stored using a single unsigned type
  * where the left-most bits represent the key and the right-most the value.
  * The number of bits allocated for the key and value is custom for each
- * container instance. E.g., if DataType = 16 and ValueWidth = 1
+ * container instance, e.g., if DataType = uint16_t and ValueWidth = 1
  * the key will be 15 bits and the value 1 bit.
- * Functions present in the STL implementation adhere to their
- * interface (std::map).
  */
-
-namespace ufo::container
-{
-template <typename DataType, size_t ValueWidth>
+template <typename DataType, size_t ValueWidth, size_t FixedSize = 0>
 class FlatMap
 {
  private:
@@ -93,19 +91,16 @@ class FlatMap
 
 	struct Element {
 	 public:
-		Element() = default;
+		constexpr Element() = default;
 
 		constexpr Element(key_type key, mapped_type value)
 		    : data_((key << ValueWidth) | (value & ValueMask))
 		{
 		}
 
-		[[nodiscard]] constexpr key_type getKey() const noexcept
-		{
-			return data_ >> ValueWidth;
-		}
+		[[nodiscard]] constexpr key_type key() const noexcept { return data_ >> ValueWidth; }
 
-		[[nodiscard]] constexpr mapped_type getValue() const noexcept
+		[[nodiscard]] constexpr mapped_type value() const noexcept
 		{
 			return data_ & ValueMask;
 		}
@@ -136,15 +131,12 @@ class FlatMap
 
 		friend std::ostream &operator<<(std::ostream &os, Element element)
 		{
-			// Note: '+' to apply arithmetic promotion (to make uint8_t print
-			// correctly)
-			os << +element.getKey() << ": " << +element.getValue();
+			// Note: '+' to apply arithmetic promotion.
+			os << +element.key() << ": " << +element.value();
 			return os;
 		}
 
 	 private:
-		// constexpr Element(DataType data) : data_(data) {}
-
 		constexpr void setKey(key_type key) noexcept
 		{
 			data_ = (key << ValueWidth) | (data_ & ValueMask);
@@ -164,6 +156,7 @@ class FlatMap
 
 		constexpr void increaseValue(mapped_type inc) noexcept
 		{
+			// FIXME: Look at
 			data_ =
 			    (data_ & LabelMask) |
 			    std::min(ValueMask, static_cast<mapped_type>(getValue() + (inc & ValueMask)));
@@ -171,13 +164,14 @@ class FlatMap
 
 		constexpr void decreaseValue(mapped_type dec) noexcept
 		{
+			// FIXME: Look at
 			auto cur = getValue();
 			dec = std::min(cur, dec & ValueMask);
 			data_ = (data_ & LabelMask) | (cur - dec);
 		}
 
 	 private:
-		DataType data_;
+		DataType data_ = 0;
 		friend class FlatMap;
 	};
 
@@ -196,7 +190,7 @@ class FlatMap
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	// Constructors
-	FlatMap() {}
+	constexpr FlatMap() = default;
 
 	template <class InputIt>
 	FlatMap(InputIt first, InputIt last)
@@ -242,54 +236,96 @@ class FlatMap
 	}
 
 	// Iterators
-	iterator begin() noexcept { return empty() ? nullptr : std::next(data_, 1); }
+	iterator begin() noexcept
+	{
+		if constexpr (FixedSize) {
+			return std::begin(data_);
+		} else {
+			return empty() ? nullptr : std::next(data_, 1);
+		}
+	}
 
 	const_iterator begin() const noexcept
 	{
-		return empty() ? nullptr : std::next(data_, 1);
+		if constexpr (FixedSize) {
+			return std::begin(data_);
+		} else {
+			return empty() ? nullptr : std::next(data_, 1);
+		}
 	}
 
 	const_iterator cbegin() const noexcept { return begin(); }
 
 	iterator end() noexcept
 	{
-		auto const s = allocSize();
-		return 0 == s ? nullptr : std::next(data_, s);
+		if constexpr (FixedSize) {
+			return std::end(data_);
+		} else {
+			auto const s = allocSize();
+			return 0 == s ? nullptr : std::next(data_, s);
+		}
 	}
 
 	const_iterator end() const noexcept
 	{
-		auto const s = allocSize();
-		return 0 == s ? nullptr : std::next(data_, s);
+		if constexpr (FixedSize) {
+			return std::end(data_);
+		} else {
+			auto const s = allocSize();
+			return 0 == s ? nullptr : std::next(data_, s);
+		}
 	}
 
 	const_iterator cend() const noexcept { return end(); }
 
 	// Capacity
 	// [[nodiscard]]
-	[[nodiscard]] bool empty() const noexcept { return nullptr == data_; }
+	[[nodiscard]] bool empty() const noexcept
+	{
+		if constexpr (FixedSize) {
+			return 0 == size();
+		} else {
+			return nullptr == data_;
+		}
+	}
 
 	[[nodiscard]] size_type size() const noexcept
 	{
-		return empty() ? 0 : data_[0].getKey();
+		if constexpr (FixedSize) {
+			return data_[0].key();
+		} else {
+			return empty() ? 0 : data_[0].getKey();
+		}
 	}
 
 	[[nodiscard]] size_type allocSize() const noexcept
 	{
-		return empty() ? 0 : data_[0].getKey() + 1;
+		if constexpr (FixedSize) {
+			return FixedSize + 1;
+		} else {
+			return empty() ? 0 : data_[0].getKey() + 1;
+		}
 	}
 
 	[[nodiscard]] constexpr size_type max_size() const noexcept
 	{
-		return LabelMask >> ValueWidth;
+		if constexpr (FixedSize) {
+			return FixedSize;
+		} else {
+			return LabelMask >> ValueWidth;
+		}
 	}
 
 	// Modifiers
 	void clear() noexcept
 	{
-		if (nullptr != data_) {
-			free(data_);
-			data_ = nullptr;
+		if constexpr (FixedSize) {
+			data_[0].setData(0);
+		} else {
+			if (nullptr != data_) {
+				free(data_);
+				data_ = nullptr;
+			}
 		}
 	}
 
@@ -711,7 +747,23 @@ class FlatMap
 		return upper_bound(begin(), end(), key);
 	}
 
-	Element const *getData() const { return std::next(data_, 1); }
+	Element *getData()
+	{
+		if constexpr (FixedSize) {
+			std::next(data_.data(), 1);
+		} else {
+			return std::next(data_, 1);
+		}
+	}
+
+	Element const *getData() const
+	{
+		if constexpr (FixedSize) {
+			std::next(data_.data(), 1);
+		} else {
+			return std::next(data_, 1);
+		}
+	}
 
 	/*
 	 * True if container contains any Key present in Range.
@@ -970,8 +1022,8 @@ class FlatMap
 	std::ostream &writeData(std::ostream &out_stream) const
 	{
 		size_type num = size();
-		out_stream.write(reinterpret_cast<char *>(&num), sizeof(size_type));
-		return out_stream.write(reinterpret_cast<char *>(std::next(data_, 1)),
+		out_stream.write(reinterpret_cast<char const *>(&num), sizeof(size_type));
+		return out_stream.write(reinterpret_cast<char const *>(getData()),
 		                        sizeof(Element) * num);
 	}
 
@@ -984,8 +1036,7 @@ class FlatMap
 			return in_stream;
 		}
 		resize(num);
-		return in_stream.read(reinterpret_cast<char *>(std::next(data_, 1)),
-		                      sizeof(Element) * num);
+		return in_stream.read(reinterpret_cast<char *>(getData()), sizeof(Element) * num);
 	}
 
 	friend std::ostream &operator<<(std::ostream &os, FlatMap const &map)
@@ -1175,21 +1226,29 @@ class FlatMap
 		}
 	}
 
-	void resize(size_type new_size)
+	void resize(size_type const new_size)
 	{
-		Element *ptr_new =
-		    static_cast<Element *>(realloc(data_, (new_size + 1) * sizeof(Element)));
+		if constexpr (FixedSize) {
+			if (data_.size() <= new_size) {
+				throw std::length_error();
+			}
 
-		if (!ptr_new) {
-			throw std::bad_alloc();
+			data_[0].setKey(new_size);  // Special
+		} else {
+			Element *ptr_new =
+			    static_cast<Element *>(realloc(data_, (new_size + 1) * sizeof(Element)));
+
+			if (!ptr_new) {
+				throw std::bad_alloc();
+			}
+
+			ptr_new[0].setKey(new_size);  // Special
+			data_ = ptr_new;
 		}
-
-		ptr_new[0].setKey(new_size);  // Special
-		data_ = ptr_new;
 	}
 
  private:
-	Element *data_ = nullptr;
+	std::conditional_t<FixedSize, std::array<DataType, FixedSize + 1>, Element *> data_{};
 };
 
 template <typename DataType, size_t ValueWidth>
