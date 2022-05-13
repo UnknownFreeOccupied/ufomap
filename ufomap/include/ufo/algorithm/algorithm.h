@@ -49,6 +49,13 @@ namespace ufo
 {
 using Permuation = std::vector<std::size_t>;
 
+/*!
+ * Retrieve the permutation to sort the elements in the range [first, last) in
+ * non-descending order. The order of equal elements is not guaranteed.
+ *
+ * @param first,last The range of elements to sort.
+ * @return Permuation The permutation.
+ */
 template <class RandomIt>
 Permuation sortPermutation(RandomIt first, RandomIt last)
 {
@@ -60,6 +67,15 @@ Permuation sortPermutation(RandomIt first, RandomIt last)
 	return p;
 }
 
+/*!
+ * Retrieve the permutation to sort the elements in the range [first, last) in
+ * non-descending order. The order of equal elements is not guaranteed.
+ *
+ * @param first,last The range of elements to sort.
+ * @param comp Comparison function object which returns true if the first argument is less
+ * than (i.e. is ordered before) the second.
+ * @return Permuation The permutation.
+ */
 template <class RandomIt, class Compare>
 Permuation sortPermutation(RandomIt first, RandomIt last, Compare comp)
 {
@@ -71,6 +87,17 @@ Permuation sortPermutation(RandomIt first, RandomIt last, Compare comp)
 	return p;
 }
 
+/*!
+ * Apply permutation to the elements in the range [first, last).
+ *
+ * @code
+ * auto perm = sortPermutation(a, b);
+ * applyPermutation(a, b, perm);
+ * @endcode
+ *
+ * @param first,last The range of elements to permutate.
+ * @param perm  The permutation.
+ */
 template <class RandomIt>
 void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
 {
