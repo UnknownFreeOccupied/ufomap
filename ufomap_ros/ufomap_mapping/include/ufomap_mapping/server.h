@@ -1,32 +1,32 @@
-/**
- * UFOMap Mapping
- *
- * @author D. Duberg, KTH Royal Institute of Technology, Copyright (c) 2020.
- * @see https://github.com/UnknownFreeOccupied/ufomap_mapping
- * License: BSD 3
- *
- */
-
-/*
+/*!
+ * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
+ * 
+ * @author Daniel Duberg (dduberg@kth.se)
+ * @see https://github.com/UnknownFreeOccupied/ufomap
+ * @version 1.0
+ * @date 2022-05-13
+ * 
+ * @copyright Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
+ * 
  * BSD 3-Clause License
- *
- * Copyright (c) 2020, D. Duberg, KTH Royal Institute of Technology
+ * 
+ * Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
  * All rights reserved.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *
+ * 
  * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- *
+ *     list of conditions and the following disclaimer.
+ * 
  * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
+ *     this list of conditions and the following disclaimer in the documentation
+ *     and/or other materials provided with the distribution.
+ * 
  * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
+ *     contributors may be used to endorse or promote products derived from
+ *     this software without specific prior written permission.
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -43,8 +43,8 @@
 #define UFO_MAP_MAPPING_SERVER_H
 
 // UFO
-#include <ufo/map/occupancy_map.h>
-#include <ufo/map/occupancy_map_color.h>
+#include <ufo/map/ufomap.h>
+#include <ufo/util/timing.h>
 #include <ufomap_mapping/ServerConfig.h>
 #include <ufomap_srvs/ClearVolume.h>
 #include <ufomap_srvs/GetMap.h>
@@ -59,7 +59,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
 
-// STD
+// STL
 #include <future>
 #include <variant>
 #include <vector>
@@ -74,7 +74,9 @@ class Server
  private:
 	void cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg);
 
-	void publishInfo();
+	void printInfo() const;
+
+	void writeComputationTimeToFile();
 
 	void mapConnectCallback(ros::SingleSubscriberPublisher const &pub, int depth);
 
@@ -114,7 +116,6 @@ class Server
 	double pub_rate_;
 	ros::Duration update_rate_;
 	ros::Time last_update_time_;
-	ros::Publisher info_pub_;
 
 	// Services
 	ros::ServiceServer get_map_server_;
@@ -135,14 +136,12 @@ class Server
 	//
 
 	// Map
-	std::variant<std::monostate, ufo::map::OccupancyMap, ufo::map::OccupancyMapColor> map_;
+	ufo::map::UFOMap map_;
 	std::string frame_id_;
 
 	// Integration
-	double max_range_;
-	ufo::map::DepthType insert_depth_;
+	ufo::map::Integrator integrator_;
 	bool simple_ray_casting_;
-	unsigned int early_stopping_;
 	bool async_;
 
 	// Clear robot
@@ -155,36 +154,12 @@ class Server
 	// Publishing
 	bool compress_;
 	bool update_part_of_map_;
-	ufo::map::DepthType publish_depth_;
+	ufo::map::Depth publish_depth_;
 	std::future<void> update_async_handler_;
 
-	//
-	// Information
-	//
-
-	// Integration
-	double min_integration_time_;
-	double max_integration_time_ = 0.0;
-	double accumulated_integration_time_ = 0.0;
-	int num_integrations_ = 0;
-
-	// Clear robot
-	double min_clear_time_;
-	double max_clear_time_ = 0.0;
-	double accumulated_clear_time_ = 0.0;
-	int num_clears_ = 0;
-
-	// Publish update
-	double min_update_time_;
-	double max_update_time_ = 0.0;
-	double accumulated_update_time_ = 0.0;
-	int num_updates_ = 0;
-
-	// Publish whole
-	double min_whole_time_;
-	double max_whole_time_ = 0.0;
-	double accumulated_whole_time_ = 0.0;
-	int num_wholes_ = 0;
+	// Timing information
+	ufo::util::Timing timing_;
+	std::ofstream output_file_;
 
 	// Verbose
 	bool verbose_;
