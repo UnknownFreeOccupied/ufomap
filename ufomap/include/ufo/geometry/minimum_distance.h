@@ -1,32 +1,32 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
- * 
+ *
  * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
- * 
+ *
  * @copyright Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
- * 
+ *
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *     list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -71,9 +71,8 @@ constexpr float squaredDistance(AABB const& a, AABB const& b) noexcept
 
 	float result = 0;
 	for (size_t i = 0; i != 3; ++i) {
-		float d_1 = std::fdim(b_max[i], a_min[i]);
-		float d_2 = std::fdim(a_max[i], b_min[i]);
-		result += (d_1 * d_1) + (d_2 * d_2);
+		float delta = std::fdim(a_min[i], b_max[i]) + std::fdim(b_min[i], a_max[i]);
+		result += delta * delta;
 
 		// if (a_min[i] > b_max[i]) {
 		// 	float delta = b_max[i] - a_min[i];
@@ -121,9 +120,8 @@ constexpr float squaredDistance(AABB const& a, AAEBB const& b) noexcept
 
 	float result = 0;
 	for (size_t i = 0; i != 3; ++i) {
-		float d_1 = std::fdim(b_max[i], a_min[i]);
-		float d_2 = std::fdim(a_max[i], b_min[i]);
-		result += (d_1 * d_1) + (d_2 * d_2);
+		float delta = std::fdim(a_min[i], b_max[i]) + std::fdim(b_min[i], a_max[i]);
+		result += delta * delta;
 
 		// if (a_min[i] > b_max[i]) {
 		// 	float delta = b_max[i] - a_min[i];
