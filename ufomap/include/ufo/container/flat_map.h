@@ -239,18 +239,18 @@ class FlatMap
 	iterator begin() noexcept
 	{
 		if constexpr (FixedSize) {
-			return std::begin(data_);
+			return std::next(std::begin(data_));
 		} else {
-			return empty() ? nullptr : std::next(data_, 1);
+			return empty() ? nullptr : std::next(data_);
 		}
 	}
 
 	const_iterator begin() const noexcept
 	{
 		if constexpr (FixedSize) {
-			return std::begin(data_);
+			return std::next(std::begin(data_));
 		} else {
-			return empty() ? nullptr : std::next(data_, 1);
+			return empty() ? nullptr : std::next(data_);
 		}
 	}
 
@@ -259,7 +259,7 @@ class FlatMap
 	iterator end() noexcept
 	{
 		if constexpr (FixedSize) {
-			return std::end(data_);
+			return std::next(std::begin(data_), size() + 1);
 		} else {
 			auto const s = allocSize();
 			return 0 == s ? nullptr : std::next(data_, s);
@@ -269,7 +269,7 @@ class FlatMap
 	const_iterator end() const noexcept
 	{
 		if constexpr (FixedSize) {
-			return std::end(data_);
+			return std::next(std::begin(data_), size() + 1);
 		} else {
 			auto const s = allocSize();
 			return 0 == s ? nullptr : std::next(data_, s);
@@ -280,21 +280,14 @@ class FlatMap
 
 	// Capacity
 	// [[nodiscard]]
-	[[nodiscard]] bool empty() const noexcept
-	{
-		if constexpr (FixedSize) {
-			return 0 == size();
-		} else {
-			return nullptr == data_;
-		}
-	}
+	[[nodiscard]] bool empty() const noexcept { return 0 == size(); }
 
 	[[nodiscard]] size_type size() const noexcept
 	{
 		if constexpr (FixedSize) {
 			return data_[0].key();
 		} else {
-			return empty() ? 0 : data_[0].getKey();
+			return data_ ? data_[0].getKey() : 0;
 		}
 	}
 
@@ -1232,8 +1225,6 @@ class FlatMap
 			if (data_.size() <= new_size) {
 				throw std::length_error();
 			}
-
-			data_[0].setKey(new_size);  // Special
 		} else {
 			Element *ptr_new =
 			    static_cast<Element *>(realloc(data_, (new_size + 1) * sizeof(Element)));
@@ -1242,9 +1233,10 @@ class FlatMap
 				throw std::bad_alloc();
 			}
 
-			ptr_new[0].setKey(new_size);  // Special
 			data_ = ptr_new;
 		}
+
+		data_[0].setKey(new_size);  // Special
 	}
 
  private:
