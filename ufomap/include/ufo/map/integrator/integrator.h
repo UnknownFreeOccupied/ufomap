@@ -67,6 +67,92 @@
 
 namespace ufo::map
 {
+template <class P>
+class IntegrationCloud
+{
+ public:
+	template <class Map, class P>
+	IntegrationCloud(Map const& map, PointCloudT<P> const& cloud, Depth const depth = 0)
+	    : IntegrationCloud(map, cloud, [depth]() { return depth })
+	{
+	}
+
+	template <class Map, class P, class UnaryFunction>
+	IntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
+	                 UnaryFunction depth_function)
+	    : points_(cloud)
+	{
+		// Get the corresponding code for each point
+		codes_.reserve(points.size());
+		std::transform(
+		    std::cbegin(points_), std::cend(points_), std::back_inserter(codes_),
+		    [&map, depth_function](auto const& p) { return map.toCode(p, depth_function(p)); });
+
+		// Sort the codes and points based on the codes
+		auto perm = sortPermutation(std::cbegin(codes_), std::cend(codes_));
+		applyPermutation(std::begin(codes_), std::end(codes_), perm);
+		applyPermutation(std::begin(points_), std::end(points_), perm);
+
+		// Get Equal indices
+		indices_ = getEqualIndices(std::cbegin(codes_), std::cend(codes_));
+	}
+
+	const_iterator begin() const
+	{
+		// TODO: Implement
+	}
+
+	const_iterator cbegin() const { return begin(); }
+
+	const_iterator end() const
+	{
+		// TODO: Implement
+	}
+
+	const_iterator cend() const { return end(); }
+
+	PointCloudT<P> const& cloud() const { return points_; }
+
+	std::vector<Code> const& codes() const {return codes_ : }
+
+	std::vector<std::pair<std::size_t, std::size_t>> const& indices() const
+	{
+		return indices_;
+	}
+
+	std::pair<P, Code> operator[](std::size_t index) const
+	{
+		return std::make_pair(points_[index], codes_[index]);
+	}
+
+ private:
+	//
+	// Get equal indices
+	//
+
+	template <class InputIt>
+	static std::vector<std::pair<std::size_t, std::size_t>> getEqualIndices(InputIt first,
+	                                                                        InputIt last)
+	{
+		std::vector<std::pair<std::size_t, std::size_t>> indices;
+		indices.reserve(std::distance(first, last));
+		for (auto it = first; it != last;) {
+			auto it_last = std::find_if_not(
+			    first, last, [value = *first](auto const& elem) { return value == elem; });
+			indices.emplace_back(std::distance(first, it), std::distance(first, it_last));
+			it = it_last;
+		}
+		return indices;
+	}
+
+ private:
+	PointCloudT<P> points_;
+	std::vector<Code> codes_;
+	std::vector<std::pair<std::size_t, std::size_t>> indices_;
+};
+
+using Misses = std::vector<Code>;
+
 /*!
  * Integrator facilitate integration of point cloud data into maps.
  *
@@ -74,6 +160,43 @@ namespace ufo::map
 class Integrator
 {
  public:
+	//
+	// Get hits
+	//
+
+	template <class Map, class P>
+	Hits<P> getHits(Map const& map, PointCloudT<P> const& cloud)
+	{
+		Hits<P> hits;
+
+		// Copy cloud
+		hits.points = cloud;
+
+		// Get the corresponding code for each point
+		hits.codes = toCodes(map, std::cbegin(cloud), std::cend(cloud), hit_depth_);
+
+		// Sort the codes and points based on the codes
+		sort(std::begin(hits.codes), std::end(hits.codes), std::begin(hits.points),
+		     std::end(hits.points));
+
+		// Get Equal indices
+		hits.indices = getEqualIndices(std::cbegin(hits.codes), std::cend(hits.codes));
+
+		return hits;
+	}
+
+	//
+	// Get misses
+	//
+
+	template <class Map, class P>
+	Misses getMisses(Map const& map, Hits<P> const& hits, Point3 const sensor_origin)
+	{
+		// Ray cast to get free space
+		return getMisses(map.toCode(sensor_origin, miss_depth_), std::cbegin(hits.codes),
+		                 std::cend(hits.codes), max_length_);
+	}
+
 	//
 	// Insert point cloud
 	//
@@ -86,26 +209,37 @@ class Integrator
 	 * @param propagate Whether to update the inner nodes of the map.
 	 */
 	template <class Map, class P>
-	void insertPointCloud(Map& map, PointCloudT<P> cloud, bool const propagate = true)
+	void insertPointCloud(Map& map, PointCloudT<P> cloud, bool const propagate = true) const
 	{
-		// Get the corresponding code for each point
-		std::vector<Code> hits =
-		    toCodes(map, std::cbegin(cloud), std::cend(cloud), hit_depth_);
-
-		// Sort the codes and points based on the codes
-		sort(std::begin(hits), std::end(hits), std::begin(cloud), std::end(cloud));
-
-		// Get Equal indices
-		std::vector<std::pair<std::size_t, std::size_t>> indices =
-		    getEqualIndices(std::cbegin(hits), std::cend(hits));
+		// Create integration cloud
+		IntegrationCloud<P> ic(map, cloud, hit_depth_);
 
 		// Integrate into the map
-		integrateHits(map, cloud, hits, indices);
+		integrateHits(map, ic);
 
+		// Propagate information in the map
 		if (propagate) {
-			// Propagate information in the map
 			map.updateModifiedNodes();
 		}
+
+		// // Get the corresponding code for each point
+		// std::vector<Code> hits =
+		//     toCodes(map, std::cbegin(cloud), std::cend(cloud), hit_depth_);
+
+		// // Sort the codes and points based on the codes
+		// sort(std::begin(hits), std::end(hits), std::begin(cloud), std::end(cloud));
+
+		// // Get Equal indices
+		// std::vector<std::pair<std::size_t, std::size_t>> indices =
+		//     getEqualIndices(std::cbegin(hits), std::cend(hits));
+
+		// // Integrate into the map
+		// integrateHits(map, cloud, hits, indices);
+
+		// if (propagate) {
+		// 	// Propagate information in the map
+		// 	map.updateModifiedNodes();
+		// }
 	}
 
 	/*!
@@ -119,7 +253,7 @@ class Integrator
 	 */
 	template <class Map, class P>
 	void insertPointCloud(Map& map, PointCloudT<P> cloud, Point3 const sensor_origin,
-	                      bool const propagate = true)
+	                      bool const propagate = true) const
 	{
 		// Get the corresponding code for each point
 		std::vector<Code> hits =
@@ -159,7 +293,7 @@ class Integrator
 	 */
 	template <class Map, class P>
 	void insertPointCloud(Map& map, PointCloudT<P> cloud, Point3 const sensor_origin,
-	                      math::Pose6f frame_origin, bool const propagate = true)
+	                      math::Pose6f frame_origin, bool const propagate = true) const
 	{
 		applyTransform(cloud, frame_origin);
 		insertPointCloud(map, cloud, frame_origin.transform(sensor_origin), propagate);
@@ -293,29 +427,6 @@ class Integrator
 
  private:
 	//
-	// Get logit
-	//
-
-	/*!
-	 * Convert a probability to logit form for a given map.
-	 *
-	 * @param map The map.
-	 * @param prob The probability to convert.
-	 * @return The logit corresponding to the probability given the map.
-	 */
-	template <class Map>
-	static auto getLogit(Map const& map, float const prob)
-	{
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
-			return math::logitChangeValue<uint8_t>(prob,
-			                                       map.getOccupancyClampingThresMinLogit(),
-			                                       map.getOccupancyClampingThresMaxLogit());
-		} else {
-			return math::logit(prob);
-		}
-	}
-
-	//
 	// Integrate hits
 	//
 
@@ -324,25 +435,34 @@ class Integrator
 	    Map& map, PointCloudT<P> const& cloud, std::vector<Code> const& codes,
 	    std::vector<std::pair<std::size_t, std::size_t>> const& indices) const
 	{
-		auto prob = getLogit(map, occupancy_prob_hit_);
+		auto prob = map.toOccupancyLogit(occupancy_prob_hit_);
 
 		// TODO: Something with semantics
 
+		// For each node
 		std::for_each(std::cbegin(indices), std::cend(indices), [&](auto const& index) {
+			// Get the points [first, last) falling into the node
+			auto first_point = std::next(std::cbegin(cloud), index.first);
+			auto last_point = std::next(std::cbegin(cloud), index.second);
+
+			// Create and retrieve the node
 			auto node = map.createNode(codes[index.first]);
+
+			// Get current occupancy
 			auto logit = map.getOccupancyLogit(node);
 
+			// Update occupancy
 			map.increateOccupancyLogit(node, prob, false);
 
+			// Update time step
 			if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
 				map.setTimeStep(node, current_time_step_, false);
 			}
 
+			// Update color
 			if constexpr (is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
 			              std::is_base_of_v<RGBColor, T>) {
-				RGBColor avg_color =
-				    RGBColor::average(std::next(std::cbegin(cloud), index.first),
-				                      std::next(std::cbegin(cloud), index.second));
+				RGBColor avg_color = RGBColor::average(first_point, last_point);
 
 				if (avg_color.set()) {
 					double total_logit = logit + prob;
@@ -351,12 +471,12 @@ class Integrator
 				}
 			}
 
+			// Update semantics
 			if constexpr (is_base_of_template_v<SemanticMapBase, std::decay_t<Map>> &&
 			              std::is_base_of_v<SemanticPair, T>) {
 				// FIXME: Implement correctly
 
-				std::vector<SemanticPair> semantics(std::next(std::cbegin(cloud), index.first),
-				                                    std::next(std::cbegin(cloud), index.second));
+				std::vector<SemanticPair> semantics(first_point, last_point);
 
 				// Remove label 0
 				semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
@@ -380,7 +500,7 @@ class Integrator
 	template <class Map>
 	void integrateMisses(Map& map, std::vector<Code> const& codes) const
 	{
-		auto prob = getLogit(map, occupancy_prob_miss_);
+		auto prob = map.toOccupancyLogit(occupancy_prob_miss_);
 
 		std::for_each(std::cbegin(codes), std::cend(codes), [&map, prob](auto code) {
 			auto node = map.createNode(code);
@@ -391,52 +511,6 @@ class Integrator
 				map.setTimeStep(node, current_time_step_, false);
 			}
 		});
-	}
-
-	//
-	// To codes
-	//
-
-	template <class Map, class InputIt>
-	static std::vector<Code> toCodes(Map const& map, InputIt first, InputIt last,
-	                                 Depth const depth = 0)
-	{
-		std::vector<Code> codes;
-		codes.reserve(std::distance(first, last));
-		std::transform(first, last, std::back_inserter(codes),
-		               [&map, depth](auto const& p) { return map.toCode(p, depth); });
-		return codes;
-	}
-
-	//
-	// Sort
-	//
-
-	template <class RandomIt, class RandomIt2>
-	static void sort(RandomIt first, RandomIt last, RandomIt2 first_2, RandomIt2 last_2)
-	{
-		auto perm = sortPermutation(first, last);
-		applyPermutation(first, last, perm);
-		applyPermutation(first_2, last_2, perm);
-	}
-
-	//
-	// Get equal indices
-	//
-
-	template <class InputIt>
-	static std::vector<std::pair<std::size_t, std::size_t>> getEqualIndices(InputIt first,
-	                                                                        InputIt last)
-	{
-		std::vector<std::pair<std::size_t, std::size_t>> indices;
-		indices.reserve(std::distance(first, last));
-		for (auto it = first; it != last;) {
-			auto it_last = std::find_if_not(
-			    first, last, [value = *first](auto const& elem) { return value == elem; });
-			indices.emplace_back(std::distance(first, it), std::distance(first, it_last));
-			it = it_last;
-		}
-		return indices;
 	}
 
 	//
