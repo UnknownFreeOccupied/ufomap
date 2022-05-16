@@ -104,22 +104,22 @@ class Code
 
 	constexpr bool operator<(Code const& rhs) const
 	{
-		return depth_ < rhs.depth_ || (depth_ == rhs.depth_ && code_ < rhs.code_);
+		return code_ < rhs.code_ || (code_ == rhs.code_ && depth_ > rhs.depth_);
 	}
 
 	constexpr bool operator<=(Code const& rhs) const
 	{
-		return depth_ < rhs.depth_ || (depth_ == rhs.depth_ && code_ <= rhs.code_);
+		return code_ < rhs.code_ || (code_ == rhs.code_ && depth_ >= rhs.depth_);
 	}
 
 	constexpr bool operator>(Code const& rhs) const
 	{
-		return depth_ > rhs.depth_ || (depth_ == rhs.depth_ && code_ > rhs.code_);
+		return code_ > rhs.code_ || (code_ == rhs.code_ && depth_ < rhs.depth_);
 	}
 
 	constexpr bool operator>=(Code const& rhs) const
 	{
-		return depth_ > rhs.depth_ || (depth_ == rhs.depth_ && code_ >= rhs.code_);
+		return code_ > rhs.code_ || (code_ == rhs.code_ && depth_ <= rhs.depth_);
 	}
 
 	/*!
