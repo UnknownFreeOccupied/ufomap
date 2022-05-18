@@ -55,7 +55,7 @@ using Permuation = std::vector<std::size_t>;
  * non-descending order. The order of equal elements is not guaranteed.
  *
  * @param first,last The range of elements to sort.
- * @return Permuation The permutation.
+ * @return The permutation.
  */
 template <class RandomIt>
 Permuation sortPermutation(RandomIt first, RandomIt last)
@@ -74,8 +74,8 @@ Permuation sortPermutation(RandomIt first, RandomIt last)
  *
  * @param first,last The range of elements to sort.
  * @param comp Comparison function object which returns true if the first argument is less
- * than (i.e. is ordered before) the second.
- * @return Permuation The permutation.
+ * than (i.e., is ordered before) the second.
+ * @return The permutation.
  */
 template <class RandomIt, class Compare>
 Permuation sortPermutation(RandomIt first, RandomIt last, Compare comp)
@@ -97,7 +97,7 @@ Permuation sortPermutation(RandomIt first, RandomIt last, Compare comp)
  * @endcode
  *
  * @param first,last The range of elements to permutate.
- * @param perm  The permutation.
+ * @param perm The permutation.
  */
 template <class RandomIt>
 void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
@@ -117,6 +117,24 @@ void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
 			done[j] = true;
 		}
 	}
+}
+
+template <typename T>
+constexpr double ipow(T base, int exp)
+{
+	if (0 == exp) {
+		return 0 <= base ? 1.0 : -1.0;
+	}
+
+	bool positive = 0 < exp;
+	exp = 0 < exp ? exp : -exp;
+
+	T result = base;
+	while (--exp) {
+		result *= base;
+	}
+
+	return positive ? result : 1.0 / result;
 }
 }  // namespace ufo
 
