@@ -48,7 +48,6 @@
 // STL
 #include <algorithm>
 #include <cstddef>  // For std::ptrdiff_t
-#include <execution>
 #include <functional>
 #include <initializer_list>
 #include <istream>
@@ -65,24 +64,24 @@ namespace ufo::container
 /*!
  * Associative ordered container using a data-coherent implementation.
  * Elements of the container are stored using a single unsigned type
- * where the left-most bits represent the key and the right-most the value.
+ * where the most significant bits represent the key and the least significant the value.
  * The number of bits allocated for the key and value is custom for each
  * container instance, e.g., if DataType = uint16_t and ValueWidth = 1
  * the key will be 15 bits and the value 1 bit.
  */
-template <typename DataType, size_t ValueWidth, size_t FixedSize = 0>
+template <typename DataType, std::size_t ValueWidth, std::size_t FixedSize = 0>
 class FlatMap
 {
  private:
 	static_assert(std::is_unsigned_v<DataType>, "FlatMap require unsigned data type.");
 
-	static constexpr size_t LabelWidth = std::numeric_limits<DataType>::digits - ValueWidth;
+	static constexpr std::size_t LabelWidth = std::numeric_limits<DataType>::digits - ValueWidth;
 	static constexpr DataType LabelMask =
-	    static_cast<DataType>(std::numeric_limits<DataType>::max() >> ValueWidth)
-	    << ValueWidth;
+	    (std::numeric_limits<DataType>::max() >> ValueWidth) << ValueWidth;
 	static constexpr DataType ValueMask =
-	    static_cast<DataType>(std::numeric_limits<DataType>::max() << LabelWidth) >>
-	    LabelWidth;
+	    (std::numeric_limits<DataType>::max() << LabelWidth) >> LabelWidth;
+
+	static constexpr std::size_t FixedSizeC = std::min(FixedSize, );
 
  public:
 	// Tags
@@ -103,6 +102,11 @@ class FlatMap
 		[[nodiscard]] constexpr mapped_type value() const noexcept
 		{
 			return data_ & ValueMask;
+		}
+
+		constexpr void setValue(mapped_type value) noexcept
+		{
+			data_ = (data_ & LabelMask) | (value & ValueMask);
 		}
 
 		constexpr bool operator==(Element const &rhs) const noexcept
@@ -142,11 +146,6 @@ class FlatMap
 			data_ = (key << ValueWidth) | (data_ & ValueMask);
 		}
 
-		constexpr void setValue(mapped_type value) noexcept
-		{
-			data_ = (data_ & LabelMask) | (value & ValueMask);
-		}
-
 		constexpr void setKeyValue(key_type key, mapped_type value) noexcept
 		{
 			data_ = (key << ValueWidth) | (value & ValueMask);
@@ -177,7 +176,7 @@ class FlatMap
 
 	// Tags
 	using value_type = Element;
-	using size_type = DataType;
+	using std::size_type = DataType;
 	using difference_type = std::ptrdiff_t;
 	using reference = value_type &;
 	using const_reference = value_type const &;
@@ -196,14 +195,6 @@ class FlatMap
 	FlatMap(InputIt first, InputIt last)
 	{
 		insert(first, last);
-	}
-
-	template <class ExecutionPolicy, class InputIt,
-	          typename = std::enable_if_t<
-	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-	FlatMap(ExecutionPolicy policy, InputIt first, InputIt last)
-	{
-		insert(policy, first, last);
 	}
 
 	FlatMap(FlatMap const &other) { *this = other; }
@@ -282,7 +273,7 @@ class FlatMap
 	// [[nodiscard]]
 	[[nodiscard]] bool empty() const noexcept { return 0 == size(); }
 
-	[[nodiscard]] size_type size() const noexcept
+	[[nodiscard]] std::size_type size() const noexcept
 	{
 		if constexpr (FixedSize) {
 			return data_[0].key();
@@ -291,7 +282,7 @@ class FlatMap
 		}
 	}
 
-	[[nodiscard]] size_type allocSize() const noexcept
+	[[nodiscard]] std::size_type allocSize() const noexcept
 	{
 		if constexpr (FixedSize) {
 			return FixedSize + 1;
@@ -300,7 +291,7 @@ class FlatMap
 		}
 	}
 
-	[[nodiscard]] constexpr size_type max_size() const noexcept
+	[[nodiscard]] constexpr std::size_type max_size() const noexcept
 	{
 		if constexpr (FixedSize) {
 			return FixedSize;
@@ -329,15 +320,6 @@ class FlatMap
 		std::copy(first, last, begin());
 	}
 
-	template <class ExecutionPolicy, class InputIt,
-	          typename = std::enable_if_t<
-	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-	void setOrdered(ExecutionPolicy policy, InputIt first, InputIt last)
-	{
-		resize(std::distance(first, last));
-		std::copy(policy, first, last, begin());
-	}
-
 	std::pair<iterator, bool> insert(value_type const &value)
 	{
 		return insert_impl<InsertType::NORMAL>(value.getKey(), value.getValue());
@@ -355,27 +337,10 @@ class FlatMap
 		insert_impl(temp);
 	}
 
-	template <class ExecutionPolicy, class InputIt,
-	          typename = std::enable_if_t<
-	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-	void insert(ExecutionPolicy policy, InputIt first, InputIt last)
-	{
-		std::vector<typename std::iterator_traits<InputIt>::value_type> temp(first, last);
-		insert_impl(policy, temp);
-	}
-
 	void insert(std::initializer_list<value_type> ilist)
 	{
 		std::vector<value_type> temp(ilist);
 		insert_impl(temp);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void insert(ExecutionPolicy policy, std::initializer_list<value_type> ilist)
-	{
-		std::vector<value_type> temp(ilist);
-		insert_impl(policy, temp);
 	}
 
 	template <class... Args>
@@ -615,7 +580,7 @@ class FlatMap
 		return it;
 	}
 
-	size_type erase(key_type key)
+	std::size_type erase(key_type key)
 	{
 		if (iterator it = find(key); end() != it) {
 			erase(it);
@@ -629,13 +594,13 @@ class FlatMap
 	 * comp(Element.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(Range<T> const &range, mapped_type value, Compare comp)
+	std::size_type erase(Range<T> const &range, mapped_type value, Compare comp)
 	{
 		return erase(RangeSet<T>(range), value, comp);
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(Range<T> const &range)
+	std::size_type erase(Range<T> const &range)
 	{
 		return erase(RangeSet<T>(range));
 	}
@@ -645,9 +610,9 @@ class FlatMap
 	 * comp(Element.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(RangeSet<T> const &rangeSet, mapped_type value, Compare comp)
+	std::size_type erase(RangeSet<T> const &rangeSet, mapped_type value, Compare comp)
 	{
-		size_type old_size = size();
+		std::size_type old_size = size();
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
 			auto upper = upper_bound(range.upper());
@@ -666,9 +631,9 @@ class FlatMap
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(RangeSet<T> const &rangeSet)
+	std::size_type erase(RangeSet<T> const &rangeSet)
 	{
-		size_type old_size = size();
+		std::size_type old_size = size();
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
 			auto upper = upper_bound(range.upper());
@@ -694,7 +659,7 @@ class FlatMap
 		return end() != it ? it->getValue() : 0;
 	}
 
-	[[nodiscard]] size_type count(key_type key) const { return contains(key) ? 1 : 0; }
+	[[nodiscard]] std::size_type count(key_type key) const { return contains(key) ? 1 : 0; }
 
 	[[nodiscard]] iterator find(key_type key)
 	{
@@ -787,7 +752,7 @@ class FlatMap
 	[[nodiscard]] bool containsAny(RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
+		if (rangeSet.size() == std::size_type(0)) {
 			return true;
 		}
 
@@ -818,7 +783,7 @@ class FlatMap
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
+		if (rangeSet.size() == std::size_type(0)) {
 			return true;
 		}
 
@@ -909,13 +874,13 @@ class FlatMap
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
+		if (rangeSet.size() == std::size_type(0)) {
 			return true;
 		}
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::size_type checked_elems = 0;
+		typename RangeSet<uint32_t>::std::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elements are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -947,13 +912,13 @@ class FlatMap
 	[[nodiscard]] bool containsAll(RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
+		if (rangeSet.size() == std::size_type(0)) {
 			return true;
 		}
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::size_type checked_elems = 0;
+		typename RangeSet<uint32_t>::std::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elemnts are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -1014,16 +979,16 @@ class FlatMap
 
 	std::ostream &writeData(std::ostream &out_stream) const
 	{
-		size_type num = size();
-		out_stream.write(reinterpret_cast<char const *>(&num), sizeof(size_type));
+		std::size_type num = size();
+		out_stream.write(reinterpret_cast<char const *>(&num), sizeof(std::size_type));
 		return out_stream.write(reinterpret_cast<char const *>(getData()),
 		                        sizeof(Element) * num);
 	}
 
 	std::istream &readData(std::istream &in_stream)
 	{
-		size_type num;
-		in_stream.read(reinterpret_cast<char *>(&num), sizeof(size_type));
+		std::size_type num;
+		in_stream.read(reinterpret_cast<char *>(&num), sizeof(std::size_type));
 		if (0 == num) {
 			clear();
 			return in_stream;
@@ -1148,32 +1113,6 @@ class FlatMap
 		}
 	}
 
-	template <InsertType InsertT = InsertType::NORMAL, class ExecutionPolicy, class T,
-	          typename = std::enable_if_t<
-	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-	void insert_impl(ExecutionPolicy policy, std::vector<T> &vec)
-	{
-		// Sort based on key and such highest value first if same key
-		std::sort(policy, std::begin(vec), std::end(vec));
-
-		// Erase duplicate keys, saving the highest value for each key
-		auto r_last = std::unique(
-		    policy, std::rbegin(vec), std::rend(vec),
-		    [](auto const &v1, auto const &v2) { return v1.getKey() == v2.getKey(); });
-		vec.erase(std::begin(vec), r_last.base());
-
-		if (empty()) {
-			// Optimized insert
-			setOrdered(policy, std::begin(vec), std::end(vec));
-		} else {
-			// Normal insert
-			auto hint = begin();
-			for (auto const &elem : vec) {
-				hint = insert<InsertT>(hint, elem.getKey(), elem.getValue()).first;
-			}
-		}
-	}
-
 	static iterator lower_bound(iterator first, iterator last, key_type key)
 	{
 		return std::lower_bound(first, last, Element(key, 0));
@@ -1219,7 +1158,7 @@ class FlatMap
 		}
 	}
 
-	void resize(size_type const new_size)
+	void resize(std::size_type const new_size)
 	{
 		if constexpr (FixedSize) {
 			if (data_.size() <= new_size) {
@@ -1243,29 +1182,29 @@ class FlatMap
 	std::conditional_t<FixedSize, std::array<DataType, FixedSize + 1>, Element *> data_{};
 };
 
-template <typename DataType, size_t ValueWidth>
+template <typename DataType, std::size_t ValueWidth>
 bool operator==(FlatMap<DataType, ValueWidth> const &lhs,
                 FlatMap<DataType, ValueWidth> const &rhs)
 {
 	return std::equal(std::begin(lhs), std::end(lhs), std::begin(rhs), std::end(rhs));
 }
 
-template <typename DataType, size_t ValueWidth>
+template <typename DataType, std::size_t ValueWidth>
 bool operator!=(FlatMap<DataType, ValueWidth> const &lhs,
                 FlatMap<DataType, ValueWidth> const &rhs)
 {
 	return !(lhs == rhs);
 }
 
-template <typename DataType, size_t ValueWidth>
+template <typename DataType, std::size_t ValueWidth>
 void swap(FlatMap<DataType, ValueWidth> &lhs,
           FlatMap<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }
 
-template <typename DataType, size_t ValueWidth, class Pred>
-typename FlatMap<DataType, ValueWidth>::size_type erase_if(
+template <typename DataType, std::size_t ValueWidth, class Pred>
+typename FlatMap<DataType, ValueWidth>::std::size_type erase_if(
     FlatMap<DataType, ValueWidth> &c, Pred pred)
 {
 	auto old_size = c.size();
