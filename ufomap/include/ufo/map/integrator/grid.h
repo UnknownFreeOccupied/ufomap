@@ -1,32 +1,32 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
- * 
+ *
  * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
- * 
+ *
  * @copyright Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
- * 
+ *
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *     list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -55,11 +55,7 @@ template <Depth Depth>
 class Grid
 {
  private:
-	static constexpr std::size_t ipow(Depth pow)
-	{
-		return 0 == pow ? 1 : 8 * ipow(pow - 1);
-	}
-	static constexpr std::size_t NumIndices = ipow(Depth);
+	static constexpr std::size_t NumIndices = ipow(8, Depth);
 
 	static constexpr Key::KeyType Mask =
 	    ~((std::numeric_limits<Key::KeyType>::max() >> Depth) << Depth);
@@ -68,34 +64,34 @@ class Grid
 	using reference = typename std::bitset<NumIndices>::reference;
 
  public:
-	constexpr bool operator[](std::size_t index) const { return indices_[index]; }
+	constexpr bool operator[](std::size_t const index) const { return indices_[index]; }
 
-	constexpr bool operator[](Key const& key) const { return indices_[getIndex(key)]; }
+	constexpr bool operator[](Key const key) const { return indices_[index(key)]; }
 
-	reference operator[](std::size_t index) { return indices_[index]; }
+	reference operator[](std::size_t const index) { return indices_[index]; }
 
-	reference operator[](Key const& key) { return indices_[getIndex(key)]; }
+	reference operator[](Key const key) { return indices_[index(key)]; }
 
-	bool test(std::size_t index) const { return indices_.test(index); }
+	bool test(std::size_t const index) const { return indices_.test(index); }
 
-	bool test(Key const& key) const { return indices_.test(getIndex(key)); }
+	bool test(Key const key) const { return indices_.test(index(key)); }
 
-	void set(Key const& key) { indices_.set(getIndex(key)); }
+	void set(Key const key) { indices_.set(index(key)); }
 
-	void reset(Key const& key) { indices_.reset(getIndex(key)); }
+	void reset(Key const key) { indices_.reset(index(key)); }
 
 	void clear() { indices_.reset(); }
 
 	constexpr std::size_t size() const noexcept { return NumIndices; }
 
-	static constexpr std::size_t getIndex(Key const& key)
+	static constexpr std::size_t index(Key const key)
 	{
 		Depth const depth = key.depth();
 		return ((key.x() >> depth) & Mask) | (((key.y() >> depth) & Mask) << Depth) |
 		       (((key.z() >> depth) & Mask) << (2 * Depth));
 	}
 
-	static Key getKey(std::size_t index, Depth depth)
+	static constexpr Key key(std::size_t const index, Depth const depth)
 	{
 		return Key((index & Mask) << depth, ((index >> Depth) & Mask) << depth,
 		           ((index >> (2 * Depth)) & Mask) << depth, depth);
