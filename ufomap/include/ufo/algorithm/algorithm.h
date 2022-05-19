@@ -44,6 +44,7 @@
 
 // STL
 #include <algorithm>
+#include <type_traits>
 #include <vector>
 
 namespace ufo
@@ -119,11 +120,11 @@ void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
 	}
 }
 
-template <typename T>
-constexpr double ipow(T base, int exp)
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+constexpr T ipow(T base, int exp)
 {
 	if (0 == exp) {
-		return 0 <= base ? 1.0 : -1.0;
+		return 0 <= base ? T(1) : T(-1);
 	}
 
 	bool positive = 0 < exp;
@@ -134,7 +135,21 @@ constexpr double ipow(T base, int exp)
 		result *= base;
 	}
 
-	return positive ? result : 1.0 / result;
+	return positive ? result : T(1) / result;
+}
+
+template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+constexpr T ipow(T base, std::size_t exp)
+{
+	if (0 == exp) {
+		return 1;
+	}
+
+	T result = base;
+	while (--exp) {
+		result *= base;
+	}
+	return result;
 }
 }  // namespace ufo
 
