@@ -64,7 +64,10 @@ KeyRay computeRay(Key origin, Key goal)
 
 	int size = 1U << origin.depth();
 
-	Vector3d dir(goal.x() - origin.x(), goal.y() - origin.y(), goal.z() - origin.z());
+	Vector3d o(origin.x(), origin.y(), origin.z());
+	Vector3d g(goal.x(), goal.y(), goal.z());
+
+	Vector3d dir = g - o;
 	double distance = dir.norm();
 	dir /= distance;
 
@@ -79,8 +82,7 @@ KeyRay computeRay(Key origin, Key goal)
 	Vector3d t_max = t_delta / 2;
 
 	KeyRay ray;
-	ray.reserve(std::abs(goal.x() - origin.x()) + std::abs(goal.y() - origin.y()) +
-	            std::abs(goal.z() - origin.z()));
+	ray.reserve(Vector3d::abs(g - o).norm());
 	ray.push_back(origin);
 	while (origin != goal && t_max.min() <= distance) {
 		auto advance_dim = t_max.minElementIndex();

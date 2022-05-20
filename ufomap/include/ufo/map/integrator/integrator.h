@@ -223,7 +223,7 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
                  Point3 const sensor_origin, bool const only_valid = false,
                  Depth const depth = 0)
 {
-	Misses misses;
+	CodeSet indices;
 
 	for (auto const& p : cloud) {
 		for (auto const& [p, v] : p.points) {

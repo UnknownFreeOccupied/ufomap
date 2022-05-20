@@ -285,8 +285,27 @@ class Code
 // using CodeMap = std::unordered_map<Code, T, Code::Hash>;
 using CodeRay = std::vector<Code>;
 
-class CodeSet
+class CodeUnorderedSet
 {
+ public:
+	using key_type = Code;
+	using value_type = Code;
+	using size_type = std::size_t;
+	using difference_type = std::ptrdiff_t;
+	using hasher = Code::Hash;
+	using key_equal = std::equal_to<Code>;
+	using allocator_type = ...;
+	using reference = value_type&;
+	using const_reference = value_type const&;
+	using pointer = ...;
+	using const_pointer = ...;
+	using iterator = ...;
+	using const_iterator = ...;
+	using local_iterator = ...;
+	using const_local_iterator = ...;
+	using node_type = ...;
+	using insert_return_type = ...;
+
  public:
 	CodeSet(unsigned int power = 18) : power_(power)
 	{
