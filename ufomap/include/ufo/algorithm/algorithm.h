@@ -63,7 +63,7 @@ Permuation sortPermutation(RandomIt first, RandomIt last)
 {
 	Permuation p(std::distance(first, last));
 	std::iota(std::begin(p), std::end(p), 0);
-	std::sort(std::begin(p), std::end(p), [first, comp](std::size_t i, std::size_t j) {
+	std::sort(std::begin(p), std::end(p), [first](std::size_t i, std::size_t j) {
 		return *std::next(first, i) < *std::next(first, j);
 	});
 	return p;
