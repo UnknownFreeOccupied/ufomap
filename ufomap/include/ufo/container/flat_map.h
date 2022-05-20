@@ -75,13 +75,14 @@ class FlatMap
  private:
 	static_assert(std::is_unsigned_v<DataType>, "FlatMap require unsigned data type.");
 
-	static constexpr std::size_t LabelWidth = std::numeric_limits<DataType>::digits - ValueWidth;
+	static constexpr std::size_t LabelWidth =
+	    std::numeric_limits<DataType>::digits - ValueWidth;
 	static constexpr DataType LabelMask =
 	    (std::numeric_limits<DataType>::max() >> ValueWidth) << ValueWidth;
 	static constexpr DataType ValueMask =
 	    (std::numeric_limits<DataType>::max() << LabelWidth) >> LabelWidth;
 
-	static constexpr std::size_t FixedSizeC = std::min(FixedSize, );
+	static constexpr std::size_t FixedSizeC = std::min(FixedSize, LabelMask >> ValueWidth);
 
  public:
 	// Tags
@@ -97,9 +98,12 @@ class FlatMap
 		{
 		}
 
-		[[nodiscard]] constexpr key_type key() const noexcept { return data_ >> ValueWidth; }
+		[[nodiscard]] constexpr key_type getKey() const noexcept
+		{
+			return data_ >> ValueWidth;
+		}
 
-		[[nodiscard]] constexpr mapped_type value() const noexcept
+		[[nodiscard]] constexpr mapped_type getValue() const noexcept
 		{
 			return data_ & ValueMask;
 		}
@@ -136,7 +140,7 @@ class FlatMap
 		friend std::ostream &operator<<(std::ostream &os, Element element)
 		{
 			// Note: '+' to apply arithmetic promotion.
-			os << +element.key() << ": " << +element.value();
+			os << +element.getKey() << ": " << +element.getValue();
 			return os;
 		}
 
@@ -176,7 +180,7 @@ class FlatMap
 
 	// Tags
 	using value_type = Element;
-	using std::size_type = DataType;
+	using size_type = DataType;
 	using difference_type = std::ptrdiff_t;
 	using reference = value_type &;
 	using const_reference = value_type const &;
@@ -229,7 +233,7 @@ class FlatMap
 	// Iterators
 	iterator begin() noexcept
 	{
-		if constexpr (FixedSize) {
+		if constexpr (FixedSizeC) {
 			return std::next(std::begin(data_));
 		} else {
 			return empty() ? nullptr : std::next(data_);
@@ -238,7 +242,7 @@ class FlatMap
 
 	const_iterator begin() const noexcept
 	{
-		if constexpr (FixedSize) {
+		if constexpr (FixedSizeC) {
 			return std::next(std::begin(data_));
 		} else {
 			return empty() ? nullptr : std::next(data_);
@@ -249,7 +253,7 @@ class FlatMap
 
 	iterator end() noexcept
 	{
-		if constexpr (FixedSize) {
+		if constexpr (FixedSizeC) {
 			return std::next(std::begin(data_), size() + 1);
 		} else {
 			auto const s = allocSize();
@@ -259,7 +263,7 @@ class FlatMap
 
 	const_iterator end() const noexcept
 	{
-		if constexpr (FixedSize) {
+		if constexpr (FixedSizeC) {
 			return std::next(std::begin(data_), size() + 1);
 		} else {
 			auto const s = allocSize();
@@ -273,28 +277,28 @@ class FlatMap
 	// [[nodiscard]]
 	[[nodiscard]] bool empty() const noexcept { return 0 == size(); }
 
-	[[nodiscard]] std::size_type size() const noexcept
+	[[nodiscard]] size_type size() const noexcept
 	{
-		if constexpr (FixedSize) {
-			return data_[0].key();
+		if constexpr (FixedSizeC) {
+			return data_[0].getKey();
 		} else {
 			return data_ ? data_[0].getKey() : 0;
 		}
 	}
 
-	[[nodiscard]] std::size_type allocSize() const noexcept
+	[[nodiscard]] size_type allocSize() const noexcept
 	{
-		if constexpr (FixedSize) {
-			return FixedSize + 1;
+		if constexpr (FixedSizeC) {
+			return FixedSizeC + 1;
 		} else {
 			return empty() ? 0 : data_[0].getKey() + 1;
 		}
 	}
 
-	[[nodiscard]] constexpr std::size_type max_size() const noexcept
+	[[nodiscard]] constexpr size_type max_size() const noexcept
 	{
-		if constexpr (FixedSize) {
-			return FixedSize;
+		if constexpr (FixedSizeC) {
+			return FixedSizeC;
 		} else {
 			return LabelMask >> ValueWidth;
 		}
@@ -303,7 +307,7 @@ class FlatMap
 	// Modifiers
 	void clear() noexcept
 	{
-		if constexpr (FixedSize) {
+		if constexpr (FixedSizeC) {
 			data_[0].setData(0);
 		} else {
 			if (nullptr != data_) {
@@ -580,7 +584,7 @@ class FlatMap
 		return it;
 	}
 
-	std::size_type erase(key_type key)
+	size_type erase(key_type key)
 	{
 		if (iterator it = find(key); end() != it) {
 			erase(it);
@@ -594,13 +598,13 @@ class FlatMap
 	 * comp(Element.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	std::size_type erase(Range<T> const &range, mapped_type value, Compare comp)
+	size_type erase(Range<T> const &range, mapped_type value, Compare comp)
 	{
 		return erase(RangeSet<T>(range), value, comp);
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	std::size_type erase(Range<T> const &range)
+	size_type erase(Range<T> const &range)
 	{
 		return erase(RangeSet<T>(range));
 	}
@@ -610,9 +614,9 @@ class FlatMap
 	 * comp(Element.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	std::size_type erase(RangeSet<T> const &rangeSet, mapped_type value, Compare comp)
+	size_type erase(RangeSet<T> const &rangeSet, mapped_type value, Compare comp)
 	{
-		std::size_type old_size = size();
+		size_type old_size = size();
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
 			auto upper = upper_bound(range.upper());
@@ -631,9 +635,9 @@ class FlatMap
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	std::size_type erase(RangeSet<T> const &rangeSet)
+	size_type erase(RangeSet<T> const &rangeSet)
 	{
-		std::size_type old_size = size();
+		size_type old_size = size();
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
 			auto upper = upper_bound(range.upper());
@@ -659,7 +663,7 @@ class FlatMap
 		return end() != it ? it->getValue() : 0;
 	}
 
-	[[nodiscard]] std::size_type count(key_type key) const { return contains(key) ? 1 : 0; }
+	[[nodiscard]] size_type count(key_type key) const { return contains(key) ? 1 : 0; }
 
 	[[nodiscard]] iterator find(key_type key)
 	{
@@ -707,8 +711,8 @@ class FlatMap
 
 	Element *getData()
 	{
-		if constexpr (FixedSize) {
-			std::next(data_.data(), 1);
+		if constexpr (FixedSizeC) {
+			return std::next(data_.data(), 1);
 		} else {
 			return std::next(data_, 1);
 		}
@@ -716,8 +720,8 @@ class FlatMap
 
 	Element const *getData() const
 	{
-		if constexpr (FixedSize) {
-			std::next(data_.data(), 1);
+		if constexpr (FixedSizeC) {
+			return std::next(data_.data(), 1);
 		} else {
 			return std::next(data_, 1);
 		}
@@ -752,7 +756,7 @@ class FlatMap
 	[[nodiscard]] bool containsAny(RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == std::size_type(0)) {
+		if (rangeSet.size() == size_type(0)) {
 			return true;
 		}
 
@@ -783,7 +787,7 @@ class FlatMap
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == std::size_type(0)) {
+		if (rangeSet.size() == size_type(0)) {
 			return true;
 		}
 
@@ -874,13 +878,13 @@ class FlatMap
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == std::size_type(0)) {
+		if (rangeSet.size() == size_type(0)) {
 			return true;
 		}
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::std::size_type checked_elems = 0;
+		typename RangeSet<uint32_t>::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elements are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -912,13 +916,13 @@ class FlatMap
 	[[nodiscard]] bool containsAll(RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
-		if (rangeSet.size() == std::size_type(0)) {
+		if (rangeSet.size() == size_type(0)) {
 			return true;
 		}
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::std::size_type checked_elems = 0;
+		typename RangeSet<uint32_t>::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elemnts are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -979,16 +983,16 @@ class FlatMap
 
 	std::ostream &writeData(std::ostream &out_stream) const
 	{
-		std::size_type num = size();
-		out_stream.write(reinterpret_cast<char const *>(&num), sizeof(std::size_type));
+		size_type num = size();
+		out_stream.write(reinterpret_cast<char const *>(&num), sizeof(size_type));
 		return out_stream.write(reinterpret_cast<char const *>(getData()),
 		                        sizeof(Element) * num);
 	}
 
 	std::istream &readData(std::istream &in_stream)
 	{
-		std::size_type num;
-		in_stream.read(reinterpret_cast<char *>(&num), sizeof(std::size_type));
+		size_type num;
+		in_stream.read(reinterpret_cast<char *>(&num), sizeof(size_type));
 		if (0 == num) {
 			clear();
 			return in_stream;
@@ -1158,11 +1162,11 @@ class FlatMap
 		}
 	}
 
-	void resize(std::size_type const new_size)
+	void resize(size_type const new_size)
 	{
-		if constexpr (FixedSize) {
+		if constexpr (FixedSizeC) {
 			if (data_.size() <= new_size) {
-				throw std::length_error();
+				throw std::length_error("Maximum fixed size");
 			}
 		} else {
 			Element *ptr_new =
@@ -1179,7 +1183,7 @@ class FlatMap
 	}
 
  private:
-	std::conditional_t<FixedSize, std::array<DataType, FixedSize + 1>, Element *> data_{};
+	std::conditional_t<FixedSizeC, std::array<DataType, FixedSizeC + 1>, Element *> data_{};
 };
 
 template <typename DataType, std::size_t ValueWidth>
@@ -1204,7 +1208,7 @@ void swap(FlatMap<DataType, ValueWidth> &lhs,
 }
 
 template <typename DataType, std::size_t ValueWidth, class Pred>
-typename FlatMap<DataType, ValueWidth>::std::size_type erase_if(
+typename FlatMap<DataType, ValueWidth>::size_type erase_if(
     FlatMap<DataType, ValueWidth> &c, Pred pred)
 {
 	auto old_size = c.size();
