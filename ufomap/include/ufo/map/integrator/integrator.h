@@ -223,7 +223,7 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
                  Point3 const sensor_origin, bool const only_valid = false,
                  Depth const depth = 0)
 {
-	CodeSet indices;
+	CodeUnorderedSet indices;
 
 	for (auto const& p : cloud) {
 		for (auto const& [p, v] : p.points) {
@@ -248,7 +248,7 @@ Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
 {
 	Key const origin = map.toKey(sensor_origin, depth);
 
-	CodeSet indices;
+	CodeUnorderedSet indices;
 	Code prev;
 	for (auto const& p : cloud) {
 		if (only_valid && !p.valid()) {
