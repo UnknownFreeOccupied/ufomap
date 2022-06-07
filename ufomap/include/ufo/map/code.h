@@ -51,7 +51,7 @@
 
 #include <algorithm>
 #include <execution>
-#include <list>
+#include <forward_list>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -280,11 +280,18 @@ class Code
 	Depth depth_ = 0;
 };
 
-// using CodeSet = std::unordered_set<Code, Code::Hash>;
+void fun()
+{
+	std::unordered_set<int> test;
+	test.erase(5);
+}
+
+// using CodeUnorderedSet = std::unordered_set<Code, Code::Hash>;
 // template <typename T>
 // using CodeMap = std::unordered_map<Code, T, Code::Hash>;
 using CodeRay = std::vector<Code>;
 
+template <class Allocator = std::allocator<Code>>
 class CodeUnorderedSet
 {
  public:
@@ -294,95 +301,128 @@ class CodeUnorderedSet
 	using difference_type = std::ptrdiff_t;
 	using hasher = Code::Hash;
 	using key_equal = std::equal_to<Code>;
-	using allocator_type = ...;
+	using allocator_type = Allocator;
 	using reference = value_type&;
 	using const_reference = value_type const&;
-	using pointer = ...;
-	using const_pointer = ...;
-	using iterator = ...;
-	using const_iterator = ...;
-	using local_iterator = ...;
-	using const_local_iterator = ...;
+	using pointer = std::forward_list<Code>::pointer;
+	using const_pointer = std::forward_list<Code>::const_pointer;
+	using iterator = typename std::forward_list<Code>::iterator;
+	using const_iterator = typename std::forward_list<Code>::const_iterator;
+	using local_iterator = iterator;
+	using const_local_iterator = const_iterator;
 	using node_type = ...;
 	using insert_return_type = ...;
 
  public:
-	CodeSet(unsigned int power = 18) : power_(power)
+	CodeUnorderedSet() : CodeUnorderedSet(1U << 18) {}
+
+	explicit CodeUnorderedSet(size_type bucket_count)
 	{
-		num_buckets_ = size_t(1) << power_;
-		data_.resize(num_buckets_);
+		// TODO: Implement
 	}
 
-	struct CodeSetIterator {
-		CodeSetIterator(CodeSet const* set = nullptr) : set_(set)
-		{
-			if (!set_) {
-				return;
-			}
+	CodeUnorderedSet(size_type bucket_count, Allocator const& alloc)
+	{
+		// TODO: Implement
+	}
 
-			if (set_->data_.empty()) {
-				set_ = nullptr;
-			} else {
-				outer_iter_ = std::begin(set_->data_);
-				outer_iter_end_ = std::end(set_->data_);
-				while (outer_iter_ != outer_iter_end_ && outer_iter_->empty()) {
-					++outer_iter_;
-				}
-				if (outer_iter_ == outer_iter_end_) {
-					set_ = nullptr;
-				} else {
-					inner_iter_ = std::begin(*outer_iter_);
-					inner_iter_end_ = std::end(*outer_iter_);
-				}
-			}
-		}
+	explicit CodeUnorderedSet(Allocator const& alloc)
+	{
+		// TODO: Implement
+	}
 
-		Code const& operator*() const { return *inner_iter_; }
+	template <class InputIt>
+	CodeUnorderedSet(InputIt first, InputIt last, size_type bucket_count = 1U << 18,
+	                 Allocator const& alloc = Allocator())
+	{
+		// TODO: Implement
+	}
 
-		// Postfix increment
-		CodeSetIterator operator++(int)
-		{
-			CodeSetIterator result = *this;
-			++(*this);
-			return result;
-		}
+	CodeUnorderedSet(CodeUnorderedSet const& other)
+	{
+		// TODO: Implement
+	}
 
-		// Prefix increment
-		CodeSetIterator& operator++()
-		{
-			++inner_iter_;
-			if (inner_iter_ == inner_iter_end_) {
-				++outer_iter_;
-				while (outer_iter_ != outer_iter_end_ && outer_iter_->empty()) {
-					++outer_iter_;
-				}
-				if (outer_iter_ == outer_iter_end_) {
-					set_ = nullptr;
-				} else {
-					inner_iter_ = outer_iter_->begin();
-					inner_iter_end_ = outer_iter_->end();
-				}
-			}
-			return *this;
-		}
+	CodeUnorderedSet(CodeUnorderedSet const& other, Allocator const& alloc)
+	{
+		// TODO: Implement
+	}
 
-		bool operator==(CodeSetIterator const& rhs) const { return (rhs.set_ == set_); }
+	CodeUnorderedSet(CodeUnorderedSet&& other)
+	{
+		// TODO: Implement
+	}
 
-		bool operator!=(CodeSetIterator const& rhs) const { return (rhs.set_ != set_); }
+	CodeUnorderedSet(CodeUnorderedSet&& other, Allocator const& alloc)
+	{
+		// TODO: Implement
+	}
 
-	 private:
-		CodeSet const* set_;
-		std::vector<std::vector<Code>>::const_iterator outer_iter_;
-		std::vector<std::vector<Code>>::const_iterator outer_iter_end_;
-		std::vector<Code>::const_iterator inner_iter_;
-		std::vector<Code>::const_iterator inner_iter_end_;
-		// typename decltype(CodeSet::data_)::const_iterator outer_iter_;
-		// typename decltype(CodeSet::data_)::const_iterator outer_iter_end_;
-		// typename decltype(CodeSet::data_)::value_type::const_iterator inner_iter_;
-		// typename decltype(CodeSet::data_)::value_type::const_iterator inner_iter_end_;
-	};
+	CodeUnorderedSet(std::initializer_list<value_type> init,
+	                 size_type bucket_count = 1U << 18,
+	                 Allocator const& alloc = Allocator())
+	{
+		// TODO: Implement
+	}
 
-	std::pair<int, bool> insert(Code const& value)
+	// TODO: Remove
+	CodeUnorderedSet(unsigned int power = 18) : power_(power)
+	{
+		num_buckets_ = 1U << power_;
+		buckets_.resize(num_buckets_);
+	}
+
+	~CodeUnorderedSet()
+	{
+		// TODO: Implement
+	}
+
+	// TODO: Add operator=
+
+	allocator_type get_allocator() const noexcept { return data_.get_allocator(); }
+
+	//
+	// Iterators
+	//
+
+	iterator begin() noexcept { return std::begin(data_); }
+
+	const_iterator begin() const noexcept { return std::begin(data_); }
+
+	const_iterator cbegin() const noexcept { return begin(); }
+
+	iterator end() noexcept { return std::end(data_); }
+
+	const_iterator end() const noexcept { return std::end(data_); }
+
+	const_iterator cend() const noexcept { return end(); }
+
+	//
+	// Capacity
+	//
+
+	[[nodiscard]] bool empty() const noexcept { return 0 == size_; }
+
+	[[nodiscard]] size_type size() const noexcept { return size_; }
+
+	[[nodiscard]] size_type max_size() const noexcept
+	{
+		return std::numeric_limits<difference_type>::max();
+	}
+
+	//
+	// Modifiers
+	//
+
+	void clear() noexcept
+	{
+		data_.clear();
+		std::for_each(std::begin(buckets_), std::end(buckets_),
+		              [](auto& bucket) { bucket.first = 0; });
+		size_ = 0;
+	}
+
+	std::pair<iterator, bool> insert(value_type const& value)
 	{
 		size_t hash = getBucket(value);
 		if (std::any_of(std::cbegin(data_[hash]), std::cend(data_[hash]),
@@ -402,26 +442,182 @@ class CodeUnorderedSet
 		return {0, true};  // TOOD: Fix
 	}
 
-	void clear()
+	std::pair<iterator, bool> insert(value_type&& value)
 	{
-		std::for_each(std::begin(data_), std::end(data_),
-		              [](auto& bucket) { bucket.clear(); });
-		size_ = 0;
+		// TODO: Implement
 	}
 
-	bool empty() const noexcept { return 0 == size_; }
+	iterator insert(const_iterator hint, value_type const& value)
+	{
+		// TODO: Implement
+	}
 
-	size_t size() const noexcept { return size_; }
+	iterator insert(const_iterator hint, value_type&& value)
+	{
+		// TODO: Implement
+	}
 
-	size_t bucket_count() const noexcept { return num_buckets_; }
+	template <class InputIt>
+	void insert(InputIt first, InputIt last)
+	{
+		// TODO: Implement
+	}
 
-	unsigned int bucket_count_power() const noexcept { return power_; }
+	void insert(std::initializer_list<value_type> ilist)
+	{
+		// TODO: Implement
+	}
 
-	double load_factor() const { return size_ / ((double)num_buckets_); }
+	insert_return_type insert(node_type&& nh)
+	{
+		// TODO: Implement
+	}
 
-	double max_load_factor() const { return max_load_factor_; }
+	iterator insert(const_iterator hint, node_type&& nh)
+	{
+		// TODO: Implement
+	}
 
-	void max_load_factor(double max_load_factor)
+	template <class... Args>
+	std::pair<iterator, bool> emplace(Args&&... args)
+	{
+		// TODO: Implement
+	}
+
+	template <class... Args>
+	iterator emplace_hint(const_iterator hint, Args&&... args)
+	{
+		// TODO: Implement
+	}
+
+	iterator erase(iterator pos)
+	{
+		// TODO: Implement
+	}
+
+	iterator erase(const_iterator pos)
+	{
+		// TODO: Implement
+	}
+
+	iterator erase(const_iterator first, const_iterator last)
+	{
+		// TODO: Implement
+	}
+
+	size_type erase(Key const& key)
+	{
+		// TODO: Implement
+	}
+
+	void swap(CodeUnorderedSet& other) noexcept(/* TODO: Implement */)
+	{
+		data_.swap(other.data_);
+		std::swap(power_, other.power_);
+		std::swap(num_buckets_, other.num_buckets_);
+		std::swap(size_, other.size_);
+		std::swap(max_load_factor_, other.max_load_factor_);
+	}
+
+	node_type extract(const_iterator position)
+	{
+		// TODO: Implement
+	}
+
+	node_type extract(Key const& k)
+	{
+		// TODO: Implement
+	}
+
+	void merge(CodeUnorderedSet& source)
+	{
+		// TODO: Implement
+	}
+
+	void merge(CodeUnorderedSet&& source)
+	{
+		// TODO: Implement
+	}
+
+	//
+	// Lookup
+	//
+
+	[[nodiscard]] size_type count(Key const& key) const
+	{
+		// TODO: Implement
+	}
+
+	[[nodiscard]] iterator find(Key const& key)
+	{
+		// TODO: Implement
+	}
+
+	[[nodiscard]] const_iterator find(Key const& key) const
+	{
+		// TODO: Implement
+	}
+
+	[[nodiscard]] bool contains(Key const& key) const { return 0 != count(key); }
+
+	std::pair<iterator, iterator> equal_range(Key const& key)
+	{
+		// TODO: Implement
+	}
+
+	std::pair<const_iterator, const_iterator> equal_range(Key const& key) const
+	{
+		// TODO: Implement
+	}
+
+	//
+	// Bucket interface
+	//
+
+	local_iterator begin(size_type n)
+	{
+		// TODO: Implement
+	}
+
+	const_local_iterator begin(size_type n) const
+	{
+		// TODO: Implement
+	}
+
+	const_local_iterator cbegin(size_type n) const { return begin(n); }
+
+	local_iterator end(size_type n)
+	{
+		// TODO: Implement
+	}
+
+	const_local_iterator end(size_type n) const
+	{
+		// TODO: Implement
+	}
+
+	const_local_iterator cend(size_type n) const { return end(n); }
+
+	[[nodiscard]] size_type bucket_count() const { return num_buckets_; }
+
+	[[nodiscard]] size_type max_bucket_count() const { return buckets_.max_size(); }
+
+	[[nodiscard]] size_type bucket_size(size_type n) const { return buckets_[n].first; }
+
+	[[nodiscard]] size_type bucket(Key const& key) const
+	{
+		// TODO: Implement
+	}
+
+	//
+	// Hash policy
+	//
+
+	float load_factor() const { return size_ / static_cast<float>(num_buckets_); }
+
+	float max_load_factor() const { return max_load_factor_; }
+
+	void max_load_factor(float ml)
 	{
 		max_load_factor_ = max_load_factor;
 
@@ -430,7 +626,7 @@ class CodeUnorderedSet
 		}
 	}
 
-	void rehash(std::size_t count)
+	void rehash(size_type count)
 	{
 		std::size_t min_count = std::max((double)count, size() / max_load_factor());
 		unsigned int power =
@@ -453,45 +649,85 @@ class CodeUnorderedSet
 		data_.swap(new_data);
 	}
 
-	void reserve(std::size_t count)
+	void reserve(size_type count)
 	{
-		power_ = std::max(power_, std::min((unsigned int)std::log2(count) + 1, MAX_POWER));
-		data_.reserve(std::size_t(1) << power_);
+		power_ = std::max(
+		    power_, std::min(static_cast<unsigned int>(std::log2(count) + 1), MAX_POWER));
+		data_.reserve(1U << power_);
 	}
 
-	CodeSetIterator begin() const { return CodeSetIterator(this); }
+	//
+	// Observer
+	//
 
-	CodeSetIterator end() const { return CodeSetIterator(); }
-
-	void swap(CodeSet& other)
+	hasher hash_function() const
 	{
-		data_.swap(other.data_);
-		std::swap(power_, other.power_);
-		std::swap(num_buckets_, other.num_buckets_);
-		std::swap(size_, other.size_);
-		std::swap(max_load_factor_, other.max_load_factor_);
+		// TODO: Implement
 	}
 
-	using const_iterator = CodeSetIterator;
+	key_equal key_eq() const
+	{
+		// TODO: Implement
+	}
+
+	//
+	// Non-member functions
+	//
+
+	template <class Alloc>
+	friend bool operator==(CodeUnorderedSet<Alloc> const& lhs,
+	                       CodeUnorderedSet<Alloc> const& rhs)
+	{
+		// TODO: Implement
+	}
+
+	template <class Alloc>
+	friend bool operator!=(CodeUnorderedSet<Alloc> const& lhs,
+	                       CodeUnorderedSet<Alloc> const& rhs)
+	{
+		return !(lhs == rhs);
+	}
+
+	template <class Alloc>
+	friend void swap(CodeUnorderedSet<Alloc>& lhs,
+	                 CodeUnorderedSet<Alloc>& rhs) noexcept(/* TODO: Implement */)
+	{
+		lhs.swap(rhs);
+	}
+
+	template <class Alloc, class Pred>
+	friend typename CodeUnorderedSet<Alloc>::size_type erase_if(CodeUnorderedSet<Alloc>& c,
+	                                                            Pred pred)
+	{
+		// TODO: Implement
+	}
+
+	//
+	// Other
+	//
+
+	unsigned int bucket_count_power() const noexcept { return power_; }
 
  private:
 	std::size_t getBucket(Code const& key) const
 	{
-		unsigned int offset = 3 * key.depth();
-		unsigned int modder = (num_buckets_ - 1) << offset;
+		std::size_t offset = 3U * key.depth();
+		std::size_t modder = (num_buckets_ - 1U) << offset;
 		return (Code::Hash()(key) & modder) >> offset;
 	}
 
  private:
-	std::vector<std::vector<Code>> data_;
+	std::forward_list<Code, Allocator> data_;
+	std::vector<std::pair<size_type, iterator>> buckets_;
+
 	unsigned int power_;
 	std::size_t num_buckets_;
 	std::size_t size_ = 0;
 	double max_load_factor_ = 1.0;
 
-	inline static const unsigned int MAX_POWER = 28;
+	static constexpr unsigned int MAX_POWER = 28;
 
-	friend struct CodeSetIterator;
+	friend struct Iterator;
 };
 
 template <class T>
