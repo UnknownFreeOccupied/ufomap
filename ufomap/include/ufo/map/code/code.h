@@ -151,7 +151,7 @@ class Code
 	 * @param index The index of the key component
 	 * @return The key component value
 	 */
-	static Key::KeyType toKey(Code const& code, std::size_t index)
+	static Key::key_t toKey(Code const& code, std::size_t index)
 	{
 		return get3Bits(code.code_ >> index);
 	}
@@ -162,7 +162,7 @@ class Code
 	 * @param index The index of the key component
 	 * @return The key component value
 	 */
-	Key::KeyType toKey(std::size_t index) const { return toKey(*this, index); }
+	Key::key_t toKey(std::size_t index) const { return toKey(*this, index); }
 
 	/*!
 	 * @brief Get the index at a specific depth for this code.
@@ -236,7 +236,7 @@ class Code
 	};
 
  private:
-	static CodeType splitBy3(Key::KeyType a)
+	static CodeType splitBy3(Key::key_t a)
 	{
 #if defined(__BMI2__)
 		return _pdep_u64(static_cast<CodeType>(a), 0x9249249249249249);
@@ -251,10 +251,10 @@ class Code
 #endif
 	}
 
-	static Key::KeyType get3Bits(CodeType code)
+	static Key::key_t get3Bits(CodeType code)
 	{
 #if defined(__BMI2__)
-		return static_cast<Key::KeyType>(_pext_u64(code, 0x9249249249249249));
+		return static_cast<Key::key_t>(_pext_u64(code, 0x9249249249249249));
 #else
 		CodeType a = code & 0x1249249249249249;
 		a = (a ^ (a >> 2)) & 0x10c30c30c30c30c3;
@@ -262,7 +262,7 @@ class Code
 		a = (a ^ (a >> 8)) & 0x1f0000ff0000ff;
 		a = (a ^ (a >> 16)) & 0x1f00000000ffff;
 		a = (a ^ a >> 32) & 0x1fffff;
-		return static_cast<Key::KeyType>(a);
+		return static_cast<Key::key_t>(a);
 #endif
 	}
 

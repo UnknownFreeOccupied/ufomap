@@ -62,11 +62,11 @@ namespace ufo::map
 class Key
 {
  public:
-	using KeyType = uint32_t;
+	using key_t = uint32_t;
 
 	constexpr Key() = default;
 
-	constexpr Key(KeyType const x, KeyType const y, KeyType const z, Depth const depth)
+	constexpr Key(key_t const x, key_t const y, key_t const z, Depth const depth)
 	    : x_((x >> depth) << depth),
 	      y_((y >> depth) << depth),
 	      z_((z >> depth) << depth),
@@ -137,51 +137,51 @@ class Key
 		depth_ = depth;
 	}
 
-	constexpr KeyType operator[](std::size_t idx) const { return *(&x_ + idx); }
+	constexpr key_t operator[](std::size_t idx) const { return *(&x_ + idx); }
 
-	constexpr KeyType& operator[](std::size_t idx) { return *(&x_ + idx); }
-
-	/*!
-	 * @brief Returns the x component of the key
-	 *
-	 * @return const KeyType& The x component of the key
-	 */
-	constexpr KeyType x() const noexcept { return x_; }
-
-	/*!
-	 * @brief Returns the y component of the key
-	 *
-	 * @return const KeyType& The y component of the key
-	 */
-	constexpr KeyType y() const noexcept { return y_; }
-
-	/*!
-	 * @brief Returns the z component of the key
-	 *
-	 * @return const KeyType& The z component of the key
-	 */
-	constexpr KeyType z() const noexcept { return z_; }
+	constexpr key_t& operator[](std::size_t idx) { return *(&x_ + idx); }
 
 	/*!
 	 * @brief Returns the x component of the key
 	 *
-	 * @return KeyType& The x component of the key
+	 * @return const key_t& The x component of the key
 	 */
-	constexpr KeyType& x() noexcept { return x_; }
+	constexpr key_t x() const noexcept { return x_; }
 
 	/*!
 	 * @brief Returns the y component of the key
 	 *
-	 * @return KeyType& The y component of the key
+	 * @return const key_t& The y component of the key
 	 */
-	constexpr KeyType& y() noexcept { return y_; }
+	constexpr key_t y() const noexcept { return y_; }
 
 	/*!
 	 * @brief Returns the z component of the key
 	 *
-	 * @return KeyType& The z component of the key
+	 * @return const key_t& The z component of the key
 	 */
-	constexpr KeyType& z() noexcept { return z_; }
+	constexpr key_t z() const noexcept { return z_; }
+
+	/*!
+	 * @brief Returns the x component of the key
+	 *
+	 * @return key_t& The x component of the key
+	 */
+	constexpr key_t& x() noexcept { return x_; }
+
+	/*!
+	 * @brief Returns the y component of the key
+	 *
+	 * @return key_t& The y component of the key
+	 */
+	constexpr key_t& y() noexcept { return y_; }
+
+	/*!
+	 * @brief Returns the z component of the key
+	 *
+	 * @return key_t& The z component of the key
+	 */
+	constexpr key_t& z() noexcept { return z_; }
 
 	/*!
 	 * @brief
@@ -201,7 +201,7 @@ class Key
 	};
 
  private:
-	static constexpr uint64_t splitBy3(KeyType a)
+	static constexpr uint64_t splitBy3(key_t a)
 	{
 #if defined(__BMI2__)
 		return _pdep_u64(a, 0x9249249249249249);
@@ -218,9 +218,9 @@ class Key
 
  private:
 	// The key
-	KeyType x_ = 0;
-	KeyType y_ = 0;
-	KeyType z_ = 0;
+	key_t x_ = 0;
+	key_t y_ = 0;
+	key_t z_ = 0;
 	// The depth of the key
 	Depth depth_ = 0;
 };

@@ -57,8 +57,8 @@ class Grid
  private:
 	static constexpr std::size_t NumIndices = ipow(8, Depth);
 
-	static constexpr Key::KeyType Mask =
-	    ~((std::numeric_limits<Key::KeyType>::max() >> Depth) << Depth);
+	static constexpr Key::key_t Mask =
+	    ~((std::numeric_limits<Key::key_t>::max() >> Depth) << Depth);
 
  public:
 	using reference = typename std::bitset<NumIndices>::reference;

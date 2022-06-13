@@ -697,7 +697,7 @@ class OctreeBase
 	[[nodiscard]] constexpr std::optional<Code> toCodeChecked(
 	    Point3 coord, Depth depth = 0) const noexcept
 	{
-		std::optional<Key::KeyType> key = toKeyChecked(coord, depth);
+		std::optional<Key::key_t> key = toKeyChecked(coord, depth);
 		return key ? std::optional<Code>(toCode(*key)) : std::nullopt;
 	}
 
@@ -2102,9 +2102,9 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	constexpr Key::KeyType toKey(coord_t coord, Depth depth = 0) const noexcept
+	constexpr Key::key_t toKey(coord_t coord, Depth depth = 0) const noexcept
 	{
-		Key::KeyType val = std::floor(node_size_factor_[0] * coord);
+		Key::key_t val = std::floor(node_size_factor_[0] * coord);
 		return ((val + max_value_) >> depth) << depth;
 	}
 
@@ -2115,12 +2115,12 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	constexpr std::optional<Key::KeyType> toKeyChecked(coord_t coord,
+	constexpr std::optional<Key::key_t> toKeyChecked(coord_t coord,
 	                                                   Depth depth = 0) const noexcept
 	{
 		auto min = -nodeSize(depthLevels() - 1);
 		auto max = -min;
-		return min <= coord && max >= coord ? std::optional<Key::KeyType>(toKey(coord, depth))
+		return min <= coord && max >= coord ? std::optional<Key::key_t>(toKey(coord, depth))
 		                                    : std::nullopt;
 	}
 
@@ -2135,7 +2135,7 @@ class OctreeBase
 	 * @param depth The depth of the coordinate.
 	 * @return The corresponding coordinate.
 	 */
-	constexpr coord_t toCoord(Key::KeyType key, Depth depth = 0) const noexcept
+	constexpr coord_t toCoord(Key::key_t key, Depth depth = 0) const noexcept
 	{
 		constexpr auto sub64 = std::minus<int_fast64_t>{};
 		return depth_levels_ == depth
@@ -3338,7 +3338,7 @@ class OctreeBase
 
  protected:
 	Depth depth_levels_;      // The number of depth levels
-	Key::KeyType max_value_;  // The maximum coordinate value the octree can store
+	Key::key_t max_value_;  // The maximum coordinate value the octree can store
 
 	std::unique_ptr<InnerNode> root_;  // The root of the octree
 
