@@ -1,32 +1,32 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
- * 
+ *
  * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
- * 
+ *
  * @copyright Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
- * 
+ *
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *     list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -445,14 +445,14 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 		}
 	}
 
-	ufo::map::time_step_t  min_allowed_ts;
-	ufo::map::time_step_t  max_allowed_ts;
+	ufo::map::time_step_t min_allowed_ts;
+	ufo::map::time_step_t max_allowed_ts;
 	if (filter.filter_time_step) {
 		min_allowed_ts = filter.min_time_step;
 		max_allowed_ts = filter.max_time_step;
 	} else {
-		min_allowed_ts = std::numeric_limits<ufo::map::time_step_t >::lowest();
-		max_allowed_ts = std::numeric_limits<ufo::map::time_step_t >::max();
+		min_allowed_ts = std::numeric_limits<ufo::map::time_step_t>::lowest();
+		max_allowed_ts = std::numeric_limits<ufo::map::time_step_t>::max();
 	}
 
 	std::array<Heatmap, 3> heatmap;
@@ -462,8 +462,8 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 			heatmap[s].min_position[i] = std::numeric_limits<PosType>::max();
 			heatmap[s].max_position[i] = std::numeric_limits<PosType>::lowest();
 		}
-		heatmap[s].min_time_step = std::numeric_limits<ufo::map::time_step_t >::max();
-		heatmap[s].max_time_step = std::numeric_limits<ufo::map::time_step_t >::lowest();
+		heatmap[s].min_time_step = std::numeric_limits<ufo::map::time_step_t>::max();
+		heatmap[s].max_time_step = std::numeric_limits<ufo::map::time_step_t>::lowest();
 
 		for (auto const& [_, obj] : objects_[s]) {
 			ufo::geometry::Point min_cur_pos;
@@ -473,10 +473,10 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 				min_cur_pos[i] = std::numeric_limits<PosType>::max();
 				max_cur_pos[i] = std::numeric_limits<PosType>::lowest();
 			}
-			ufo::map::time_step_t  min_cur_time_step =
-			    std::numeric_limits<ufo::map::time_step_t >::max();
-			ufo::map::time_step_t  max_cur_time_step =
-			    std::numeric_limits<ufo::map::time_step_t >::lowest();
+			ufo::map::time_step_t min_cur_time_step =
+			    std::numeric_limits<ufo::map::time_step_t>::max();
+			ufo::map::time_step_t max_cur_time_step =
+			    std::numeric_limits<ufo::map::time_step_t>::lowest();
 
 			for (auto const& [_, data] : obj.transformed_voxels_) {
 				auto min_pos = data.minPosition();

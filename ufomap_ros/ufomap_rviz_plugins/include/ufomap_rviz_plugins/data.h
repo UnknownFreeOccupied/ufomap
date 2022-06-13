@@ -1,32 +1,32 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
- * 
+ *
  * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
- * 
+ *
  * @copyright Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
- * 
+ *
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *     list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -79,7 +79,7 @@ class Data
 
 	void addOccupancy(float occupancy) { occupancy_.emplace_back(occupancy); }
 
-	void addTimeStep(ufo::map::time_step_t  time_step)
+	void addTimeStep(ufo::map::time_step_t time_step)
 	{
 		time_step_.emplace_back(time_step);
 
@@ -113,9 +113,9 @@ class Data
 
 	ufo::map::Point3 maxPosition() const { return max_position_; }
 
-	ufo::map::time_step_t  minTimeStep() const { return min_time_step_; }
+	ufo::map::time_step_t minTimeStep() const { return min_time_step_; }
 
-	ufo::map::time_step_t  maxTimeStep() const { return max_time_step_; }
+	ufo::map::time_step_t maxTimeStep() const { return max_time_step_; }
 
 	void clear();
 
@@ -128,15 +128,15 @@ class Data
  private:
 	std::vector<Ogre::Vector3> position_;
 	std::vector<float> occupancy_;
-	std::vector<ufo::map::time_step_t > time_step_;
+	std::vector<ufo::map::time_step_t> time_step_;
 	std::vector<Ogre::ColourValue> color_;
 	std::vector<std::vector<ufo::map::SemanticPair>> semantics_;
 
 	ufo::map::Point3 min_position_;
 	ufo::map::Point3 max_position_;
 
-	ufo::map::time_step_t  min_time_step_;
-	ufo::map::time_step_t  max_time_step_;
+	ufo::map::time_step_t min_time_step_;
+	ufo::map::time_step_t max_time_step_;
 };
 }  // namespace ufomap_ros::rviz_plugins
 
