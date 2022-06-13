@@ -62,11 +62,11 @@ namespace ufo::map
 class Code
 {
  public:
-	using CodeType = uint64_t;
+	using code_t = uint64_t;
 
 	constexpr Code() = default;
 
-	constexpr Code(CodeType code, Depth depth = 0)
+	constexpr Code(code_t code, Depth depth = 0)
 	    : code_((code >> depth) << depth), depth_(depth)
 	{
 	}
@@ -123,7 +123,7 @@ class Code
 	 */
 	constexpr Code toDepth(Depth depth) const
 	{
-		CodeType temp = 3 * depth;
+		code_t temp = 3 * depth;
 		return Code((code_ >> temp) << temp, depth);
 	}
 
@@ -133,12 +133,12 @@ class Code
 	 * @param key The key to convert
 	 * @return uint64_t The code corresponding to the key
 	 */
-	static constexpr CodeType toCode(Key const& key)
+	static constexpr code_t toCode(Key const& key)
 	{
 #if defined(__BMI2__)
-		return _pdep_u64(static_cast<CodeType>(key[0]), 0x9249249249249249) |
-		       _pdep_u64(static_cast<CodeType>(key[1]), 0x2492492492492492) |
-		       _pdep_u64(static_cast<CodeType>(key[2]), 0x4924924924924924);
+		return _pdep_u64(static_cast<code_t>(key[0]), 0x9249249249249249) |
+		       _pdep_u64(static_cast<code_t>(key[1]), 0x2492492492492492) |
+		       _pdep_u64(static_cast<code_t>(key[2]), 0x4924924924924924);
 #else
 		return splitBy3(key[0]) | (splitBy3(key[1]) << 1) | (splitBy3(key[2]) << 2);
 #endif
@@ -172,7 +172,7 @@ class Code
 	 */
 	constexpr std::size_t indexAtDepth(Depth depth) const
 	{
-		return (code_ >> static_cast<CodeType>(3 * depth)) & ((CodeType)0x7);
+		return (code_ >> static_cast<code_t>(3 * depth)) & ((code_t)0x7);
 	}
 
 	/*!
@@ -190,7 +190,7 @@ class Code
 
 		Depth child_depth = depth_ - 1;
 		return Code(
-		    code_ + (static_cast<CodeType>(index) << static_cast<CodeType>(3 * child_depth)),
+		    code_ + (static_cast<code_t>(index) << static_cast<code_t>(3 * child_depth)),
 		    child_depth);
 	}
 
@@ -202,19 +202,19 @@ class Code
 	 */
 	inline Code sibling(std::size_t index) const
 	{
-		CodeType sibling_code = (code_ >> static_cast<CodeType>(3 * (depth_ + 1)))
-		                        << static_cast<CodeType>(3 * (depth_ + 1));
+		code_t sibling_code = (code_ >> static_cast<code_t>(3 * (depth_ + 1)))
+		                        << static_cast<code_t>(3 * (depth_ + 1));
 		return Code(sibling_code +
-		                (static_cast<CodeType>(index) << static_cast<CodeType>(3 * depth_)),
+		                (static_cast<code_t>(index) << static_cast<code_t>(3 * depth_)),
 		            depth_);
 	}
 
 	/*!
 	 * @brief Get the code
 	 *
-	 * @return CodeType The code
+	 * @return code_t The code
 	 */
-	constexpr CodeType code() const noexcept { return code_; }
+	constexpr code_t code() const noexcept { return code_; }
 
 	/*!
 	 * @brief Get the depth that this code is specified at
@@ -228,20 +228,20 @@ class Code
 	 *
 	 */
 	struct Hash {
-		static constexpr CodeType hash(Code const& code) { return code.code(); }
+		static constexpr code_t hash(Code const& code) { return code.code(); }
 
-		constexpr CodeType operator()(Code const& code) const { return hash(code); }
+		constexpr code_t operator()(Code const& code) const { return hash(code); }
 
 		static constexpr bool equal(Code const& lhs, Code const& rhs) { return lhs == rhs; }
 	};
 
  private:
-	static CodeType splitBy3(Key::key_t a)
+	static code_t splitBy3(Key::key_t a)
 	{
 #if defined(__BMI2__)
-		return _pdep_u64(static_cast<CodeType>(a), 0x9249249249249249);
+		return _pdep_u64(static_cast<code_t>(a), 0x9249249249249249);
 #else
-		CodeType code = static_cast<CodeType>(a) & 0x1fffff;
+		code_t code = static_cast<code_t>(a) & 0x1fffff;
 		code = (code | code << 32) & 0x1f00000000ffff;
 		code = (code | code << 16) & 0x1f0000ff0000ff;
 		code = (code | code << 8) & 0x100f00f00f00f00f;
@@ -251,12 +251,12 @@ class Code
 #endif
 	}
 
-	static Key::key_t get3Bits(CodeType code)
+	static Key::key_t get3Bits(code_t code)
 	{
 #if defined(__BMI2__)
 		return static_cast<Key::key_t>(_pext_u64(code, 0x9249249249249249));
 #else
-		CodeType a = code & 0x1249249249249249;
+		code_t a = code & 0x1249249249249249;
 		a = (a ^ (a >> 2)) & 0x10c30c30c30c30c3;
 		a = (a ^ (a >> 4)) & 0x100f00f00f00f00f;
 		a = (a ^ (a >> 8)) & 0x1f0000ff0000ff;
@@ -268,7 +268,7 @@ class Code
 
  private:
 	// The Morton code
-	CodeType code_ = 0;
+	code_t code_ = 0;
 	// The depth of the Morton code
 	Depth depth_ = 0;
 };

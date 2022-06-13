@@ -115,9 +115,9 @@ struct Node {
 	constexpr Depth depth() const noexcept { return code_.depth(); }
 
 	struct Hash {
-		static constexpr Code::CodeType hash(Node const& node) { return node.code().code(); }
+		static constexpr Code::code_t hash(Node const& node) { return node.code().code(); }
 
-		constexpr Code::CodeType operator()(Node const& node) const { return hash(node); }
+		constexpr Code::code_t operator()(Node const& node) const { return hash(node); }
 
 		static constexpr bool equal(Node const& lhs, Node const& rhs) { return lhs == rhs; }
 	};
