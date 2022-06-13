@@ -47,7 +47,6 @@
 
 namespace ufo::geometry
 {
-
 //
 // AABB
 //

@@ -102,9 +102,7 @@ class Range
 
 	Range(T value) : lower_(value), upper_(value) {}
 
-	Range(T lower, T upper) : lower_(std::min(lower, upper)), upper_(std::max(lower, upper))
-	{
-	}
+	Range(T lower, T upper) : lower_(lower), upper_(upper) { assert(lower <= upper); }
 
 	template <typename V, typename = std::enable_if_t<std::is_arithmetic_v<V>>>
 	Range(V value) : Range(value, value)
@@ -145,7 +143,10 @@ class Range
 
 	constexpr void setRange(T lower, T upper)
 	{
-		std::tie(lower_, upper_) = std::minmax(lower, upper);
+		assert(lower <= upper);
+
+		lower_ = lower;
+		upper_ = upper;
 	}
 
 	template <typename V, typename = std::enable_if_t<std::is_arithmetic_v<V>>>
@@ -157,45 +158,46 @@ class Range
 	template <typename V, typename = std::enable_if_t<std::is_arithmetic_v<V>>>
 	constexpr void setRange(V lower, V upper)
 	{
+		assert(lower <= upper);
+
 		// FIXME: Check that this is correct
-		auto [min, max] = std::minmax(lower, upper);
-		auto t_min = std::numeric_limits<T>::lowest();
-		auto t_max = std::numeric_limits<T>::max();
+		constexpr T t_min = std::numeric_limits<T>::lowest();
+		constexpr T t_max = std::numeric_limits<T>::max();
 
 		// Check for error
 		if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<V> ||
 		              std::is_signed_v<T> == std::is_signed_v<V>) {
-			if (max < t_min || t_max < min) {
+			if (upper < t_min || t_max < lower) {
 				// FIXME: Fix better message
 				throw std::range_error("Outside representable range.");
 			}
 		} else if constexpr (std::is_unsigned_v<T>) {
-			if (min < 0 || t_max < min) {
+			if (lower < 0 || t_max < lower) {
 				// FIXME: Fix better message
 				throw std::range_error("Outside representable range.");
 			}
-		} else if (t_max < min) {
+		} else if (t_max < lower) {
 			// FIXME: Fix better message
 			throw std::range_error("Outside representable range.");
 		}
 
 		if constexpr (std::is_floating_point_v<T>) {
-			lower_ = t_min <= min ? min : t_min;
-			upper_ = t_max >= max ? max : t_max;
+			lower_ = t_min <= lower ? lower : t_min;
+			upper_ = t_max >= upper ? upper : t_max;
 		} else if constexpr (std::is_floating_point_v<V>) {
-			auto v_min = std::floor(min);
-			auto v_max = std::ceil(max);
+			auto v_min = std::floor(lower);
+			auto v_max = std::ceil(upper);
 			lower_ = t_min <= v_min ? v_min : t_min;
 			upper_ = t_max >= v_max ? v_max : t_max;
 		} else if constexpr (std::is_signed_v<T> == std::is_signed_v<V>) {
-			lower_ = t_min <= min ? min : t_min;
-			upper_ = t_max >= max ? max : t_max;
+			lower_ = t_min <= lower ? lower : t_min;
+			upper_ = t_max >= upper ? upper : t_max;
 		} else if constexpr (std::is_unsigned_v<T>) {
-			lower_ = 0 > min ? 0 : (t_max >= min ? min : t_max);
-			upper_ = 0 > max ? 0 : (t_max >= max ? max : t_max);
+			lower_ = 0 > lower ? 0 : (t_max >= lower ? lower : t_max);
+			upper_ = 0 > upper ? 0 : (t_max >= upper ? upper : t_max);
 		} else {
-			lower_ = t_max >= min ? min : t_max;
-			upper_ = t_max >= max ? max : t_max;
+			lower_ = t_max >= lower ? lower : t_max;
+			upper_ = t_max >= upper ? upper : t_max;
 		}
 	}
 
@@ -223,16 +225,17 @@ class Range
 	template <typename V, typename = std::enable_if_t<std::is_arithmetic_v<V>>>
 	[[nodiscard]] constexpr bool contains(V lower, V upper) const noexcept
 	{
+		assert(lower <= upper);
+
 		// FIXME: Is correct?
-		auto [min, max] = std::minmax(lower, upper);
 		if constexpr (std::is_floating_point_v<T> || std::is_floating_point_v<V> ||
 		              (std::is_signed_v<T> == std::is_signed_v<V>)) {
-			return lower_ <= min && max <= upper_;
+			return lower_ <= lower && upper <= upper_;
 		} else {
-			if (min < 0 || upper_ < 0 || max > upper_) {
+			if (lower < 0 || upper_ < 0 || upper > upper_) {
 				return false;
 			}
-			return lower_ < 0 || lower_ <= min;
+			return lower_ < 0 || lower_ <= lower;
 		}
 	}
 

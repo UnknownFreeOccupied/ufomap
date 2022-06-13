@@ -582,7 +582,7 @@ class RangeMap
 	void insert(InputIt first, InputIt last)
 	{
 		// FIXME: Correct?
-		std::for_each(first, last, [this](auto &&...args) { this->insert(args...); });
+		std::for_each(first, last, [this](auto &&... args) { this->insert(args...); });
 	}
 
 	void insert(std::initializer_list<value_type> ilist)
@@ -708,21 +708,21 @@ class RangeMap
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> emplace(Args &&...args)
+	std::pair<iterator, bool> emplace(Args &&... args)
 	{
 		// FIXME: Construct value_type only if needed
 		return insert(value_type(std::forward<Args>(args)...));
 	}
 
 	template <class... Args>
-	iterator emplace_hint(const_iterator hint, Args &&...args)
+	iterator emplace_hint(const_iterator hint, Args &&... args)
 	{
 		// FIXME: Use hint
 		return emplace(std::forward<Args>(args)...).first;
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(key_type k, Args &&...args)
+	std::pair<iterator, bool> try_emplace(key_type k, Args &&... args)
 	{
 		// FIXME: Construct value_type only if needed
 		return insert(value_type(std::piecewise_construct, std::forward_as_tuple(k),
@@ -730,7 +730,7 @@ class RangeMap
 	}
 
 	template <class... Args>
-	iterator try_emplace(const_iterator hint, key_type k, Args &&...args)
+	iterator try_emplace(const_iterator hint, key_type k, Args &&... args)
 	{
 		// FIXME: Use hint
 		return try_emplace(k, std::forward<Args>(args)...).first;

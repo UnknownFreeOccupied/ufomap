@@ -44,6 +44,7 @@
 
 // UFO
 #include <ufo/container/flat_map.h>
+#include <ufo/container/range_map.h>
 #include <ufo/map/octree/octree_base.h>
 #include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/types.h>
@@ -114,29 +115,29 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Get semantic value
 	//
 
-	semantic_value_t getSemanticValue(Node const& node, semantic_label_t  label) const
+	semantic_value_t getSemanticValue(Node const& node, semantic_label_t label) const
 	{
 		return Base::getLeafNode(node)->semantics.getValue(label);
 	}
 
-	semantic_value_t getSemanticValue(Code code, semantic_label_t  label) const
+	semantic_value_t getSemanticValue(Code code, semantic_label_t label) const
 	{
 		return Base::getLeafNode(code).semantics.getValue(label);
 	}
 
-	semantic_value_t getSemanticValue(Key key, semantic_label_t  label) const
+	semantic_value_t getSemanticValue(Key key, semantic_label_t label) const
 	{
 		return getSemanticValue(Base::toCode(key), label);
 	}
 
-	semantic_value_t getSemanticValue(Point3 coord, semantic_label_t  label,
-	                               depth_t depth = 0) const
+	semantic_value_t getSemanticValue(Point3 coord, semantic_label_t label,
+	                                  depth_t depth = 0) const
 	{
 		return getSemanticValue(Base::toCode(coord, depth), label);
 	}
 
-	semantic_value_t getSemanticValue(coord_t x, coord_t y, coord_t z, semantic_label_t  label,
-	                               depth_t depth = 0) const
+	semantic_value_t getSemanticValue(coord_t x, coord_t y, coord_t z,
+	                                  semantic_label_t label, depth_t depth = 0) const
 	{
 		return getSemanticValue(Base::toCode(x, y, z, depth), label);
 	}
@@ -186,7 +187,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	// TODO: Node
 
-	void insertSemantics(Code code, semantic_label_t  label, semantic_value_t value,
+	void insertSemantics(Code code, semantic_label_t label, semantic_value_t value,
 	                     bool propagate = true)
 	{
 		insertSemantics(std::execution::seq, code, label, value, propagate);
@@ -205,7 +206,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertSemantics(ExecutionPolicy policy, Code code, semantic_label_t  label,
+	void insertSemantics(ExecutionPolicy policy, Code code, semantic_label_t label,
 	                     semantic_value_t value, bool propagate = true)
 	{
 		insertSemantics(policy, code, SemanticPair(label, value), propagate);
@@ -242,7 +243,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Insert or assign semantics
 	//
 
-	void insertOrAssignSemantics(Node& node, semantic_label_t  label, semantic_value_t value,
+	void insertOrAssignSemantics(Node& node, semantic_label_t label, semantic_value_t value,
 	                             bool propagate = true)
 	{
 		insertOrAssignSemantics(std::execution::seq, node, label, value, propagate);
@@ -260,7 +261,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		insertOrAssignSemantics(std::execution::seq, node, first, last, propagate);
 	}
 
-	void insertOrAssignSemantics(Code code, semantic_label_t  label, semantic_value_t value,
+	void insertOrAssignSemantics(Code code, semantic_label_t label, semantic_value_t value,
 	                             bool propagate = true)
 	{
 		insertOrAssignSemantics(std::execution::seq, code, label, value, propagate);
@@ -278,7 +279,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		insertOrAssignSemantics(std::execution::seq, code, first, last, propagate);
 	}
 
-	void insertOrAssignSemantics(Key key, semantic_label_t  label, semantic_value_t value,
+	void insertOrAssignSemantics(Key key, semantic_label_t label, semantic_value_t value,
 	                             bool propagate = true)
 	{
 		insertOrAssignSemantics(std::execution::seq, key, label, value, propagate);
@@ -296,8 +297,9 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		insertOrAssignSemantics(std::execution::seq, key, first, last, propagate);
 	}
 
-	void insertOrAssignSemantics(Point3 coord, semantic_label_t  label, semantic_value_t value,
-	                             bool propagate = true, depth_t depth = 0)
+	void insertOrAssignSemantics(Point3 coord, semantic_label_t label,
+	                             semantic_value_t value, bool propagate = true,
+	                             depth_t depth = 0)
 	{
 		insertOrAssignSemantics(std::execution::seq, coord, label, value, propagate, depth);
 	}
@@ -315,7 +317,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		insertOrAssignSemantics(std::execution::seq, coord, first, last, propagate, depth);
 	}
 
-	void insertOrAssignSemantics(coord_t x, coord_t y, coord_t z, semantic_label_t  label,
+	void insertOrAssignSemantics(coord_t x, coord_t y, coord_t z, semantic_label_t label,
 	                             semantic_value_t value, bool propagate = true,
 	                             depth_t depth = 0)
 	{
@@ -329,15 +331,15 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	}
 
 	template <class InputIt>
-	void insertOrAssignSemantics(coord_t x, coord_t y, coord_t z, InputIt first, InputIt last,
-	                             bool propagate = true, depth_t depth = 0)
+	void insertOrAssignSemantics(coord_t x, coord_t y, coord_t z, InputIt first,
+	                             InputIt last, bool propagate = true, depth_t depth = 0)
 	{
 		insertOrAssignSemantics(std::execution::seq, x, y, z, first, last, propagate, depth);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertOrAssignSemantics(ExecutionPolicy policy, Node& node, semantic_label_t  label,
+	void insertOrAssignSemantics(ExecutionPolicy policy, Node& node, semantic_label_t label,
 	                             semantic_value_t value, bool propagate = true)
 	{
 		insertOrAssignSemantics(policy, node, SemanticPair(label, value), propagate);
@@ -370,7 +372,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertOrAssignSemantics(ExecutionPolicy policy, Code code, semantic_label_t  label,
+	void insertOrAssignSemantics(ExecutionPolicy policy, Code code, semantic_label_t label,
 	                             semantic_value_t value, bool propagate = true)
 	{
 		insertOrAssignSemantics(policy, code, SemanticPair(label, value), propagate);
@@ -403,7 +405,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertOrAssignSemantics(ExecutionPolicy policy, Key key, semantic_label_t  label,
+	void insertOrAssignSemantics(ExecutionPolicy policy, Key key, semantic_label_t label,
 	                             semantic_value_t value, bool propagate = true)
 	{
 		insertOrAssignSemantics(policy, Base::toCode(key), label, value, propagate);
@@ -428,9 +430,9 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertOrAssignSemantics(ExecutionPolicy policy, Point3 coord, semantic_label_t  label,
-	                             semantic_value_t value, bool propagate = true,
-	                             depth_t depth = 0)
+	void insertOrAssignSemantics(ExecutionPolicy policy, Point3 coord,
+	                             semantic_label_t label, semantic_value_t value,
+	                             bool propagate = true, depth_t depth = 0)
 	{
 		insertOrAssignSemantics(policy, Base::toCode(coord, depth), label, value, propagate);
 	}
@@ -456,7 +458,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void insertOrAssignSemantics(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                             semantic_label_t  label, semantic_value_t value,
+	                             semantic_label_t label, semantic_value_t value,
 	                             bool propagate = true, depth_t depth = 0)
 	{
 		insertOrAssignSemantics(policy, Base::toCode(x, y, z, depth), label, value,
@@ -491,14 +493,14 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		increaseSemantics(std::execution::seq, code, inc, propagate);
 	}
 
-	void increaseSemantics(Code code, semantic_label_t  label, semantic_value_t inc,
+	void increaseSemantics(Code code, semantic_label_t label, semantic_value_t inc,
 	                       semantic_value_t init_value = 0, bool propagate = true)
 	{
 		increaseSemantics(std::execution::seq, code, label, inc, init_value, propagate);
 	}
 
-	void increaseSemantics(Code code, SemanticPair semantic, semantic_value_t init_value = 0,
-	                       bool propagate = true)
+	void increaseSemantics(Code code, SemanticPair semantic,
+	                       semantic_value_t init_value = 0, bool propagate = true)
 	{
 		increaseSemantics(std::execution::seq, code, semantic, init_value, propagate);
 	}
@@ -520,7 +522,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseSemantics(ExecutionPolicy policy, Code code, semantic_label_t  label,
+	void increaseSemantics(ExecutionPolicy policy, Code code, semantic_label_t label,
 	                       semantic_value_t inc, semantic_value_t init_value = 0,
 	                       bool propagate = true)
 	{
@@ -563,13 +565,13 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		// TODO: Implement
 	}
 
-	void decreaseSemantics(Code code, semantic_label_t  label, semantic_value_t dec,
+	void decreaseSemantics(Code code, semantic_label_t label, semantic_value_t dec,
 	                       bool propagate = true)
 	{
 		decreaseSemantics(code, label, dec, 0, propagate);
 	}
 
-	void decreaseSemantics(Code code, semantic_label_t  label, semantic_value_t dec,
+	void decreaseSemantics(Code code, semantic_label_t label, semantic_value_t dec,
 	                       semantic_value_t init_value, bool propagate = true)
 	{
 		// TODO: Implement
@@ -579,78 +581,78 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Change label
 	//
 
-	void changeLabel(semantic_label_t  old_label, semantic_label_t  new_label,
+	void changeLabel(semantic_label_t old_label, semantic_label_t new_label,
 	                 bool propagate = true)
 	{
 		changeLabel(std::execution::seq, old_label, new_label, propagate);
 	}
 
-	void changeLabel(Node& node, semantic_label_t  old_label, semantic_label_t  new_label,
+	void changeLabel(Node& node, semantic_label_t old_label, semantic_label_t new_label,
 	                 bool propagate = true)
 	{
 		changeLabel(std::execution::seq, node, old_label, new_label, propagate);
 	}
 
-	void changeLabel(Code code, semantic_label_t  old_label, semantic_label_t  new_label,
+	void changeLabel(Code code, semantic_label_t old_label, semantic_label_t new_label,
 	                 bool propagate = true)
 	{
 		changeLabel(std::execution::seq, code, old_label, new_label, propagate);
 	}
 
-	void changeLabel(Key key, semantic_label_t  old_label, semantic_label_t  new_label,
+	void changeLabel(Key key, semantic_label_t old_label, semantic_label_t new_label,
 	                 bool propagate = true)
 	{
 		changeLabel(std::execution::seq, key, old_label, new_label, propagate);
 	}
 
-	void changeLabel(Point3 coord, semantic_label_t  old_label, semantic_label_t  new_label,
+	void changeLabel(Point3 coord, semantic_label_t old_label, semantic_label_t new_label,
 	                 bool propagate = true, depth_t depth = 0)
 	{
 		changeLabel(std::execution::seq, coord, old_label, new_label, propagate, depth);
 	}
 
-	void changeLabel(coord_t x, coord_t y, coord_t z, semantic_label_t  old_label,
-	                 semantic_label_t  new_label, bool propagate = true, depth_t depth = 0)
+	void changeLabel(coord_t x, coord_t y, coord_t z, semantic_label_t old_label,
+	                 semantic_label_t new_label, bool propagate = true, depth_t depth = 0)
 	{
 		changeLabel(std::execution::seq, x, y, z, old_label, new_label, propagate, depth);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void changeLabel(ExecutionPolicy policy, semantic_label_t  old_label,
-	                 semantic_label_t  new_label, bool propagate = true)
+	void changeLabel(ExecutionPolicy policy, semantic_label_t old_label,
+	                 semantic_label_t new_label, bool propagate = true)
 	{
 		changeLabel(policy, Base::getRootCode(), old_label, new_label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void changeLabel(ExecutionPolicy policy, Node& node, semantic_label_t  old_label,
-	                 semantic_label_t  new_label, bool propagate = true)
+	void changeLabel(ExecutionPolicy policy, Node& node, semantic_label_t old_label,
+	                 semantic_label_t new_label, bool propagate = true)
 	{
 		// TODO: Implement
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void changeLabel(ExecutionPolicy policy, Code code, semantic_label_t  old_label,
-	                 semantic_label_t  new_label, bool propagate = true)
+	void changeLabel(ExecutionPolicy policy, Code code, semantic_label_t old_label,
+	                 semantic_label_t new_label, bool propagate = true)
 	{
 		// TODO: Implement
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void changeLabel(ExecutionPolicy policy, Key key, semantic_label_t  old_label,
-	                 semantic_label_t  new_label, bool propagate = true)
+	void changeLabel(ExecutionPolicy policy, Key key, semantic_label_t old_label,
+	                 semantic_label_t new_label, bool propagate = true)
 	{
 		changeLabel(policy, Base::toCode(key), old_label, new_label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void changeLabel(ExecutionPolicy policy, Point3 coord, semantic_label_t  old_label,
-	                 semantic_label_t  new_label, bool propagate = true, depth_t depth = 0)
+	void changeLabel(ExecutionPolicy policy, Point3 coord, semantic_label_t old_label,
+	                 semantic_label_t new_label, bool propagate = true, depth_t depth = 0)
 	{
 		changeLabel(policy, Base::toCode(coord, depth), old_label, new_label, propagate);
 	}
@@ -658,7 +660,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void changeLabel(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                 semantic_label_t  old_label, semantic_label_t  new_label,
+	                 semantic_label_t old_label, semantic_label_t new_label,
 	                 bool propagate = true, depth_t depth = 0)
 	{
 		changeLabel(policy, Base::toCode(x, y, z, depth), old_label, new_label, propagate);
@@ -668,48 +670,48 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Delete label
 	//
 
-	void deleteLabel(semantic_label_t  label, bool propagate = true)
+	void deleteLabel(semantic_label_t label, bool propagate = true)
 	{
 		deleteLabel(std::execution::seq, label, propagate);
 	}
 
-	void deleteLabel(Node& node, semantic_label_t  label, bool propagate = true)
+	void deleteLabel(Node& node, semantic_label_t label, bool propagate = true)
 	{
 		deleteLabel(std::execution::seq, node, label, propagate);
 	}
 
-	void deleteLabel(Code code, semantic_label_t  label, bool propagate = true)
+	void deleteLabel(Code code, semantic_label_t label, bool propagate = true)
 	{
 		deleteLabel(std::execution::seq, code, label, propagate);
 	}
 
-	void deleteLabel(Key key, semantic_label_t  label, bool propagate = true)
+	void deleteLabel(Key key, semantic_label_t label, bool propagate = true)
 	{
 		deleteLabel(std::execution::seq, key, label, propagate);
 	}
 
-	void deleteLabel(Point3 coord, semantic_label_t  label, bool propagate = true,
+	void deleteLabel(Point3 coord, semantic_label_t label, bool propagate = true,
 	                 depth_t depth = 0)
 	{
 		deleteLabel(std::execution::seq, coord, label, propagate, depth);
 	}
 
-	void deleteLabel(coord_t x, coord_t y, coord_t z, semantic_label_t  label, bool propagate = true,
-	                 depth_t depth = 0)
+	void deleteLabel(coord_t x, coord_t y, coord_t z, semantic_label_t label,
+	                 bool propagate = true, depth_t depth = 0)
 	{
 		deleteLabel(std::execution::seq, x, y, z, label, propagate, depth);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void deleteLabel(ExecutionPolicy policy, semantic_label_t  label, bool propagate = true)
+	void deleteLabel(ExecutionPolicy policy, semantic_label_t label, bool propagate = true)
 	{
 		deleteLabel(policy, Base::getRootCode(), label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void deleteLabel(ExecutionPolicy policy, Node& node, semantic_label_t  label,
+	void deleteLabel(ExecutionPolicy policy, Node& node, semantic_label_t label,
 	                 bool propagate = true)
 	{
 		// TODO: Implement
@@ -717,7 +719,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void deleteLabel(ExecutionPolicy policy, Code code, semantic_label_t  label,
+	void deleteLabel(ExecutionPolicy policy, Code code, semantic_label_t label,
 	                 bool propagate = true)
 	{
 		// TODO: Implement
@@ -725,7 +727,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void deleteLabel(ExecutionPolicy policy, Key key, semantic_label_t  label,
+	void deleteLabel(ExecutionPolicy policy, Key key, semantic_label_t label,
 	                 bool propagate = true)
 	{
 		deleteLabel(policy, Base::toCode(key), label, propagate);
@@ -733,7 +735,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void deleteLabel(ExecutionPolicy policy, Point3 coord, semantic_label_t  label,
+	void deleteLabel(ExecutionPolicy policy, Point3 coord, semantic_label_t label,
 	                 bool propagate = true, depth_t depth = 0)
 	{
 		deleteLabel(policy, Base::toCode(coord, depth), label, propagate);
@@ -741,8 +743,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void deleteLabel(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, semantic_label_t  label,
-	                 bool propagate = true, depth_t depth = 0)
+	void deleteLabel(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
+	                 semantic_label_t label, bool propagate = true, depth_t depth = 0)
 	{
 		deleteLabel(policy, Base::toCode(x, y, z, depth), label, propagate);
 	}
@@ -879,8 +881,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// 	filterSemantics(policy, Base::toCode(coord, depth), min_prob, propagate);
 	// }
 
-	// void filterSemantics(coord_t x, coord_t y, coord_t z, float min_prob, bool propagate =
-	// true,
+	// void filterSemantics(coord_t x, coord_t y, coord_t z, float min_prob, bool propagate
+	// = true,
 	//                      depth_t depth = 0)
 	// {
 	// 	filterSemantics(Base::toCode(x, y, z, depth), min_prob, propagate);
@@ -926,7 +928,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Add label mapping
 	//
 
-	void addLabelMapping(std::string const& name, semantic_label_t  label)
+	void addLabelMapping(std::string const& name, semantic_label_t label)
 	{
 		label_mapping_[name].ranges.insert(label);
 	}
@@ -1180,8 +1182,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Change label
 	//
 
-	virtual void changeLabelImpl(LeafNode& node, semantic_label_t  old_label,
-	                             semantic_label_t  new_label)
+	virtual void changeLabelImpl(LeafNode& node, semantic_label_t old_label,
+	                             semantic_label_t new_label)
 	{
 		// TODO: Implement
 	}
@@ -1190,7 +1192,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Delete label
 	//
 
-	virtual void deleteSemanticLabelImpl(LeafNode& node, semantic_label_t  label)
+	virtual void deleteSemanticLabelImpl(LeafNode& node, semantic_label_t label)
 	{
 		node.semantics.erase(label);
 	}
@@ -1232,7 +1234,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		// TODO: Make parallel
 
 		if ('U' == type && sizeof(semantic_label_t) == size) {
-			semantic_label_t  bits_for_label;
+			semantic_label_t bits_for_label;
 			in_stream.read(reinterpret_cast<char*>(&bits_for_label), sizeof(semantic_label_t));
 			for (auto& node : nodes) {
 				node->semantics.readData(in_stream);

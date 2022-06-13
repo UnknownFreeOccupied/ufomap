@@ -203,10 +203,10 @@ class Code
 	inline Code sibling(std::size_t index) const
 	{
 		code_t sibling_code = (code_ >> static_cast<code_t>(3 * (depth_ + 1)))
-		                        << static_cast<code_t>(3 * (depth_ + 1));
-		return Code(sibling_code +
-		                (static_cast<code_t>(index) << static_cast<code_t>(3 * depth_)),
-		            depth_);
+		                      << static_cast<code_t>(3 * (depth_ + 1));
+		return Code(
+		    sibling_code + (static_cast<code_t>(index) << static_cast<code_t>(3 * depth_)),
+		    depth_);
 	}
 
 	/*!

@@ -43,7 +43,7 @@
 #define UFO_MAP_RAY_CASTER_H
 
 // UFO
-#include <ufo/map/code.h>
+#include <ufo/map/code/code.h>
 #include <ufo/map/key.h>
 #include <ufo/map/types.h>
 #include <ufo/math/util.h>

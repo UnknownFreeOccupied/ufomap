@@ -44,7 +44,6 @@
 
 namespace ufo::container
 {
-
 }
 
 #endif  // UFO_CONTAINER_HASH_MAP_H

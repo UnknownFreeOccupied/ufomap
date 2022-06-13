@@ -53,7 +53,8 @@ namespace ufo::map
 // class OccupancyMapColorSemantic final
 //     : public OccupancyMapTimeBase<OccupancyMapTimeColorSemantic,
 //                                   OccupancyTimeColorSemanticNode>,
-//       public ColorMapBase<OccupancyMapTimeColorSemantic, OccupancyTimeColorSemanticNode,
+//       public ColorMapBase<OccupancyMapTimeColorSemantic,
+//       OccupancyTimeColorSemanticNode,
 //                           OccupancyIndicators>,
 //       public SemanticMapBase<OccupancyMapTimeColorSemantic,
 //                              OccupancyTimeColorSemanticNode, OccupancyIndicators>

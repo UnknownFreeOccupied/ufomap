@@ -1,32 +1,32 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
- * 
+ *
  * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
- * 
+ *
  * @copyright Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
- * 
+ *
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2022, Daniel Duberg, KTH Royal Institute of Technology
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *     list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -43,7 +43,7 @@
 #define UFO_MAP_OCTREE_BASE_H
 
 // UFO
-#include <ufo/map/code.h>
+#include <ufo/map/code/code.h>
 #include <ufo/map/io.h>
 #include <ufo/map/iterator/octree.h>
 #include <ufo/map/key.h>
@@ -176,7 +176,10 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The size of a node at the depth.
 	 */
-	[[nodiscard]] constexpr double nodeSize(depth_t depth) const { return node_size_[depth]; }
+	[[nodiscard]] constexpr double nodeSize(depth_t depth) const
+	{
+		return node_size_[depth];
+	}
 
 	//
 	// Resolution
@@ -582,7 +585,8 @@ class OctreeBase
 	 * @param depth The depth of the node to check.
 	 * @return Whether the node is a leaf node.
 	 */
-	[[nodiscard]] constexpr bool isLeaf(coord_t x, coord_t y, coord_t z, depth_t depth = 0) noexcept
+	[[nodiscard]] constexpr bool isLeaf(coord_t x, coord_t y, coord_t z,
+	                                    depth_t depth = 0) noexcept
 	{
 		return isPureLeaf(x, y, z, depth) || isLeaf(innerNode(toCode(x, y, z, depth)));
 	}
@@ -758,7 +762,8 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	constexpr std::optional<Key> toKeyChecked(Point3 coord, depth_t depth = 0) const noexcept
+	constexpr std::optional<Key> toKeyChecked(Point3 coord,
+	                                          depth_t depth = 0) const noexcept
 	{
 		return depthLevels() >= depth && isWithin(coord)
 		           ? std::optional<Key>(toKey(coord, depth))
@@ -973,7 +978,8 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The node.
 	 */
-	std::optional<Node> getNodeChecked(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	std::optional<Node> getNodeChecked(coord_t x, coord_t y, coord_t z,
+	                                   depth_t depth = 0) const
 	{
 		return getNodeChecked(Point3(x, y, z), depth);
 	}
@@ -1213,7 +1219,7 @@ class OctreeBase
 	Node createNode(Code code)
 	{
 		InnerNode* node = &getRootImpl();
-		auto const min_depth = std::max(static_cast<Depth>(1), code.depth());
+		auto const min_depth = std::max(depth_t(1), code.depth());
 		depth_t cur_depth = depthLevels();
 		for (; min_depth < cur_depth; --cur_depth) {
 			if (isLeaf(*node)) {
@@ -1444,7 +1450,8 @@ class OctreeBase
 	// Update modified nodes
 	//
 
-	void updateModifiedNodes(bool keep_modified = false, depth_t max_depth = maxDepthLevels())
+	void updateModifiedNodes(bool keep_modified = false,
+	                         depth_t max_depth = maxDepthLevels())
 	{
 		if (keep_modified) {
 			updateModifiedNodesRecurs<true>(max_depth, getRootImpl(), depthLevels());
@@ -1474,7 +1481,8 @@ class OctreeBase
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void updateModifiedNodes(ExecutionPolicy policy, Node const& node,
-	                         bool keep_modified = false, depth_t max_depth = maxDepthLevels())
+	                         bool keep_modified = false,
+	                         depth_t max_depth = maxDepthLevels())
 	{
 		// TODO: Implement
 		// if ()
@@ -1519,13 +1527,15 @@ class OctreeBase
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void updateModifiedNodes(ExecutionPolicy policy, Point3 coord, depth_t depth = 0,
-	                         bool keep_modified = false, depth_t max_depth = maxDepthLevels())
+	                         bool keep_modified = false,
+	                         depth_t max_depth = maxDepthLevels())
 	{
 		updateModifiedNodes(policy, toCode(coord, depth), keep_modified, max_depth);
 	}
 
 	void updateModifiedNodes(double x, double y, double z, depth_t depth = 0,
-	                         bool keep_modified = false, depth_t max_depth = maxDepthLevels())
+	                         bool keep_modified = false,
+	                         depth_t max_depth = maxDepthLevels())
 	{
 		updateModifiedNodes(toCode(x, y, z, depth), keep_modified, max_depth);
 	}
@@ -1624,7 +1634,10 @@ class OctreeBase
 		}
 	}
 
-	void setModified(Key key, depth_t min_depth = 0) { setModified(toCode(key), min_depth); }
+	void setModified(Key key, depth_t min_depth = 0)
+	{
+		setModified(toCode(key), min_depth);
+	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
@@ -1653,8 +1666,8 @@ class OctreeBase
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setModified(ExecutionPolicy policy, double x, double y, double z, depth_t depth = 0,
-	                 depth_t min_depth = 0)
+	void setModified(ExecutionPolicy policy, double x, double y, double z,
+	                 depth_t depth = 0, depth_t min_depth = 0)
 	{
 		setModified(policy, toCode(x, y, z, depth), min_depth);
 	}
@@ -1727,12 +1740,14 @@ class OctreeBase
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void clearModified(ExecutionPolicy policy, Key key, depth_t max_depth = maxDepthLevels())
+	void clearModified(ExecutionPolicy policy, Key key,
+	                   depth_t max_depth = maxDepthLevels())
 	{
 		clearModified(policy, toCode(key), max_depth);
 	}
 
-	void clearModified(Point3 coord, depth_t depth = 0, depth_t max_depth = maxDepthLevels())
+	void clearModified(Point3 coord, depth_t depth = 0,
+	                   depth_t max_depth = maxDepthLevels())
 	{
 		clearModified(toCode(coord, depth), max_depth);
 	}
@@ -1878,9 +1893,9 @@ class OctreeBase
 	}
 
 	template <class Predicates, typename = std::enable_if_t<!std::is_scalar_v<Predicates>>>
-	void write(std::ostream& out_stream, Predicates const& predicates, depth_t min_depth = 0,
-	           bool compress = false, int compression_acceleration_level = 1,
-	           int compression_level = 0) const
+	void write(std::ostream& out_stream, Predicates const& predicates,
+	           depth_t min_depth = 0, bool compress = false,
+	           int compression_acceleration_level = 1, int compression_level = 0) const
 	{
 		writeHeader(out_stream, getFileInfo());
 		writeData(out_stream, predicates, min_depth, compress, compression_acceleration_level,
@@ -2116,7 +2131,7 @@ class OctreeBase
 	 * @return The corresponding key.
 	 */
 	constexpr std::optional<Key::key_t> toKeyChecked(coord_t coord,
-	                                                   depth_t depth = 0) const noexcept
+	                                                 depth_t depth = 0) const noexcept
 	{
 		auto min = -nodeSize(depthLevels() - 1);
 		auto max = -min;
@@ -2824,8 +2839,8 @@ class OctreeBase
 	template <bool KeepModified, class ExecutionPolicy,
 	          typename = std::enable_if_t<
 	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-	void updateModifiedNodesRecurs(ExecutionPolicy policy, depth_t max_depth, InnerNode& node,
-	                               depth_t depth)
+	void updateModifiedNodesRecurs(ExecutionPolicy policy, depth_t max_depth,
+	                               InnerNode& node, depth_t depth)
 	{
 		if (!isModified(node)) {
 			return;
@@ -3161,8 +3176,8 @@ class OctreeBase
 	                       uint64_t num) = 0;
 
 	template <class Predicates>
-	void writeData(std::ostream& out_stream, Predicates const& predicates, depth_t min_depth,
-	               bool compress, int compression_acceleration_level,
+	void writeData(std::ostream& out_stream, Predicates const& predicates,
+	               depth_t min_depth, bool compress, int compression_acceleration_level,
 	               int compression_level) const
 	{
 		uint8_t compressed = compress ? UINT8_MAX : 0U;
@@ -3337,7 +3352,7 @@ class OctreeBase
 	                        int compression_level) const = 0;
 
  protected:
-	depth_t depth_levels_;      // The number of depth levels
+	depth_t depth_levels_;  // The number of depth levels
 	Key::key_t max_value_;  // The maximum coordinate value the octree can store
 
 	std::unique_ptr<InnerNode> root_;  // The root of the octree

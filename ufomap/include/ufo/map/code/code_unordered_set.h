@@ -54,7 +54,7 @@
 
 namespace ufo::map
 {
-using CodeUnorderedSet = std::unordered_set<Code>;
+using CodeUnorderedSet = std::unordered_set<Code, Code::Hash>;
 
 // template <class Allocator = std::allocator<Code>>
 // class CodeUnorderedSet

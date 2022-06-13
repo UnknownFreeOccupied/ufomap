@@ -43,11 +43,12 @@
 #define UFO_MAP_INTEGRATOR_BASE_H
 
 // UFO
-#include <ufo/map/code.h>
+#include <ufo/map/code/code.h>
 #include <ufo/map/color/color_map_base.h>
 // #include <ufo/map/integrator/grid.h>
 // #include <ufo/map/integrator/integrator_point_cloud.h>
 #include <ufo/algorithm/algorithm.h>
+#include <ufo/map/code/code_unordered_set.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_time_base.h>
 #include <ufo/map/point_cloud.h>
@@ -261,7 +262,7 @@ Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
 		}
 		prev = cur;
 
-		for (auto e : computeRay(origin.toDepth(cur.depth()), cur)) {
+		for (auto e : computeRay(Key(origin, cur.depth()), cur)) {
 			indices.insert(e);
 		}
 	}
@@ -323,12 +324,12 @@ class Integrator
 
 			// Update time step
 			if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-				map.setTimeStep(node, current_time_step_, false);
+				map.setTimeStep(node, time_step_, false);
 			}
 
 			// Update color
 			if constexpr (is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
-			              std::is_base_of_v<RGBColor, T>) {
+			              std::is_base_of_v<RGBColor, P>) {
 				RGBColor avg_color = RGBColor::average(first_point, last_point);
 
 				if (avg_color.set()) {
@@ -340,7 +341,7 @@ class Integrator
 
 			// Update semantics
 			if constexpr (is_base_of_template_v<SemanticMapBase, std::decay_t<Map>> &&
-			              std::is_base_of_v<SemanticPair, T>) {
+			              std::is_base_of_v<SemanticPair, P>) {
 				// FIXME: Implement correctly
 
 				std::vector<SemanticPair> semantics(first_point, last_point);
@@ -369,15 +370,17 @@ class Integrator
 	{
 		auto prob = map.toOccupancyLogit(occupancy_prob_miss_);
 
-		std::for_each(std::cbegin(codes), std::cend(codes), [&map, prob](auto code) {
-			auto node = map.createNode(code);
+		std::for_each(
+		    std::cbegin(codes), std::cend(codes),
+		    [&map, prob, time_step = time_step_](auto code) {
+			    auto node = map.createNode(code);
 
-			map.decreaseOccupancyLogit(node, prob, false);
+			    map.decreaseOccupancyLogit(node, prob, false);
 
-			if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
-				map.setTimeStep(node, current_time_step_, false);
-			}
-		});
+			    if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
+				    map.setTimeStep(node, time_step, false);
+			    }
+		    });
 	}
 
 	//
@@ -426,8 +429,7 @@ class Integrator
 		        : toIntegrationCloud(map, cloud, sensor_origin, max_range_, hit_depth_);
 
 		// Ray cast to get free space
-		Misses misses = getMisses(map.toCode(sensor_origin, miss_depth_), std::cbegin(hits),
-		                          std::cend(hits), max_length_);
+		Misses misses = getMisses(map, ic, sensor_origin);
 
 		// Integrate into the map
 		integrateMisses(map, misses);
@@ -515,7 +517,7 @@ class Integrator
 	/*!
 	 * @return The time step.
 	 */
-	[[nodiscard]] constexpr time_step_t  timeStep() const noexcept { return time_step_; }
+	[[nodiscard]] constexpr time_step_t timeStep() const noexcept { return time_step_; }
 
 	/*!
 	 * @return Whether the time step is automatically incremented.
@@ -570,7 +572,7 @@ class Integrator
 		occupancy_prob_miss_ = prob;
 	}
 
-	constexpr void setTimeStep(time_step_t  time_step) noexcept { time_step_ = time_step; }
+	constexpr void setTimeStep(time_step_t time_step) noexcept { time_step_ = time_step; }
 
 	constexpr void setTimeStepAutoInc(int inc) noexcept { time_step_auto_inc_ = inc; }
 
@@ -605,7 +607,7 @@ class Integrator
 	float occupancy_prob_miss_ = 0.4;
 
 	// Time step specific
-	time_step_t  time_step_ = 1;
+	time_step_t time_step_ = 1;
 	int time_step_auto_inc_ = 1;
 
 	// Semantic specific

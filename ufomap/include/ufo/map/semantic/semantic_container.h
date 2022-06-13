@@ -39,12 +39,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_CONTAINER_FLAT_MAP_H
-#define UFO_CONTAINER_FLAT_MAP_H
+#ifndef UFO_MAP_SEMANTIC_CONTAINER_H
+#define UFO_MAP_SEMANTIC_CONTAINER_H
 
 // UFO
 #include <ufo/container/range.h>
-#include <ufo/container/range_set.h>
 
 // STL
 #include <algorithm>
@@ -59,7 +58,7 @@
 #include <utility>
 #include <vector>
 
-namespace ufo::container
+namespace ufo::map
 {
 /*!
  * Associative ordered container using a data-coherent implementation.
@@ -70,10 +69,11 @@ namespace ufo::container
  * the key will be 15 bits and the value 1 bit.
  */
 template <typename DataType, std::size_t ValueWidth, std::size_t FixedSize = 0>
-class FlatMap
+class SemanticContainer
 {
  private:
-	static_assert(std::is_unsigned_v<DataType>, "FlatMap require unsigned data type.");
+	static_assert(std::is_unsigned_v<DataType>,
+	              "SemanticContainer require unsigned data type.");
 
 	static constexpr std::size_t LabelWidth =
 	    std::numeric_limits<DataType>::digits - ValueWidth;
@@ -175,7 +175,7 @@ class FlatMap
 
 	 private:
 		DataType data_ = 0;
-		friend class FlatMap;
+		friend class SemanticContainer;
 	};
 
 	// Tags
@@ -193,25 +193,25 @@ class FlatMap
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	// Constructors
-	constexpr FlatMap() = default;
+	constexpr SemanticContainer() = default;
 
 	template <class InputIt>
-	FlatMap(InputIt first, InputIt last)
+	SemanticContainer(InputIt first, InputIt last)
 	{
 		insert(first, last);
 	}
 
-	FlatMap(FlatMap const &other) { *this = other; }
+	SemanticContainer(SemanticContainer const &other) { *this = other; }
 
-	FlatMap(FlatMap &&other) noexcept = default;
+	SemanticContainer(SemanticContainer &&other) noexcept = default;
 
-	FlatMap(std::initializer_list<value_type> init) { insert(init); }
+	SemanticContainer(std::initializer_list<value_type> init) { insert(init); }
 
 	// Destructor
-	~FlatMap() { clear(); }
+	~SemanticContainer() { clear(); }
 
 	// operator=
-	FlatMap &operator=(FlatMap const &rhs)
+	SemanticContainer &operator=(SemanticContainer const &rhs)
 	{
 		if (rhs.empty()) {
 			clear();
@@ -222,9 +222,9 @@ class FlatMap
 		return *this;
 	}
 
-	FlatMap &operator=(FlatMap &&rhs) noexcept = default;
+	SemanticContainer &operator=(SemanticContainer &&rhs) noexcept = default;
 
-	FlatMap &operator=(std::initializer_list<value_type> ilist)
+	SemanticContainer &operator=(std::initializer_list<value_type> ilist)
 	{
 		insert(ilist);
 		return *this;
@@ -647,7 +647,7 @@ class FlatMap
 		return old_size - size();
 	}
 
-	void swap(FlatMap &other) noexcept { std::swap(data_, other.data_); }
+	void swap(SemanticContainer &other) noexcept { std::swap(data_, other.data_); }
 
 	// Lookup
 	[[nodiscard]] mapped_type at(key_type key) const
@@ -1002,7 +1002,7 @@ class FlatMap
 		return in_stream.read(reinterpret_cast<char *>(getData()), sizeof(Element) * num);
 	}
 
-	friend std::ostream &operator<<(std::ostream &os, FlatMap const &map)
+	friend std::ostream &operator<<(std::ostream &os, SemanticContainer const &map)
 	{
 		if (!map.empty()) {
 			std::copy(std::begin(map), std::prev(std::end(map)),
@@ -1188,29 +1188,29 @@ class FlatMap
 };
 
 template <typename DataType, std::size_t ValueWidth>
-bool operator==(FlatMap<DataType, ValueWidth> const &lhs,
-                FlatMap<DataType, ValueWidth> const &rhs)
+bool operator==(SemanticContainer<DataType, ValueWidth> const &lhs,
+                SemanticContainer<DataType, ValueWidth> const &rhs)
 {
 	return std::equal(std::begin(lhs), std::end(lhs), std::begin(rhs), std::end(rhs));
 }
 
 template <typename DataType, std::size_t ValueWidth>
-bool operator!=(FlatMap<DataType, ValueWidth> const &lhs,
-                FlatMap<DataType, ValueWidth> const &rhs)
+bool operator!=(SemanticContainer<DataType, ValueWidth> const &lhs,
+                SemanticContainer<DataType, ValueWidth> const &rhs)
 {
 	return !(lhs == rhs);
 }
 
 template <typename DataType, std::size_t ValueWidth>
-void swap(FlatMap<DataType, ValueWidth> &lhs,
-          FlatMap<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
+void swap(SemanticContainer<DataType, ValueWidth> &lhs,
+          SemanticContainer<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }
 
 template <typename DataType, std::size_t ValueWidth, class Pred>
-typename FlatMap<DataType, ValueWidth>::size_type erase_if(
-    FlatMap<DataType, ValueWidth> &c, Pred pred)
+typename SemanticContainer<DataType, ValueWidth>::size_type erase_if(
+    SemanticContainer<DataType, ValueWidth> &c, Pred pred)
 {
 	auto old_size = c.size();
 	for (auto it = std::begin(c), last = std::end(c); it != last;) {
@@ -1223,6 +1223,6 @@ typename FlatMap<DataType, ValueWidth>::size_type erase_if(
 	return old_size - c.size();
 }
 
-}  // namespace ufo::container
+}  // namespace ufo::map
 
-#endif  // UFO_CONTAINER_FLAT_MAP_H
+#endif  // UFO_MAP_SEMANTIC_CONTAINER_H

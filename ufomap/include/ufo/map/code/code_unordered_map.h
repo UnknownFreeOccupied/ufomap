@@ -51,7 +51,7 @@
 namespace ufo::map
 {
 template <typename T>
-using CodeUnorderedMap = std::unordered_map<Code, T>;
+using CodeUnorderedMap = std::unordered_map<Code, T, Code::Hash>;
 
 // template <class T>
 // class CodeMap
@@ -140,7 +140,8 @@ using CodeUnorderedMap = std::unordered_map<Code, T>;
 // 		typename std::vector<std::vector<std::pair<Code, T>>>::const_iterator outer_iter_;
 // 		typename std::vector<std::vector<std::pair<Code, T>>>::const_iterator
 // outer_iter_end_; 		typename std::vector<std::pair<Code, T>>::const_iterator
-// inner_iter_; 		typename std::vector<std::pair<Code, T>>::const_iterator inner_iter_end_;
+// inner_iter_; 		typename std::vector<std::pair<Code, T>>::const_iterator
+// inner_iter_end_;
 // 		// typename decltype(CodeMap<T>::data_)::const_iterator outer_iter_;
 // 		// typename decltype(CodeMap<T>::data_)::const_iterator outer_iter_end_;
 // 		// typename decltype(CodeMap<T>::data_)::value_type::const_iterator inner_iter_;
