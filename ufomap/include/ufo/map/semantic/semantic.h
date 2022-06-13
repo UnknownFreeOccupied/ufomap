@@ -47,16 +47,16 @@
 
 namespace ufo::map
 {
-using SemanticLabel = uint64_t;
-using SemanticValue = uint64_t;
+using semantic_label_t  = uint64_t;
+using semantic_value_t = uint64_t;
 
 struct SemanticPair {
-	SemanticLabel label = 0;
-	SemanticValue value = 0;
+	semantic_label_t  label = 0;
+	semantic_value_t value = 0;
 
 	constexpr SemanticPair() = default;
 
-	constexpr SemanticPair(SemanticLabel label, SemanticValue value = 0)
+	constexpr SemanticPair(semantic_label_t  label, semantic_value_t value = 0)
 	    : label(label), value(value)
 	{
 	}

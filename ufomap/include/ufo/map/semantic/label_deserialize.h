@@ -60,7 +60,7 @@ namespace ufo::map
 class LabelDeserialize
 {
  public:
-	void add(SemanticLabel label, PropagationCriteria prop_criteria)
+	void add(semantic_label_t  label, PropagationCriteria prop_criteria)
 	{
 		deserialize_.insert_or_assign(label, prop_criteria);
 	}
@@ -80,7 +80,7 @@ class LabelDeserialize
 	}
 
  private:
-	container::RangeMap<SemanticLabel, PropagationCriteria> deserialize_;
+	container::RangeMap<semantic_label_t, PropagationCriteria> deserialize_;
 };
 }  // namespace ufo::map
 

@@ -89,8 +89,8 @@ struct Point3Semantic : public Point3, public SemanticPair {
 	{
 	}
 
-	constexpr Point3Semantic(Point3 const& point, SemanticLabel label = 0,
-	                         SemanticValue value = 0)
+	constexpr Point3Semantic(Point3 const& point, semantic_label_t  label = 0,
+	                         semantic_value_t value = 0)
 	    : Point3(point), SemanticPair(label, value)
 	{
 	}
@@ -101,8 +101,8 @@ struct Point3Semantic : public Point3, public SemanticPair {
 	{
 	}
 
-	constexpr Point3Semantic(coord_t x, coord_t y, coord_t z, SemanticLabel label = 0,
-	                         SemanticValue value = 0)
+	constexpr Point3Semantic(coord_t x, coord_t y, coord_t z, semantic_label_t  label = 0,
+	                         semantic_value_t value = 0)
 	    : Point3(x, y, z), SemanticPair(label, value)
 	{
 	}
@@ -118,8 +118,8 @@ struct Point3ColorSemantic : public Point3Color, public SemanticPair {
 	}
 
 	constexpr Point3ColorSemantic(Point3 const& point, RGBColorType red, RGBColorType green,
-	                              RGBColorType blue, SemanticLabel label = 0,
-	                              SemanticValue value = 0)
+	                              RGBColorType blue, semantic_label_t  label = 0,
+	                              semantic_value_t value = 0)
 	    : Point3Color(point, red, green, blue), SemanticPair(label, value)
 	{
 	}
@@ -133,7 +133,7 @@ struct Point3ColorSemantic : public Point3Color, public SemanticPair {
 
 	constexpr Point3ColorSemantic(coord_t x, coord_t y, coord_t z, RGBColorType red,
 	                              RGBColorType green, RGBColorType blue,
-	                              SemanticLabel label = 0, SemanticValue value = 0)
+	                              semantic_label_t  label = 0, semantic_value_t value = 0)
 	    : Point3Color(x, y, z, red, green, blue), SemanticPair(label, value)
 	{
 	}

@@ -61,7 +61,7 @@ struct AnyLabels {
 	{
 	}
 
-	AnyLabels(std::initializer_list<SemanticLabel> ilist) : ranges(ilist), need_fetch(false)
+	AnyLabels(std::initializer_list<semantic_label_t> ilist) : ranges(ilist), need_fetch(false)
 	{
 	}
 
@@ -82,7 +82,7 @@ struct AnyLabels {
 		need_fetch = strings.insert(arg).second || need_fetch;
 	}
 
-	void add(SemanticLabel label) { ranges.insert(label); }
+	void add(semantic_label_t  label) { ranges.insert(label); }
 
 	template <typename Key>
 	void add(util::Range<Key> const& range)
@@ -107,7 +107,7 @@ struct AnyLabels {
 
  private:
 	std::unordered_set<std::string> strings;
-	util::RangeSet<SemanticLabel> ranges;
+	util::RangeSet<semantic_label_t> ranges;
 	bool need_fetch;
 };
 

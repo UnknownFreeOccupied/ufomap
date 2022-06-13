@@ -60,7 +60,7 @@ namespace ufo::map
 class LabelPropagation
 {
  public:
-	void add(SemanticLabel label, PropagationCriteria prop_criteria)
+	void add(semantic_label_t  label, PropagationCriteria prop_criteria)
 	{
 		propagation_.insert_or_assign(label, prop_criteria);
 	}
@@ -80,7 +80,7 @@ class LabelPropagation
 	}
 
  private:
-	container::RangeMap<SemanticLabel, PropagationCriteria> propagation_;
+	container::RangeMap<semantic_label_t, PropagationCriteria> propagation_;
 };
 }  // namespace ufo::map
 
