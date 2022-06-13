@@ -515,7 +515,7 @@ class Integrator
 	/*!
 	 * @return The time step.
 	 */
-	[[nodiscard]] constexpr TimeStepType timeStep() const noexcept { return time_step_; }
+	[[nodiscard]] constexpr time_step_t  timeStep() const noexcept { return time_step_; }
 
 	/*!
 	 * @return Whether the time step is automatically incremented.
@@ -570,7 +570,7 @@ class Integrator
 		occupancy_prob_miss_ = prob;
 	}
 
-	constexpr void setTimeStep(TimeStepType time_step) noexcept { time_step_ = time_step; }
+	constexpr void setTimeStep(time_step_t  time_step) noexcept { time_step_ = time_step; }
 
 	constexpr void setTimeStepAutoInc(int inc) noexcept { time_step_auto_inc_ = inc; }
 
@@ -605,7 +605,7 @@ class Integrator
 	float occupancy_prob_miss_ = 0.4;
 
 	// Time step specific
-	TimeStepType time_step_ = 1;
+	time_step_t  time_step_ = 1;
 	int time_step_auto_inc_ = 1;
 
 	// Semantic specific

@@ -445,14 +445,14 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 		}
 	}
 
-	ufo::map::TimeStepType min_allowed_ts;
-	ufo::map::TimeStepType max_allowed_ts;
+	ufo::map::time_step_t  min_allowed_ts;
+	ufo::map::time_step_t  max_allowed_ts;
 	if (filter.filter_time_step) {
 		min_allowed_ts = filter.min_time_step;
 		max_allowed_ts = filter.max_time_step;
 	} else {
-		min_allowed_ts = std::numeric_limits<ufo::map::TimeStepType>::lowest();
-		max_allowed_ts = std::numeric_limits<ufo::map::TimeStepType>::max();
+		min_allowed_ts = std::numeric_limits<ufo::map::time_step_t >::lowest();
+		max_allowed_ts = std::numeric_limits<ufo::map::time_step_t >::max();
 	}
 
 	std::array<Heatmap, 3> heatmap;
@@ -462,8 +462,8 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 			heatmap[s].min_position[i] = std::numeric_limits<PosType>::max();
 			heatmap[s].max_position[i] = std::numeric_limits<PosType>::lowest();
 		}
-		heatmap[s].min_time_step = std::numeric_limits<ufo::map::TimeStepType>::max();
-		heatmap[s].max_time_step = std::numeric_limits<ufo::map::TimeStepType>::lowest();
+		heatmap[s].min_time_step = std::numeric_limits<ufo::map::time_step_t >::max();
+		heatmap[s].max_time_step = std::numeric_limits<ufo::map::time_step_t >::lowest();
 
 		for (auto const& [_, obj] : objects_[s]) {
 			ufo::geometry::Point min_cur_pos;
@@ -473,10 +473,10 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 				min_cur_pos[i] = std::numeric_limits<PosType>::max();
 				max_cur_pos[i] = std::numeric_limits<PosType>::lowest();
 			}
-			ufo::map::TimeStepType min_cur_time_step =
-			    std::numeric_limits<ufo::map::TimeStepType>::max();
-			ufo::map::TimeStepType max_cur_time_step =
-			    std::numeric_limits<ufo::map::TimeStepType>::lowest();
+			ufo::map::time_step_t  min_cur_time_step =
+			    std::numeric_limits<ufo::map::time_step_t >::max();
+			ufo::map::time_step_t  max_cur_time_step =
+			    std::numeric_limits<ufo::map::time_step_t >::lowest();
 
 			for (auto const& [_, data] : obj.transformed_voxels_) {
 				auto min_pos = data.minPosition();

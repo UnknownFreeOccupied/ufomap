@@ -60,8 +60,8 @@ struct Filter {
 
 	// Time step
 	bool filter_time_step;
-	ufo::map::TimeStepType min_time_step;
-	ufo::map::TimeStepType max_time_step;
+	ufo::map::time_step_t  min_time_step;
+	ufo::map::time_step_t  max_time_step;
 
 	// Semantics
 	bool filter_semantics;

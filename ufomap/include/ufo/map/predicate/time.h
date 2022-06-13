@@ -58,9 +58,9 @@ struct TimeStepMap {
 
 template <PredicateCompare PC = PredicateCompare::EQUAL>
 struct TimeStep {
-	TimeStep(TimeStepType time_step) : time_step(time_step) {}
+	TimeStep(time_step_t  time_step) : time_step(time_step) {}
 
-	TimeStepType time_step;
+	time_step_t  time_step;
 };
 
 using TimeStepE = TimeStep<>;
@@ -73,7 +73,7 @@ using TimeStepMin = TimeStepGE;
 using TimeStepMax = TimeStepLE;
 
 struct TimeStepInterval {
-	TimeStepInterval(TimeStepType min, TimeStepType max) : min(min), max(max) {}
+	TimeStepInterval(time_step_t  min, time_step_t  max) : min(min), max(max) {}
 
 	TimeStepMin min;
 	TimeStepMax max;

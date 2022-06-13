@@ -52,8 +52,8 @@ struct Heatmap {
 	ufo::map::Point3 max_position;
 
 	// Time step
-	ufo::map::TimeStepType min_time_step;
-	ufo::map::TimeStepType max_time_step;
+	ufo::map::time_step_t  min_time_step;
+	ufo::map::time_step_t  max_time_step;
 
 	bool operator==(Heatmap const& rhs) const
 	{

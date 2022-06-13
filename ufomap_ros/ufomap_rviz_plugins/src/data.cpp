@@ -51,8 +51,8 @@ Data::Data()
       max_position_(std::numeric_limits<Ogre::Real>::lowest(),
                     std::numeric_limits<Ogre::Real>::lowest(),
                     std::numeric_limits<Ogre::Real>::lowest()),
-      min_time_step_(std::numeric_limits<ufo::map::TimeStepType>::max()),
-      max_time_step_(std::numeric_limits<ufo::map::TimeStepType>::lowest())
+      min_time_step_(std::numeric_limits<ufo::map::time_step_t >::max()),
+      max_time_step_(std::numeric_limits<ufo::map::time_step_t >::lowest())
 {
 }
 
