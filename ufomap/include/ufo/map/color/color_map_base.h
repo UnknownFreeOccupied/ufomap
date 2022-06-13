@@ -80,7 +80,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		return getColor(Base::toCode(coord, depth));
 	}
 
-	RGBColor getColor(Coord x, Coord y, Coord z, Depth depth = 0) const
+	RGBColor getColor(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	{
 		return getColor(Base::toCode(x, y, z, depth));
 	}
@@ -112,7 +112,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		setColor(Base::toCode(coord, depth), color, propagate);
 	}
 
-	void setColor(Coord x, Coord y, Coord z, RGBColor const& color, bool propagate = true,
+	void setColor(coord_t x, coord_t y, coord_t z, RGBColor const& color, bool propagate = true,
 	              Depth depth = 0)
 	{
 		setColor(Base::toCode(x, y, z, depth), color, propagate);
@@ -156,7 +156,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setColor(ExecutionPolicy policy, Coord x, Coord y, Coord z, RGBColor const& color,
+	void setColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, RGBColor const& color,
 	              bool propagate = true, Depth depth = 0)
 	{
 		setColor(policy, Base::toCode(x, y, z, depth), color, propagate);
@@ -193,7 +193,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		updateColor(Base::toCode(coord, depth), color, weight, propagate);
 	}
 
-	void updateColor(Coord x, Coord y, Coord z, RGBColor const& color, float weight,
+	void updateColor(coord_t x, coord_t y, coord_t z, RGBColor const& color, float weight,
 	                 bool propagate = true, Depth depth = 0)
 	{
 		updateColor(Base::toCode(x, y, z, depth), color, weight, propagate);
@@ -239,7 +239,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void updateColor(ExecutionPolicy policy, Coord x, Coord y, Coord z,
+	void updateColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                 RGBColor const& color, float weight, bool propagate = true,
 	                 Depth depth = 0)
 	{

@@ -51,8 +51,8 @@
 
 namespace ufo::map
 {
-using Coord = float;
-using Point3 = math::Vector3<Coord>;
+using coord_t = float;
+using Point3 = math::Vector3<coord_t>;
 
 struct Point3Color : public Point3, public RGBColor {
 	constexpr Point3Color() = default;
@@ -68,12 +68,12 @@ struct Point3Color : public Point3, public RGBColor {
 	{
 	}
 
-	constexpr Point3Color(Coord x, Coord y, Coord z, RGBColor const& color = RGBColor())
+	constexpr Point3Color(coord_t x, coord_t y, coord_t z, RGBColor const& color = RGBColor())
 	    : Point3(x, y, z), RGBColor(color)
 	{
 	}
 
-	constexpr Point3Color(Coord x, Coord y, Coord z, RGBColorType red, RGBColorType green,
+	constexpr Point3Color(coord_t x, coord_t y, coord_t z, RGBColorType red, RGBColorType green,
 	                      RGBColorType blue)
 	    : Point3(x, y, z), RGBColor(red, green, blue)
 	{
@@ -95,13 +95,13 @@ struct Point3Semantic : public Point3, public SemanticPair {
 	{
 	}
 
-	constexpr Point3Semantic(Coord x, Coord y, Coord z,
+	constexpr Point3Semantic(coord_t x, coord_t y, coord_t z,
 	                         SemanticPair const& semantic = SemanticPair())
 	    : Point3(x, y, z), SemanticPair(semantic)
 	{
 	}
 
-	constexpr Point3Semantic(Coord x, Coord y, Coord z, SemanticLabel label = 0,
+	constexpr Point3Semantic(coord_t x, coord_t y, coord_t z, SemanticLabel label = 0,
 	                         SemanticValue value = 0)
 	    : Point3(x, y, z), SemanticPair(label, value)
 	{
@@ -124,14 +124,14 @@ struct Point3ColorSemantic : public Point3Color, public SemanticPair {
 	{
 	}
 
-	constexpr Point3ColorSemantic(Coord x, Coord y, Coord z,
+	constexpr Point3ColorSemantic(coord_t x, coord_t y, coord_t z,
 	                              RGBColor const& color = RGBColor(),
 	                              SemanticPair const& semantic = SemanticPair())
 	    : Point3Color(x, y, z, color), SemanticPair(semantic)
 	{
 	}
 
-	constexpr Point3ColorSemantic(Coord x, Coord y, Coord z, RGBColorType red,
+	constexpr Point3ColorSemantic(coord_t x, coord_t y, coord_t z, RGBColorType red,
 	                              RGBColorType green, RGBColorType blue,
 	                              SemanticLabel label = 0, SemanticValue value = 0)
 	    : Point3Color(x, y, z, red, green, blue), SemanticPair(label, value)

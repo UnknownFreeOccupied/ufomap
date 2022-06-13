@@ -326,7 +326,7 @@ class OctreeBase
 	 * @param x,y,z The coordinate.
 	 * @return Whether the coordinate is within the octree bounds.
 	 */
-	[[nodiscard]] constexpr bool isWithin(Coord x, Coord y, Coord z) const
+	[[nodiscard]] constexpr bool isWithin(coord_t x, coord_t y, coord_t z) const
 	{
 		auto min = -nodeSize(depthLevels() - 1);
 		auto max = -min;
@@ -518,7 +518,7 @@ class OctreeBase
 	 * @param depth The depth of the node to check.
 	 * @return Whether the node is a pure leaf node.
 	 */
-	[[nodiscard]] static constexpr bool isPureLeaf(Coord x, Coord y, Coord z,
+	[[nodiscard]] static constexpr bool isPureLeaf(coord_t x, coord_t y, coord_t z,
 	                                               Depth depth = 0) noexcept
 	{
 		return 0 == depth;
@@ -582,7 +582,7 @@ class OctreeBase
 	 * @param depth The depth of the node to check.
 	 * @return Whether the node is a leaf node.
 	 */
-	[[nodiscard]] constexpr bool isLeaf(Coord x, Coord y, Coord z, Depth depth = 0) noexcept
+	[[nodiscard]] constexpr bool isLeaf(coord_t x, coord_t y, coord_t z, Depth depth = 0) noexcept
 	{
 		return isPureLeaf(x, y, z, depth) || isLeaf(innerNode(toCode(x, y, z, depth)));
 	}
@@ -644,7 +644,7 @@ class OctreeBase
 	 * @param depth The depth of the node to check.
 	 * @return Whether the node is a parent.
 	 */
-	[[nodiscard]] constexpr bool isParent(Coord x, Coord y, Coord z,
+	[[nodiscard]] constexpr bool isParent(coord_t x, coord_t y, coord_t z,
 	                                      Depth depth = 0) noexcept
 	{
 		return !isLeaf(x, y, z, depth);
@@ -681,7 +681,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The code corresponding to the coordinate at the specific depth.
 	 */
-	[[nodiscard]] constexpr Code toCode(Coord x, Coord y, Coord z,
+	[[nodiscard]] constexpr Code toCode(coord_t x, coord_t y, coord_t z,
 	                                    Depth depth = 0) const noexcept
 	{
 		return toCode(toKey(x, y, z, depth));
@@ -709,7 +709,7 @@ class OctreeBase
 	 * @return The code corresponding to the coordinate at the specific depth.
 	 */
 	[[nodiscard]] constexpr std::optional<Code> toCodeChecked(
-	    Coord x, Coord y, Coord z, Depth depth = 0) const noexcept
+	    coord_t x, coord_t y, coord_t z, Depth depth = 0) const noexcept
 	{
 		return toCodeChecked(Point3(x, y, z), depth);
 	}
@@ -746,7 +746,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	constexpr Key toKey(Coord x, Coord y, Coord z, Depth depth = 0) const noexcept
+	constexpr Key toKey(coord_t x, coord_t y, coord_t z, Depth depth = 0) const noexcept
 	{
 		return Key(toKey(x, depth), toKey(y, depth), toKey(z, depth), depth);
 	}
@@ -772,7 +772,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	constexpr std::optional<Key> toKeyChecked(Coord x, Coord y, Coord z,
+	constexpr std::optional<Key> toKeyChecked(coord_t x, coord_t y, coord_t z,
 	                                          Depth depth = 0) const noexcept
 	{
 		return toKeyChecked(Point3(x, y, z), depth);
@@ -920,7 +920,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The node.
 	 */
-	Node getNode(Coord x, Coord y, Coord z, Depth depth = 0) const
+	Node getNode(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	{
 		return getNode(toCode(x, y, z, depth));
 	}
@@ -973,7 +973,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The node.
 	 */
-	std::optional<Node> getNodeChecked(Coord x, Coord y, Coord z, Depth depth = 0) const
+	std::optional<Node> getNodeChecked(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	{
 		return getNodeChecked(Point3(x, y, z), depth);
 	}
@@ -1000,7 +1000,7 @@ class OctreeBase
 	// 	return getNodeBV(toCode(coord, depth));
 	// }
 
-	// NodeBV getNodeBV(Coord x, Coord y, Coord z, Depth depth = 0) const
+	// NodeBV getNodeBV(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	// {
 	// 	return getNodeBV(toCode(x, y, z, depth));
 	// }
@@ -1050,26 +1050,26 @@ class OctreeBase
 
 	static constexpr double nodeSize(NodeBV const& node) noexcept { return node.size(); }
 
-	constexpr Coord nodeX(Node const& node) const noexcept
+	constexpr coord_t nodeX(Node const& node) const noexcept
 	{
 		return toCoord(node.code().toKey(0), node.depth());
 	}
 
-	static constexpr Coord nodeX(NodeBV const& node) noexcept { return node.x(); }
+	static constexpr coord_t nodeX(NodeBV const& node) noexcept { return node.x(); }
 
-	constexpr Coord nodeY(Node const& node) const noexcept
+	constexpr coord_t nodeY(Node const& node) const noexcept
 	{
 		return toCoord(node.code().toKey(1), node.depth());
 	}
 
-	static constexpr Coord nodeY(NodeBV const& node) noexcept { return node.y(); }
+	static constexpr coord_t nodeY(NodeBV const& node) noexcept { return node.y(); }
 
-	constexpr Coord nodeZ(Node const& node) const noexcept
+	constexpr coord_t nodeZ(Node const& node) const noexcept
 	{
 		return toCoord(node.code().toKey(2), node.depth());
 	}
 
-	static constexpr Coord nodeZ(NodeBV const& node) noexcept { return node.z(); }
+	static constexpr coord_t nodeZ(NodeBV const& node) noexcept { return node.z(); }
 
 	//
 	// Node child
@@ -1181,7 +1181,7 @@ class OctreeBase
 		return isModified(toCode(coord, depth));
 	}
 
-	constexpr bool isModified(Coord x, Coord y, Coord z, Depth depth = 0) const
+	constexpr bool isModified(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	{
 		return isModified(toCode(x, y, z, depth));
 	}
@@ -1201,7 +1201,7 @@ class OctreeBase
 		return isRoot(toCode(coord, depth));
 	}
 
-	bool isRoot(Coord x, Coord y, Coord z, Depth depth = 0) const
+	bool isRoot(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	{
 		return isRoot(toCode(x, y, z, depth));
 	}
@@ -1239,7 +1239,7 @@ class OctreeBase
 		return createNode(toCode(coord, depth));
 	}
 
-	Node createNode(Coord x, Coord y, Coord z, Depth depth = 0)
+	Node createNode(coord_t x, coord_t y, coord_t z, Depth depth = 0)
 	{
 		return createNode(toCode(x, y, z, depth));
 	}
@@ -1272,7 +1272,7 @@ class OctreeBase
 		return createNodeBV(toCode(coord, depth));
 	}
 
-	NodeBV createNodeBV(Coord x, Coord y, Coord z, Depth depth = 0)
+	NodeBV createNodeBV(coord_t x, coord_t y, coord_t z, Depth depth = 0)
 	{
 		return createNodeBV(toCode(x, y, z, depth));
 	}
@@ -2102,7 +2102,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	constexpr Key::KeyType toKey(Coord coord, Depth depth = 0) const noexcept
+	constexpr Key::KeyType toKey(coord_t coord, Depth depth = 0) const noexcept
 	{
 		Key::KeyType val = std::floor(node_size_factor_[0] * coord);
 		return ((val + max_value_) >> depth) << depth;
@@ -2115,7 +2115,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	constexpr std::optional<Key::KeyType> toKeyChecked(Coord coord,
+	constexpr std::optional<Key::KeyType> toKeyChecked(coord_t coord,
 	                                                   Depth depth = 0) const noexcept
 	{
 		auto min = -nodeSize(depthLevels() - 1);
@@ -2135,13 +2135,13 @@ class OctreeBase
 	 * @param depth The depth of the coordinate.
 	 * @return The corresponding coordinate.
 	 */
-	constexpr Coord toCoord(Key::KeyType key, Depth depth = 0) const noexcept
+	constexpr coord_t toCoord(Key::KeyType key, Depth depth = 0) const noexcept
 	{
 		constexpr auto sub64 = std::minus<int_fast64_t>{};
 		return depth_levels_ == depth
 		           ? 0
-		           : (std::floor(sub64(key, max_value_) / static_cast<Coord>(1U << depth)) +
-		              Coord(0.5)) *
+		           : (std::floor(sub64(key, max_value_) / static_cast<coord_t>(1U << depth)) +
+		              coord_t(0.5)) *
 		                 nodeSize(depth);
 
 		// // FIXME: Check if correct

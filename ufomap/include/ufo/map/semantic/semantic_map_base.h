@@ -105,7 +105,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		return getSemantics(Base::toCode(coord, depth));
 	}
 
-	SemanticMap getSemantics(Coord x, Coord y, Coord z, Depth depth = 0) const
+	SemanticMap getSemantics(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	{
 		return getSemantics(Base::toCode(x, y, z, depth));
 	}
@@ -135,7 +135,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		return getSemanticValue(Base::toCode(coord, depth), label);
 	}
 
-	SemanticValue getSemanticValue(Coord x, Coord y, Coord z, SemanticLabel label,
+	SemanticValue getSemanticValue(coord_t x, coord_t y, coord_t z, SemanticLabel label,
 	                               Depth depth = 0) const
 	{
 		return getSemanticValue(Base::toCode(x, y, z, depth), label);
@@ -175,7 +175,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		return maxSemanticValue(Base::toCode(coord, depth));
 	}
 
-	SemanticPair maxSemanticValue(Coord x, Coord y, Coord z, Depth depth = 0) const
+	SemanticPair maxSemanticValue(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
 	{
 		return maxSemanticValue(Base::toCode(x, y, z, depth));
 	}
@@ -315,21 +315,21 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		insertOrAssignSemantics(std::execution::seq, coord, first, last, propagate, depth);
 	}
 
-	void insertOrAssignSemantics(Coord x, Coord y, Coord z, SemanticLabel label,
+	void insertOrAssignSemantics(coord_t x, coord_t y, coord_t z, SemanticLabel label,
 	                             SemanticValue value, bool propagate = true,
 	                             Depth depth = 0)
 	{
 		insertOrAssignSemantics(std::execution::seq, x, y, z, label, value, propagate, depth);
 	}
 
-	void insertOrAssignSemantics(Coord x, Coord y, Coord z, SemanticPair semantic,
+	void insertOrAssignSemantics(coord_t x, coord_t y, coord_t z, SemanticPair semantic,
 	                             bool propagate = true, Depth depth = 0)
 	{
 		insertOrAssignSemantics(std::execution::seq, x, y, z, semantic, propagate, depth);
 	}
 
 	template <class InputIt>
-	void insertOrAssignSemantics(Coord x, Coord y, Coord z, InputIt first, InputIt last,
+	void insertOrAssignSemantics(coord_t x, coord_t y, coord_t z, InputIt first, InputIt last,
 	                             bool propagate = true, Depth depth = 0)
 	{
 		insertOrAssignSemantics(std::execution::seq, x, y, z, first, last, propagate, depth);
@@ -455,7 +455,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertOrAssignSemantics(ExecutionPolicy policy, Coord x, Coord y, Coord z,
+	void insertOrAssignSemantics(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                             SemanticLabel label, SemanticValue value,
 	                             bool propagate = true, Depth depth = 0)
 	{
@@ -465,7 +465,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertOrAssignSemantics(ExecutionPolicy policy, Coord x, Coord y, Coord z,
+	void insertOrAssignSemantics(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                             SemanticPair semantic, bool propagate = true,
 	                             Depth depth = 0)
 	{
@@ -475,7 +475,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	template <class ExecutionPolicy, class InputIt,
 	          typename = std::enable_if_t<
 	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-	void insertOrAssignSemantics(ExecutionPolicy policy, Coord x, Coord y, Coord z,
+	void insertOrAssignSemantics(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                             InputIt first, InputIt last, bool propagate = true,
 	                             Depth depth = 0)
 	{
@@ -609,7 +609,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		changeLabel(std::execution::seq, coord, old_label, new_label, propagate, depth);
 	}
 
-	void changeLabel(Coord x, Coord y, Coord z, SemanticLabel old_label,
+	void changeLabel(coord_t x, coord_t y, coord_t z, SemanticLabel old_label,
 	                 SemanticLabel new_label, bool propagate = true, Depth depth = 0)
 	{
 		changeLabel(std::execution::seq, x, y, z, old_label, new_label, propagate, depth);
@@ -657,7 +657,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void changeLabel(ExecutionPolicy policy, Coord x, Coord y, Coord z,
+	void changeLabel(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                 SemanticLabel old_label, SemanticLabel new_label,
 	                 bool propagate = true, Depth depth = 0)
 	{
@@ -694,7 +694,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		deleteLabel(std::execution::seq, coord, label, propagate, depth);
 	}
 
-	void deleteLabel(Coord x, Coord y, Coord z, SemanticLabel label, bool propagate = true,
+	void deleteLabel(coord_t x, coord_t y, coord_t z, SemanticLabel label, bool propagate = true,
 	                 Depth depth = 0)
 	{
 		deleteLabel(std::execution::seq, x, y, z, label, propagate, depth);
@@ -741,7 +741,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void deleteLabel(ExecutionPolicy policy, Coord x, Coord y, Coord z, SemanticLabel label,
+	void deleteLabel(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, SemanticLabel label,
 	                 bool propagate = true, Depth depth = 0)
 	{
 		deleteLabel(policy, Base::toCode(x, y, z, depth), label, propagate);
@@ -803,7 +803,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		clearSemantics(policy, Base::toCode(coord, depth), propagate);
 	}
 
-	void clearSemantics(Coord x, Coord y, Coord z, bool propagate = true,
+	void clearSemantics(coord_t x, coord_t y, coord_t z, bool propagate = true,
 	                    Depth depth = 0)
 	{
 		clearSemantics(Base::toCode(x, y, z, depth), propagate);
@@ -811,7 +811,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void clearSemantics(ExecutionPolicy policy, Coord x, Coord y, Coord z,
+	void clearSemantics(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                    bool propagate = true, Depth depth = 0)
 	{
 		clearSemantics(policy, Base::toCode(x, y, z, depth), propagate);
@@ -879,7 +879,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// 	filterSemantics(policy, Base::toCode(coord, depth), min_prob, propagate);
 	// }
 
-	// void filterSemantics(Coord x, Coord y, Coord z, float min_prob, bool propagate =
+	// void filterSemantics(coord_t x, coord_t y, coord_t z, float min_prob, bool propagate =
 	// true,
 	//                      Depth depth = 0)
 	// {
@@ -889,7 +889,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// template <class ExecutionPolicy, typename =
 	// std::enable_if_t<std::is_execution_policy_v<
 	//                                      std::decay_t<ExecutionPolicy>>>>
-	// void filterSemantics(ExecutionPolicy policy, Coord x, Coord y, Coord z, float
+	// void filterSemantics(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, float
 	// min_prob,
 	//                      bool propagate = true, Depth depth = 0)
 	// {
