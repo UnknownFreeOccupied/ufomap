@@ -66,7 +66,7 @@ class Code
 
 	constexpr Code() = default;
 
-	constexpr Code(code_t code, Depth depth = 0)
+	constexpr Code(code_t code, depth_t depth = 0)
 	    : code_((code >> depth) << depth), depth_(depth)
 	{
 	}
@@ -121,7 +121,7 @@ class Code
 	 * @param depth The depth of the code
 	 * @return Code The code at the specified depth
 	 */
-	constexpr Code toDepth(Depth depth) const
+	constexpr Code toDepth(depth_t depth) const
 	{
 		code_t temp = 3 * depth;
 		return Code((code_ >> temp) << temp, depth);
@@ -170,7 +170,7 @@ class Code
 	 * @param depth The depth the index is requested for.
 	 * @return The index at the specified depth.
 	 */
-	constexpr std::size_t indexAtDepth(Depth depth) const
+	constexpr std::size_t indexAtDepth(depth_t depth) const
 	{
 		return (code_ >> static_cast<code_t>(3 * depth)) & ((code_t)0x7);
 	}
@@ -188,7 +188,7 @@ class Code
 			return *this;
 		}
 
-		Depth child_depth = depth_ - 1;
+		depth_t child_depth = depth_ - 1;
 		return Code(
 		    code_ + (static_cast<code_t>(index) << static_cast<code_t>(3 * child_depth)),
 		    child_depth);
@@ -219,9 +219,9 @@ class Code
 	/*!
 	 * @brief Get the depth that this code is specified at
 	 *
-	 * @return Depth The depth this code is specified at
+	 * @return depth_t The depth this code is specified at
 	 */
-	constexpr Depth depth() const noexcept { return depth_; }
+	constexpr depth_t depth() const noexcept { return depth_; }
 
 	/*!
 	 * @brief
@@ -270,7 +270,7 @@ class Code
 	// The Morton code
 	code_t code_ = 0;
 	// The depth of the Morton code
-	Depth depth_ = 0;
+	depth_t depth_ = 0;
 };
 
 // using CodeUnorderedSet = std::unordered_set<Code, Code::Hash>;

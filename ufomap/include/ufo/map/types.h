@@ -51,7 +51,7 @@ namespace ufo::map
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
 enum class PropagationCriteria { Max, Min, Mean, Sum, Custom };
 
-using Depth = uint8_t;
+using depth_t = uint8_t;
 using TimeStepType = uint32_t;
 
 // Check if

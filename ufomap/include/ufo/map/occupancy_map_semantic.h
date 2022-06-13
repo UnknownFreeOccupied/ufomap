@@ -74,7 +74,7 @@ class OccupancyMapSemanticT final
 	// Constructors
 	//
 
-	OccupancyMapSemanticT(float resolution, Depth depth_levels = 16,
+	OccupancyMapSemanticT(float resolution, depth_t depth_levels = 16,
 	                      bool automatic_pruning = true, float occupied_thres = 0.5,
 	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	                      float clamping_thres_max = 0.971)
@@ -199,7 +199,7 @@ class OccupancyMapSemanticT final
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, Depth depth) override
+	virtual void updateNode(InnerNode& node, depth_t depth) override
 	{
 		OccupancyBase::updateNode(node, depth);
 		SemanticBase::updateNode(node, depth);

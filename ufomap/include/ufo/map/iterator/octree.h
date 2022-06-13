@@ -93,7 +93,7 @@ class IteratorBase
 	virtual bool equal(IteratorBase const& other) const = 0;
 
  protected:
-	constexpr Depth depth(Node const& node) const { return node.depth(); }
+	constexpr depth_t depth(Node const& node) const { return node.depth(); }
 
 	constexpr Code code(Node const& node) const { return node.code(); }
 

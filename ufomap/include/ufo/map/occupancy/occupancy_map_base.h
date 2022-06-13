@@ -248,12 +248,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		return getOccupancyState(Base::toCode(key));
 	}
 
-	OccupancyState getOccupancyState(Point3 coord, Depth depth = 0) const
+	OccupancyState getOccupancyState(Point3 coord, depth_t depth = 0) const
 	{
 		return getOccupancyState(Base::toCode(coord, depth));
 	}
 
-	OccupancyState getOccupancyState(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	OccupancyState getOccupancyState(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return getOccupancyState(Base::toCode(x, y, z, depth));
 	}
@@ -292,13 +292,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	bool containsOccupancyState(OccupancyState state, Point3 coord,
-	                            Depth depth = 0) const
+	                            depth_t depth = 0) const
 	{
 		return containsOccupancyState(state, Base::toCode(coord, depth));
 	}
 
 	bool containsOccupancyState(OccupancyState state, coord_t x, coord_t y, coord_t z,
-	                            Depth depth = 0) const
+	                            depth_t depth = 0) const
 	{
 		return containsOccupancyState(state, Base::toCode(x, y, z, depth));
 	}
@@ -313,12 +313,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	bool isUnknown(Key key) const { return isUnknown(Base::toCode(key)); }
 
-	bool isUnknown(Point3 coord, Depth depth = 0) const
+	bool isUnknown(Point3 coord, depth_t depth = 0) const
 	{
 		return isUnknown(Base::toCode(coord, depth));
 	}
 
-	bool isUnknown(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	bool isUnknown(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return isUnknown(Base::toCode(x, y, z, depth));
 	}
@@ -333,12 +333,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	bool isFree(Key key) const { return isFree(Base::toCode(key)); }
 
-	bool isFree(Point3 coord, Depth depth = 0) const
+	bool isFree(Point3 coord, depth_t depth = 0) const
 	{
 		return isFree(Base::toCode(coord, depth));
 	}
 
-	bool isFree(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	bool isFree(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return isFree(Base::toCode(x, y, z, depth));
 	}
@@ -353,12 +353,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	bool isOccupied(Key key) const { return isOccupied(Base::toCode(key)); }
 
-	bool isOccupied(Point3 coord, Depth depth = 0) const
+	bool isOccupied(Point3 coord, depth_t depth = 0) const
 	{
 		return isOccupied(Base::toCode(coord, depth));
 	}
 
-	bool isOccupied(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	bool isOccupied(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return isOccupied(Base::toCode(x, y, z, depth));
 	}
@@ -385,12 +385,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	bool containsUnknown(Key key) const { return containsUnknown(Base::toCode(key)); }
 
-	bool containsUnknown(Point3 coord, Depth depth = 0) const
+	bool containsUnknown(Point3 coord, depth_t depth = 0) const
 	{
 		return containsUnknown(Base::toCode(coord, depth));
 	}
 
-	bool containsUnknown(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	bool containsUnknown(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return containsUnknown(Base::toCode(x, y, z, depth));
 	}
@@ -417,12 +417,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	bool containsFree(Key key) const { return containsFree(Base::toCode(key)); }
 
-	bool containsFree(Point3 coord, Depth depth = 0) const
+	bool containsFree(Point3 coord, depth_t depth = 0) const
 	{
 		return containsFree(Base::toCode(coord, depth));
 	}
 
-	bool containsFree(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	bool containsFree(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return containsFree(Base::toCode(x, y, z, depth));
 	}
@@ -449,12 +449,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	bool containsOccupied(Key key) const { return containsOccupied(Base::toCode(key)); }
 
-	bool containsOccupied(Point3 coord, Depth depth = 0) const
+	bool containsOccupied(Point3 coord, depth_t depth = 0) const
 	{
 		return containsOccupied(Base::toCode(coord, depth));
 	}
 
-	bool containsOccupied(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	bool containsOccupied(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return containsOccupied(Base::toCode(x, y, z, depth));
 	}
@@ -472,12 +472,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	float getOccupancy(Key key) const { return getOccupancy(Base::toCode(key)); }
 
-	float getOccupancy(Point3 coord, Depth depth = 0) const
+	float getOccupancy(Point3 coord, depth_t depth = 0) const
 	{
 		return getOccupancy(Base::toCode(coord, depth));
 	}
 
-	float getOccupancy(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	float getOccupancy(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return getOccupancy(Base::toCode(x, y, z, depth));
 	}
@@ -501,12 +501,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		return getOccupancyLogit(Base::toCode(key));
 	}
 
-	LogitType getOccupancyLogit(Point3 coord, Depth depth = 0) const
+	LogitType getOccupancyLogit(Point3 coord, depth_t depth = 0) const
 	{
 		return getOccupancyLogit(Base::toCode(coord, depth));
 	}
 
-	LogitType getOccupancyLogit(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	LogitType getOccupancyLogit(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return getOccupancyLogit(Base::toCode(x, y, z, depth));
 	}
@@ -533,13 +533,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	void setOccupancy(Point3 coord, float occupancy, bool propagate = true,
-	                  Depth depth = 0)
+	                  depth_t depth = 0)
 	{
 		setOccupancy(Base::toCode(coord, depth), occupancy, propagate);
 	}
 
 	void setOccupancy(coord_t x, coord_t y, coord_t z, float occupancy, bool propagate = true,
-	                  Depth depth = 0)
+	                  depth_t depth = 0)
 	{
 		setOccupancy(Base::toCode(x, y, z, depth), occupancy, propagate);
 	}
@@ -565,7 +565,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setOccupancy(ExecutionPolicy policy, Point3 coord, float occupancy,
-	                  bool propagate = true, Depth depth = 0)
+	                  bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancy(policy, Base::toCode(coord, depth), occupancy, propagate);
 	}
@@ -573,7 +573,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setOccupancy(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, float occupancy,
-	                  bool propagate = true, Depth depth = 0)
+	                  bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancy(policy, Base::toCode(x, y, z, depth), occupancy, propagate);
 	}
@@ -602,13 +602,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	void setOccupancyLogit(Point3 coord, LogitType logit, bool propagate = true,
-	                       Depth depth = 0)
+	                       depth_t depth = 0)
 	{
 		setOccupancyLogit(Base::toCode(coord, depth), logit, propagate);
 	}
 
 	void setOccupancyLogit(coord_t x, coord_t y, coord_t z, LogitType logit,
-	                       bool propagate = true, Depth depth = 0)
+	                       bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancyLogit(Base::toCode(x, y, z, depth), logit, propagate);
 	}
@@ -644,7 +644,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setOccupancyLogit(ExecutionPolicy policy, Point3 coord, LogitType logit,
-	                       bool propagate = true, Depth depth = 0)
+	                       bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancyLogit(policy, Base::toCode(coord, depth), logit, propagate);
 	}
@@ -652,7 +652,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                       LogitType logit, bool propagate = true, Depth depth = 0)
+	                       LogitType logit, bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancyLogit(policy, Base::toCode(x, y, z, depth), logit, propagate);
 	}
@@ -786,7 +786,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	void increaseOccupancy(Point3 coord, float inc, bool propagate = true,
-	                       Depth depth = 0)
+	                       depth_t depth = 0)
 	{
 		increaseOccupancy(Base::toCode(coord, depth), inc, propagate);
 	}
@@ -794,13 +794,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void increaseOccupancy(ExecutionPolicy policy, Point3 coord, float inc,
-	                       bool propagate = true, Depth depth = 0)
+	                       bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancy(policy, Base::toCode(coord, depth), inc, propagate);
 	}
 
 	void increaseOccupancyLogit(Point3 coord, LogitType inc, bool propagate = true,
-	                            Depth depth = 0)
+	                            depth_t depth = 0)
 	{
 		increaseOccupancyLogit(Base::toCode(coord, depth), inc, propagate);
 	}
@@ -808,13 +808,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void increaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, LogitType inc,
-	                            bool propagate = true, Depth depth = 0)
+	                            bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancyLogit(policy, Base::toCode(coord, depth), inc, propagate);
 	}
 
 	void increaseOccupancy(coord_t x, coord_t y, coord_t z, float inc, bool propagate = true,
-	                       Depth depth = 0)
+	                       depth_t depth = 0)
 	{
 		increaseOccupancy(Base::toCode(x, y, z, depth), inc, propagate);
 	}
@@ -822,13 +822,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void increaseOccupancy(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, float inc,
-	                       bool propagate = true, Depth depth = 0)
+	                       bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancy(policy, Base::toCode(x, y, z, depth), inc, propagate);
 	}
 
 	void increaseOccupancyLogit(coord_t x, coord_t y, coord_t z, LogitType inc,
-	                            bool propagate = true, Depth depth = 0)
+	                            bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancyLogit(Base::toCode(x, y, z, depth), inc, propagate);
 	}
@@ -836,7 +836,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void increaseOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                            LogitType inc, bool propagate = true, Depth depth = 0)
+	                            LogitType inc, bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancyLogit(policy, Base::toCode(x, y, z, depth), inc, propagate);
 	}
@@ -970,7 +970,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	void decreaseOccupancy(Point3 coord, float dec, bool propagate = true,
-	                       Depth depth = 0)
+	                       depth_t depth = 0)
 	{
 		decreaseOccupancy(Base::toCode(coord, depth), dec, propagate);
 	}
@@ -978,13 +978,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void decreaseOccupancy(ExecutionPolicy policy, Point3 coord, float dec,
-	                       bool propagate = true, Depth depth = 0)
+	                       bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancy(policy, Base::toCode(coord, depth), dec, propagate);
 	}
 
 	void decreaseOccupancyLogit(Point3 coord, LogitType dec, bool propagate = true,
-	                            Depth depth = 0)
+	                            depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(Base::toCode(coord, depth), dec, propagate);
 	}
@@ -992,13 +992,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void decreaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, LogitType dec,
-	                            bool propagate = true, Depth depth = 0)
+	                            bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(policy, Base::toCode(coord, depth), dec, propagate);
 	}
 
 	void decreaseOccupancy(coord_t x, coord_t y, coord_t z, float dec, bool propagate = true,
-	                       Depth depth = 0)
+	                       depth_t depth = 0)
 	{
 		decreaseOccupancy(Base::toCode(x, y, z, depth), dec, propagate);
 	}
@@ -1006,13 +1006,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void decreaseOccupancy(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, float dec,
-	                       bool propagate = true, Depth depth = 0)
+	                       bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancy(policy, Base::toCode(x, y, z, depth), dec, propagate);
 	}
 
 	void decreaseOccupancyLogit(coord_t x, coord_t y, coord_t z, LogitType dec,
-	                            bool propagate = true, Depth depth = 0)
+	                            bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(Base::toCode(x, y, z, depth), dec, propagate);
 	}
@@ -1020,7 +1020,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void decreaseOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                            LogitType dec, bool propagate = true, Depth depth = 0)
+	                            LogitType dec, bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(policy, Base::toCode(x, y, z, depth), dec, propagate);
 	}
@@ -1030,7 +1030,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// Constructors
 	//
 
-	OccupancyMapBase(float resolution, Depth depth_levels = 16,
+	OccupancyMapBase(float resolution, depth_t depth_levels = 16,
 	                 bool automatic_pruning = true, float occupied_thres = 0.5,
 	                 float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	                 float clamping_thres_max = 0.971)
@@ -1232,7 +1232,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	//
 
 	// NOTE: Only called when node has children
-	virtual void updateNode(InnerNode& node, Depth depth) override
+	virtual void updateNode(InnerNode& node, depth_t depth) override
 	{
 		node.occupancy = std::numeric_limits<LogitType>::lowest();
 
@@ -1256,7 +1256,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	// NOTE: Only called when node has children
-	virtual void updateNodeIndicators(InnerNode& node, Depth depth) override
+	virtual void updateNodeIndicators(InnerNode& node, depth_t depth) override
 	{
 		node.contains_unknown = false;
 		node.contains_free = false;

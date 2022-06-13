@@ -66,7 +66,7 @@ class Key
 
 	constexpr Key() = default;
 
-	constexpr Key(key_t const x, key_t const y, key_t const z, Depth const depth)
+	constexpr Key(key_t const x, key_t const y, key_t const z, depth_t const depth)
 	    : x_((x >> depth) << depth),
 	      y_((y >> depth) << depth),
 	      z_((z >> depth) << depth),
@@ -74,7 +74,7 @@ class Key
 	{
 	}
 
-	constexpr Key(Key const key, Depth const depth)
+	constexpr Key(Key const key, depth_t const depth)
 	    : x_((key.x_ >> depth) << depth),
 	      y_((key.y_ >> depth) << depth),
 	      z_((key.z_ >> depth) << depth),
@@ -122,14 +122,14 @@ class Key
 	 *
 	 * @return The depth the key.
 	 */
-	constexpr Depth depth() const noexcept { return depth_; }
+	constexpr depth_t depth() const noexcept { return depth_; }
 
 	/*!
 	 * @brief Change the depth of the key.
 	 *
 	 * @note This will change the x, y, z components of the key.
 	 */
-	constexpr void depth(Depth depth) noexcept
+	constexpr void depth(depth_t depth) noexcept
 	{
 		x_ = (x_ >> depth) << depth;
 		y_ = (y_ >> depth) << depth;
@@ -222,7 +222,7 @@ class Key
 	key_t y_ = 0;
 	key_t z_ = 0;
 	// The depth of the key
-	Depth depth_ = 0;
+	depth_t depth_ = 0;
 };
 
 using KeySet = std::unordered_set<Key, Key::Hash>;

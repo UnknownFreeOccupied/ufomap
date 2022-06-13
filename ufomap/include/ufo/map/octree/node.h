@@ -112,7 +112,7 @@ struct Node {
 	 *
 	 * @return The depth of the node.
 	 */
-	constexpr Depth depth() const noexcept { return code_.depth(); }
+	constexpr depth_t depth() const noexcept { return code_.depth(); }
 
 	struct Hash {
 		static constexpr Code::code_t hash(Node const& node) { return node.code().code(); }

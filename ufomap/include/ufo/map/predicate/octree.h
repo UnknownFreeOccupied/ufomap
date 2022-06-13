@@ -62,9 +62,9 @@ struct PureLeaf {
 };
 
 struct Leaf {
-	constexpr Leaf(Depth min_depth = 0) noexcept : min_depth(min_depth) {}
+	constexpr Leaf(depth_t min_depth = 0) noexcept : min_depth(min_depth) {}
 
-	Depth min_depth;
+	depth_t min_depth;
 };
 
 template <PredicateRounding PR>
@@ -100,9 +100,9 @@ struct Parent {
 template <PredicateCompare PC = PredicateCompare::EQUAL,
           PredicateType PT = PredicateType::RETURN_AND_INNER>
 struct DepthT {
-	constexpr DepthT(Depth depth) noexcept : depth(depth) {}
+	constexpr DepthT(depth_t depth) noexcept : depth(depth) {}
 
-	Depth depth;
+	depth_t depth;
 };
 
 using DepthE = DepthT<PredicateCompare::EQUAL>;
@@ -115,7 +115,7 @@ using DepthMin = DepthGE;
 using DepthMax = DepthLE;
 
 struct DepthInterval {
-	constexpr DepthInterval(Depth min, Depth max) noexcept : min(min), max(max) {}
+	constexpr DepthInterval(depth_t min, depth_t max) noexcept : min(min), max(max) {}
 
 	DepthMin min;
 	DepthMax max;

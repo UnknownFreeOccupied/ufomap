@@ -51,7 +51,7 @@
 
 namespace ufo::map
 {
-template <Depth Depth>
+template <depth_t Depth>
 class Grid
 {
  private:
@@ -86,12 +86,12 @@ class Grid
 
 	static constexpr std::size_t index(Key const key)
 	{
-		Depth const depth = key.depth();
+		depth_t const depth = key.depth();
 		return ((key.x() >> depth) & Mask) | (((key.y() >> depth) & Mask) << Depth) |
 		       (((key.z() >> depth) & Mask) << (2 * Depth));
 	}
 
-	static constexpr Key key(std::size_t const index, Depth const depth)
+	static constexpr Key key(std::size_t const index, depth_t const depth)
 	{
 		return Key((index & Mask) << depth, ((index >> Depth) & Mask) << depth,
 		           ((index >> (2 * Depth)) & Mask) << depth, depth);

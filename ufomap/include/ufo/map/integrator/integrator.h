@@ -168,7 +168,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 template <class Map, class P, class TransformFunction, class ValidFunction>
 IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
                                        TransformFunction trans_f, ValidFunction valid_f,
-                                       Depth const depth = 0)
+                                       depth_t const depth = 0)
 {
 	return IntegrationCloud(map, cloud, trans_f, valid_f,
 	                        [depth](auto const&) { return depth; });
@@ -185,7 +185,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 
 template <class Map, class P>
 IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
-                                       Depth const depth = 0)
+                                       depth_t const depth = 0)
 {
 	return IntegrationCloud(map, cloud, [depth](auto const&) { return depth; });
 }
@@ -212,7 +212,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 template <class Map, class P>
 IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
                                        Point3 const sensor_origin, double const max_range,
-                                       Depth const depth = 0)
+                                       depth_t const depth = 0)
 {
 	return IntegrationCloud(map, cloud, sensor_origin, max_range,
 	                        [depth](auto const&) { return depth; });
@@ -221,7 +221,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 template <class Map, class P>
 Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
                  Point3 const sensor_origin, bool const only_valid = false,
-                 Depth const depth = 0)
+                 depth_t const depth = 0)
 {
 	CodeUnorderedSet indices;
 
@@ -244,7 +244,7 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
 template <class Map, class P>
 Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
                          Point3 const sensor_origin, bool const only_valid = false,
-                         Depth const depth = 0)
+                         depth_t const depth = 0)
 {
 	Key const origin = map.toKey(sensor_origin, depth);
 
@@ -274,7 +274,7 @@ Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
 template <class Map, class P>
 Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
                              Point3 const sensor_origin, bool const only_valid = false,
-                             Depth const& depth = 0)
+                             depth_t const& depth = 0)
 {
 	// TODO: Implement
 
@@ -482,14 +482,14 @@ class Integrator
 	 *
 	 * @return The depth for misses.
 	 */
-	[[nodiscard]] constexpr Depth missDepth() const noexcept { return miss_depth_; }
+	[[nodiscard]] constexpr depth_t missDepth() const noexcept { return miss_depth_; }
 
 	/*!
 	 * The depth used for hits.
 	 *
 	 * @return The depth for hits.
 	 */
-	[[nodiscard]] constexpr Depth hitDepth() const noexcept { return hit_depth_; }
+	[[nodiscard]] constexpr depth_t hitDepth() const noexcept { return hit_depth_; }
 
 	/*!
 	 * @return Whether weighted integration is enable.
@@ -557,9 +557,9 @@ class Integrator
 
 	constexpr void setMaxRange(double max_range) noexcept { max_range_ = max_range; }
 
-	constexpr void setMissDepth(Depth depth) noexcept { miss_depth_ = depth; }
+	constexpr void setMissDepth(depth_t depth) noexcept { miss_depth_ = depth; }
 
-	constexpr void setHitDepth(Depth depth) noexcept { hit_depth_ = depth; }
+	constexpr void setHitDepth(depth_t depth) noexcept { hit_depth_ = depth; }
 
 	constexpr void setWeighted(bool weighted) noexcept { weighted_ = weighted; }
 
@@ -592,10 +592,10 @@ class Integrator
 	double max_range_ = -1;
 
 	// Miss depth
-	Depth miss_depth_ = 0;
+	depth_t miss_depth_ = 0;
 
 	// Hit depth
-	Depth hit_depth_ = 0;
+	depth_t hit_depth_ = 0;
 
 	// Weighted
 	bool weighted_ = false;

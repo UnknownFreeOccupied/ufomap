@@ -178,7 +178,7 @@ struct RenderMode {
 	float scale = 1.0;
 
 	// Depth
-	ufo::map::Depth depth = 0;
+	ufo::map::depth_t depth = 0;
 
 	bool operator==(RenderMode const& rhs) const
 	{

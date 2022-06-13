@@ -71,7 +71,7 @@ class OccupancyMapTimeColor final
 
 	// using OccupancyTimeBase::OccupancyTimeBase;
 
-	OccupancyMapTimeColor(float resolution, Depth depth_levels = 16,
+	OccupancyMapTimeColor(float resolution, depth_t depth_levels = 16,
 	                      bool automatic_pruning = true, float occupied_thres = 0.5,
 	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	                      float clamping_thres_max = 0.971)
@@ -185,7 +185,7 @@ class OccupancyMapTimeColor final
 		ColorBase::initRoot();
 	}
 
-	virtual void updateNode(InnerNode& node, Depth depth) override
+	virtual void updateNode(InnerNode& node, depth_t depth) override
 	{
 		OccupancyTimeBase::updateNode(node, depth);
 		ColorBase::updateNode(node, depth);

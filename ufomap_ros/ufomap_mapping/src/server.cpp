@@ -81,7 +81,7 @@ Server::Server(ros::NodeHandle &nh, ros::NodeHandle &nh_priv)
 {
 	// Set up map
 	double resolution = nh_priv_.param("resolution", 0.05);
-	ufo::map::Depth depth_levels = nh_priv_.param("depth_levels", 16);
+	ufo::map::depth_t depth_levels = nh_priv_.param("depth_levels", 16);
 	uint32_t map_type_index = 0;
 	map_type_index |= (nh_priv_.param("time_map", false) ? 1U : 0U) << 0;
 	map_type_index |= (nh_priv_.param("color_map", false) ? 1U : 0U) << 1;

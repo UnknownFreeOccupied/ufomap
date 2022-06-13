@@ -178,7 +178,7 @@ void UFOMapDisplay::processMessages()
 		message_lock.unlock();
 
 		// TODO: Get parameters
-		ufo::map::Depth depth = grid_size_depth_;
+		ufo::map::depth_t depth = grid_size_depth_;
 
 		updateMap(local_queue);
 
@@ -203,7 +203,7 @@ void UFOMapDisplay::processMessages()
 	}
 }
 
-void UFOMapDisplay::generateObjects(ufo::map::Depth depth)
+void UFOMapDisplay::generateObjects(ufo::map::depth_t depth)
 {
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -268,7 +268,7 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 		return;
 	}
 
-	ufo::map::Depth depth = grid_size_depth_;
+	ufo::map::depth_t depth = grid_size_depth_;
 
 	decltype(queued_objects_) queued_objects;
 	{
@@ -336,7 +336,7 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 }
 
 std::vector<ufo::map::Code> UFOMapDisplay::getCodesInFOV(
-    ufo::geometry::Frustum const& view, ufo::map::Depth depth) const
+    ufo::geometry::Frustum const& view, ufo::map::depth_t depth) const
 {
 	std::vector<ufo::map::Code> codes;
 	auto pred = ufo::map::predicate::Leaf(depth) && ufo::map::predicate::Intersects(view);

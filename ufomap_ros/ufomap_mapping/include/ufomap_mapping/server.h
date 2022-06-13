@@ -154,7 +154,7 @@ class Server
 	// Publishing
 	bool compress_;
 	bool update_part_of_map_;
-	ufo::map::Depth publish_depth_;
+	ufo::map::depth_t publish_depth_;
 	std::future<void> update_async_handler_;
 
 	// Timing information

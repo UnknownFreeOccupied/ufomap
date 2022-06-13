@@ -68,7 +68,7 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 
 	using OccupancyBase::OccupancyBase;
 
-	// OccupancyMapT(float resolution, Depth depth_levels = 16,
+	// OccupancyMapT(float resolution, depth_t depth_levels = 16,
 	//               bool automatic_pruning = true, float occupied_thres = 0.5,
 	//               float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	//               float clamping_thres_max = 0.971)

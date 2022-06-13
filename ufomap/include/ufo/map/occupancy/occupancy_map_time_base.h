@@ -88,12 +88,12 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 
 	TimeStepType getTimeStep(Key key) const { return getTimeStep(OctreeBase::toCode(key)); }
 
-	TimeStepType getTimeStep(Point3 coord, Depth depth = 0) const
+	TimeStepType getTimeStep(Point3 coord, depth_t depth = 0) const
 	{
 		return getTimeStep(OctreeBase::toCode(coord, depth));
 	}
 
-	TimeStepType getTimeStep(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	TimeStepType getTimeStep(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return getTimeStep(OctreeBase::toCode(x, y, z, depth));
 	}
@@ -122,13 +122,13 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	}
 
 	void setTimeStep(Point3 coord, TimeStepType time_step, bool propagate = true,
-	                 Depth depth = 0)
+	                 depth_t depth = 0)
 	{
 		setTimeStep(OctreeBase::toCode(coord, depth), time_step, propagate);
 	}
 
 	void setTimeStep(coord_t x, coord_t y, coord_t z, TimeStepType time_step,
-	                 bool propagate = true, Depth depth = 0)
+	                 bool propagate = true, depth_t depth = 0)
 	{
 		setTimeStep(OctreeBase::toCode(x, y, z, depth), time_step, propagate);
 	}
@@ -166,7 +166,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setTimeStep(ExecutionPolicy policy, Point3 coord, TimeStepType time_step,
-	                 bool propagate = true, Depth depth = 0)
+	                 bool propagate = true, depth_t depth = 0)
 	{
 		setTimeStep(policy, OctreeBase::toCode(coord, depth), time_step, propagate);
 	}
@@ -174,7 +174,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setTimeStep(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                 TimeStepType time_step, bool propagate = true, Depth depth = 0)
+	                 TimeStepType time_step, bool propagate = true, depth_t depth = 0)
 	{
 		setTimeStep(policy, OctreeBase::toCode(x, y, z, depth), time_step, propagate);
 	}
@@ -186,7 +186,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 
 	// using OccupancyBase::OccupancyBase
 
-	OccupancyMapTimeBase(float resolution, Depth depth_levels, bool automatic_pruning,
+	OccupancyMapTimeBase(float resolution, depth_t depth_levels, bool automatic_pruning,
 	                     float occupied_thres, float free_thres, float clamping_thres_min,
 	                     float clamping_thres_max)
 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
@@ -258,7 +258,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, Depth depth) override
+	virtual void updateNode(InnerNode& node, depth_t depth) override
 	{
 		OccupancyBase::updateNode(node, depth);
 

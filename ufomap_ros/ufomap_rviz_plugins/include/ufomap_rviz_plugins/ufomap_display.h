@@ -96,11 +96,11 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
  private:
 	void processMessages();
 
-	void generateObjects(ufo::map::Depth depth);
+	void generateObjects(ufo::map::depth_t depth);
 
 	template <ufo::map::OccupancyState State>
 	void generateObjectsImpl(std::vector<ufo::map::Code> const& codes,
-	                         ufo::map::Depth min_depth)
+	                         ufo::map::depth_t min_depth)
 	{
 		std::for_each(
 		    std::execution::par, std::begin(codes), std::end(codes), [&](auto code) {
@@ -149,7 +149,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	void updateMap(std::vector<ufomap_msgs::UFOMapStamped::ConstPtr> const& msgs);
 
 	std::vector<ufo::map::Code> getCodesInFOV(ufo::geometry::Frustum const& view,
-	                                          ufo::map::Depth depth) const;
+	                                          ufo::map::depth_t depth) const;
 
 	ufo::geometry::Frustum getViewFrustum(Ogre::Real far_clip) const;
 
@@ -223,7 +223,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	// Performance
 	rviz::Property* performance_property_;
 	std::unique_ptr<PerformanceDisplay> performance_display_;
-	ufo::map::Depth grid_size_depth_ = 12;
+	ufo::map::depth_t grid_size_depth_ = 12;
 	Performance prev_performance_;
 };
 

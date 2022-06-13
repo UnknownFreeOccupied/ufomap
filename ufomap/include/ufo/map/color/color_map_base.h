@@ -75,12 +75,12 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	RGBColor getColor(Key key) const { return getColor(Base::toCode(key)); }
 
-	RGBColor getColor(Point3 coord, Depth depth = 0) const
+	RGBColor getColor(Point3 coord, depth_t depth = 0) const
 	{
 		return getColor(Base::toCode(coord, depth));
 	}
 
-	RGBColor getColor(coord_t x, coord_t y, coord_t z, Depth depth = 0) const
+	RGBColor getColor(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return getColor(Base::toCode(x, y, z, depth));
 	}
@@ -107,13 +107,13 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	}
 
 	void setColor(Point3 coord, RGBColor const& color, bool propagate = true,
-	              Depth depth = 0)
+	              depth_t depth = 0)
 	{
 		setColor(Base::toCode(coord, depth), color, propagate);
 	}
 
 	void setColor(coord_t x, coord_t y, coord_t z, RGBColor const& color, bool propagate = true,
-	              Depth depth = 0)
+	              depth_t depth = 0)
 	{
 		setColor(Base::toCode(x, y, z, depth), color, propagate);
 	}
@@ -149,7 +149,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setColor(ExecutionPolicy policy, Point3 coord, RGBColor const& color,
-	              bool propagate = true, Depth depth = 0)
+	              bool propagate = true, depth_t depth = 0)
 	{
 		setColor(policy, Base::toCode(coord, depth), color, propagate);
 	}
@@ -157,7 +157,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z, RGBColor const& color,
-	              bool propagate = true, Depth depth = 0)
+	              bool propagate = true, depth_t depth = 0)
 	{
 		setColor(policy, Base::toCode(x, y, z, depth), color, propagate);
 	}
@@ -188,13 +188,13 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	}
 
 	void updateColor(Point3 coord, RGBColor const& color, float weight,
-	                 bool propagate = true, Depth depth = 0)
+	                 bool propagate = true, depth_t depth = 0)
 	{
 		updateColor(Base::toCode(coord, depth), color, weight, propagate);
 	}
 
 	void updateColor(coord_t x, coord_t y, coord_t z, RGBColor const& color, float weight,
-	                 bool propagate = true, Depth depth = 0)
+	                 bool propagate = true, depth_t depth = 0)
 	{
 		updateColor(Base::toCode(x, y, z, depth), color, weight, propagate);
 	}
@@ -232,7 +232,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void updateColor(ExecutionPolicy policy, Point3 coord, RGBColor const& color,
-	                 float weight, bool propagate = true, Depth depth = 0)
+	                 float weight, bool propagate = true, depth_t depth = 0)
 	{
 		updateColor(policy, Base::toCode(coord, depth), color, weight, propagate);
 	}
@@ -241,7 +241,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void updateColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                 RGBColor const& color, float weight, bool propagate = true,
-	                 Depth depth = 0)
+	                 depth_t depth = 0)
 	{
 		updateColor(policy, Base::toCode(x, y, z, depth), color, weight, propagate);
 	}
@@ -253,7 +253,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	// using Base::Base;
 
-	ColorMapBase(double resolution, Depth depth_levels, bool automatic_pruning)
+	ColorMapBase(double resolution, depth_t depth_levels, bool automatic_pruning)
 	    : Base(resolution, depth_levels, automatic_pruning)
 	{
 		printf("ColorMapBase constructor\n");
@@ -315,7 +315,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, Depth depth) override
+	virtual void updateNode(InnerNode& node, depth_t depth) override
 	{
 		node.color = averageChildColor(node, depth);
 	}
@@ -403,7 +403,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Average child color
 	//
 
-	RGBColor averageChildColor(InnerNode const& node, Depth depth) const
+	RGBColor averageChildColor(InnerNode const& node, depth_t depth) const
 	{
 		return 1 == depth ? RGBColor::average({Base::getLeafChild(node, 0).color,
 		                                       Base::getLeafChild(node, 1).color,
