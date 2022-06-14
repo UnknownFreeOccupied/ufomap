@@ -238,7 +238,7 @@ struct PredicateValueCheck<Occupancy<PC>> {
 	static inline bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		if (p.occupancy_modified) {
-			if constexpr (std::is_same_v<uint8_t, typename Map::LogitType>) {
+			if constexpr (std::is_same_v<uint8_t, typename Map::logit_t>) {
 				p.logit_u8 = m.toOccupancyLogit(p.occupancy);
 			} else {
 				p.logit_f = m.toOccupancyLogit(p.occupancy);
@@ -246,7 +246,7 @@ struct PredicateValueCheck<Occupancy<PC>> {
 			p.occupancy_modified = false;
 		}
 
-		if constexpr (std::is_same_v<uint8_t, typename Map::LogitType>) {
+		if constexpr (std::is_same_v<uint8_t, typename Map::logit_t>) {
 			if constexpr (PredicateCompare::EQUAL == PC) {
 				return m.getOccupancyLogit(n) == p.logit_u8;
 			} else if constexpr (PredicateCompare::LESS_EQUAL == PC) {
@@ -393,7 +393,7 @@ struct PredicateInnerCheck<Occupancy<PC>> {
 	static inline bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		if (p.occupancy_modified) {
-			if constexpr (std::is_same_v<uint8_t, typename Map::LogitType>) {
+			if constexpr (std::is_same_v<uint8_t, typename Map::logit_t>) {
 				p.logit_u8 = m.toOccupancyLogit(p.occupancy);
 			} else {
 				p.logit_f = m.toOccupancyLogit(p.occupancy);
@@ -403,7 +403,7 @@ struct PredicateInnerCheck<Occupancy<PC>> {
 
 		// FIXME: Check how occupancy is propagated to determine
 
-		if constexpr (std::is_same_v<uint8_t, typename Map::LogitType>) {
+		if constexpr (std::is_same_v<uint8_t, typename Map::logit_t>) {
 			if constexpr (PredicateCompare::EQUAL == PC) {
 				return m.getOccupancyLogit(n) >= p.logit_u8;
 			} else if constexpr (PredicateCompare::LESS_EQUAL == PC) {

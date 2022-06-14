@@ -74,7 +74,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	              std::is_base_of_v<OccupancyTimeNode, LeafNode>);
 
  public:
-	using LogitType = std::conditional_t<std::is_base_of_v<OccupancyTimeNode, DataType>,
+	using logit_t = std::conditional_t<std::is_base_of_v<OccupancyTimeNode, DataType>,
 	                                     uint8_t, decltype(DataType::occupancy)>;
 
  public:
@@ -107,7 +107,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		return toOccupancyProbability(getOccupiedThresLogit());
 	}
 
-	constexpr LogitType getOccupiedThresLogit() const noexcept
+	constexpr logit_t getOccupiedThresLogit() const noexcept
 	{
 		return occupied_thres_log_;
 	}
@@ -117,21 +117,21 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		return toOccupancyProbability(getFreeThresLogit());
 	}
 
-	constexpr LogitType getFreeThresLogit() const noexcept { return free_thres_log_; }
+	constexpr logit_t getFreeThresLogit() const noexcept { return free_thres_log_; }
 
 	//
 	// Probability <-> logit
 	//
 
-	constexpr LogitType toOccupancyLogit(float probability) const
+	constexpr logit_t toOccupancyLogit(float probability) const
 	{
-		return math::logit<LogitType>(probability, getOccupancyClampingThresMinLogit(),
+		return math::logit<logit_t>(probability, getOccupancyClampingThresMinLogit(),
 		                              getOccupancyClampingThresMaxLogit());
 	}
 
-	constexpr float toOccupancyProbability(LogitType logit) const
+	constexpr float toOccupancyProbability(logit_t logit) const
 	{
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			return math::probability(logit, getOccupancyClampingThresMinLogit(),
 			                         getOccupancyClampingThresMaxLogit());
 		} else {
@@ -154,7 +154,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	// FIXME: Look at
-	void setOccupiedFreeThresLogit(LogitType new_occupied_thres, LogitType new_free_thres,
+	void setOccupiedFreeThresLogit(logit_t new_occupied_thres, logit_t new_free_thres,
 	                               bool propagate = true)
 	{
 		// FIXME: Should add a warning that these are very computational expensive to
@@ -178,7 +178,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		                               math::logit(max_thres_probability));
 	}
 
-	constexpr void setOccupancyClampingThresLogit(LogitType min_thres, LogitType max_thres)
+	constexpr void setOccupancyClampingThresLogit(logit_t min_thres, logit_t max_thres)
 	{
 		// FIXME: What happens if uint8_t?
 		setOccupancyClampingThresMinLogit(min_thres);
@@ -190,7 +190,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		setOccupancyClampingThresMinLogit(math::logit(probability));
 	}
 
-	constexpr void setOccupancyClampingThresMinLogit(LogitType min_thres)
+	constexpr void setOccupancyClampingThresMinLogit(logit_t min_thres)
 	{
 		// FIXME: What happens if uint8_t?
 		occupancy_clamping_thres_min_log_ = min_thres;
@@ -201,7 +201,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		setOccupancyClampingThresMaxLogit(math::logit(probability));
 	}
 
-	constexpr void setOccupancyClampingThresMaxLogit(LogitType max_thres)
+	constexpr void setOccupancyClampingThresMaxLogit(logit_t max_thres)
 	{
 		// FIXME: What happens if uint8_t?
 		occupancy_clamping_thres_max_log_ = max_thres;
@@ -486,27 +486,27 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// Get occupancy logit
 	//
 
-	LogitType getOccupancyLogit(Node const& node) const
+	logit_t getOccupancyLogit(Node const& node) const
 	{
 		return getOccupancyLogit(Base::leafNode(node));
 	}
 
-	LogitType getOccupancyLogit(Code code) const
+	logit_t getOccupancyLogit(Code code) const
 	{
 		return getOccupancyLogit(Base::leafNode(code));
 	}
 
-	LogitType getOccupancyLogit(Key key) const
+	logit_t getOccupancyLogit(Key key) const
 	{
 		return getOccupancyLogit(Base::toCode(key));
 	}
 
-	LogitType getOccupancyLogit(Point3 coord, depth_t depth = 0) const
+	logit_t getOccupancyLogit(Point3 coord, depth_t depth = 0) const
 	{
 		return getOccupancyLogit(Base::toCode(coord, depth));
 	}
 
-	LogitType getOccupancyLogit(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	logit_t getOccupancyLogit(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return getOccupancyLogit(Base::toCode(x, y, z, depth));
 	}
@@ -517,13 +517,13 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	void setOccupancy(Node& node, float occupancy, bool propagate = true)
 	{
-		LogitType logit = toOccupancyLogit(occupancy);
+		logit_t logit = toOccupancyLogit(occupancy);
 		setOccupancyLogit(node, logit, propagate);
 	}
 
 	void setOccupancy(Code code, float occupancy, bool propagate = true)
 	{
-		LogitType logit = toOccupancyLogit(occupancy);
+		logit_t logit = toOccupancyLogit(occupancy);
 		setOccupancyLogit(code, logit, propagate);
 	}
 
@@ -549,7 +549,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	void setOccupancy(ExecutionPolicy policy, Node& node, float occupancy,
 	                  bool propagate = true)
 	{
-		LogitType logit = toOccupancyLogit(occupancy);
+		logit_t logit = toOccupancyLogit(occupancy);
 		setOccupancyLogit(policy, node, logit, propagate);
 	}
 
@@ -558,7 +558,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	void setOccupancy(ExecutionPolicy policy, Code code, float occupancy,
 	                  bool propagate = true)
 	{
-		LogitType logit = toOccupancyLogit(occupancy);
+		logit_t logit = toOccupancyLogit(occupancy);
 		setOccupancyLogit(policy, code, logit, propagate);
 	}
 
@@ -582,32 +582,32 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// Set occupancy logit
 	//
 
-	void setOccupancyLogit(Node& node, LogitType logit, bool propagate = true)
+	void setOccupancyLogit(Node& node, logit_t logit, bool propagate = true)
 	{
 		Base::apply(
 		    node, [this, logit](LeafNode& node) { setOccupancyLogitImpl(node, logit); },
 		    propagate);
 	}
 
-	void setOccupancyLogit(Code code, LogitType logit, bool propagate = true)
+	void setOccupancyLogit(Code code, logit_t logit, bool propagate = true)
 	{
 		Base::apply(
 		    code, [this, logit](LeafNode& node) { setOccupancyLogitImpl(node, logit); },
 		    propagate);
 	}
 
-	void setOccupancyLogit(Key key, LogitType logit, bool propagate = true)
+	void setOccupancyLogit(Key key, logit_t logit, bool propagate = true)
 	{
 		setOccupancyLogit(Base::toCode(key), logit, propagate);
 	}
 
-	void setOccupancyLogit(Point3 coord, LogitType logit, bool propagate = true,
+	void setOccupancyLogit(Point3 coord, logit_t logit, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		setOccupancyLogit(Base::toCode(coord, depth), logit, propagate);
 	}
 
-	void setOccupancyLogit(coord_t x, coord_t y, coord_t z, LogitType logit,
+	void setOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t logit,
 	                       bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancyLogit(Base::toCode(x, y, z, depth), logit, propagate);
@@ -615,7 +615,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Node& node, LogitType logit,
+	void setOccupancyLogit(ExecutionPolicy policy, Node& node, logit_t logit,
 	                       bool propagate = true)
 	{
 		Base::apply(
@@ -625,7 +625,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Code code, LogitType logit,
+	void setOccupancyLogit(ExecutionPolicy policy, Code code, logit_t logit,
 	                       bool propagate = true)
 	{
 		Base::apply(
@@ -635,7 +635,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Key key, LogitType logit,
+	void setOccupancyLogit(ExecutionPolicy policy, Key key, logit_t logit,
 	                       bool propagate = true)
 	{
 		setOccupancyLogit(policy, Base::toCode(key), logit, propagate);
@@ -643,7 +643,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Point3 coord, LogitType logit,
+	void setOccupancyLogit(ExecutionPolicy policy, Point3 coord, logit_t logit,
 	                       bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancyLogit(policy, Base::toCode(coord, depth), logit, propagate);
@@ -652,7 +652,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void setOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                       LogitType logit, bool propagate = true, depth_t depth = 0)
+	                       logit_t logit, bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancyLogit(policy, Base::toCode(x, y, z, depth), logit, propagate);
 	}
@@ -663,8 +663,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	void increaseOccupancy(Node& node, float inc, bool propagate = true)
 	{
-		LogitType inc_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t inc_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -680,8 +680,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	void increaseOccupancy(ExecutionPolicy policy, Node& node, float inc,
 	                       bool propagate = true)
 	{
-		LogitType inc_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t inc_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -692,7 +692,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		increaseOccupancyLogit(policy, node, inc_logit, propagate);
 	}
 
-	void increaseOccupancyLogit(Node& node, LogitType inc, bool propagate = true)
+	void increaseOccupancyLogit(Node& node, logit_t inc, bool propagate = true)
 	{
 		Base::apply(
 		    node, [this, inc](LeafNode& node) { increaseOccupancyLogitImpl(node, inc); },
@@ -701,7 +701,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Node& node, LogitType inc,
+	void increaseOccupancyLogit(ExecutionPolicy policy, Node& node, logit_t inc,
 	                            bool propagate = true)
 	{
 		Base::apply(
@@ -712,8 +712,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	void increaseOccupancy(Code code, float inc, bool propagate = true)
 	{
-		LogitType inc_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t inc_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -729,8 +729,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	void increaseOccupancy(ExecutionPolicy policy, Code code, float inc,
 	                       bool propagate = true)
 	{
-		LogitType inc_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t inc_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -741,7 +741,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		increaseOccupancyLogit(policy, code, inc_logit, propagate);
 	}
 
-	void increaseOccupancyLogit(Code code, LogitType inc, bool propagate = true)
+	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
 	{
 		Base::apply(
 		    code, [this, inc](LeafNode& node) { increaseOccupancyLogitImpl(node, inc); },
@@ -750,7 +750,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Code code, LogitType inc,
+	void increaseOccupancyLogit(ExecutionPolicy policy, Code code, logit_t inc,
 	                            bool propagate = true)
 	{
 		Base::apply(
@@ -772,14 +772,14 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		increaseOccupancy(policy, Base::toCode(key), inc, propagate);
 	}
 
-	void increaseOccupancyLogit(Key key, LogitType inc, bool propagate = true)
+	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
 	{
 		increaseOccupancyLogit(Base::toCode(key), inc, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Key key, LogitType inc,
+	void increaseOccupancyLogit(ExecutionPolicy policy, Key key, logit_t inc,
 	                            bool propagate = true)
 	{
 		increaseOccupancyLogit(policy, Base::toCode(key), inc, propagate);
@@ -799,7 +799,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		increaseOccupancy(policy, Base::toCode(coord, depth), inc, propagate);
 	}
 
-	void increaseOccupancyLogit(Point3 coord, LogitType inc, bool propagate = true,
+	void increaseOccupancyLogit(Point3 coord, logit_t inc, bool propagate = true,
 	                            depth_t depth = 0)
 	{
 		increaseOccupancyLogit(Base::toCode(coord, depth), inc, propagate);
@@ -807,7 +807,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, LogitType inc,
+	void increaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, logit_t inc,
 	                            bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancyLogit(policy, Base::toCode(coord, depth), inc, propagate);
@@ -827,7 +827,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		increaseOccupancy(policy, Base::toCode(x, y, z, depth), inc, propagate);
 	}
 
-	void increaseOccupancyLogit(coord_t x, coord_t y, coord_t z, LogitType inc,
+	void increaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t inc,
 	                            bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancyLogit(Base::toCode(x, y, z, depth), inc, propagate);
@@ -836,7 +836,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void increaseOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                            LogitType inc, bool propagate = true, depth_t depth = 0)
+	                            logit_t inc, bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancyLogit(policy, Base::toCode(x, y, z, depth), inc, propagate);
 	}
@@ -847,8 +847,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	void decreaseOccupancy(Node& node, float dec, bool propagate = true)
 	{
-		LogitType dec_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t dec_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -864,8 +864,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	void decreaseOccupancy(ExecutionPolicy policy, Node& node, float dec,
 	                       bool propagate = true)
 	{
-		LogitType dec_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t dec_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -876,7 +876,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		decreaseOccupancyLogit(policy, node, dec_logit, propagate);
 	}
 
-	void decreaseOccupancyLogit(Node& node, LogitType dec, bool propagate = true)
+	void decreaseOccupancyLogit(Node& node, logit_t dec, bool propagate = true)
 	{
 		Base::apply(
 		    node, [this, dec](LeafNode& node) { decreaseOccupancyLogitImpl(node, dec); },
@@ -885,7 +885,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Node& node, LogitType dec,
+	void decreaseOccupancyLogit(ExecutionPolicy policy, Node& node, logit_t dec,
 	                            bool propagate = true)
 	{
 		Base::apply(
@@ -896,8 +896,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	void decreaseOccupancy(Code code, float dec, bool propagate = true)
 	{
-		LogitType dec_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t dec_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -913,8 +913,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	void decreaseOccupancy(ExecutionPolicy policy, Code code, float dec,
 	                       bool propagate = true)
 	{
-		LogitType dec_logit;
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		logit_t dec_logit;
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
 			                                   getOccupancyClampingThresMaxLogit());
 		} else {
@@ -925,7 +925,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		decreaseOccupancyLogit(policy, code, dec_logit, propagate);
 	}
 
-	void decreaseOccupancyLogit(Code code, LogitType dec, bool propagate = true)
+	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
 	{
 		Base::apply(
 		    code, [this, dec](LeafNode& node) { decreaseOccupancyLogitImpl(node, dec); },
@@ -934,7 +934,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Code code, LogitType dec,
+	void decreaseOccupancyLogit(ExecutionPolicy policy, Code code, logit_t dec,
 	                            bool propagate = true)
 	{
 		Base::apply(
@@ -956,14 +956,14 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		decreaseOccupancy(policy, Base::toCode(key), dec, propagate);
 	}
 
-	void decreaseOccupancyLogit(Key key, LogitType dec, bool propagate = true)
+	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
 	{
 		decreaseOccupancyLogit(Base::toCode(key), dec, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Key key, LogitType dec,
+	void decreaseOccupancyLogit(ExecutionPolicy policy, Key key, logit_t dec,
 	                            bool propagate = true)
 	{
 		decreaseOccupancyLogit(policy, Base::toCode(key), dec, propagate);
@@ -983,7 +983,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		decreaseOccupancy(policy, Base::toCode(coord, depth), dec, propagate);
 	}
 
-	void decreaseOccupancyLogit(Point3 coord, LogitType dec, bool propagate = true,
+	void decreaseOccupancyLogit(Point3 coord, logit_t dec, bool propagate = true,
 	                            depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(Base::toCode(coord, depth), dec, propagate);
@@ -991,7 +991,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, LogitType dec,
+	void decreaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, logit_t dec,
 	                            bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(policy, Base::toCode(coord, depth), dec, propagate);
@@ -1011,7 +1011,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		decreaseOccupancy(policy, Base::toCode(x, y, z, depth), dec, propagate);
 	}
 
-	void decreaseOccupancyLogit(coord_t x, coord_t y, coord_t z, LogitType dec,
+	void decreaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t dec,
 	                            bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(Base::toCode(x, y, z, depth), dec, propagate);
@@ -1020,7 +1020,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void decreaseOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                            LogitType dec, bool propagate = true, depth_t depth = 0)
+	                            logit_t dec, bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(policy, Base::toCode(x, y, z, depth), dec, propagate);
 	}
@@ -1135,7 +1135,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		return toOccupancyProbability(getOccupancyLogit(node));
 	}
 
-	constexpr LogitType getOccupancyLogit(LeafNode const& node) const noexcept
+	constexpr logit_t getOccupancyLogit(LeafNode const& node) const noexcept
 	{
 		return node.occupancy;
 	}
@@ -1178,9 +1178,9 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// Set occupancy
 	//
 
-	constexpr void setOccupancyLogitImpl(LeafNode& node, LogitType new_occupancy)
+	constexpr void setOccupancyLogitImpl(LeafNode& node, logit_t new_occupancy)
 	{
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			node.occupancy = new_occupancy;
 		} else {
 			node.occupancy = std::clamp(new_occupancy, getOccupancyClampingThresMinLogit(),
@@ -1192,9 +1192,9 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// Increase occupancy
 	//
 
-	constexpr void increaseOccupancyLogitImpl(LeafNode& node, LogitType inc)
+	constexpr void increaseOccupancyLogitImpl(LeafNode& node, logit_t inc)
 	{
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			node.occupancy = math::increaseLogit(static_cast<uint8_t>(node.occupancy), inc);
 		} else {
 			node.occupancy =
@@ -1207,9 +1207,9 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// Decrease occupancy
 	//
 
-	constexpr void decreaseOccupancyLogitImpl(LeafNode& node, LogitType dec)
+	constexpr void decreaseOccupancyLogitImpl(LeafNode& node, logit_t dec)
 	{
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			node.occupancy = math::decreaseLogit(static_cast<uint8_t>(node.occupancy), dec);
 		} else {
 			node.occupancy =
@@ -1225,7 +1225,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// NOTE: Only called when node has children
 	virtual void updateNode(InnerNode& node, depth_t depth) override
 	{
-		node.occupancy = std::numeric_limits<LogitType>::lowest();
+		node.occupancy = std::numeric_limits<logit_t>::lowest();
 
 		if (1 == depth) {
 			for (auto const& child : Base::getLeafChildren(node)) {
@@ -1275,7 +1275,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	virtual void addFileInfo(FileInfo& info) const override
 	{
 		info["fields"].emplace_back("occupancy");
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			info["type"].emplace_back("U");
 			info["size"].emplace_back("1");
 		} else {
@@ -1303,7 +1303,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 			std::vector<uint8_t> data(nodes.size());
 			in_stream.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(uint8_t));
 
-			if constexpr (std::is_same_v<LogitType, uint8_t>) {
+			if constexpr (std::is_same_v<logit_t, uint8_t>) {
 				if (getOccupancyClampingThresMinLogit() == min_logit &&
 				    getOccupancyClampingThresMaxLogit() == max_logit) {
 					for (size_t i = 0; i != nodes.size(); ++i) {
@@ -1328,7 +1328,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 			in_stream.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(float));
 
 			for (size_t i = 0; i != nodes.size(); ++i) {
-				if constexpr (std::is_same_v<LogitType, uint8_t>) {
+				if constexpr (std::is_same_v<logit_t, uint8_t>) {
 					nodes[i]->occupancy = math::convertLogit<uint8_t>(
 					    std::clamp(data[i], getOccupancyClampingThresMinLogit(),
 					               getOccupancyClampingThresMaxLogit()),
@@ -1351,12 +1351,12 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	                        int compression_acceleration_level,
 	                        int compression_level) const override
 	{
-		std::vector<LogitType> data(nodes.size());
+		std::vector<logit_t> data(nodes.size());
 		for (size_t i = 0; i != nodes.size(); ++i) {
 			data[i] = nodes[i]->occupancy;
 		}
 
-		if constexpr (std::is_same_v<LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			uint64_t size = nodes.size() + sizeof(occupancy_clamping_thres_min_log_) +
 			                sizeof(occupancy_clamping_thres_max_log_);
 
@@ -1379,8 +1379,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	//  Sensor model
 	float occupancy_clamping_thres_min_log_;  // Min logit value
 	float occupancy_clamping_thres_max_log_;  // Max logit value
-	LogitType occupied_thres_log_;            // Threshold for occupied
-	LogitType free_thres_log_;                // Threshold for free
+	logit_t occupied_thres_log_;            // Threshold for occupied
+	logit_t free_thres_log_;                // Threshold for free
 
 	// Propagation criteria
 	PropagationCriteria occupancy_prop_criteria_;

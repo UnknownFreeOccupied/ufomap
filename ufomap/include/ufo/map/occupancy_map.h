@@ -168,7 +168,7 @@ class OccupancyMap final
 
 	static constexpr std::string_view mapType()
 	{
-		if constexpr (std::is_same_v<typename OccupancyBase::LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<typename OccupancyBase::logit_t, uint8_t>) {
 			return "occupancy_map_small";
 		} else {
 			return "occupancy_map";

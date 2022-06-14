@@ -209,7 +209,7 @@ class OccupancyMapSemanticT final
 
 	static constexpr std::string_view mapType()
 	{
-		if constexpr (std::is_same_v<typename OccupancyBase::LogitType, uint8_t>) {
+		if constexpr (std::is_same_v<typename OccupancyBase::logit_t, uint8_t>) {
 			// FIXME: Update
 			return "occupancy_map_semantic_small";
 		} else {
