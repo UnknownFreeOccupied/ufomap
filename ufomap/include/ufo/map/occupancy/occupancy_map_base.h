@@ -205,6 +205,33 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	}
 
 	//
+	// Propagation criteria
+	//
+
+	constexpr PropagationCriteria getOccupancyPropagationCriteria() const noexcept
+	{
+		return occupancy_prop_criteria_;
+	}
+
+	constexpr void setOccupancyPropagationCriteria(
+	    PropagationCriteria occupancy_prop_criteria, bool propagate = true) noexcept
+	{
+		if (occupancy_prop_criteria_ == occupancy_prop_criteria) {
+			return;
+		}
+
+		occupancy_prop_criteria_ = occupancy_prop_criteria;
+
+		// Set all inner nodes to modified
+		// FIXME: Possible to optimize this to only set the ones with children
+		Base::setModified(1);
+
+		if (propagate) {
+			Base::updateModifiedNodes();
+		}
+	}
+
+	//
 	// Get bounding volume containing all known
 	//
 
@@ -1222,16 +1249,44 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// NOTE: Only called when node has children
 	virtual void updateNode(InnerNode& node, depth_t depth) override
 	{
-		node.occupancy = std::numeric_limits<logit_t>::lowest();
-
-		if (1 == depth) {
-			for (auto const& child : Base::getLeafChildren(node)) {
-				node.occupancy = std::max(node.occupancy, child.occupancy);
-			}
-		} else {
-			for (auto const& child : Base::getInnerChildren(node)) {
-				node.occupancy = std::max(node.occupancy, child.occupancy);
-			}
+		switch (occupancy_prop_criteria_) {
+			case PropagationCriteria::Max:
+				node.occupancy = std::numeric_limits<logit_t>::lowest();
+				if (1 == depth) {
+					for (auto const& child : Base::getLeafChildren(node)) {
+						node.occupancy = std::max(node.occupancy, child.occupancy);
+					}
+				} else {
+					for (auto const& child : Base::getInnerChildren(node)) {
+						node.occupancy = std::max(node.occupancy, child.occupancy);
+					}
+				}
+				break;
+			case PropagationCriteria::Min:
+				node.occupancy = std::numeric_limits<logit_t>::max();
+				if (1 == depth) {
+					for (auto const& child : Base::getLeafChildren(node)) {
+						node.occupancy = std::min(node.occupancy, child.occupancy);
+					}
+				} else {
+					for (auto const& child : Base::getInnerChildren(node)) {
+						node.occupancy = std::min(node.occupancy, child.occupancy);
+					}
+				}
+				break;
+			case PropagationCriteria::Mean:
+				double total = 0.0;
+				if (1 == depth) {
+					for (auto const& child : Base::getLeafChildren(node)) {
+						total += child.occupancy;
+					}
+				} else {
+					for (auto const& child : Base::getInnerChildren(node)) {
+						total += child.occupancy;
+					}
+				}
+				node.occupancy = total / 8.0;
+				break;
 		}
 	}
 
@@ -1381,7 +1436,6 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	// Propagation criteria
 	PropagationCriteria occupancy_prop_criteria_;
-	// TODO: Add prop_function
 
 	template <class D1, class D2, class I>
 	friend class OccupancyMapBase;
