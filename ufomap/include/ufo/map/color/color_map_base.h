@@ -256,41 +256,34 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	ColorMapBase(double resolution, depth_t depth_levels, bool automatic_pruning)
 	    : Base(resolution, depth_levels, automatic_pruning)
 	{
-		printf("ColorMapBase constructor\n");
 	}
 
 	ColorMapBase(ColorMapBase const& other) : Base(other)
 	{
-		printf("ColorMapBase copy constructor\n");
 	}
 
 	template <class D1, class D2, class I>
 	ColorMapBase(ColorMapBase<D1, D2, I> const& other) : Base(other)
 	{
-		printf("ColorMapBase template copy constructor\n");
 	}
 
 	ColorMapBase(ColorMapBase&& other) : Base(std::move(other))
 	{
-		printf("ColorMapBase move constructor\n");
 	}
 
 	ColorMapBase& operator=(ColorMapBase const& rhs)
 	{
-		printf("ColorMapBase copy assignment\n");
 		Base::operator=(rhs);
 	}
 
 	template <class D1, class D2, class I>
 	ColorMapBase& operator=(ColorMapBase<D1, D2, I> const& rhs)
 	{
-		printf("ColorMapBase template copy assignment\n");
 		Base::operator=(rhs);
 	}
 
 	ColorMapBase& operator=(ColorMapBase&& rhs)
 	{
-		printf("ColorMapBase move assignment\n");
 		Base::operator=(std::move(rhs));
 	}
 
@@ -306,7 +299,6 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	virtual void initRoot() override
 	{
-		printf("ColorMapBase initRoot\n");
 		Base::initRoot();
 		Base::getRootImpl().color.clear();
 	}

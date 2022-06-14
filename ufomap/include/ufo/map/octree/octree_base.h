@@ -1341,7 +1341,7 @@ class OctreeBase
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearest(Geometry const& geometry, Predicates const& predicates,
-	                      OutputIt d_first, float epsilon = 0.0f) const
+	                      OutputIt d_first, double epsilon = 0.0) const
 	{
 		return std::copy(beginQueryNearest(geometry, predicates, epsilon),
 		                 endQueryNearest(geometry, predicates), d_first);
@@ -1352,7 +1352,7 @@ class OctreeBase
 	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
 	OutputIt queryNearest(ExecutionPolicy policy, Geometry const& geometry,
 	                      Predicates const& predicates, OutputIt d_first,
-	                      float epsilon = 0.0f) const
+	                      double epsilon = 0.0) const
 	{
 		return std::copy(policy, beginQueryNearest(geometry, predicates, epsilon),
 		                 endQueryNearest(geometry, predicates), d_first);
@@ -1360,7 +1360,7 @@ class OctreeBase
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearestK(size_t k, Geometry const& geometry, Predicates const& predicates,
-	                       OutputIt d_first, float epsilon = 0.0f) const
+	                       OutputIt d_first, double epsilon = 0.0) const
 	{
 		size_t count = 0;
 		for (auto it = beginQueryNearest(geometry, predicates, epsilon);
@@ -1375,7 +1375,7 @@ class OctreeBase
 	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
 	OutputIt queryNearestK(ExecutionPolicy policy, size_t k, Geometry const& geometry,
 	                       Predicates const& predicates, OutputIt d_first,
-	                       float epsilon = 0.0f) const
+	                       double epsilon = 0.0) const
 	{
 		size_t count = 0;
 		for (auto it = beginQueryNearest(geometry, predicates, epsilon);
@@ -1404,7 +1404,7 @@ class OctreeBase
 	template <class Geometry, class Predicates>
 	const_query_nearest_iterator beginQueryNearest(Geometry const& geometry,
 	                                               Predicates const& predicates,
-	                                               float epsilon = 0.0f) const
+	                                               double epsilon = 0.0) const
 	{
 		return const_query_nearest_iterator(new NearestIterator(
 		    dynamic_cast<Derived const*>(this), getRoot(), geometry, predicates, epsilon));
@@ -1927,7 +1927,6 @@ class OctreeBase
 	      automatic_pruning_enabled_(other.automatic_pruning_enabled_),
 	      parallel_depth_(other.parallel_depth_)
 	{
-		printf("OctreeBase copy constructor\n");
 		// TODO: Implement
 
 		// num_inner_nodes_ = other.num_inner_nodes_;
@@ -1946,7 +1945,6 @@ class OctreeBase
 	      automatic_pruning_enabled_(other.automatic_pruning_enabled_),
 	      parallel_depth_(other.parallel_depth_)
 	{
-		printf("OctreeBase template copy constructor\n");
 		// TODO: Implement
 
 		// num_inner_nodes_ = other.num_inner_nodes_;
@@ -1965,8 +1963,6 @@ class OctreeBase
 	      automatic_pruning_enabled_(std::move(other.automatic_pruning_enabled_)),
 	      parallel_depth_(std::move(other.parallel_depth_))
 	{
-		printf("OctreeBase move constructor\n");
-
 		num_inner_nodes_.store(other.num_inner_nodes_);
 		num_inner_leaf_nodes_.store(other.num_inner_leaf_nodes_);
 		num_leaf_nodes_.store(other.num_leaf_nodes_);
@@ -2021,8 +2017,6 @@ class OctreeBase
 
 	OctreeBase& operator=(OctreeBase const& rhs)
 	{
-		printf("OctreeBase copy assignment\n");
-
 		// TODO: Should this clear?
 		clear(rhs.resolution(), rhs.depthLevels());
 
@@ -2041,8 +2035,6 @@ class OctreeBase
 	template <class D1, class D2, class I>
 	OctreeBase& operator=(OctreeBase<D1, D2, I> const& rhs)
 	{
-		printf("OctreeBase template copy assignment\n");
-
 		// TODO: Should this clear?
 		clear(rhs.resolution(), rhs.depthLevels());
 
@@ -2060,8 +2052,6 @@ class OctreeBase
 
 	OctreeBase& operator=(OctreeBase&& rhs)
 	{
-		printf("OctreeBase move assignment\n");
-
 		// TODO: Should this clear?
 		clear(rhs.resolution(), rhs.depthLevels(), true);
 
@@ -2098,7 +2088,6 @@ class OctreeBase
 
 	virtual void initRoot()
 	{
-		printf("OctreeBase initRoot\n");
 		if (!root_) {
 			root_ = std::make_unique<InnerNode>();
 		}
@@ -2706,7 +2695,7 @@ class OctreeBase
 	// Get child center
 	//
 
-	static Point3 childCenter(Point3 parent_center, float child_half_size,
+	static Point3 childCenter(Point3 parent_center, double child_half_size,
 	                          unsigned int child_idx)
 	{
 		parent_center[0] += ((child_idx & 1U) ? child_half_size : -child_half_size);
@@ -2719,7 +2708,7 @@ class OctreeBase
 	// Get sibling center
 	//
 
-	static Point3 siblingCenter(Point3 sibling_center, float half_size,
+	static Point3 siblingCenter(Point3 sibling_center, double half_size,
 	                            unsigned int sibling_idx, unsigned int new_idx)
 	{
 		sibling_center[0] += ((sibling_idx & 1U) ? -half_size : half_size);
@@ -2735,7 +2724,7 @@ class OctreeBase
 	// Get parent center
 	//
 
-	static Point3 getParentCenter(Point3 child_center, float child_half_size,
+	static Point3 getParentCenter(Point3 child_center, double child_half_size,
 	                              unsigned int child_idx)
 	{
 		child_center[0] -= ((child_idx & 1U) ? child_half_size : -child_half_size);

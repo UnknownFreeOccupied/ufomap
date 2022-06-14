@@ -1041,7 +1041,6 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		occupied_thres_log_ = toOccupancyLogit(occupied_thres);
 		free_thres_log_ = toOccupancyLogit(free_thres);
 
-		printf("OccupancyMapBase constructor\n");
 		// TODO: Implement?
 	}
 
@@ -1052,7 +1051,6 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	      occupied_thres_log_(other.occupied_thres_log_),
 	      free_thres_log_(other.free_thres_log_)
 	{
-		printf("OccupancyMapBase copy constructor\n");
 		// TODO: Implement?
 	}
 
@@ -1062,8 +1060,6 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	      occupancy_clamping_thres_min_log_(other.occupancy_clamping_thres_min_log_),
 	      occupancy_clamping_thres_max_log_(other.occupancy_clamping_thres_max_log_)
 	{
-		printf("OccupancyMapBase template copy constructor\n");
-
 		occupied_thres_log_ = toOccupancyLogit(other.getOccupiedThres());
 		free_thres_log_ = toOccupancyLogit(other.getFreeThres());
 	}
@@ -1077,13 +1073,11 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	      occupied_thres_log_(std::move(other.occupied_thres_log_)),
 	      free_thres_log_(std::move(other.free_thres_log_))
 	{
-		printf("OccupancyMapBase move constructor\n");
 		// TODO: Implement?
 	}
 
 	OccupancyMapBase& operator=(OccupancyMapBase const& rhs)
 	{
-		printf("OccupancyMapBase copy assignment\n");
 		// Base::operator=(rhs);
 		occupancy_clamping_thres_min_log_ = rhs.occupancy_clamping_thres_min_log_;
 		occupancy_clamping_thres_max_log_ = rhs.occupancy_clamping_thres_max_log_;
@@ -1095,7 +1089,6 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	template <class D1, class D2, class I>
 	OccupancyMapBase& operator=(OccupancyMapBase<D1, D2, I> const& rhs)
 	{
-		printf("OccupancyMapBase template copy assignment\n");
 		// Base::operator=(rhs);
 		occupancy_clamping_thres_min_log_ = rhs.occupancy_clamping_thres_min_log_;
 		occupancy_clamping_thres_max_log_ = rhs.occupancy_clamping_thres_max_log_;
@@ -1108,7 +1101,6 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	OccupancyMapBase& operator=(OccupancyMapBase&& rhs)
 	{
-		printf("OccupancyMapBase move assignment\n");
 		// Base::operator=(std::move(rhs));
 		occupancy_clamping_thres_min_log_ = std::move(rhs.occupancy_clamping_thres_min_log_);
 		occupancy_clamping_thres_max_log_ = std::move(rhs.occupancy_clamping_thres_max_log_);
@@ -1121,7 +1113,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	// Destructor
 	//
 
-	virtual ~OccupancyMapBase() override { printf("OccupancyMapBase destructor\n"); }
+	virtual ~OccupancyMapBase() override {}
 
 	//
 	// Initilize root
@@ -1129,7 +1121,6 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
 	virtual void initRoot() override
 	{
-		printf("OccupancyMapBase initRoot\n");
 		Base::initRoot();
 		Base::getRootImpl().occupancy = toOccupancyLogit(0.5);
 		OccupancyMapBase::updateNodeIndicators(Base::getRootImpl());
@@ -1392,7 +1383,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	LogitType free_thres_log_;                // Threshold for free
 
 	// Propagation criteria
-	PropagationCriteria prop_criteria;
+	PropagationCriteria occupancy_prop_criteria_;
 	// TODO: Add prop_function
 
 	template <class D1, class D2, class I>

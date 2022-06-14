@@ -80,8 +80,6 @@ class OccupancyMapTimeColor final
 	                        free_thres, clamping_thres_min, clamping_thres_max),
 	      ColorBase(resolution, depth_levels, automatic_pruning)
 	{
-		printf("OccupancyMapTimeColor constructor\n");
-
 		// TODO: Implement
 		initRoot();
 	}
@@ -93,8 +91,6 @@ class OccupancyMapTimeColor final
 	    : OccupancyMapTimeColor(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                            clamping_thres_min, clamping_thres_max)
 	{
-		printf("OccupancyMapTimeColor constructor\n");
-
 		// TODO: Implement
 		OctreeBase::read(filename);
 		// TODO: Throw if cannot read
@@ -107,8 +103,6 @@ class OccupancyMapTimeColor final
 	    : OccupancyMapTimeColor(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                            clamping_thres_min, clamping_thres_max)
 	{
-		printf("OccupancyMapTimeColor constructor\n");
-
 		// TODO: Implement
 		OctreeBase::read(in_stream);
 		// TODO: Throw if cannot read
@@ -117,8 +111,6 @@ class OccupancyMapTimeColor final
 	OccupancyMapTimeColor(OccupancyMapTimeColor const& other)
 	    : OctreeBase(other), OccupancyTimeBase(other), ColorBase(other)
 	{
-		printf("OccupancyMapTimeColor copy constructor\n");
-
 		// TODO: Implement
 		initRoot();
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
@@ -132,14 +124,11 @@ class OccupancyMapTimeColor final
 	      OccupancyTimeBase(std::move(other)),
 	      ColorBase(std::move(other))
 	{
-		printf("OccupancyMapTimeColor move constructor\n");
 		// TODO: Implement
 	}
 
 	OccupancyMapTimeColor& operator=(OccupancyMapTimeColor const& rhs)
 	{
-		printf("OccupancyMapTimeColor copy assignment\n");
-
 		// TODO: Implement
 		OctreeBase::operator=(rhs);
 		OccupancyTimeBase::operator=(rhs);
@@ -156,8 +145,6 @@ class OccupancyMapTimeColor final
 
 	OccupancyMapTimeColor& operator=(OccupancyMapTimeColor&& rhs)
 	{
-		printf("OccupancyMapTimeColor move assignment\n");
-
 		// TODO: Implement
 		OctreeBase::operator=(std::move(rhs));
 		OccupancyTimeBase::operator=(std::move(rhs));
@@ -171,7 +158,6 @@ class OccupancyMapTimeColor final
 
 	virtual ~OccupancyMapTimeColor() override
 	{
-		printf("OccupancyMapTimeColor destructor\n");
 	}
 
 	//
@@ -180,7 +166,6 @@ class OccupancyMapTimeColor final
 
 	virtual void initRoot() override
 	{
-		printf("OccupancyMapTimeColor initRoot\n");
 		OccupancyTimeBase::initRoot();
 		ColorBase::initRoot();
 	}

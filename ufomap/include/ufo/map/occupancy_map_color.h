@@ -171,7 +171,7 @@ class OccupancyMapColorT final
 	// Destructor
 	//
 
-	virtual ~OccupancyMapColorT() override { printf("OccupancyMapColorT destructor\n"); }
+	virtual ~OccupancyMapColorT() override { }
 
 	//
 	// Initilize root
@@ -179,7 +179,6 @@ class OccupancyMapColorT final
 
 	virtual void initRoot() override
 	{
-		printf("OccupancyMapColorT initRoot\n");
 		OccupancyBase::initRoot();
 		ColorBase::initRoot();
 	}

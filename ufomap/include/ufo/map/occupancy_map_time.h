@@ -67,59 +67,56 @@ class OccupancyMapTime final
 	// Constructors
 	//
 
-	using OccupancyTimeBase::OccupancyTimeBase;
+	OccupancyMapTime(float resolution, depth_t depth_levels = 16,
+	                 bool automatic_pruning = true, float occupied_thres = 0.5,
+	                 float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	                 float clamping_thres_max = 0.971)
+	    : OctreeBase(resolution, depth_levels, automatic_pruning),
+	      OccupancyTimeBase(resolution, depth_levels, automatic_pruning, occupied_thres,
+	                        free_thres, clamping_thres_min, clamping_thres_max)
+	{
+		// TODO: Implement
+		OccupancyTimeBase::initRoot();
+	}
 
-	// OccupancyMapTime(float resolution, depth_t depth_levels = 16,
-	//                  bool automatic_pruning = true, float occupied_thres = 0.5,
-	//                  float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	//                  float clamping_thres_max = 0.971)
-	//     : OctreeBase(resolution, depth_levels, automatic_pruning),
-	//       OccupancyTimeBase(resolution, depth_levels, automatic_pruning, occupied_thres,
-	//                         free_thres, clamping_thres_min, clamping_thres_max)
-	// {
-	// 	// TODO: Implement
-	// 	OccupancyTimeBase::initRoot();
-	// }
+	OccupancyMapTime(std::filesystem::path const& filename, bool automatic_pruning = true,
+	                 float occupied_thres = 0.5, float free_thres = 0.5,
+	                 float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                       clamping_thres_min, clamping_thres_max)
+	{
+		// TODO: Implement
+		OctreeBase::read(filename);
+		// TODO: Throw if cannot read
+	}
 
-	// OccupancyMapTime(std::filesystem::path const& filename, bool automatic_pruning =
-	// true,
-	//                  float occupied_thres = 0.5, float free_thres = 0.5,
-	//                  float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	//     : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	//                        clamping_thres_min, clamping_thres_max)
-	// {
-	// 	// TODO: Implement
-	// 	OctreeBase::read(filename);
-	// 	// TODO: Throw if cannot read
-	// }
+	OccupancyMapTime(std::istream& in_stream, bool automatic_pruning = true,
+	                 float occupied_thres = 0.5, float free_thres = 0.5,
+	                 float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                       clamping_thres_min, clamping_thres_max)
+	{
+		// TODO: Implement
+		OctreeBase::read(in_stream);
+		// TODO: Throw if cannot read
+	}
 
-	// OccupancyMapTime(std::istream& in_stream, bool automatic_pruning = true,
-	//                  float occupied_thres = 0.5, float free_thres = 0.5,
-	//                  float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	//     : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	//                        clamping_thres_min, clamping_thres_max)
-	// {
-	// 	// TODO: Implement
-	// 	OctreeBase::read(in_stream);
-	// 	// TODO: Throw if cannot read
-	// }
+	OccupancyMapTime(OccupancyMapTime const& other)
+	    : OctreeBase(other), OccupancyTimeBase(other)
+	{
+		// TODO: Implement
+		OccupancyTimeBase::initRoot();
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		other.write(io_stream);
+		OctreeBase::read(io_stream);
+	}
 
-	// OccupancyMapTime(OccupancyMapTime const& other)
-	//     : OctreeBase(other), OccupancyTimeBase(other)
-	// {
-	// 	// TODO: Implement
-	// 	OccupancyTimeBase::initRoot();
-	// 	std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-	// 	                            std::ios_base::binary);
-	// 	other.write(io_stream);
-	// 	OctreeBase::read(io_stream);
-	// }
-
-	// OccupancyMapTime(OccupancyMapTime&& other)
-	//     : OctreeBase(std::move(other)), OccupancyTimeBase(std::move(other))
-	// {
-	// 	// TODO: Implement
-	// }
+	OccupancyMapTime(OccupancyMapTime&& other)
+	    : OctreeBase(std::move(other)), OccupancyTimeBase(std::move(other))
+	{
+		// TODO: Implement
+	}
 
 	OccupancyMapTime& operator=(OccupancyMapTime const& rhs)
 	{

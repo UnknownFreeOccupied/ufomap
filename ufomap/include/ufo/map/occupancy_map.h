@@ -52,11 +52,13 @@
 
 namespace ufo::map
 {
-template <class T>
-class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyNode<T>>
+template <class OccupancyType = float>
+class OccupancyMap final
+    : public OccupancyMapBase<OccupancyMap<OccupancyType>, OccupancyNode<OccupancyType>>
 {
  protected:
-	using OccupancyBase = OccupancyMapBase<OccupancyMapT<T>, OccupancyNode<T>>;
+	using OccupancyBase =
+	    OccupancyMapBase<OccupancyMap<OccupancyType>, OccupancyNode<OccupancyType>>;
 	using OctreeBase = typename OccupancyBase::Base;
 	using LeafNode = typename OctreeBase::LeafNode;
 	using InnerNode = typename OctreeBase::InnerNode;
@@ -66,66 +68,60 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 	// Constructors
 	//
 
-	using OccupancyBase::OccupancyBase;
+	OccupancyMap(float resolution, depth_t depth_levels = 16, bool automatic_pruning = true,
+	             float occupied_thres = 0.5, float free_thres = 0.5,
+	             float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OctreeBase(resolution, depth_levels, automatic_pruning),
+	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
+	                    free_thres, clamping_thres_min, clamping_thres_max)
+	{
+		// TODO: Implement
+		OccupancyBase::initRoot();
+	}
 
-	// OccupancyMapT(float resolution, depth_t depth_levels = 16,
-	//               bool automatic_pruning = true, float occupied_thres = 0.5,
-	//               float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	//               float clamping_thres_max = 0.971)
-	//     : OctreeBase(resolution, depth_levels, automatic_pruning),
-	//       OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
-	//                     free_thres, clamping_thres_min, clamping_thres_max)
-	// {
-	// 	// TODO: Implement
-	// 	OccupancyBase::initRoot();
-	// }
+	OccupancyMap(std::filesystem::path const& filename, bool automatic_pruning = true,
+	             float occupied_thres = 0.5, float free_thres = 0.5,
+	             float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMap(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                   clamping_thres_min, clamping_thres_max)
+	{
+		OctreeBase::read(filename);
+	}
 
-	// OccupancyMapT(std::filesystem::path const& filename, bool automatic_pruning = true,
-	//               float occupied_thres = 0.5, float free_thres = 0.5,
-	//               float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	//     : OccupancyMapT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	//                     clamping_thres_min, clamping_thres_max)
-	// {
-	// 	OctreeBase::read(filename);
-	// 	// TODO: Throw if cannot read
-	// }
+	OccupancyMap(std::istream& in_stream, bool automatic_pruning = true,
+	             float occupied_thres = 0.5, float free_thres = 0.5,
+	             float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMap(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                   clamping_thres_min, clamping_thres_max)
+	{
+		OctreeBase::read(in_stream);
+	}
 
-	// OccupancyMapT(std::istream& in_stream, bool automatic_pruning = true,
-	//               float occupied_thres = 0.5, float free_thres = 0.5,
-	//               float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	//     : OccupancyMapT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	//                     clamping_thres_min, clamping_thres_max)
-	// {
-	// 	OctreeBase::read(in_stream);
-	// 	// TODO: Throw if cannot read
-	// }
+	OccupancyMap(OccupancyMap const& other) : OctreeBase(other), OccupancyBase(other)
+	{
+		OccupancyBase::initRoot();
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		other.write(io_stream);
+		OctreeBase::read(io_stream);
+	}
 
-	// OccupancyMapT(OccupancyMapT const& other) : OctreeBase(other), OccupancyBase(other)
-	// {
-	// 	OccupancyBase::initRoot();
-	// 	std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-	// 	                            std::ios_base::binary);
-	// 	other.write(io_stream);
-	// 	OctreeBase::read(io_stream);
-	// }
+	template <class T2>
+	OccupancyMap(OccupancyMap<T2> const& other) : OctreeBase(other), OccupancyBase(other)
+	{
+		OccupancyBase::initRoot();
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		other.write(io_stream);
+		OctreeBase::read(io_stream);
+	}
 
-	// template <class T2>
-	// OccupancyMapT(OccupancyMapT<T2> const& other) : OctreeBase(other),
-	// OccupancyBase(other)
-	// {
-	// 	OccupancyBase::initRoot();
-	// 	std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-	// 	                            std::ios_base::binary);
-	// 	other.write(io_stream);
-	// 	OctreeBase::read(io_stream);
-	// }
+	OccupancyMap(OccupancyMap&& other)
+	    : OctreeBase(std::move(other)), OccupancyBase(std::move(other))
+	{
+	}
 
-	// OccupancyMapT(OccupancyMapT&& other)
-	//     : OctreeBase(std::move(other)), OccupancyBase(std::move(other))
-	// {
-	// }
-
-	OccupancyMapT& operator=(OccupancyMapT const& rhs)
+	OccupancyMap& operator=(OccupancyMap const& rhs)
 	{
 		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
@@ -139,8 +135,8 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 		return *this;
 	}
 
-	template <class T2>
-	OccupancyMapT& operator=(OccupancyMapT<T2> const& rhs)
+	template <class OccupancyType2>
+	OccupancyMap& operator=(OccupancyMap<OccupancyType2> const& rhs)
 	{
 		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
@@ -153,7 +149,7 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 		return *this;
 	}
 
-	OccupancyMapT& operator=(OccupancyMapT&& rhs)
+	OccupancyMap& operator=(OccupancyMap&& rhs)
 	{
 		OctreeBase::operator=(std::move(rhs));
 		OccupancyBase::operator=(std::move(rhs));
@@ -164,10 +160,7 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 	// Destructor
 	//
 
-	virtual ~OccupancyMapT() override
-	{
-		// TODO: Implement
-	}
+	virtual ~OccupancyMap() override {}
 
 	//
 	// Get map type
@@ -209,8 +202,7 @@ class OccupancyMapT final : public OccupancyMapBase<OccupancyMapT<T>, OccupancyN
 	}
 };
 
-using OccupancyMap = OccupancyMapT<float>;
-using OccupancyMapSmall = OccupancyMapT<uint8_t>;
+using OccupancyMapSmall = OccupancyMap<uint8_t>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_H

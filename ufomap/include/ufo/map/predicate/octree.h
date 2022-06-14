@@ -99,17 +99,17 @@ struct Parent {
 
 template <PredicateCompare PC = PredicateCompare::EQUAL,
           PredicateType PT = PredicateType::RETURN_AND_INNER>
-struct DepthT {
-	constexpr DepthT(depth_t depth) noexcept : depth(depth) {}
+struct Depth {
+	constexpr Depth(depth_t depth) noexcept : depth(depth) {}
 
 	depth_t depth;
 };
 
-using DepthE = DepthT<PredicateCompare::EQUAL>;
-using DepthLE = DepthT<PredicateCompare::LESS_EQUAL>;
-using DepthGE = DepthT<PredicateCompare::GREATER_EQUAL>;
-using DepthL = DepthT<PredicateCompare::LESS>;
-using DepthG = DepthT<PredicateCompare::GREATER>;
+using DepthE = Depth<PredicateCompare::EQUAL>;
+using DepthLE = Depth<PredicateCompare::LESS_EQUAL>;
+using DepthGE = Depth<PredicateCompare::GREATER_EQUAL>;
+using DepthL = Depth<PredicateCompare::LESS>;
+using DepthG = Depth<PredicateCompare::GREATER>;
 
 using DepthMin = DepthGE;
 using DepthMax = DepthLE;
@@ -136,7 +136,7 @@ struct VoxelSize {
 
  private:
 	double voxel_size;
-	mutable DepthT<PC, PT> depth;
+	mutable Depth<PC, PT> depth;
 	mutable bool depth_modified = true;
 
 	friend struct PredicateValueCheck<VoxelSize<PR, PC, PT>>;
@@ -256,8 +256,8 @@ struct PredicateValueCheck<Parent> {
 };
 
 template <PredicateCompare PC, PredicateType PT>
-struct PredicateValueCheck<DepthT<PC, PT>> {
-	using Pred = DepthT<PC, PT>;
+struct PredicateValueCheck<Depth<PC, PT>> {
+	using Pred = Depth<PC, PT>;
 
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
@@ -422,8 +422,8 @@ struct PredicateInnerCheck<Parent> {
 };
 
 template <PredicateCompare PC, PredicateType PT>
-struct PredicateInnerCheck<DepthT<PC, PT>> {
-	using Pred = DepthT<PC, PT>;
+struct PredicateInnerCheck<Depth<PC, PT>> {
+	using Pred = Depth<PC, PT>;
 
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept

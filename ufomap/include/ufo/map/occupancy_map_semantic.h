@@ -181,7 +181,6 @@ class OccupancyMapSemanticT final
 
 	virtual ~OccupancyMapSemanticT() override
 	{
-		printf("OccupancyMapSemanticT destructor\n");
 	}
 
 	//
@@ -190,7 +189,6 @@ class OccupancyMapSemanticT final
 
 	virtual void initRoot() override
 	{
-		printf("OccupancyMapSemanticT initRoot\n");
 		OccupancyBase::initRoot();
 		SemanticBase::initRoot();
 	}

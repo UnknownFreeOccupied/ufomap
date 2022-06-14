@@ -977,41 +977,34 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	SemanticMapBase(double resolution, depth_t depth_levels, bool automatic_pruning)
 	    : Base(resolution, depth_levels, automatic_pruning)
 	{
-		printf("SemanticMapBase constructor\n");
 	}
 
 	SemanticMapBase(SemanticMapBase const& other) : Base(other)
 	{
-		printf("SemanticMapBase copy constructor\n");
 	}
 
 	template <class D1, class D2, class I>
 	SemanticMapBase(SemanticMapBase<D1, D2, I> const& other) : Base(other)
 	{
-		printf("SemanticMapBase template copy constructor\n");
 	}
 
 	SemanticMapBase(SemanticMapBase&& other) : Base(std::move(other))
 	{
-		printf("SemanticMapBase move constructor\n");
 	}
 
 	SemanticMapBase& operator=(SemanticMapBase const& rhs)
 	{
-		printf("SemanticMapBase copy assignment\n");
 		Base::operator=(rhs);
 	}
 
 	template <class D1, class D2, class I>
 	SemanticMapBase& operator=(SemanticMapBase<D1, D2, I> const& rhs)
 	{
-		printf("SemanticMapBase template copy assignment\n");
 		Base::operator=(rhs);
 	}
 
 	SemanticMapBase& operator=(SemanticMapBase&& rhs)
 	{
-		printf("SemanticMapBase move assignment\n");
 		Base::operator=(std::move(rhs));
 	}
 
@@ -1027,7 +1020,6 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	virtual void initRoot() override
 	{
-		printf("SemanticMapBase initRoot\n");
 		Base::initRoot();
 		Base::getRoot().semantics.clear();
 	}

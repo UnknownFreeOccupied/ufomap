@@ -193,27 +193,23 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
 	                    free_thres, clamping_thres_min, clamping_thres_max)
 	{
-		printf("OccupancyMapTimeBase constructor\n");
 		// TODO: Implement?
 	}
 
 	OccupancyMapTimeBase(OccupancyMapTimeBase const& other)
 	    : OctreeBase(other), OccupancyBase(other)
 	{
-		printf("OccupancyMapTimeBase copy constructor\n");
 		// TODO: Implement?
 	}
 
 	OccupancyMapTimeBase(OccupancyMapTimeBase&& other)
 	    : OctreeBase(std::move(other)), OccupancyBase(std::move(other))
 	{
-		printf("OccupancyMapTimeBase move constructor\n");
 		// TODO: Implement?
 	}
 
 	OccupancyMapTimeBase& operator=(OccupancyMapTimeBase const& rhs)
 	{
-		printf("OccupancyMapTimeBase copy assignment\n");
 		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
 		return *this;
@@ -222,7 +218,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	OccupancyMapTimeBase& operator=(OccupancyMapTimeBase&& rhs)
 	{
 		// TODO: Implement
-		printf("OccupancyMapTimeBase move assignment\n");
 		OctreeBase::operator=(std::move(rhs));
 		OccupancyBase::operator=(std::move(rhs));
 		return *this;
@@ -240,7 +235,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 
 	virtual void initRoot() override
 	{
-		printf("OccupancyMapTimeBase initRoot\n");
 		OccupancyBase::initRoot();
 		OctreeBase::getRootImpl().time_step = 0;
 	}
