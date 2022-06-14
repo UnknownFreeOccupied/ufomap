@@ -156,9 +156,7 @@ class OccupancyMapTimeColor final
 	// Destructor
 	//
 
-	virtual ~OccupancyMapTimeColor() override
-	{
-	}
+	virtual ~OccupancyMapTimeColor() override {}
 
 	//
 	// Initilize root

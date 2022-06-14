@@ -75,7 +75,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 
  public:
 	using logit_t = std::conditional_t<std::is_base_of_v<OccupancyTimeNode, DataType>,
-	                                     uint8_t, decltype(DataType::occupancy)>;
+	                                   uint8_t, decltype(DataType::occupancy)>;
 
  public:
 	//
@@ -107,10 +107,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 		return toOccupancyProbability(getOccupiedThresLogit());
 	}
 
-	constexpr logit_t getOccupiedThresLogit() const noexcept
-	{
-		return occupied_thres_log_;
-	}
+	constexpr logit_t getOccupiedThresLogit() const noexcept { return occupied_thres_log_; }
 
 	constexpr float getFreeThres() const noexcept
 	{
@@ -126,7 +123,7 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	constexpr logit_t toOccupancyLogit(float probability) const
 	{
 		return math::logit<logit_t>(probability, getOccupancyClampingThresMinLogit(),
-		                              getOccupancyClampingThresMaxLogit());
+		                            getOccupancyClampingThresMaxLogit());
 	}
 
 	constexpr float toOccupancyProbability(logit_t logit) const
@@ -1379,8 +1376,8 @@ class OccupancyMapBase : virtual public OctreeBase<Derived, DataType, Indicators
 	//  Sensor model
 	float occupancy_clamping_thres_min_log_;  // Min logit value
 	float occupancy_clamping_thres_max_log_;  // Max logit value
-	logit_t occupied_thres_log_;            // Threshold for occupied
-	logit_t free_thres_log_;                // Threshold for free
+	logit_t occupied_thres_log_;              // Threshold for occupied
+	logit_t free_thres_log_;                  // Threshold for free
 
 	// Propagation criteria
 	PropagationCriteria occupancy_prop_criteria_;

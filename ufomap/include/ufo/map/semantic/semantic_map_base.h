@@ -979,23 +979,16 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	{
 	}
 
-	SemanticMapBase(SemanticMapBase const& other) : Base(other)
-	{
-	}
+	SemanticMapBase(SemanticMapBase const& other) : Base(other) {}
 
 	template <class D1, class D2, class I>
 	SemanticMapBase(SemanticMapBase<D1, D2, I> const& other) : Base(other)
 	{
 	}
 
-	SemanticMapBase(SemanticMapBase&& other) : Base(std::move(other))
-	{
-	}
+	SemanticMapBase(SemanticMapBase&& other) : Base(std::move(other)) {}
 
-	SemanticMapBase& operator=(SemanticMapBase const& rhs)
-	{
-		Base::operator=(rhs);
-	}
+	SemanticMapBase& operator=(SemanticMapBase const& rhs) { Base::operator=(rhs); }
 
 	template <class D1, class D2, class I>
 	SemanticMapBase& operator=(SemanticMapBase<D1, D2, I> const& rhs)
@@ -1003,10 +996,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		Base::operator=(rhs);
 	}
 
-	SemanticMapBase& operator=(SemanticMapBase&& rhs)
-	{
-		Base::operator=(std::move(rhs));
-	}
+	SemanticMapBase& operator=(SemanticMapBase&& rhs) { Base::operator=(std::move(rhs)); }
 
 	//
 	// Destructor

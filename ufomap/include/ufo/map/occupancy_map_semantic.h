@@ -179,9 +179,7 @@ class OccupancyMapSemanticT final
 	// Destructor
 	//
 
-	virtual ~OccupancyMapSemanticT() override
-	{
-	}
+	virtual ~OccupancyMapSemanticT() override {}
 
 	//
 	// Initilize root

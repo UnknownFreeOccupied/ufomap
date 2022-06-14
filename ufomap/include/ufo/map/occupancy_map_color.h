@@ -171,7 +171,7 @@ class OccupancyMapColorT final
 	// Destructor
 	//
 
-	virtual ~OccupancyMapColorT() override { }
+	virtual ~OccupancyMapColorT() override {}
 
 	//
 	// Initilize root

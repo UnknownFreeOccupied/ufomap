@@ -258,23 +258,16 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	{
 	}
 
-	ColorMapBase(ColorMapBase const& other) : Base(other)
-	{
-	}
+	ColorMapBase(ColorMapBase const& other) : Base(other) {}
 
 	template <class D1, class D2, class I>
 	ColorMapBase(ColorMapBase<D1, D2, I> const& other) : Base(other)
 	{
 	}
 
-	ColorMapBase(ColorMapBase&& other) : Base(std::move(other))
-	{
-	}
+	ColorMapBase(ColorMapBase&& other) : Base(std::move(other)) {}
 
-	ColorMapBase& operator=(ColorMapBase const& rhs)
-	{
-		Base::operator=(rhs);
-	}
+	ColorMapBase& operator=(ColorMapBase const& rhs) { Base::operator=(rhs); }
 
 	template <class D1, class D2, class I>
 	ColorMapBase& operator=(ColorMapBase<D1, D2, I> const& rhs)
@@ -282,10 +275,7 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		Base::operator=(rhs);
 	}
 
-	ColorMapBase& operator=(ColorMapBase&& rhs)
-	{
-		Base::operator=(std::move(rhs));
-	}
+	ColorMapBase& operator=(ColorMapBase&& rhs) { Base::operator=(std::move(rhs)); }
 
 	//
 	// Destructor
