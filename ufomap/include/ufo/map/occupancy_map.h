@@ -163,26 +163,12 @@ class OccupancyMap final
 	virtual ~OccupancyMap() override {}
 
 	//
-	// Get map type
-	//
-
-	static constexpr std::string_view mapType()
-	{
-		if constexpr (std::is_same_v<typename OccupancyBase::logit_t, uint8_t>) {
-			return "occupancy_map_small";
-		} else {
-			return "occupancy_map";
-		}
-	}
-
-	//
 	// Input/output (read/write)
 	//
 
 	virtual void addFileInfo(FileInfo& info) const override
 	{
 		OccupancyBase::addFileInfo(info);
-		info["map_type"].emplace_back(mapType());
 	}
 
 	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,

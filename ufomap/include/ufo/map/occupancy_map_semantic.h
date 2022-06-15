@@ -202,21 +202,6 @@ class OccupancyMapSemanticT final
 	}
 
 	//
-	// Get map type
-	//
-
-	static constexpr std::string_view mapType()
-	{
-		if constexpr (std::is_same_v<typename OccupancyBase::logit_t, uint8_t>) {
-			// FIXME: Update
-			return "occupancy_map_semantic_small";
-		} else {
-			// FIXME: Update
-			return "occupancy_map_semantic";
-		}
-	}
-
-	//
 	// Input/output (read/write)
 	//
 
@@ -224,7 +209,6 @@ class OccupancyMapSemanticT final
 	{
 		OccupancyBase::addFileInfo(info);
 		SemanticBase::addFileInfo(info);
-		info["map_type"].emplace_back(mapType());
 	}
 
 	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,

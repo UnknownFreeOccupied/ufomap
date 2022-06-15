@@ -151,19 +151,12 @@ class OccupancyMapTime final
 	}
 
 	//
-	// Get map type
-	//
-
-	static constexpr std::string_view mapType() { return "occupancy_map_time"; }
-
-	//
 	// Input/output (read/write)
 	//
 
 	virtual void addFileInfo(FileInfo& info) const override
 	{
 		OccupancyTimeBase::addFileInfo(info);
-		info["map_type"].emplace_back(mapType());
 	}
 
 	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
