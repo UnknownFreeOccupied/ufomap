@@ -477,21 +477,21 @@ class Integrator
 	 *
 	 * @return The max range to integrate.
 	 */
-	[[nodiscard]] constexpr double maxRange() const noexcept { return max_range_; }
+	[[nodiscard]] constexpr double getMaxRange() const noexcept { return max_range_; }
 
 	/*!
 	 * The depth used for misses from ray casting.
 	 *
 	 * @return The depth for misses.
 	 */
-	[[nodiscard]] constexpr depth_t missDepth() const noexcept { return miss_depth_; }
+	[[nodiscard]] constexpr depth_t getMissDepth() const noexcept { return miss_depth_; }
 
 	/*!
 	 * The depth used for hits.
 	 *
 	 * @return The depth for hits.
 	 */
-	[[nodiscard]] constexpr depth_t hitDepth() const noexcept { return hit_depth_; }
+	[[nodiscard]] constexpr depth_t getHitDepth() const noexcept { return hit_depth_; }
 
 	/*!
 	 * @return Whether weighted integration is enable.
@@ -501,7 +501,7 @@ class Integrator
 	/*!
 	 * @return The probability for a hit in the sensor model.
 	 */
-	[[nodiscard]] constexpr float occupancyProbHit() const noexcept
+	[[nodiscard]] constexpr float getOccupancyProbHit() const noexcept
 	{
 		return occupancy_prob_hit_;
 	}
@@ -509,7 +509,7 @@ class Integrator
 	/*!
 	 * @return The probability for a miss in the sensor model.
 	 */
-	[[nodiscard]] constexpr float occupancyProbMiss() const noexcept
+	[[nodiscard]] constexpr float getOccupancyProbMiss() const noexcept
 	{
 		return occupancy_prob_miss_;
 	}
@@ -517,7 +517,7 @@ class Integrator
 	/*!
 	 * @return The time step.
 	 */
-	[[nodiscard]] constexpr time_step_t timeStep() const noexcept { return time_step_; }
+	[[nodiscard]] constexpr time_step_t getTimeStep() const noexcept { return time_step_; }
 
 	/*!
 	 * @return Whether the time step is automatically incremented.
@@ -530,7 +530,7 @@ class Integrator
 	/*!
 	 * @return The automatic increment step.
 	 */
-	[[nodiscard]] constexpr int timeStepAutoInc() const noexcept
+	[[nodiscard]] constexpr int getTimeStepAutoInc() const noexcept
 	{
 		return time_step_auto_inc_;
 	}
@@ -538,7 +538,7 @@ class Integrator
 	/*!
 	 * @return The amount the semantic value increases for a hit.
 	 */
-	[[nodiscard]] constexpr semantic_value_t semanticValueHit() const noexcept
+	[[nodiscard]] constexpr semantic_value_t getSemanticValueHit() const noexcept
 	{
 		return semantic_value_hit_;
 	}
@@ -546,7 +546,7 @@ class Integrator
 	/*!
 	 * @return The amount the semantic value decreases for a miss.
 	 */
-	[[nodiscard]] constexpr semantic_value_t semanticValueMiss() const noexcept
+	[[nodiscard]] constexpr semantic_value_t getSemanticValueMiss() const noexcept
 	{
 		return semantic_value_miss_;
 	}
