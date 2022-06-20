@@ -145,35 +145,32 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
                   uint64_t uncompressed_data_size, int acceleration_level,
                   int compression_level)
 {
-	static constexpr uint64_t max =
-	    static_cast<uint64_t>(std::numeric_limits<int32_t>::max());
+	static constexpr uint64_t max = std::numeric_limits<int32_t>::max();
 
 	uint64_t begin = 0;
 	uint64_t end = std::min(max, uncompressed_data_size);
-	std::vector<char> data;
-	std::vector<char> compressed_data;
+	int const max_dst_size = LZ4_compressBound(end);
+	auto data = std::make_unique<char[]>(end);
+	auto compressed_data = std::make_unique<char[]>(max_dst_size);
 	while (begin != end) {
 		int32_t num_data = end - begin;
 
 		// Compress data
-		data.resize(num_data);
-		in_stream.read(data.data(), data.size());
-		int const max_dst_size = LZ4_compressBound(data.size());
-		compressed_data.resize(max_dst_size);
+		in_stream.read(data.get(), num_data);
 
 		int32_t compressed_data_size =
 		    (0 >= compression_level)
-		        ? LZ4_compress_fast(data.data(), compressed_data.data(), data.size(),
-		                            compressed_data.size(), acceleration_level)
-		        : LZ4_compress_HC(data.data(), compressed_data.data(), data.size(),
-		                          compressed_data.size(), compression_level);
+		        ? LZ4_compress_fast(data.get(), compressed_data.get(), num_data, max_dst_size,
+		                            acceleration_level)
+		        : LZ4_compress_HC(data.get(), compressed_data.get(), num_data, max_dst_size,
+		                          compression_level);
 
 		// Check if compression successful
 		if (0 <= compressed_data_size) {
 			// Write amount of data to output stream
 			out_stream.write(reinterpret_cast<char*>(&compressed_data_size), sizeof(int32_t));
 			// Write compressed data to output stream
-			out_stream.write(compressed_data.data(), compressed_data_size);
+			out_stream.write(compressed_data.get(), compressed_data_size);
 		} else {
 			return false;
 		}
@@ -190,8 +187,7 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
                     uint64_t uncompressed_data_size)
 {
-	std::vector<char> compressed_data;
-	std::vector<char> regen_buffer(uncompressed_data_size);
+	auto regen_buffer = std::make_unique<char[]>(uncompressed_data_size);
 	size_t cur = 0;
 	while (in_stream.good() && cur < uncompressed_data_size) {
 		// Get size of compressed data
@@ -199,11 +195,11 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 		in_stream.read(reinterpret_cast<char*>(&compressed_data_size), sizeof(int32_t));
 
 		// Decompress data
-		compressed_data.resize(compressed_data_size);
-		in_stream.read(compressed_data.data(), compressed_data.size());
+		auto compressed_data = std::make_unique<char[]>(compressed_data_size);
+		in_stream.read(compressed_data.get(), compressed_data_size);
 		int const decompressed_size =
-		    LZ4_decompress_safe(compressed_data.data(), regen_buffer.data() + cur,
-		                        compressed_data.size(), regen_buffer.size() - cur);
+		    LZ4_decompress_safe(compressed_data.get(), regen_buffer.get() + cur,
+		                        compressed_data_size, uncompressed_data_size - cur);
 		cur += decompressed_size;
 
 		// Check if decompression successful
@@ -213,7 +209,7 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 	}
 
 	// Write decompressed data to output stream
-	out_stream.write(regen_buffer.data(), regen_buffer.size());
+	out_stream.write(regen_buffer.get(), uncompressed_data_size);
 
 	return !in_stream.fail();
 }
