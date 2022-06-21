@@ -974,15 +974,15 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Constructors
 	//
 
-	SemanticMapBase(double resolution, depth_t depth_levels, bool automatic_pruning)
+	SemanticMapBase(double resolution = 0.1, depth_t depth_levels, bool automatic_pruning)
 	    : Base(resolution, depth_levels, automatic_pruning)
 	{
 	}
 
 	SemanticMapBase(SemanticMapBase const& other) : Base(other) {}
 
-	template <class D1, class D2, class I>
-	SemanticMapBase(SemanticMapBase<D1, D2, I> const& other) : Base(other)
+	template <class Derived2, class DataType2, class Indicators2>
+	SemanticMapBase(SemanticMapBase<Derived2, DataType2, Indicators2> const& other) : Base(other)
 	{
 	}
 
@@ -990,8 +990,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	SemanticMapBase& operator=(SemanticMapBase const& rhs) { Base::operator=(rhs); }
 
-	template <class D1, class D2, class I>
-	SemanticMapBase& operator=(SemanticMapBase<D1, D2, I> const& rhs)
+	template <class Derived2, class DataType2, class Indicators2>
+	SemanticMapBase& operator=(SemanticMapBase<Derived2, DataType2, Indicators2> const& rhs)
 	{
 		Base::operator=(rhs);
 	}
@@ -1101,7 +1101,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	virtual void increaseSemanticsImpl(LeafNode& node, semantic_value_t inc)
 	{
 		// FIXME: Improve?
-		for (auto const& semantic : node.semantics) {
+		for (auto semantic : node.semantics) {
 			node.semantics.increase_value(semantic.getKey(), inc, 0);
 		}
 	}
@@ -1134,7 +1134,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	virtual void decreaseSemanticsImpl(LeafNode& node, semantic_value_t dec)
 	{
 		// FIXME: Improve?
-		for (auto const& semantic : node.semantics) {
+		for (auto semantic : node.semantics) {
 			node.semantics.decrease_value(semantic.getKey(), dec, 0);
 		}
 	}

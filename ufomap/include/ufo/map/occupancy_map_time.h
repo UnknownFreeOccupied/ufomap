@@ -67,7 +67,7 @@ class OccupancyMapTime final
 	// Constructors
 	//
 
-	OccupancyMapTime(float resolution, depth_t depth_levels = 16,
+	OccupancyMapTime(double resolution = 0.1, depth_t depth_levels = 16,
 	                 bool automatic_pruning = true, float occupied_thres = 0.5,
 	                 float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	                 float clamping_thres_max = 0.971)

@@ -46,21 +46,26 @@
 #include <ufo/map/color/color_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_time_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/octree/octree_base.h>
 
 namespace ufo::map
 {
 class OccupancyMapTimeColor final
-    : public OccupancyMapTimeBase<OccupancyMapTimeColor, OccupancyTimeColorNode>,
+    : public OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
+                        OccupancyIndicators>,
+      public OccupancyMapTimeBase<OccupancyMapTimeColor, OccupancyTimeColorNode>,
       public ColorMapBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
                           OccupancyIndicators>
 {
  protected:
+	using OctreeBase =
+	    OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode, OccupancyIndicators>;
 	using OccupancyTimeBase =
 	    OccupancyMapTimeBase<OccupancyMapTimeColor, OccupancyTimeColorNode>;
 	using ColorBase =
 	    ColorMapBase<OccupancyMapTimeColor, OccupancyTimeColorNode, OccupancyIndicators>;
-	using OccupancyBase = typename OccupancyTimeBase::OccupancyBase;
-	using OctreeBase = typename OccupancyTimeBase::OctreeBase;
+
+ public:
 	using LeafNode = typename OctreeBase::LeafNode;
 	using InnerNode = typename OctreeBase::InnerNode;
 
@@ -69,14 +74,14 @@ class OccupancyMapTimeColor final
 	// Constructors
 	//
 
-	OccupancyMapTimeColor(float resolution, depth_t depth_levels = 16,
+	OccupancyMapTimeColor(double resolution = 0.1, depth_t depth_levels = 16,
 	                      bool automatic_pruning = true, float occupied_thres = 0.5,
 	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	                      float clamping_thres_max = 0.971)
 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-	      OccupancyTimeBase(resolution, depth_levels, automatic_pruning, occupied_thres,
-	                        free_thres, clamping_thres_min, clamping_thres_max),
-	      ColorBase(resolution, depth_levels, automatic_pruning)
+	      OccupancyTimeBase(occupied_thres, free_thres, clamping_thres_min,
+	                        clamping_thres_max),
+	      ColorBase()
 	{
 		// TODO: Implement
 		initRoot();
@@ -154,19 +159,19 @@ class OccupancyMapTimeColor final
 	// Destructor
 	//
 
-	virtual ~OccupancyMapTimeColor() override {}
+	~OccupancyMapTimeColor() {}
 
 	//
 	// Initilize root
 	//
 
-	virtual void initRoot() override
+	void initRoot()
 	{
 		OccupancyTimeBase::initRoot();
 		ColorBase::initRoot();
 	}
 
-	virtual void updateNode(InnerNode& node, depth_t depth) override
+	void updateNode(InnerNode& node, depth_t depth)
 	{
 		OccupancyTimeBase::updateNode(node, depth);
 		ColorBase::updateNode(node, depth);
@@ -176,28 +181,23 @@ class OccupancyMapTimeColor final
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
+	void addFileInfo(FileInfo& info) const
 	{
 		OccupancyTimeBase::addFileInfo(info);
 		ColorBase::addFileInfo(info);
 	}
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
-		return OccupancyBase::readNodes(in_stream, nodes, field, type, size, num) ||
-		       OccupancyTimeBase::readNodes(in_stream, nodes, field, type, size, num) ||
+		return OccupancyTimeBase::readNodes(in_stream, nodes, field, type, size, num) ||
 		       ColorBase::readNodes(in_stream, nodes, field, type, size, num);
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	                bool compress, int compression_acceleration_level,
+	                int compression_level) const
 	{
-		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-		                          compression_level);
 		OccupancyTimeBase::writeNodes(out_stream, nodes, compress,
 		                              compression_acceleration_level, compression_level);
 		ColorBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,

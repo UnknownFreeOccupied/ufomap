@@ -56,46 +56,38 @@ namespace ufo::map
 template <class Derived, class DataType, class Indicators = OccupancyIndicators>
 class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicators>
 {
-	static constexpr bool PropagateMax = true;  // FIXME: Fix
-
  protected:
 	using OccupancyBase = OccupancyMapBase<Derived, DataType, Indicators>;
-	using OctreeBase = typename OccupancyBase::Base;
-	using LeafNode = typename OctreeBase::LeafNode;
-	using InnerNode = typename OctreeBase::InnerNode;
+	using typename OccupancyBase::InnerNode;
+	using typename OccupancyBase::LeafNode;
 
 	static_assert(std::is_base_of_v<OccupancyTimeNode, LeafNode>);
 
  public:
-	using TimeType = std::chrono::time_point<std::chrono::system_clock>;
-
- public:
-	constexpr bool propagateTimeMax() const noexcept { return PropagateMax; }
-
 	//
 	// Get time step
 	//
 
-	constexpr time_step_t getTimeStep(Node const& node) const noexcept
+	static constexpr time_step_t getTimeStep(Node const& node) noexcept
 	{
-		return OctreeBase::getLeafNode(node).time_step;
+		return getTimeStep(Derived::getLeafNode(node));
 	}
 
 	time_step_t getTimeStep(Code code) const
 	{
-		return OctreeBase::getLeafNode(code).time_step;
+		return getTimeStep(Derived::getLeafNode(code));
 	}
 
-	time_step_t getTimeStep(Key key) const { return getTimeStep(OctreeBase::toCode(key)); }
+	time_step_t getTimeStep(Key key) const { return getTimeStep(Derived::toCode(key)); }
 
 	time_step_t getTimeStep(Point3 coord, depth_t depth = 0) const
 	{
-		return getTimeStep(OctreeBase::toCode(coord, depth));
+		return getTimeStep(derived().toCode(coord, depth));
 	}
 
 	time_step_t getTimeStep(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
-		return getTimeStep(OctreeBase::toCode(x, y, z, depth));
+		return getTimeStep(derived().toCode(x, y, z, depth));
 	}
 
 	//
@@ -104,33 +96,33 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 
 	void setTimeStep(Node& node, time_step_t time_step, bool propagate = true)
 	{
-		OctreeBase::apply(
+		derived().apply(
 		    node, [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
 	}
 
 	void setTimeStep(Code code, time_step_t time_step, bool propagate = true)
 	{
-		OctreeBase::apply(
+		derived().apply(
 		    code, [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
 	}
 
 	void setTimeStep(Key key, time_step_t time_step, bool propagate = true)
 	{
-		setTimeStep(OctreeBase::toCode(key), time_step, propagate);
+		setTimeStep(Derived::toCode(key), time_step, propagate);
 	}
 
 	void setTimeStep(Point3 coord, time_step_t time_step, bool propagate = true,
 	                 depth_t depth = 0)
 	{
-		setTimeStep(OctreeBase::toCode(coord, depth), time_step, propagate);
+		setTimeStep(derived().toCode(coord, depth), time_step, propagate);
 	}
 
 	void setTimeStep(coord_t x, coord_t y, coord_t z, time_step_t time_step,
 	                 bool propagate = true, depth_t depth = 0)
 	{
-		setTimeStep(OctreeBase::toCode(x, y, z, depth), time_step, propagate);
+		setTimeStep(derived().toCode(x, y, z, depth), time_step, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -138,7 +130,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	void setTimeStep(ExecutionPolicy policy, Node& node, time_step_t time_step,
 	                 bool propagate = true)
 	{
-		OctreeBase::apply(
+		derived().apply(
 		    policy, node,
 		    [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
@@ -149,7 +141,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	void setTimeStep(ExecutionPolicy policy, Code code, time_step_t time_step,
 	                 bool propagate = true)
 	{
-		OctreeBase::apply(
+		derived().apply(
 		    policy, code,
 		    [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
@@ -160,7 +152,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	void setTimeStep(ExecutionPolicy policy, Key key, time_step_t time_step,
 	                 bool propagate = true)
 	{
-		setTimeStep(policy, OctreeBase::toCode(key), time_step, propagate);
+		setTimeStep(policy, Derived::toCode(key), time_step, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -168,7 +160,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	void setTimeStep(ExecutionPolicy policy, Point3 coord, time_step_t time_step,
 	                 bool propagate = true, depth_t depth = 0)
 	{
-		setTimeStep(policy, OctreeBase::toCode(coord, depth), time_step, propagate);
+		setTimeStep(policy, derived().toCode(coord, depth), time_step, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -176,7 +168,34 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	void setTimeStep(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                 time_step_t time_step, bool propagate = true, depth_t depth = 0)
 	{
-		setTimeStep(policy, OctreeBase::toCode(x, y, z, depth), time_step, propagate);
+		setTimeStep(policy, derived().toCode(x, y, z, depth), time_step, propagate);
+	}
+
+	//
+	// Propagation criteria
+	//
+
+	constexpr PropagationCriteria getTimeStepPropagationCriteria() const noexcept
+	{
+		return time_step_prop_criteria_;
+	}
+
+	constexpr void setTimeStepPropagationCriteria(
+	    PropagationCriteria time_step_prop_criteria, bool propagate = true) noexcept
+	{
+		if (time_step_prop_criteria_ == time_step_prop_criteria) {
+			return;
+		}
+
+		time_step_prop_criteria_ = time_step_prop_criteria;
+
+		// Set all inner nodes to modified
+		// FIXME: Possible to optimize this to only set the ones with children
+		Derived::setModified(1);
+
+		if (propagate) {
+			derived().updateModifiedNodes();
+		}
 	}
 
  protected:
@@ -184,33 +203,25 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	// Constructors
 	//
 
-	// using OccupancyBase::OccupancyBase
-
-	OccupancyMapTimeBase(float resolution, depth_t depth_levels, bool automatic_pruning,
-	                     float occupied_thres, float free_thres, float clamping_thres_min,
+	OccupancyMapTimeBase(float occupied_thres, float free_thres, float clamping_thres_min,
 	                     float clamping_thres_max)
-	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
-	                    free_thres, clamping_thres_min, clamping_thres_max)
+	    : OccupancyBase(occupied_thres, free_thres, clamping_thres_min, clamping_thres_max)
 	{
 		// TODO: Implement?
 	}
 
-	OccupancyMapTimeBase(OccupancyMapTimeBase const& other)
-	    : OctreeBase(other), OccupancyBase(other)
+	OccupancyMapTimeBase(OccupancyMapTimeBase const& other) : OccupancyBase(other)
 	{
 		// TODO: Implement?
 	}
 
-	OccupancyMapTimeBase(OccupancyMapTimeBase&& other)
-	    : OctreeBase(std::move(other)), OccupancyBase(std::move(other))
+	OccupancyMapTimeBase(OccupancyMapTimeBase&& other) : OccupancyBase(std::move(other))
 	{
 		// TODO: Implement?
 	}
 
 	OccupancyMapTimeBase& operator=(OccupancyMapTimeBase const& rhs)
 	{
-		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
 		return *this;
 	}
@@ -218,7 +229,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	OccupancyMapTimeBase& operator=(OccupancyMapTimeBase&& rhs)
 	{
 		// TODO: Implement
-		OctreeBase::operator=(std::move(rhs));
 		OccupancyBase::operator=(std::move(rhs));
 		return *this;
 	}
@@ -227,23 +237,40 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	// Destructor
 	//
 
-	virtual ~OccupancyMapTimeBase() override {}
+	~OccupancyMapTimeBase() {}
+
+	//
+	// Derived
+	//
+
+	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
+
+	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
 
 	//
 	// Initilize root
 	//
 
-	virtual void initRoot() override
+	void initRoot()
 	{
 		OccupancyBase::initRoot();
-		OctreeBase::getRootImpl().time_step = 0;
+		setTimeStep(derived().getRoot(), 0);
+	}
+
+	//
+	// Get time step
+	//
+
+	static constexpr time_step_t getTimeStep(LeafNode const& node)
+	{
+		return node.time_step;
 	}
 
 	//
 	// Set time step
 	//
 
-	static constexpr void setTimeStepImpl(DataType& node, time_step_t time_step)
+	static constexpr void setTimeStep(LeafNode& node, time_step_t time_step)
 	{
 		node.time_step = time_step;
 	}
@@ -252,40 +279,95 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, depth_t depth) override
+	void updateNode(InnerNode& node, depth_t depth)
 	{
 		OccupancyBase::updateNode(node, depth);
 
-		if constexpr (PropagateMax) {
-			node.time_step = 0;
-		} else {
-			node.time_step = -1;
+		switch (time_step_prop_criteria_) {
+			case PropagationCriteria::Max:
+				setTimeStep(node, maxChildTimeStep(node, depth));
+				break;
+			case PropagationCriteria::Min:
+				setTimeStep(node, minChildTimeStep(node, depth));
+				break;
+			case PropagationCriteria::Mean:
+				setTimeStep(node, averageChildTimeStep(node, depth));
+				break;
 		}
+	}
 
-		if (1 == depth) {
-			for (auto const& child : OctreeBase::getLeafChildren(node)) {
-				if constexpr (PropagateMax) {
-					node.time_step = std::max(node.time_step, child.time_step);
-				} else {
-					node.time_step = std::min(node.time_step, child.time_step);
-				}
-			}
-		} else {
-			for (auto const& child : OctreeBase::getInnerChildren(node)) {
-				if constexpr (PropagateMax) {
-					node.time_step = std::max(node.time_step, child.time_step);
-				} else {
-					node.time_step = std::min(node.time_step, child.time_step);
-				}
-			}
-		}
+	//
+	// Max child time step
+	//
+
+	static constexpr time_step_t maxChildTimeStep(InnerNode const& node, depth_t depth)
+	{
+		return 1 == depth ? std::max({getTimeStep(Derived::getLeafChild(node, 0)),
+		                              getTimeStep(Derived::getLeafChild(node, 1)),
+		                              getTimeStep(Derived::getLeafChild(node, 2)),
+		                              getTimeStep(Derived::getLeafChild(node, 3)),
+		                              getTimeStep(Derived::getLeafChild(node, 4)),
+		                              getTimeStep(Derived::getLeafChild(node, 5)),
+		                              getTimeStep(Derived::getLeafChild(node, 6)),
+		                              getTimeStep(Derived::getLeafChild(node, 7))})
+		                  : std::max({getTimeStep(Derived::getInnerChild(node, 0)),
+		                              getTimeStep(Derived::getInnerChild(node, 1)),
+		                              getTimeStep(Derived::getInnerChild(node, 2)),
+		                              getTimeStep(Derived::getInnerChild(node, 3)),
+		                              getTimeStep(Derived::getInnerChild(node, 4)),
+		                              getTimeStep(Derived::getInnerChild(node, 5)),
+		                              getTimeStep(Derived::getInnerChild(node, 6)),
+		                              getTimeStep(Derived::getInnerChild(node, 7))});
+	}
+
+	//
+	// Min child time step
+	//
+
+	static constexpr time_step_t minChildTimeStep(InnerNode const& node, depth_t depth)
+	{
+		return 1 == depth ? std::min({getTimeStep(Derived::getLeafChild(node, 0)),
+		                              getTimeStep(Derived::getLeafChild(node, 1)),
+		                              getTimeStep(Derived::getLeafChild(node, 2)),
+		                              getTimeStep(Derived::getLeafChild(node, 3)),
+		                              getTimeStep(Derived::getLeafChild(node, 4)),
+		                              getTimeStep(Derived::getLeafChild(node, 5)),
+		                              getTimeStep(Derived::getLeafChild(node, 6)),
+		                              getTimeStep(Derived::getLeafChild(node, 7))})
+		                  : std::min({getTimeStep(Derived::getInnerChild(node, 0)),
+		                              getTimeStep(Derived::getInnerChild(node, 1)),
+		                              getTimeStep(Derived::getInnerChild(node, 2)),
+		                              getTimeStep(Derived::getInnerChild(node, 3)),
+		                              getTimeStep(Derived::getInnerChild(node, 4)),
+		                              getTimeStep(Derived::getInnerChild(node, 5)),
+		                              getTimeStep(Derived::getInnerChild(node, 6)),
+		                              getTimeStep(Derived::getInnerChild(node, 7))});
+	}
+
+	//
+	// Average child time step
+	//
+
+	static constexpr time_step_t averageChildTimeStep(InnerNode const& node, depth_t depth)
+	{
+		time_step_t sum =
+		    1 == depth ? std::accumulate(
+		                     std::begin(Derived::getLeafChildren(node)),
+		                     std::end(Derived::getLeafChildren(node)), time_step_t(0),
+		                     [](auto cur, auto&& child) { return cur + getTimeStep(child); })
+		               : std::accumulate(
+		                     std::begin(Derived::getInnerChildren(node)),
+		                     std::end(Derived::getInnerChildren(node)), time_step_t(0),
+		                     [](auto cur, auto&& child) { return cur + getTimeStep(child); });
+
+		return sum / time_step_t(8);
 	}
 
 	//
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
+	void addFileInfo(FileInfo& info) const
 	{
 		OccupancyBase::addFileInfo(info);
 		info["fields"].emplace_back("time_step");
@@ -293,45 +375,52 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 		info["size"].emplace_back("4");
 	}
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
+		if (OccupancyBase::readNodes(in_stream, nodes, field, type, size, num)) {
+			return true;
+		}
+
 		if ("time_step" != field) {
 			return false;
 		}
-		// FIXME: Make parallel
 
 		if ('U' == type && 4 == size) {
-			std::vector<uint32_t> data(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.data()),
-			               data.size() * sizeof(typename decltype(data)::value_type));
+			auto data = std::make_unique<uint32_t[]>(nodes.size());
+			in_stream.read(reinterpret_cast<char*>(data.get()),
+			               nodes.size() * sizeof(uint32_t));
 
 			for (size_t i = 0; i != data.size(); ++i) {
-				nodes[i]->time_step = data[i];
+				setTimeStep(*nodes[i], data[i]);
 			}
 		} else {
-			// FIXME: Error
 			return false;
 		}
 		return true;
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	                bool compress, int compression_acceleration_level,
+	                int compression_level) const
 	{
-		std::vector<uint32_t> data(nodes.size());
+		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
+		                          compression_level);
+
+		auto data = std::make_unique<uint32_t[]>(nodes.size());
 		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = nodes[i]->time_step;
+			data[i] = getTimeStep(*nodes[i]);
 		}
 
-		uint64_t size = data.size();
+		uint64_t size = nodes.size();
 		out_stream.write(reinterpret_cast<char*>(&size), sizeof(size));
-		out_stream.write(reinterpret_cast<char const*>(data.data()),
-		                 data.size() * sizeof(typename decltype(data)::value_type));
+		out_stream.write(reinterpret_cast<char const*>(data.get()),
+		                 nodes.size() * sizeof(uint32_t));
 	}
+
+ protected:
+	// Propagation criteria
+	PropagationCriteria time_step_prop_criteria_ = PropagationCriteria::Max;
 };
 }  // namespace ufo::map
 

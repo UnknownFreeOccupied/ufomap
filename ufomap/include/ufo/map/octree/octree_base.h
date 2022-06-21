@@ -72,18 +72,15 @@
 
 namespace ufo::map
 {
-template <class Derived,  // This is the derived (CRTP)...
-          class DataType, class Indicators = OctreeIndicators>
+// Utilizing Curiously recurring template pattern (CRTP)
+template <class Derived, class DataType, class Indicators = OctreeIndicators>
 class OctreeBase
 {
-	// // Must be able to cast InnerNode <-> LeafNode and slice InnerNode -> LeafNode
-	// static_assert(std::is_base_of_v<LeafNode, InnerNode>);
-
  private:
 	// Minimum number of depth levels
-	static constexpr const depth_t MIN_DEPTH_LEVELS = 2;
+	static constexpr depth_t MIN_DEPTH_LEVELS = 2;
 	// Maximum number of depth levels
-	static constexpr const depth_t MAX_DEPTH_LEVELS = 21;
+	static constexpr depth_t MAX_DEPTH_LEVELS = 21;
 
  protected:
 	using LeafNode = OctreeLeafNode<DataType, Indicators>;
@@ -133,13 +130,13 @@ class OctreeBase
 	void clear(double new_resolution, depth_t new_depth_levels, bool prune = false)
 	{
 		if (root_) {
-			deleteChildren(getRootImpl(), depthLevels(), prune);
+			deleteChildren(getRoot(), depthLevels(), prune);
 		}
 
 		// FIXME: Should this be first?
 		setResolutionAndDepthLevels(new_resolution, new_depth_levels);
 
-		initRoot();
+		derived().initRoot();
 	}
 
 	/*!
@@ -157,13 +154,13 @@ class OctreeBase
 	           bool prune = false)
 	{
 		if (root_) {
-			deleteChildren(policy, getRootImpl(), depthLevels(), prune);
+			deleteChildren(policy, getRoot(), depthLevels(), prune);
 		}
 
 		// FIXME: Should this be first?
 		setResolutionAndDepthLevels(new_resolution, new_depth_levels);
 
-		initRoot();
+		derived().initRoot();
 	}
 
 	//
@@ -839,17 +836,9 @@ class OctreeBase
 	 *
 	 * @return The root node.
 	 */
-	constexpr Node getRoot() { return Node(&getRootImpl(), getRootCode()); }
-
-	/*!
-	 * @brief Get the root node.
-	 *
-	 * @return The root node.
-	 */
-	constexpr Node getRoot() const
+	constexpr Node getRootNode() const
 	{
-		// FIXME: Look at
-		return Node(const_cast<InnerNode*>(&getRootImpl()), getRootCode());
+		return Node(const_cast<InnerNode*>(&getRoot()), getRootCode());
 	}
 
 	/*!
@@ -857,17 +846,9 @@ class OctreeBase
 	 *
 	 * @return The root node with bounding volume.
 	 */
-	constexpr NodeBV getRootBV() { return NodeBV(getRoot(), boundingVolume()); }
-
-	/*!
-	 * @brief Get the root node with bounding volume.
-	 *
-	 * @return The root node with bounding volume.
-	 */
-	constexpr NodeBV getRootBV() const
+	constexpr NodeBV getRootNodeBV() const
 	{
-		// FIXME: Look at
-		return NodeBV(getRoot(), boundingVolume());
+		return NodeBV(getRootNode(), boundingVolume());
 	}
 
 	/*!
@@ -889,13 +870,8 @@ class OctreeBase
 	 */
 	Node getNode(Code code) const
 	{
-		Node node = getRoot();
-
-		while (isParent(node) && code.depth() != node.depth()) {
-			node = nodeChild(node, code.indexAtDepth(node.depth() - 1));
-		}
-
-		return node;
+		auto const& [node, depth] = getNode(code);
+		return Node(const_cast<LeafNode*>(&node), code.toDepth(depth));
 	}
 
 	/*!
@@ -1218,7 +1194,7 @@ class OctreeBase
 
 	Node createNode(Code code)
 	{
-		InnerNode* node = &getRootImpl();
+		InnerNode* node = &getRoot();
 		auto const min_depth = std::max(depth_t(1), code.depth());
 		depth_t cur_depth = depthLevels();
 		for (; min_depth < cur_depth; --cur_depth) {
@@ -1258,7 +1234,7 @@ class OctreeBase
 	{
 		// FIXME: Handle wrong codes
 
-		NodeBV node(getRoot());
+		NodeBV node(getRootNode());
 
 		while (code.depth() != node.depth()) {
 			if (isLeaf(node)) {
@@ -1392,13 +1368,12 @@ class OctreeBase
 	template <class Predicates>
 	const_query_iterator beginQuery(Predicates const& predicates) const
 	{
-		return const_query_iterator(
-		    new Iterator(dynamic_cast<Derived const*>(this), getRoot(), predicates));
+		return const_query_iterator(new Iterator(derived(), getRootNode(), predicates));
 	}
 
 	const_query_iterator endQuery() const
 	{
-		return const_query_iterator(new Iterator<Derived>(getRoot()));
+		return const_query_iterator(new Iterator<Derived>(getRootNode()));
 	}
 
 	template <class Geometry, class Predicates>
@@ -1406,8 +1381,8 @@ class OctreeBase
 	                                               Predicates const& predicates,
 	                                               double epsilon = 0.0) const
 	{
-		return const_query_nearest_iterator(new NearestIterator(
-		    dynamic_cast<Derived const*>(this), getRoot(), geometry, predicates, epsilon));
+		return const_query_nearest_iterator(
+		    new NearestIterator(derived(), getRootNode(), geometry, predicates, epsilon));
 	}
 
 	const_query_nearest_iterator endQueryNearest() const
@@ -1431,7 +1406,7 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(UnaryFunction f)
 	{
-		auto root = getRoot();
+		auto root = getRootNode();
 		if (!f(root)) {
 			traverseRecurs(f, root);
 		}
@@ -1440,7 +1415,7 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(UnaryFunction f) const
 	{
-		auto root = getRoot();
+		auto root = getRootNode();
 		if (!f(root)) {
 			traverseRecurs(f, root);
 		}
@@ -1454,9 +1429,9 @@ class OctreeBase
 	                         depth_t max_depth = maxDepthLevels())
 	{
 		if (keep_modified) {
-			updateModifiedNodesRecurs<true>(max_depth, getRootImpl(), depthLevels());
+			updateModifiedNodesRecurs<true>(max_depth, getRoot(), depthLevels());
 		} else {
-			updateModifiedNodesRecurs<false>(max_depth, getRootImpl(), depthLevels());
+			updateModifiedNodesRecurs<false>(max_depth, getRoot(), depthLevels());
 		}
 	}
 
@@ -1466,9 +1441,9 @@ class OctreeBase
 	                         depth_t max_depth = maxDepthLevels())
 	{
 		if (keep_modified) {
-			updateModifiedNodesRecurs<true>(policy, max_depth, getRootImpl(), depthLevels());
+			updateModifiedNodesRecurs<true>(policy, max_depth, getRoot(), depthLevels());
 		} else {
-			updateModifiedNodesRecurs<false>(policy, max_depth, getRootImpl(), depthLevels());
+			updateModifiedNodesRecurs<false>(policy, max_depth, getRoot(), depthLevels());
 		}
 	}
 
@@ -1556,7 +1531,7 @@ class OctreeBase
 	void setModified(depth_t min_depth = 0)
 	{
 		if (depthLevels() >= min_depth) {
-			setModifiedRecurs(getRootImpl(), depthLevels(), min_depth);
+			setModifiedRecurs(getRoot(), depthLevels(), min_depth);
 		}
 	}
 
@@ -1566,7 +1541,7 @@ class OctreeBase
 	{
 		// FIXME: Update
 		if (depthLevels() >= min_depth) {
-			setModifiedRecurs(getRootImpl(), depthLevels(), min_depth);
+			setModifiedRecurs(getRoot(), depthLevels(), min_depth);
 		}
 	}
 
@@ -1578,10 +1553,9 @@ class OctreeBase
 			} else {
 				setModifiedRecurs(innerNode(node), node.depth(), min_depth);
 			}
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(), node.code());
+			setModifiedParentsRecurs(getRoot(), depthLevels(), node.code());
 		} else {
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(),
-			                         node.code().toDepth(min_depth));
+			setModifiedParentsRecurs(getRoot(), depthLevels(), node.code().toDepth(min_depth));
 		}
 	}
 
@@ -1596,10 +1570,9 @@ class OctreeBase
 				// FIXME: Update
 				setModifiedRecurs(innerNode(node), node.depth(), min_depth);
 			}
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(), node.code());
+			setModifiedParentsRecurs(getRoot(), depthLevels(), node.code());
 		} else {
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(),
-			                         node.code().toDepth(min_depth));
+			setModifiedParentsRecurs(getRoot(), depthLevels(), node.code().toDepth(min_depth));
 		}
 	}
 
@@ -1611,9 +1584,9 @@ class OctreeBase
 			} else {
 				setModifiedRecurs(innerNode(code), code.depth(), min_depth);
 			}
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(), code);
+			setModifiedParentsRecurs(getRoot(), depthLevels(), code);
 		} else {
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(), code.toDepth(min_depth));
+			setModifiedParentsRecurs(getRoot(), depthLevels(), code.toDepth(min_depth));
 		}
 	}
 
@@ -1628,9 +1601,9 @@ class OctreeBase
 				// FIXME: Update
 				setModifiedRecurs(innerNode(code), code.depth(), min_depth);
 			}
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(), code);
+			setModifiedParentsRecurs(getRoot(), depthLevels(), code);
 		} else {
-			setModifiedParentsRecurs(getRootImpl(), depthLevels(), code.toDepth(min_depth));
+			setModifiedParentsRecurs(getRoot(), depthLevels(), code.toDepth(min_depth));
 		}
 	}
 
@@ -1678,7 +1651,7 @@ class OctreeBase
 
 	void clearModified(depth_t max_depth = maxDepthLevels())
 	{
-		clearModifiedRecurs(getRootImpl(), depthLevels(), max_depth);
+		clearModifiedRecurs(getRoot(), depthLevels(), max_depth);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -1686,7 +1659,7 @@ class OctreeBase
 	void clearModified(ExecutionPolicy policy, depth_t max_depth = maxDepthLevels())
 	{
 		// FIXME: Update
-		clearModifiedRecurs(getRootImpl(), depthLevels(), max_depth);
+		clearModifiedRecurs(getRoot(), depthLevels(), max_depth);
 	}
 
 	void clearModified(Node const& node, depth_t max_depth = maxDepthLevels())
@@ -1909,11 +1882,8 @@ class OctreeBase
 
 	OctreeBase(double resolution = 0.1, depth_t depth_levels = 16,
 	           bool automatic_pruning = true)
-	    : depth_levels_(depth_levels),
-	      max_value_(std::pow(2, depth_levels - 1)),
-	      automatic_pruning_enabled_(automatic_pruning)
+	    : automatic_pruning_enabled_(automatic_pruning)
 	{
-		// FIXME: Should this be first?
 		setResolutionAndDepthLevels(resolution, depth_levels);
 
 		init();
@@ -1936,8 +1906,8 @@ class OctreeBase
 		init();
 	}
 
-	template <class D1, class D2, class I>
-	OctreeBase(OctreeBase<D1, D2, I> const& other)
+	template <class Derived2, class DataType2, class Indicators2>
+	OctreeBase(OctreeBase<Derived2, DataType2, Indicators2> const& other)
 	    : depth_levels_(other.depth_levels_),
 	      max_value_(other.max_value_),
 	      node_size_(other.node_size_),
@@ -1975,45 +1945,8 @@ class OctreeBase
 	}
 
 	//
-	// Init
+	// Assignment operator
 	//
-
-	void init()
-	{
-		size_t i = 0;
-		for (auto& a_l : children_locks_) {
-			for (auto& l : a_l) {
-				l.clear();
-			}
-		}
-	}
-
-	//
-	// Set resolution and depth levels
-	//
-
-	void setResolutionAndDepthLevels(double const resolution, depth_t const depth_levels)
-	{
-		if (minDepthLevels() > depth_levels || maxDepthLevels() < depth_levels) {
-			throw std::invalid_argument("depth_levels can be minimum " +
-			                            std::to_string(+minDepthLevels()) + " and maximum " +
-			                            std::to_string(+maxDepthLevels()) + ", '" +
-			                            std::to_string(+depth_levels) + "' was supplied.");
-		}
-
-		depth_levels_ = depth_levels;
-		max_value_ = std::pow(2, depth_levels - 1);
-
-		std::generate(std::begin(node_size_), std::end(node_size_),
-		              [n = resolution]() mutable {
-			              auto c = n;
-			              n *= 2;
-			              return c;
-		              });
-
-		std::transform(std::begin(node_size_), std::end(node_size_),
-		               std::begin(node_size_factor_), [](auto n) { return 1 / n; });
-	}
 
 	OctreeBase& operator=(OctreeBase const& rhs)
 	{
@@ -2032,8 +1965,8 @@ class OctreeBase
 		return *this;
 	}
 
-	template <class D1, class D2, class I>
-	OctreeBase& operator=(OctreeBase<D1, D2, I> const& rhs)
+	template <class Derived2, class DataType2, class Indicators2>
+	OctreeBase& operator=(OctreeBase<Derived2, DataType2, Indicators2> const& rhs)
 	{
 		// TODO: Should this clear?
 		clear(rhs.resolution(), rhs.depthLevels());
@@ -2075,18 +2008,67 @@ class OctreeBase
 	// Destructor
 	//
 
-	virtual ~OctreeBase()
+	~OctreeBase()
 	{
 		if (root_) {
-			deleteChildren(getRootImpl(), depthLevels(), true);
+			deleteChildren(getRoot(), depthLevels(), true);
 		}
+	}
+
+	//
+	// Derived
+	//
+
+	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
+
+	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
+
+	//
+	// Init
+	//
+
+	void init()
+	{
+		size_t i = 0;
+		for (auto& a_l : children_locks_) {
+			for (auto& l : a_l) {
+				l.clear();
+			}
+		}
+	}
+
+	//
+	// Set resolution and depth levels
+	//
+
+	void setResolutionAndDepthLevels(double const resolution, depth_t const depth_levels)
+	{
+		if (minDepthLevels() > depth_levels || maxDepthLevels() < depth_levels) {
+			throw std::invalid_argument("depth_levels can be minimum " +
+			                            std::to_string(+minDepthLevels()) + " and maximum " +
+			                            std::to_string(+maxDepthLevels()) + ", '" +
+			                            std::to_string(+depth_levels) + "' was supplied.");
+		}
+
+		depth_levels_ = depth_levels;
+		max_value_ = std::pow(2, depth_levels - 1);
+
+		std::generate(std::begin(node_size_), std::end(node_size_),
+		              [n = resolution]() mutable {
+			              auto const c = n;
+			              n *= 2.0;
+			              return c;
+		              });
+
+		std::transform(std::begin(node_size_), std::end(node_size_),
+		               std::begin(node_size_factor_), [](auto n) { return 1.0 / n; });
 	}
 
 	//
 	// Initilize root
 	//
 
-	virtual void initRoot()
+	void initRoot()
 	{
 		if (!root_) {
 			root_ = std::make_unique<InnerNode>();
@@ -2247,7 +2229,7 @@ class OctreeBase
 			return;
 		}
 
-		applyRecurs(getRootImpl(), depthLevels(), code, f);
+		applyRecurs(getRoot(), depthLevels(), code, f);
 
 		if (propagate) {
 			updateModifiedNodes();
@@ -2265,7 +2247,7 @@ class OctreeBase
 			return;
 		}
 
-		applyRecurs(policy, getRootImpl(), depthLevels(), code, f);
+		applyRecurs(policy, getRoot(), depthLevels(), code, f);
 
 		if (propagate) {
 			updateModifiedNodes(policy);
@@ -2371,12 +2353,12 @@ class OctreeBase
 	}
 
 	//
-	// Get root impl
+	// Get root
 	//
 
-	constexpr InnerNode const& getRootImpl() const noexcept { return *root_; }
+	constexpr InnerNode const& getRoot() const noexcept { return *root_; }
 
-	constexpr InnerNode& getRootImpl() noexcept { return *root_; }
+	constexpr InnerNode& getRoot() noexcept { return *root_; }
 
 	//
 	// Get node
@@ -2394,24 +2376,26 @@ class OctreeBase
 
 	LeafNode const& leafNode(Code code) const
 	{
-		return leafNodeRecurs(getRootImpl(), depthLevels(), code);
+		LeafNode const* node = &getRoot();
+		depth_t depth = depthLevels();
+		while (code.depth() != depth || isParent(node)) {
+			--depth;
+			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
+			                  : &getInnerChild(node, code.indexAtDepth(depth));
+		}
+		return *node;
 	}
 
 	LeafNode& leafNode(Code code)
 	{
-		return const_cast<LeafNode&>(std::as_const(*this).leafNode(code));
-	}
-
-	LeafNode const& leafNodeRecurs(InnerNode const& node, depth_t depth, Code code) const
-	{
-		if (code.depth() == depth || isLeaf(node)) {
-			return node;
-		} else if (1 == depth) {
-			return getLeafChild(node, code.indexAtDepth(0));
-		} else {
-			return leafNodeRecurs(getInnerChild(node, code.indexAtDepth(depth - 1)), depth - 1,
-			                      code);
+		LeafNode* node = &getRoot();
+		depth_t depth = depthLevels();
+		while (code.depth() != depth || isParent(node)) {
+			--depth;
+			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
+			                  : &getInnerChild(node, code.indexAtDepth(depth));
 		}
+		return *node;
 	}
 
 	static constexpr InnerNode const& innerNode(Node const& node)
@@ -2429,9 +2413,30 @@ class OctreeBase
 		return static_cast<InnerNode const&>(leafNode(code));
 	}
 
-	InnerNode& innerNode(Code code)
+	InnerNode& innerNode(Code code) { return static_cast<InnerNode&>(leafNode(code)); }
+
+	std::pair<LeafNode const&, depth_t> getNode(Code code) const
 	{
-		return const_cast<InnerNode&>(std::as_const(*this).innerNode(code));
+		LeafNode const* node = &getRoot();
+		depth_t depth = depthLevels();
+		while (code.depth() != depth || isParent(node)) {
+			--depth;
+			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
+			                  : &getInnerChild(node, code.indexAtDepth(depth));
+		}
+		return {*node, depth};
+	}
+
+	std::pair<LeafNode&, depth_t> getNode(Code code)
+	{
+		LeafNode* node = &getRoot();
+		depth_t depth = depthLevels();
+		while (code.depth() != depth || isParent(node)) {
+			--depth;
+			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
+			                  : &getInnerChild(node, code.indexAtDepth(depth));
+		}
+		return {*node, depth};
 	}
 
 	//
@@ -2695,8 +2700,8 @@ class OctreeBase
 	// Get child center
 	//
 
-	static Point3 childCenter(Point3 parent_center, double child_half_size,
-	                          unsigned int child_idx)
+	static constexpr Point3 childCenter(Point3 parent_center, double child_half_size,
+	                                    unsigned int child_idx)
 	{
 		parent_center[0] += ((child_idx & 1U) ? child_half_size : -child_half_size);
 		parent_center[1] += ((child_idx & 2U) ? child_half_size : -child_half_size);
@@ -2708,8 +2713,8 @@ class OctreeBase
 	// Get sibling center
 	//
 
-	static Point3 siblingCenter(Point3 sibling_center, double half_size,
-	                            unsigned int sibling_idx, unsigned int new_idx)
+	static constexpr Point3 siblingCenter(Point3 sibling_center, double half_size,
+	                                      unsigned int sibling_idx, unsigned int new_idx)
 	{
 		sibling_center[0] += ((sibling_idx & 1U) ? -half_size : half_size);
 		sibling_center[1] += ((sibling_idx & 2U) ? -half_size : half_size);
@@ -2724,8 +2729,8 @@ class OctreeBase
 	// Get parent center
 	//
 
-	static Point3 getParentCenter(Point3 child_center, double child_half_size,
-	                              unsigned int child_idx)
+	static constexpr Point3 getParentCenter(Point3 child_center, double child_half_size,
+	                                        unsigned int child_idx)
 	{
 		child_center[0] -= ((child_idx & 1U) ? child_half_size : -child_half_size);
 		child_center[1] -= ((child_idx & 2U) ? child_half_size : -child_half_size);
@@ -2840,7 +2845,7 @@ class OctreeBase
 				for (auto& child : getLeafChildren(node)) {
 					updateNodeIndicators(child);
 					if constexpr (!KeepModified) {
-						child.modified = false;
+						setModified(child, false);  // TODO: Create function
 					}
 				}
 			} else {
@@ -2869,16 +2874,19 @@ class OctreeBase
 				updateNodeIndicators(node);
 			}
 			if constexpr (!KeepModified) {
-				node.modified = false;
+				setModified(node, false);  // TODO: Create function
 			}
 		}
 	}
 
-	virtual void updateNode(InnerNode& node, depth_t depth) = 0;
+	void updateNode(InnerNode& node, depth_t depth) { derived().updateNode(node, depth); }
 
-	virtual void updateNodeIndicators(LeafNode& node) = 0;
+	void updateNodeIndicators(LeafNode& node) { derived().updateNodeIndicators(node); }
 
-	virtual void updateNodeIndicators(InnerNode& node, depth_t depth) = 0;
+	void updateNodeIndicators(InnerNode& node, depth_t depth)
+	{
+		derived().updateNodeIndicators(node, depth);
+	}
 
 	//
 	// Set parents modified
@@ -2889,7 +2897,7 @@ class OctreeBase
 		if (node.depth() >= depthLevels()) {
 			return;
 		}
-		setModifiedParentsRecurs(getRootImpl(), depthLevels(), node.code());
+		setModifiedParentsRecurs(getRoot(), depthLevels(), node.code());
 	}
 
 	// NOTE: Assumes code has depth higher then depth
@@ -3022,11 +3030,11 @@ class OctreeBase
 		FileInfo info;
 		info["resolution"].push_back(std::to_string(resolution()));
 		info["depth_levels"].push_back(std::to_string(static_cast<uint32_t>(depthLevels())));
-		addFileInfo(info);
+		derived().addFileInfo(info);
 		return info;
 	}
 
-	virtual void addFileInfo(FileInfo& info) const {}
+	void addFileInfo(FileInfo& info) const {}
 
 	std::vector<LeafNode*> getNodes(std::istream& in_stream)
 	{
@@ -3085,12 +3093,12 @@ class OctreeBase
 		bool valid_inner = 0 != indicators[1];
 
 		if (valid_return) {
-			nodes[0] = static_cast<LeafNode*>(&getRootImpl());
-			getRootImpl().modified = true;
+			nodes[0] = static_cast<LeafNode*>(&getRoot());
+			getRoot().modified = true;
 		} else if (valid_inner) {
 			size_t idx = 2;
 			auto nodes_it = nodes.begin();
-			getNodesRecurs(indicators, idx, nodes_it, getRoot());
+			getNodesRecurs(indicators, idx, nodes_it, getRootNode());
 		}
 
 		return nodes;
@@ -3136,8 +3144,8 @@ class OctreeBase
 		}
 	}
 
-	virtual void readNodes(std::istream& in_stream, FileInfo const& header,
-	                       std::vector<LeafNode*> const& nodes)
+	void readNodes(std::istream& in_stream, FileInfo const& header,
+	               std::vector<LeafNode*> const& nodes)
 	{
 		size_t num_fields = header.at("fields").size();
 		if (header.at("size").size() != num_fields ||
@@ -3153,16 +3161,12 @@ class OctreeBase
 			uint64_t num;
 			in_stream.read(reinterpret_cast<char*>(&num), sizeof(num));
 
-			if (!readNodes(in_stream, nodes, field, type, size, num)) {
+			if (!derived().readNodes(in_stream, nodes, field, type, size, num)) {
 				// Skip forward
 				in_stream.seekg(size * num, std::istream::cur);
 			}
 		}
 	}
-
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) = 0;
 
 	template <class Predicates>
 	void writeData(std::ostream& out_stream, Predicates const& predicates,
@@ -3188,8 +3192,8 @@ class OctreeBase
 
 			writeIndicators(data, indicators, compress, compression_acceleration_level,
 			                compression_level);
-			writeNodes(data, nodes, compress, compression_acceleration_level,
-			           compression_level);
+			derived().writeNodes(data, nodes, compress, compression_acceleration_level,
+			                     compression_level);
 
 			uncompressed_data_size = data.tellp();
 
@@ -3198,8 +3202,8 @@ class OctreeBase
 		} else {
 			writeIndicators(out_stream, indicators, compress, compression_acceleration_level,
 			                compression_level);
-			writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-			           compression_level);
+			derived().writeNodes(out_stream, nodes, compress, compression_acceleration_level,
+			                     compression_level);
 
 			uncompressed_data_size = out_stream.tellp() - data_pos;
 		}
@@ -3220,14 +3224,12 @@ class OctreeBase
 		std::vector<uint8_t> indicators;
 		std::vector<LeafNode const*> nodes;
 
-		auto root = getRoot();
-
-		Derived const* derived = dynamic_cast<Derived const*>(this);
+		auto root = getRootNode();
 
 		bool valid_return =
-		    predicate::PredicateValueCheck<Predicates>::apply(predicates, *derived, root);
+		    predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(), root);
 		bool valid_inner = !valid_return && predicate::PredicateInnerCheck<Predicates>::apply(
-		                                        predicates, *derived, root);
+		                                        predicates, derived(), root);
 
 		indicators.push_back(valid_return ? UINT8_MAX : 0U);
 		indicators.push_back(valid_inner ? UINT8_MAX : 0U);
@@ -3235,7 +3237,7 @@ class OctreeBase
 		if (valid_return) {
 			nodes.push_back(&leafNode(root));
 		} else if (valid_inner) {
-			dataRecurs(indicators, nodes, predicates, derived, root);
+			dataRecurs(indicators, nodes, predicates, root);
 			if (nodes.empty()) {
 				//  Nothing was added
 				indicators.clear();
@@ -3247,8 +3249,7 @@ class OctreeBase
 
 	template <class Predicates>
 	void dataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode const*>& nodes,
-	                Predicates const& predicates, Derived const* derived,
-	                Node const& node) const
+	                Predicates const& predicates, Node const& node) const
 	{
 		auto cur_indicators_size = indicators.size();
 		auto cur_nodes_size = nodes.size();
@@ -3260,10 +3261,10 @@ class OctreeBase
 		for (size_t i = 0; 8 != i; ++i) {
 			child = nodeSibling(child, i);
 
-			if (predicate::PredicateValueCheck<Predicates>::apply(predicates, *derived,
+			if (predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(),
 			                                                      child)) {
 				child_valid_return |= 1U << i;
-			} else if (predicate::PredicateInnerCheck<Predicates>::apply(predicates, *derived,
+			} else if (predicate::PredicateInnerCheck<Predicates>::apply(predicates, derived(),
 			                                                             child)) {
 				child_valid_inner |= 1U << i;
 			}
@@ -3278,7 +3279,7 @@ class OctreeBase
 				nodes.push_back(&leafNode(child));
 			} else if ((child_valid_inner >> i) & 1U) {
 				child = nodeSibling(child, i);
-				dataRecurs(indicators, nodes, predicates, derived, child);
+				dataRecurs(indicators, nodes, predicates, child);
 			}
 		}
 
@@ -3335,11 +3336,6 @@ class OctreeBase
 		out_stream.seekp(end_pos);
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const = 0;
-
  protected:
 	depth_t depth_levels_;  // The number of depth levels
 	Key::key_t max_value_;  // The maximum coordinate value the octree can store
@@ -3373,8 +3369,10 @@ class OctreeBase
 	std::atomic_size_t num_allocated_inner_leaf_nodes_ = 1;
 	std::atomic_size_t num_allocated_leaf_nodes_ = 0;
 
-	template <class D1, class D2, class I>
+	template <class Derived2, class DataType2, class Indicators2>
 	friend class OctreeBase;
+
+	friend Derived;
 };
 
 }  // namespace ufo::map

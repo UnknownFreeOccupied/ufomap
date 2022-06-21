@@ -52,30 +52,39 @@
 
 namespace ufo::map
 {
+template <class>
+class OccupancyMap;
+
+template <class OccupancyType>
+using OB = OctreeBase<OccupancyMap<OccupancyType>, OccupancyNode<OccupancyType>,
+                      OccupancyIndicators>;
+
 template <class OccupancyType = float>
-class OccupancyMap final
-    : public OccupancyMapBase<OccupancyMap<OccupancyType>, OccupancyNode<OccupancyType>>
+class OccupancyMap final : public OB<OccupancyType>,
+                           public OccupancyMapBase<OccupancyMap<OccupancyType>,
+                                                   typename OB<OccupancyType>::LeafNode,
+                                                   typename OB<OccupancyType>::InnerNode>
 {
  protected:
 	using OccupancyBase =
-	    OccupancyMapBase<OccupancyMap<OccupancyType>, OccupancyNode<OccupancyType>>;
-	using OctreeBase = typename OccupancyBase::Base;
-	using LeafNode = typename OctreeBase::LeafNode;
-	using InnerNode = typename OctreeBase::InnerNode;
+	    OccupancyMapBase<OccupancyMap<OccupancyType>, typename OB<OccupancyType>::LeafNode,
+	                     typename OB<OccupancyType>::InnerNode>;
+	using LeafNode = typename OB<OccupancyType>::LeafNode;
+	using InnerNode = typename OB<OccupancyType>::InnerNode;
 
  public:
 	//
 	// Constructors
 	//
 
-	OccupancyMap(float resolution, depth_t depth_levels = 16, bool automatic_pruning = true,
-	             float occupied_thres = 0.5, float free_thres = 0.5,
-	             float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
-	                    free_thres, clamping_thres_min, clamping_thres_max)
+	OccupancyMap(double resolution = 0.1, depth_t depth_levels = 16,
+	             bool automatic_pruning = true, float occupied_thres = 0.5,
+	             float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	             float clamping_thres_max = 0.971)
+	    : OB<OccupancyType>(resolution, depth_levels, automatic_pruning),
+	      OccupancyBase(occupied_thres, free_thres, clamping_thres_min, clamping_thres_max)
 	{
-		// TODO: Implement
+		OB<OccupancyType>::initRoot();
 		OccupancyBase::initRoot();
 	}
 
@@ -85,7 +94,7 @@ class OccupancyMap final
 	    : OccupancyMap(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                   clamping_thres_min, clamping_thres_max)
 	{
-		OctreeBase::read(filename);
+		OccupancyBase::read(filename);
 	}
 
 	OccupancyMap(std::istream& in_stream, bool automatic_pruning = true,
@@ -94,43 +103,39 @@ class OccupancyMap final
 	    : OccupancyMap(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                   clamping_thres_min, clamping_thres_max)
 	{
-		OctreeBase::read(in_stream);
+		OccupancyBase::read(in_stream);
 	}
 
-	OccupancyMap(OccupancyMap const& other) : OctreeBase(other), OccupancyBase(other)
+	OccupancyMap(OccupancyMap const& other) : OccupancyBase(other)
 	{
 		OccupancyBase::initRoot();
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		other.write(io_stream);
-		OctreeBase::read(io_stream);
+		OccupancyBase::read(io_stream);
 	}
 
 	template <class T2>
-	OccupancyMap(OccupancyMap<T2> const& other) : OctreeBase(other), OccupancyBase(other)
+	OccupancyMap(OccupancyMap<T2> const& other) : OccupancyBase(other)
 	{
 		OccupancyBase::initRoot();
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		other.write(io_stream);
-		OctreeBase::read(io_stream);
+		OccupancyBase::read(io_stream);
 	}
 
-	OccupancyMap(OccupancyMap&& other)
-	    : OctreeBase(std::move(other)), OccupancyBase(std::move(other))
-	{
-	}
+	OccupancyMap(OccupancyMap&& other) : OccupancyBase(std::move(other)) {}
 
 	OccupancyMap& operator=(OccupancyMap const& rhs)
 	{
-		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
 
 		OccupancyBase::initRoot();
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		rhs.write(io_stream);
-		OctreeBase::read(io_stream);
+		OccupancyBase::read(io_stream);
 
 		return *this;
 	}
@@ -138,20 +143,18 @@ class OccupancyMap final
 	template <class OccupancyType2>
 	OccupancyMap& operator=(OccupancyMap<OccupancyType2> const& rhs)
 	{
-		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		rhs.write(io_stream);
-		OctreeBase::read(io_stream);
+		OccupancyBase::read(io_stream);
 
 		return *this;
 	}
 
 	OccupancyMap& operator=(OccupancyMap&& rhs)
 	{
-		OctreeBase::operator=(std::move(rhs));
 		OccupancyBase::operator=(std::move(rhs));
 		return *this;
 	}
@@ -160,32 +163,31 @@ class OccupancyMap final
 	// Destructor
 	//
 
-	virtual ~OccupancyMap() override {}
+	~OccupancyMap() {}
 
 	//
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
-	{
-		OccupancyBase::addFileInfo(info);
-	}
+	void addFileInfo(FileInfo& info) const { OccupancyBase::addFileInfo(info); }
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
 		return OccupancyBase::readNodes(in_stream, nodes, field, type, size, num);
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	                bool compress, int compression_acceleration_level,
+	                int compression_level) const
 	{
 		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
 		                          compression_level);
 	}
+
+	friend class OccupancyMapBase<OccupancyMap<OccupancyType>,
+	                              typename OB<OccupancyType>::LeafNode,
+	                              typename OB<OccupancyType>::InnerNode>;
 };
 
 using OccupancyMapSmall = OccupancyMap<uint8_t>;

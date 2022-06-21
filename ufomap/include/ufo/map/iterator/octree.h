@@ -72,10 +72,10 @@ class IteratorBase
 	using iterator_category = std::forward_iterator_tag;
 	using difference_type = std::ptrdiff_t;
 	using value_type = T;
-	using pointer = value_type*;                // or also value_type*
-	using reference = value_type&;              // or also value_type&
-	using const_pointer = value_type const*;    // or also value_type*
-	using const_reference = value_type const&;  // or also value_type&
+	using pointer = value_type*;
+	using reference = value_type&;
+	using const_pointer = value_type const*;
+	using const_reference = value_type const&;
 
 	constexpr IteratorBase() = default;
 
@@ -103,8 +103,6 @@ class IteratorBase
 	}
 
 	constexpr bool isParent(Node const& node) const { return tree_->isParent(node); }
-
-	constexpr bool hasParent(Node const& node) const { return tree_->hasParent(node); }
 
 	constexpr Node child(Node const& node, unsigned int idx) const
 	{
@@ -148,13 +146,13 @@ class IteratorWrapper
 
  public:
 	// Tags
-	using iterator_category = typename Base::iterator_category;
-	using difference_type = typename Base::difference_type;
-	using value_type = typename Base::value_type;
-	using pointer = typename Base::pointer;
-	using reference = typename Base::reference;
-	using const_pointer = typename Base::const_pointer;
-	using const_reference = typename Base::const_reference;
+	using typename Base::const_pointer;
+	using typename Base::const_reference;
+	using typename Base::difference_type;
+	using typename Base::iterator_category;
+	using typename Base::pointer;
+	using typename Base::reference;
+	using typename Base::value_type;
 
 	IteratorWrapper(Base* it_base) : it_base_(it_base) {}
 
@@ -206,13 +204,13 @@ class Iterator : public IteratorBase<Tree, Node>
 
  public:
 	// Tags
-	using iterator_category = typename Base::iterator_category;
-	using difference_type = typename Base::difference_type;
-	using value_type = typename Base::value_type;
-	using pointer = typename Base::pointer;
-	using reference = typename Base::reference;
-	using const_pointer = typename Base::const_pointer;
-	using const_reference = typename Base::const_reference;
+	using typename Base::const_pointer;
+	using typename Base::const_reference;
+	using typename Base::difference_type;
+	using typename Base::iterator_category;
+	using typename Base::pointer;
+	using typename Base::reference;
+	using typename Base::value_type;
 
 	Iterator(Node const& root)
 	    : node_(root), predicates_(predicate::TRUE()), valid_inner_(false)
@@ -414,13 +412,13 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 
  public:
 	// Tags
-	using iterator_category = typename Base::iterator_category;
-	using difference_type = typename Base::difference_type;
-	using value_type = typename Base::value_type;
-	using pointer = typename Base::pointer;
-	using reference = typename Base::reference;
-	using const_pointer = typename Base::const_pointer;
-	using const_reference = typename Base::const_reference;
+	using typename Base::const_pointer;
+	using typename Base::const_reference;
+	using typename Base::difference_type;
+	using typename Base::iterator_category;
+	using typename Base::pointer;
+	using typename Base::reference;
+	using typename Base::value_type;
 
 	NearestIterator() {}
 

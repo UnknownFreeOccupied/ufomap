@@ -51,13 +51,13 @@
 
 namespace ufo::map
 {
-template <class Derived, class DataType = ColorNode, class Indicators = OctreeIndicators>
-class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
+template <class Derived, class DataType = ColorNode, class Indicators = OctreeIndicators,
+          class Base = OctreeBase<Derived, DataType, Indicators>>
+class ColorMapBase : public Base
 {
  protected:
-	using Base = OctreeBase<Derived, DataType, Indicators>;
-	using LeafNode = typename Base::LeafNode;
-	using InnerNode = typename Base::InnerNode;
+	using typename Base::InnerNode;
+	using typename Base::LeafNode;
 
 	static_assert(std::is_base_of_v<ColorNode, LeafNode>);
 
@@ -66,184 +66,174 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Get color
 	//
 
-	RGBColor getColor(Node const& node) const noexcept
+	static constexpr RGBColor getColor(Node const& node) noexcept
 	{
-		return getColor(Base::getLeafNode(node));
+		return getColor(Derived::getLeafNode(node));
 	}
 
-	RGBColor getColor(Code code) const { return getColor(Base::getLeafNode(code)); }
-
-	RGBColor getColor(Key key) const { return getColor(Base::toCode(key)); }
-
-	RGBColor getColor(Point3 coord, depth_t depth = 0) const
+	constexpr RGBColor getColor(Code code) const
 	{
-		return getColor(Base::toCode(coord, depth));
+		return getColor(Derived::getLeafNode(code));
 	}
 
-	RGBColor getColor(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	constexpr RGBColor getColor(Key key) const { return getColor(Derived::toCode(key)); }
+
+	constexpr RGBColor getColor(Point3 coord, depth_t depth = 0) const
 	{
-		return getColor(Base::toCode(x, y, z, depth));
+		return getColor(derived().toCode(coord, depth));
+	}
+
+	constexpr RGBColor getColor(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	{
+		return getColor(derived().toCode(x, y, z, depth));
 	}
 
 	//
 	// Set color
 	//
 
-	void setColor(Node& node, RGBColor const& color, bool propagate = true)
+	constexpr void setColor(Node& node, RGBColor color, bool propagate = true)
 	{
-		Base::apply(
-		    node, [this, &color](LeafNode& node) { setColorImpl(node, color); }, propagate);
+		derived().apply(
+		    node, [this, &color](LeafNode& node) { setColor(node, color); }, propagate);
 	}
 
-	void setColor(Code code, RGBColor const& color, bool propagate = true)
+	constexpr void setColor(Code code, RGBColor color, bool propagate = true)
 	{
-		Base::apply(
-		    code, [this, color](LeafNode& node) { setColorImpl(node, color); }, propagate);
+		derived().apply(
+		    code, [this, color](LeafNode& node) { setColor(node, color); }, propagate);
 	}
 
-	void setColor(Key key, RGBColor const& color, bool propagate = true)
+	constexpr void setColor(Key key, RGBColor color, bool propagate = true)
 	{
-		setColor(Base::toCode(key), color, propagate);
+		setColor(Derived::toCode(key), color, propagate);
 	}
 
-	void setColor(Point3 coord, RGBColor const& color, bool propagate = true,
-	              depth_t depth = 0)
+	constexpr void setColor(Point3 coord, RGBColor color, bool propagate = true,
+	                        depth_t depth = 0)
 	{
-		setColor(Base::toCode(coord, depth), color, propagate);
+		setColor(derived().toCode(coord, depth), color, propagate);
 	}
 
-	void setColor(coord_t x, coord_t y, coord_t z, RGBColor const& color,
-	              bool propagate = true, depth_t depth = 0)
+	constexpr void setColor(coord_t x, coord_t y, coord_t z, RGBColor color,
+	                        bool propagate = true, depth_t depth = 0)
 	{
-		setColor(Base::toCode(x, y, z, depth), color, propagate);
+		setColor(derived().toCode(x, y, z, depth), color, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setColor(ExecutionPolicy policy, Node& node, RGBColor const& color,
-	              bool propagate = true)
+	constexpr void setColor(ExecutionPolicy policy, Node& node, RGBColor color,
+	                        bool propagate = true)
 	{
-		Base::apply(
-		    policy, node, [this, color](LeafNode& node) { setColorImpl(node, color); },
+		derived().apply(
+		    policy, node, [this, color](LeafNode& node) { setColor(node, color); },
 		    propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setColor(ExecutionPolicy policy, Code code, RGBColor const& color,
-	              bool propagate = true)
+	constexpr void setColor(ExecutionPolicy policy, Code code, RGBColor color,
+	                        bool propagate = true)
 	{
-		Base::apply(
-		    policy, code, [this, color](LeafNode& node) { setColorImpl(node, color); },
+		derived().apply(
+		    policy, code, [this, color](LeafNode& node) { setColor(node, color); },
 		    propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setColor(ExecutionPolicy policy, Key key, RGBColor const& color,
-	              bool propagate = true)
+	constexpr void setColor(ExecutionPolicy policy, Key key, RGBColor color,
+	                        bool propagate = true)
 	{
-		setColor(policy, Base::toCode(key), color, propagate);
+		setColor(policy, Derived::toCode(key), color, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setColor(ExecutionPolicy policy, Point3 coord, RGBColor const& color,
-	              bool propagate = true, depth_t depth = 0)
+	constexpr void setColor(ExecutionPolicy policy, Point3 coord, RGBColor color,
+	                        bool propagate = true, depth_t depth = 0)
 	{
-		setColor(policy, Base::toCode(coord, depth), color, propagate);
+		setColor(policy, derived().toCode(coord, depth), color, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	              RGBColor const& color, bool propagate = true, depth_t depth = 0)
+	constexpr void setColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
+	                        RGBColor color, bool propagate = true, depth_t depth = 0)
 	{
-		setColor(policy, Base::toCode(x, y, z, depth), color, propagate);
+		setColor(policy, derived().toCode(x, y, z, depth), color, propagate);
 	}
 
 	//
-	// Update color
+	// Clear color
 	//
 
-	void updateColor(Node& node, RGBColor const& color, float weight, bool propagate = true)
+	constexpr void clearColor(Node& node, bool propagate = true)
 	{
-		Base::apply(
-		    node,
-		    [this, color, weight](LeafNode& node) { updateColorImpl(node, color, weight); },
-		    propagate);
+		derived().apply(
+		    node, [this](LeafNode& node) { clearColor(node); }, propagate);
 	}
 
-	void updateColor(Code code, RGBColor const& color, float weight, bool propagate = true)
+	constexpr void clearColor(Code code, bool propagate = true)
 	{
-		Base::apply(
-		    code,
-		    [this, color, weight](LeafNode& node) { updateColorImpl(node, color, weight); },
-		    propagate);
+		derived().apply(
+		    code, [this](LeafNode& node) { clearColor(node); }, propagate);
 	}
 
-	void updateColor(Key key, RGBColor const& color, float weight, bool propagate = true)
+	constexpr void clearColor(Key key, bool propagate = true)
 	{
-		updateColor(Base::toCode(key), color, weight, propagate);
+		clearColor(Derived::toCode(key), propagate);
 	}
 
-	void updateColor(Point3 coord, RGBColor const& color, float weight,
-	                 bool propagate = true, depth_t depth = 0)
+	constexpr void setColor(Point3 coord, bool propagate = true, depth_t depth = 0)
 	{
-		updateColor(Base::toCode(coord, depth), color, weight, propagate);
+		clearColor(derived().toCode(coord, depth), propagate);
 	}
 
-	void updateColor(coord_t x, coord_t y, coord_t z, RGBColor const& color, float weight,
-	                 bool propagate = true, depth_t depth = 0)
+	constexpr void clearColor(coord_t x, coord_t y, coord_t z, bool propagate = true,
+	                          depth_t depth = 0)
 	{
-		updateColor(Base::toCode(x, y, z, depth), color, weight, propagate);
+		clearColor(derived().toCode(x, y, z, depth), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void updateColor(ExecutionPolicy policy, Node& node, RGBColor const& color,
-	                 float weight, bool propagate = true)
+	constexpr void clearColor(ExecutionPolicy policy, Node& node, bool propagate = true)
 	{
-		Base::apply(
-		    policy, node,
-		    [this, color, weight](LeafNode& node) { updateColorImpl(node, color, weight); },
-		    propagate);
+		derived().apply(
+		    policy, node, [this](LeafNode& node) { clearColor(node); }, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void updateColor(ExecutionPolicy policy, Code code, RGBColor const& color, float weight,
-	                 bool propagate = true)
+	constexpr void clearColor(ExecutionPolicy policy, Code code, bool propagate = true)
 	{
-		Base::apply(
-		    policy, code,
-		    [this, color, weight](LeafNode& node) { updateColorImpl(node, color, weight); },
-		    propagate);
+		derived().apply(
+		    policy, code, [this](LeafNode& node) { clearColor(node); }, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void updateColor(ExecutionPolicy policy, Key key, RGBColor const& color, float weight,
-	                 bool propagate = true)
+	constexpr void clearColor(ExecutionPolicy policy, Key key, bool propagate = true)
 	{
-		updateColor(policy, Base::toCode(key), color, weight, propagate);
+		clearColor(policy, Derived::toCode(key), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void updateColor(ExecutionPolicy policy, Point3 coord, RGBColor const& color,
-	                 float weight, bool propagate = true, depth_t depth = 0)
+	constexpr void clearColor(ExecutionPolicy policy, Point3 coord, bool propagate = true,
+	                          depth_t depth = 0)
 	{
-		updateColor(policy, Base::toCode(coord, depth), color, weight, propagate);
+		clearColor(policy, derived().toCode(coord, depth), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void updateColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                 RGBColor const& color, float weight, bool propagate = true,
-	                 depth_t depth = 0)
+	constexpr void clearColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
+	                          bool propagate = true, depth_t depth = 0)
 	{
-		updateColor(policy, Base::toCode(x, y, z, depth), color, weight, propagate);
+		clearColor(policy, derived().toCode(x, y, z, depth), propagate);
 	}
 
  protected:
@@ -251,161 +241,145 @@ class ColorMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Constructor
 	//
 
-	// using Base::Base;
+	ColorMapBase() = default;
 
-	ColorMapBase(double resolution, depth_t depth_levels, bool automatic_pruning)
-	    : Base(resolution, depth_levels, automatic_pruning)
+	ColorMapBase(ColorMapBase const& other) {}
+
+	template <class Derived2, class DataType2, class Indicators2>
+	ColorMapBase(ColorMapBase<Derived2, DataType2, Indicators2> const& other)
 	{
 	}
 
-	ColorMapBase(ColorMapBase const& other) : Base(other) {}
+	ColorMapBase(ColorMapBase&& other) {}
 
-	template <class D1, class D2, class I>
-	ColorMapBase(ColorMapBase<D1, D2, I> const& other) : Base(other)
+	ColorMapBase& operator=(ColorMapBase const& rhs) {}
+
+	template <class Derived2, class DataType2, class Indicators2>
+	ColorMapBase& operator=(ColorMapBase<Derived2, DataType2, Indicators2> const& rhs)
 	{
 	}
 
-	ColorMapBase(ColorMapBase&& other) : Base(std::move(other)) {}
-
-	ColorMapBase& operator=(ColorMapBase const& rhs) { Base::operator=(rhs); }
-
-	template <class D1, class D2, class I>
-	ColorMapBase& operator=(ColorMapBase<D1, D2, I> const& rhs)
-	{
-		Base::operator=(rhs);
-	}
-
-	ColorMapBase& operator=(ColorMapBase&& rhs) { Base::operator=(std::move(rhs)); }
+	ColorMapBase& operator=(ColorMapBase&& rhs) {}
 
 	//
 	// Destructor
 	//
 
-	virtual ~ColorMapBase() override {}
+	~ColorMapBase() {}
+
+	//
+	// Derived
+	//
+
+	using Base::derived;
 
 	//
 	// Initilize root
 	//
 
-	virtual void initRoot() override
-	{
-		Base::initRoot();
-		Base::getRootImpl().color.clear();
-	}
-
-	//
-	// Update node
-	//
-
-	virtual void updateNode(InnerNode& node, depth_t depth) override
-	{
-		node.color = averageChildColor(node, depth);
-	}
-
-	//
-	// Input/output (read/write)
-	//
-
-	virtual void addFileInfo(FileInfo& info) const override
-	{
-		info["fields"].emplace_back("color");
-		info["type"].emplace_back("U");
-		info["size"].emplace_back(std::to_string(sizeof(RGBColor)));
-	}
-
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
-	{
-		if ("color" != field) {
-			return false;
-		}
-		// FIXME: Make parallel
-
-		if ('U' == type && sizeof(RGBColor) == size) {
-			std::vector<RGBColor> data(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.data()),
-			               data.size() * sizeof(typename decltype(data)::value_type));
-
-			for (size_t i = 0; i != data.size(); ++i) {
-				nodes[i]->color = data[i];
-			}
-		} else {
-			// FIXME: Error
-			return false;
-		}
-		return true;
-	}
-
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
-	{
-		std::vector<RGBColor> data(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = nodes[i]->color;
-		}
-
-		uint64_t size = data.size();
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(uint64_t));
-		out_stream.write(reinterpret_cast<char const*>(data.data()),
-		                 data.size() * sizeof(typename decltype(data)::value_type));
-	}
+	void initRoot() { clearColor(derived().getRoot()); }
 
 	//
 	// Get color
 	//
 
-	RGBColor getColor(LeafNode const& node) const { return node.color; }
+	static constexpr RGBColor getColor(LeafNode const& node) noexcept { return node.color; }
 
 	//
 	// Set color
 	//
 
-	static constexpr void setColorImpl(LeafNode& node, RGBColor const& color)
+	static constexpr void setColor(LeafNode& node, RGBColor color) noexcept
 	{
 		node.color = color;
 	}
 
 	//
-	// Update color
+	// Clear color
 	//
 
-	static void updateColorImpl(LeafNode& node, RGBColor const& color, float weight)
+	static constexpr void clearColor(LeafNode& node) noexcept { node.color.clear(); }
+
+	//
+	// Update node
+	//
+
+	void updateNode(InnerNode& node, depth_t depth)
 	{
-		if (!node.color.set()) {
-			node.color = color;
-		} else {
-			node.color = RGBColor::average({{node.color, 1.0 - weight}, {color, weight}});
-		}
+		setColor(node, averageChildColor(node, depth));
 	}
 
 	//
 	// Average child color
 	//
 
-	RGBColor averageChildColor(InnerNode const& node, depth_t depth) const
+	static constexpr RGBColor averageChildColor(InnerNode const& node, depth_t depth)
 	{
-		return 1 == depth ? RGBColor::average({Base::getLeafChild(node, 0).color,
-		                                       Base::getLeafChild(node, 1).color,
-		                                       Base::getLeafChild(node, 2).color,
-		                                       Base::getLeafChild(node, 3).color,
-		                                       Base::getLeafChild(node, 4).color,
-		                                       Base::getLeafChild(node, 5).color,
-		                                       Base::getLeafChild(node, 6).color,
-		                                       Base::getLeafChild(node, 7).color})
-		                  : RGBColor::average({Base::getInnerChild(node, 0).color,
-		                                       Base::getInnerChild(node, 1).color,
-		                                       Base::getInnerChild(node, 2).color,
-		                                       Base::getInnerChild(node, 3).color,
-		                                       Base::getInnerChild(node, 4).color,
-		                                       Base::getInnerChild(node, 5).color,
-		                                       Base::getInnerChild(node, 6).color,
-		                                       Base::getInnerChild(node, 7).color});
+		return 1 == depth ? RGBColor::average({Derived::getLeafChild(node, 0).color,
+		                                       Derived::getLeafChild(node, 1).color,
+		                                       Derived::getLeafChild(node, 2).color,
+		                                       Derived::getLeafChild(node, 3).color,
+		                                       Derived::getLeafChild(node, 4).color,
+		                                       Derived::getLeafChild(node, 5).color,
+		                                       Derived::getLeafChild(node, 6).color,
+		                                       Derived::getLeafChild(node, 7).color})
+		                  : RGBColor::average({Derived::getInnerChild(node, 0).color,
+		                                       Derived::getInnerChild(node, 1).color,
+		                                       Derived::getInnerChild(node, 2).color,
+		                                       Derived::getInnerChild(node, 3).color,
+		                                       Derived::getInnerChild(node, 4).color,
+		                                       Derived::getInnerChild(node, 5).color,
+		                                       Derived::getInnerChild(node, 6).color,
+		                                       Derived::getInnerChild(node, 7).color});
 	}
 
-	template <class D1, class D2, class I>
+	//
+	// Input/output (read/write)
+	//
+
+	void addFileInfo(FileInfo& info) const
+	{
+		info["fields"].emplace_back("color");
+		info["type"].emplace_back("U");
+		info["size"].emplace_back(std::to_string(sizeof(RGBColor)));
+	}
+
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               std::string const& field, char type, uint64_t size, uint64_t num)
+	{
+		if ("color" != field) {
+			return false;
+		}
+
+		if ('U' == type && sizeof(RGBColor) == size) {
+			auto data = std::make_unique<RGBColor[]>(nodes.size());
+			in_stream.read(reinterpret_cast<char*>(data.get()),
+			               nodes.size() * sizeof(RGBColor));
+
+			for (size_t i = 0; i != data.size(); ++i) {
+				setColor(*nodes[i], data[i]);
+			}
+		} else {
+			return false;
+		}
+		return true;
+	}
+
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	                bool compress, int compression_acceleration_level,
+	                int compression_level) const
+	{
+		auto data = std::make_unique<RGBColor[]>(nodes.size());
+		for (size_t i = 0; i != nodes.size(); ++i) {
+			data[i] = getColor(*nodes[i]);
+		}
+
+		uint64_t size = nodes.size();
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(uint64_t));
+		out_stream.write(reinterpret_cast<char const*>(data.get()),
+		                 nodes.size() * sizeof(RGBColor));
+	}
+	template <class Derived2, class DataType2, class Indicators2>
 	friend class ColorMapBase;
 };
 }  // namespace ufo::map
