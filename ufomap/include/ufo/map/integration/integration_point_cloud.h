@@ -39,12 +39,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_INTEGRATOR_POINT_CLOUD_H
-#define UFO_MAP_INTEGRATOR_POINT_CLOUD_H
+#ifndef UFO_MAP_INTEGRATION_POINT_CLOUD_H
+#define UFO_MAP_INTEGRATION_POINT_CLOUD_H
 
 // UFO
-#include <ufo/map/code/code.h>
-#include <ufo/map/types.h>
+#include <ufo/map/integration/integration_point.h>
 
 // STL
 #include <vector>
@@ -52,72 +51,7 @@
 namespace ufo::map
 {
 template <class P>
-struct DiscretePoint {
-	std::vector<P> points;
-	Code code;
-};
+using IntegrationCloud = std::vector<IntegrationPoint<P>>;
+}
 
-template <class P>
-using DiscretePointCloud = PointCloudT<P>;
-
-template <class P>
-class DiscretePointCloud
-{
- public:
-	template <class Map>
-	DiscretePointCloud(Map const& map, PointCloudT<P> const& cloud)
-	{
-	}
-
- private:
-	PointCloudT<DiscretePoint> cloud_;
-};
-
-template <class T>
-struct IntegratorPoint {
-	IntegratorPoint() = default;
-
-	IntegratorPoint(Point3 from, T const& to, Code code, float distance, bool has_moved)
-	    : from(from), to(to), code(code), distance(distance), has_moved(has_moved)
-	{
-	}
-
-	// Sensor origin
-	Point3 from;
-	// The end point
-	T to;
-	// The Morton code for the end point
-	Code code;
-	// Distance from sensor to point
-	float distance;
-	// If the point's position has moved compared to the initial point cloud
-	bool has_moved;
-};
-
-template <class T>
-using IntegratorPointCloud = std::vector<IntegratorPoint<T>>;
-
-template <class T>
-struct IntegratorPoint2 {
-	IntegratorPoint2() = default;
-
-	IntegratorPoint2(T const& to, Code code, bool has_moved, float distance)
-	    : to(to), code(code), has_moved(has_moved), distance(distance)
-	{
-	}
-
-	// The end point
-	T to;
-	// The Morton code for the end point
-	Code code;
-	// If the point's position has moved compared to the initial point cloud
-	bool has_moved;
-	// Distance from sensor to point
-	float distance;
-};
-
-template <class T>
-using IntegratorPointCloud2 = std::vector<IntegratorPoint2<T>>;
-}  // namespace ufo::map
-
-#endif  // UFO_MAP_INTEGRATOR_POINT_CLOUD_H
+#endif  // UFO_MAP_INTEGRATION_POINT_CLOUD_H

@@ -974,7 +974,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Constructors
 	//
 
-	SemanticMapBase(double resolution = 0.1, depth_t depth_levels, bool automatic_pruning)
+	SemanticMapBase(double resolution, depth_t depth_levels, bool automatic_pruning)
 	    : Base(resolution, depth_levels, automatic_pruning)
 	{
 	}
@@ -982,7 +982,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	SemanticMapBase(SemanticMapBase const& other) : Base(other) {}
 
 	template <class Derived2, class DataType2, class Indicators2>
-	SemanticMapBase(SemanticMapBase<Derived2, DataType2, Indicators2> const& other) : Base(other)
+	SemanticMapBase(SemanticMapBase<Derived2, DataType2, Indicators2> const& other)
+	    : Base(other)
 	{
 	}
 

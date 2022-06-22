@@ -53,21 +53,41 @@ namespace ufo::map
 class OccupancyMapTimeColor final
     : public OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
                         OccupancyIndicators>,
-      public OccupancyMapTimeBase<OccupancyMapTimeColor, OccupancyTimeColorNode>,
-      public ColorMapBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
-                          OccupancyIndicators>
+      public OccupancyMapTimeBase<
+          OccupancyMapTimeColor,
+          typename OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
+                              OccupancyIndicators>::LeafNode,
+          typename OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
+                              OccupancyIndicators>::InnerNode>,
+      public ColorMapBase<
+          OccupancyMapTimeColor,
+          typename OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
+                              OccupancyIndicators>::LeafNode,
+          typename OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode,
+                              OccupancyIndicators>::InnerNode>
 {
  protected:
+	//
+	// Tags
+	//
+
 	using OctreeBase =
 	    OctreeBase<OccupancyMapTimeColor, OccupancyTimeColorNode, OccupancyIndicators>;
-	using OccupancyTimeBase =
-	    OccupancyMapTimeBase<OccupancyMapTimeColor, OccupancyTimeColorNode>;
-	using ColorBase =
-	    ColorMapBase<OccupancyMapTimeColor, OccupancyTimeColorNode, OccupancyIndicators>;
-
- public:
 	using LeafNode = typename OctreeBase::LeafNode;
 	using InnerNode = typename OctreeBase::InnerNode;
+	using OccupancyTimeBase =
+	    OccupancyMapTimeBase<OccupancyMapTimeColor, LeafNode, InnerNode>;
+	using OccupancyBase = typename OccupancyTimeBase::OccupancyBase;
+	using ColorBase = ColorMapBase<OccupancyMapTimeColor, LeafNode, InnerNode>;
+
+	//
+	// Friends
+	//
+
+	friend OctreeBase;
+	friend OccupancyBase;
+	friend OccupancyTimeBase;
+	friend ColorBase;
 
  public:
 	//
@@ -83,7 +103,6 @@ class OccupancyMapTimeColor final
 	                        clamping_thres_max),
 	      ColorBase()
 	{
-		// TODO: Implement
 		initRoot();
 	}
 
@@ -94,9 +113,7 @@ class OccupancyMapTimeColor final
 	    : OccupancyMapTimeColor(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                            clamping_thres_min, clamping_thres_max)
 	{
-		// TODO: Implement
 		OctreeBase::read(filename);
-		// TODO: Throw if cannot read
 	}
 
 	OccupancyMapTimeColor(std::istream& in_stream, bool automatic_pruning = true,
@@ -106,38 +123,30 @@ class OccupancyMapTimeColor final
 	    : OccupancyMapTimeColor(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                            clamping_thres_min, clamping_thres_max)
 	{
-		// TODO: Implement
 		OctreeBase::read(in_stream);
-		// TODO: Throw if cannot read
 	}
 
 	OccupancyMapTimeColor(OccupancyMapTimeColor const& other)
 	    : OctreeBase(other), OccupancyTimeBase(other), ColorBase(other)
 	{
-		// TODO: Implement
 		initRoot();
+
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		other.write(io_stream);
 		OctreeBase::read(io_stream);
 	}
 
-	OccupancyMapTimeColor(OccupancyMapTimeColor&& other)
-	    : OctreeBase(std::move(other)),
-	      OccupancyTimeBase(std::move(other)),
-	      ColorBase(std::move(other))
-	{
-		// TODO: Implement
-	}
+	OccupancyMapTimeColor(OccupancyMapTimeColor&& other) = default;
 
 	OccupancyMapTimeColor& operator=(OccupancyMapTimeColor const& rhs)
 	{
-		// TODO: Implement
 		OctreeBase::operator=(rhs);
 		OccupancyTimeBase::operator=(rhs);
 		ColorBase::operator=(rhs);
 
 		initRoot();
+
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		rhs.write(io_stream);
@@ -146,20 +155,7 @@ class OccupancyMapTimeColor final
 		return *this;
 	}
 
-	OccupancyMapTimeColor& operator=(OccupancyMapTimeColor&& rhs)
-	{
-		// TODO: Implement
-		OctreeBase::operator=(std::move(rhs));
-		OccupancyTimeBase::operator=(std::move(rhs));
-		ColorBase::operator=(std::move(rhs));
-		return *this;
-	}
-
-	//
-	// Destructor
-	//
-
-	~OccupancyMapTimeColor() {}
+	OccupancyMapTimeColor& operator=(OccupancyMapTimeColor&& rhs) = default;
 
 	//
 	// Initilize root
@@ -167,6 +163,7 @@ class OccupancyMapTimeColor final
 
 	void initRoot()
 	{
+		OctreeBase::initRoot();
 		OccupancyTimeBase::initRoot();
 		ColorBase::initRoot();
 	}

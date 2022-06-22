@@ -39,80 +39,64 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_RAY_CASTER_H
-#define UFO_MAP_RAY_CASTER_H
+#ifndef UFO_MAP_INTEGRATION_POINT_H
+#define UFO_MAP_INTEGRATION_POINT_H
 
 // UFO
 #include <ufo/map/code/code.h>
-#include <ufo/map/key.h>
-#include <ufo/map/point.h>
-#include <ufo/map/types.h>
-#include <ufo/math/util.h>
-#include <ufo/math/vector3.h>
 
 // STL
-#include <exception>
-#include <limits>
+#include <algorithm>
+#include <initializer_list>
 #include <vector>
 
 namespace ufo::map
 {
-KeyRay computeRay(Key origin, Key goal)
-{
-	if (origin.depth() != goal.depth()) {
-		throw std::invalid_argument("origin and goal need to be at the same depth.");
+
+/*!
+ * @brief
+ *
+ */
+template <class P>
+struct IntegrationPoint {
+	struct Point {
+		P point;
+		bool valid;
+	};
+
+	Code code;
+	std::vector<Point> points;
+
+	IntegrationPoint(Code const code) : code(code) {}
+
+	IntegrationPoint(Code const code, P const& point, bool const valid = true)
+	    : code(code), points(1, Point{point, valid})
+	{
 	}
 
-	using namespace ufo::math;
-
-	int size = 1U << origin.depth();
-
-	Vector3d o(origin.x(), origin.y(), origin.z());
-	Vector3d g(goal.x(), goal.y(), goal.z());
-
-	Vector3d dir = g - o;
-	double distance = dir.norm();
-	dir /= distance;
-
-	Vector3i step(sgn(dir.x) * size, sgn(dir.y) * size, sgn(dir.z) * size);
-
-	dir.abs();
-
-	static constexpr auto max = std::numeric_limits<double>::max();
-	Vector3d t_delta(step.x ? size / dir.x : max, step.y ? size / dir.y : max,
-	                 step.z ? size / dir.z : max);
-
-	Vector3d t_max = t_delta / 2.0;
-
-	KeyRay ray;
-	ray.reserve(Vector3d::abs(g - o).norm());
-	ray.push_back(origin);
-	while (origin != goal && t_max.min() <= distance) {
-		auto advance_dim = t_max.minElementIndex();
-		origin[advance_dim] += step[advance_dim];
-		t_max[advance_dim] += t_delta[advance_dim];
-		ray.push_back(origin);
+	IntegrationPoint(Code code, std::initializer_list<Point> init)
+	    : code(code), points(init)
+	{
 	}
-	return ray;
-}
 
-std::vector<Point3> computeRaySimple(Point3 origin, Point3 goal, double step_size)
-{
-	Point3 dir = goal - origin;
-	double distance = dir.norm();
-	dir /= distance;
-
-	size_t num_steps = distance / step_size;
-	Point3 step = dir * step_size;
-
-	std::vector<Point3> ray{origin};
-	ray.reserve(num_steps);
-	for (size_t i = 0; i != num_steps; ++i) {
-		origin += step;
-		ray.push_back(origin);
+	[[nodiscard]] bool valid() const
+	{
+		return std::any_of(std::cbegin(points), std::cend(points),
+		                   [](auto const& p) { return p.valid; });
 	}
-	return ray;
-}
+
+	bool operator==(IntegrationPoint const& rhs) const { return code == rhs.code; }
+
+	bool operator!=(IntegrationPoint const& rhs) const { return !(*this == rhs); }
+
+	bool operator<(IntegrationPoint const& rhs) const { return code < rhs.code; }
+
+	bool operator<=(IntegrationPoint const& rhs) const { return code <= rhs.code; }
+
+	bool operator>(IntegrationPoint const& rhs) const { return code > rhs.code; }
+
+	bool operator>=(IntegrationPoint const& rhs) const { return code >= rhs.code; }
+};
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_RAY_CASTER_H
+#endif  // UFO_MAP_INTEGRATION_POINT_H

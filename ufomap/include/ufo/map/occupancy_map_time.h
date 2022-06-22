@@ -52,15 +52,33 @@
 
 namespace ufo::map
 {
+	
 class OccupancyMapTime final
-    : public OccupancyMapTimeBase<OccupancyMapTime, OccupancyTimeNode>
+    : public OctreeBase<OccupancyMapTime, OccupancyTimeNode, OccupancyIndicators>,
+      public OccupancyMapTimeBase<OccupancyMapTime,
+                                  typename OctreeBase<OccupancyMapTime, OccupancyTimeNode,
+                                                      OccupancyIndicators>::LeafNode,
+                                  typename OctreeBase<OccupancyMapTime, OccupancyTimeNode,
+                                                      OccupancyIndicators>::InnerNode>
 {
  protected:
-	using OccupancyTimeBase = OccupancyMapTimeBase<OccupancyMapTime, OccupancyTimeNode>;
-	using OccupancyBase = typename OccupancyTimeBase::OccupancyBase;
-	using OctreeBase = typename OccupancyTimeBase::OctreeBase;
+	//
+	// Tags
+	//
+
+	using OctreeBase = OctreeBase<OccupancyMapTime, OccupancyTimeNode, OccupancyIndicators>;
 	using LeafNode = typename OctreeBase::LeafNode;
 	using InnerNode = typename OctreeBase::InnerNode;
+	using OccupancyTimeBase = OccupancyMapTimeBase<OccupancyMapTime, LeafNode, InnerNode>;
+	using OccupancyBase = typename OccupancyTimeBase::OccupancyBase;
+
+	//
+	// Friends
+	//
+
+	friend OctreeBase;
+	friend OccupancyBase;
+	friend OccupancyTimeBase;
 
  public:
 	//
@@ -72,11 +90,10 @@ class OccupancyMapTime final
 	                 float free_thres = 0.5, float clamping_thres_min = 0.1192,
 	                 float clamping_thres_max = 0.971)
 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-	      OccupancyTimeBase(resolution, depth_levels, automatic_pruning, occupied_thres,
-	                        free_thres, clamping_thres_min, clamping_thres_max)
+	      OccupancyTimeBase(occupied_thres, free_thres, clamping_thres_min,
+	                        clamping_thres_max)
 	{
-		// TODO: Implement
-		OccupancyTimeBase::initRoot();
+		initRoot();
 	}
 
 	OccupancyMapTime(std::filesystem::path const& filename, bool automatic_pruning = true,
@@ -85,9 +102,7 @@ class OccupancyMapTime final
 	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                       clamping_thres_min, clamping_thres_max)
 	{
-		// TODO: Implement
 		OctreeBase::read(filename);
-		// TODO: Throw if cannot read
 	}
 
 	OccupancyMapTime(std::istream& in_stream, bool automatic_pruning = true,
@@ -96,35 +111,29 @@ class OccupancyMapTime final
 	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
 	                       clamping_thres_min, clamping_thres_max)
 	{
-		// TODO: Implement
 		OctreeBase::read(in_stream);
-		// TODO: Throw if cannot read
 	}
 
 	OccupancyMapTime(OccupancyMapTime const& other)
 	    : OctreeBase(other), OccupancyTimeBase(other)
 	{
-		// TODO: Implement
-		OccupancyTimeBase::initRoot();
+		initRoot();
+
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		other.write(io_stream);
 		OctreeBase::read(io_stream);
 	}
 
-	OccupancyMapTime(OccupancyMapTime&& other)
-	    : OctreeBase(std::move(other)), OccupancyTimeBase(std::move(other))
-	{
-		// TODO: Implement
-	}
+	OccupancyMapTime(OccupancyMapTime&& other) = default;
 
 	OccupancyMapTime& operator=(OccupancyMapTime const& rhs)
 	{
-		// TODO: Implement
 		OctreeBase::operator=(rhs);
 		OccupancyTimeBase::operator=(rhs);
 
-		OccupancyTimeBase::initRoot();
+		initRoot();
+
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		rhs.write(io_stream);
@@ -133,55 +142,28 @@ class OccupancyMapTime final
 		return *this;
 	}
 
-	OccupancyMapTime& operator=(OccupancyMapTime&& rhs)
-	{
-		// TODO: Implement
-		OctreeBase::operator=(std::move(rhs));
-		OccupancyTimeBase::operator=(std::move(rhs));
-		return *this;
-	}
+	OccupancyMapTime& operator=(OccupancyMapTime&& rhs) = default;
 
+ protected:
 	//
-	// Destructor
+	// Init root
 	//
 
-	virtual ~OccupancyMapTime() override
+	void initRoot()
 	{
-		// TODO: Implement
+		OctreeBase::initRoot();
+		OccupancyTimeBase::initRoot();
 	}
 
 	//
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
-	{
-		OccupancyTimeBase::addFileInfo(info);
-	}
+	using OccupancyTimeBase::addFileInfo;
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
-	{
-		if (OccupancyBase::readNodes(in_stream, nodes, field, type, size, num)) {
-			return true;
-		}
-		if (OccupancyTimeBase::readNodes(in_stream, nodes, field, type, size, num)) {
-			return true;
-		}
-		return false;
-	}
+	using OccupancyTimeBase::readNodes;
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
-	{
-		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-		                          compression_level);
-		OccupancyTimeBase::writeNodes(out_stream, nodes, compress,
-		                              compression_acceleration_level, compression_level);
-	}
+	using OccupancyTimeBase::writeNodes;
 };
 
 // TODO: Fix

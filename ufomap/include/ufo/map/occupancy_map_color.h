@@ -49,107 +49,100 @@
 
 namespace ufo::map
 {
-template <class OccupancyType>
-class OccupancyMapColorT final
-    : public OccupancyMapBase<OccupancyMapColorT<OccupancyType>,
-                              OccupancyColorNode<OccupancyType>>,
-      public ColorMapBase<OccupancyMapColorT<OccupancyType>,
-                          OccupancyColorNode<OccupancyType>, OccupancyIndicators>
+
+template <class OccupancyType = float>
+class OccupancyMapColor final
+    : public OctreeBase<OccupancyMapColor<OccupancyType>,
+                        OccupancyColorNode<OccupancyType>, OccupancyIndicators>,
+      public OccupancyMapBase<OccupancyMapColor<OccupancyType>,
+                              typename OctreeBase<OccupancyMapColor<OccupancyType>,
+                                                  OccupancyColorNode<OccupancyType>,
+                                                  OccupancyIndicators>::LeafNode,
+                              typename OctreeBase<OccupancyMapColor<OccupancyType>,
+                                                  OccupancyColorNode<OccupancyType>,
+                                                  OccupancyIndicators>::InnerNode>,
+      public ColorMapBase<OccupancyMapColor<OccupancyType>,
+                          typename OctreeBase<OccupancyMapColor<OccupancyType>,
+                                              OccupancyColorNode<OccupancyType>,
+                                              OccupancyIndicators>::LeafNode,
+                          typename OctreeBase<OccupancyMapColor<OccupancyType>,
+                                              OccupancyColorNode<OccupancyType>,
+                                              OccupancyIndicators>::InnerNode>
 {
  protected:
-	using OctreeNode = OccupancyColorNode<OccupancyType>;
-	using OccupancyBase = OccupancyMapBase<OccupancyMapColorT, OctreeNode>;
-	using OctreeBase = typename OccupancyBase::Base;
-	using ColorBase = ColorMapBase<OccupancyMapColorT, OctreeNode, OccupancyIndicators>;
+	//
+	// Tags
+	//
+
+	using OctreeBase = OctreeBase<OccupancyMapColor, OccupancyColorNode<OccupancyType>,
+	                              OccupancyIndicators>;
 	using LeafNode = typename OctreeBase::LeafNode;
 	using InnerNode = typename OctreeBase::InnerNode;
+	using OccupancyBase = OccupancyMapBase<OccupancyMapColor, LeafNode, InnerNode>;
+	using ColorBase = ColorMapBase<OccupancyMapColor, LeafNode, InnerNode>;
+
+	//
+	// Friends
+	//
+
+	friend OctreeBase;
+	friend OccupancyBase;
+	friend ColorBase;
 
  public:
 	//
 	// Constructors
 	//
 
-	OccupancyMapColorT(double resolution = 0.1, depth_t depth_levels = 16,
-	                   bool automatic_pruning = true, float occupied_thres = 0.5,
-	                   float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	                   float clamping_thres_max = 0.971)
+	OccupancyMapColor(double resolution = 0.1, depth_t depth_levels = 16,
+	                  bool automatic_pruning = true, float occupied_thres = 0.5,
+	                  float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	                  float clamping_thres_max = 0.971)
 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
-	                    free_thres, clamping_thres_min, clamping_thres_max),
-	      ColorBase(resolution, depth_levels, automatic_pruning)
-	{  // TODO: Implement
+	      OccupancyBase(occupied_thres, free_thres, clamping_thres_min, clamping_thres_max),
+	      ColorBase()
+	{
 		initRoot();
 	}
 
-	OccupancyMapColorT(std::filesystem::path const& filename, bool automatic_pruning = true,
-	                   float occupied_thres = 0.5, float free_thres = 0.5,
-	                   float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : OccupancyMapColorT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                         clamping_thres_min, clamping_thres_max)
+	OccupancyMapColor(std::filesystem::path const& filename, bool automatic_pruning = true,
+	                  float occupied_thres = 0.5, float free_thres = 0.5,
+	                  float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMapColor(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                        clamping_thres_min, clamping_thres_max)
 	{
 		OctreeBase::read(filename);
-		// TODO: Throw if cannot read
 	}
 
-	OccupancyMapColorT(std::istream& in_stream, bool automatic_pruning = true,
-	                   float occupied_thres = 0.5, float free_thres = 0.5,
-	                   float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : OccupancyMapColorT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                         clamping_thres_min, clamping_thres_max)
+	OccupancyMapColor(std::istream& in_stream, bool automatic_pruning = true,
+	                  float occupied_thres = 0.5, float free_thres = 0.5,
+	                  float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+	    : OccupancyMapColor(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                        clamping_thres_min, clamping_thres_max)
 	{
 		OctreeBase::read(in_stream);
-		// TODO: Throw if cannot read
 	}
 
-	OccupancyMapColorT(OccupancyMapColorT const& other)
+	OccupancyMapColor(OccupancyMapColor const& other)
 	    : OctreeBase(other), OccupancyBase(other), ColorBase(other)
 	{
 		initRoot();
+
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		other.write(io_stream);
 		OctreeBase::read(io_stream);
 	}
 
-	template <class T2>
-	OccupancyMapColorT(OccupancyMapColorT<T2> const& other)
-	    : OctreeBase(other), OccupancyBase(other), ColorBase(other)
-	{
-		initRoot();
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		other.write(io_stream);
-		OctreeBase::read(io_stream);
-	}
+	OccupancyMapColor(OccupancyMapColor&& other) = default;
 
-	OccupancyMapColorT(OccupancyMapColorT&& other)
-	    : OctreeBase(std::move(other)),
-	      OccupancyBase(std::move(other)),
-	      ColorBase(std::move(other))
-	{
-	}
-
-	OccupancyMapColorT& operator=(OccupancyMapColorT const& rhs)
+	OccupancyMapColor& operator=(OccupancyMapColor const& rhs)
 	{
 		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
 		ColorBase::operator=(rhs);
 
 		initRoot();
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		rhs.write(io_stream);
-		OctreeBase::read(io_stream);
-
-		return *this;
-	}
-
-	template <class T2>
-	OccupancyMapColorT& operator=(OccupancyMapColorT<T2> const& rhs)
-	{
-		OctreeBase::operator=(rhs);
-		OccupancyBase::operator=(rhs);
-		ColorBase::operator=(rhs);
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
@@ -159,26 +152,15 @@ class OccupancyMapColorT final
 		return *this;
 	}
 
-	OccupancyMapColorT& operator=(OccupancyMapColorT&& rhs)
-	{
-		OctreeBase::operator=(std::move(rhs));
-		OccupancyBase::operator=(std::move(rhs));
-		ColorBase::operator=(std::move(rhs));
-		return *this;
-	}
-
-	//
-	// Destructor
-	//
-
-	virtual ~OccupancyMapColorT() override {}
+	OccupancyMapColor& operator=(OccupancyMapColor&& rhs) = default;
 
 	//
 	// Initilize root
 	//
 
-	virtual void initRoot() override
+	void initRoot()
 	{
+		OctreeBase::initRoot();
 		OccupancyBase::initRoot();
 		ColorBase::initRoot();
 	}
@@ -187,7 +169,7 @@ class OccupancyMapColorT final
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, depth_t depth) override
+	void updateNode(InnerNode& node, depth_t depth)
 	{
 		OccupancyBase::updateNode(node, depth);
 		ColorBase::updateNode(node, depth);
@@ -197,24 +179,22 @@ class OccupancyMapColorT final
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
+	void addFileInfo(FileInfo& info) const
 	{
 		OccupancyBase::addFileInfo(info);
 		ColorBase::addFileInfo(info);
 	}
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
 		return OccupancyBase::readNodes(in_stream, nodes, field, type, size, num) ||
 		       ColorBase::readNodes(in_stream, nodes, field, type, size, num);
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	                bool compress, int compression_acceleration_level,
+	                int compression_level) const
 	{
 		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
 		                          compression_level);
@@ -223,8 +203,7 @@ class OccupancyMapColorT final
 	}
 };
 
-using OccupancyMapColor = OccupancyMapColorT<float>;
-using OccupancyMapColorSmall = OccupancyMapColorT<uint8_t>;
+using OccupancyMapColorSmall = OccupancyMapColor<uint8_t>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_H

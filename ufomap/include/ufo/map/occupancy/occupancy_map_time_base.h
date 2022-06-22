@@ -45,7 +45,9 @@
 // UFO
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/octree/node.h>
 #include <ufo/map/predicate/time.h>
+#include <ufo/map/types.h>
 
 // STL
 #include <chrono>
@@ -53,13 +55,11 @@
 
 namespace ufo::map
 {
-template <class Derived, class DataType, class Indicators = OccupancyIndicators>
-class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicators>
+template <class Derived, class LeafNode, class InnerNode>
+class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNode>
 {
  protected:
-	using OccupancyBase = OccupancyMapBase<Derived, DataType, Indicators>;
-	using typename OccupancyBase::InnerNode;
-	using typename OccupancyBase::LeafNode;
+	using OccupancyBase = OccupancyMapBase<Derived, LeafNode, InnerNode>;
 
 	static_assert(std::is_base_of_v<OccupancyTimeNode, LeafNode>);
 
@@ -97,14 +97,14 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	void setTimeStep(Node& node, time_step_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
+		    node, [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
 	}
 
 	void setTimeStep(Code code, time_step_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
+		    code, [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
 	}
 
@@ -132,7 +132,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	{
 		derived().apply(
 		    policy, node,
-		    [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
+		    [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
 	}
 
@@ -143,7 +143,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 	{
 		derived().apply(
 		    policy, code,
-		    [this, time_step](DataType& node) { setTimeStepImpl(node, time_step); },
+		    [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
 		    propagate);
 	}
 
@@ -191,7 +191,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 
 		// Set all inner nodes to modified
 		// FIXME: Possible to optimize this to only set the ones with children
-		Derived::setModified(1);
+		derived().setModified(1);
 
 		if (propagate) {
 			derived().updateModifiedNodes();
@@ -232,12 +232,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 		OccupancyBase::operator=(std::move(rhs));
 		return *this;
 	}
-
-	//
-	// Destructor
-	//
-
-	~OccupancyMapTimeBase() {}
 
 	//
 	// Derived
@@ -391,7 +385,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, DataType, Indicato
 			in_stream.read(reinterpret_cast<char*>(data.get()),
 			               nodes.size() * sizeof(uint32_t));
 
-			for (size_t i = 0; i != data.size(); ++i) {
+			for (size_t i = 0; i != nodes.size(); ++i) {
 				setTimeStep(*nodes[i], data[i]);
 			}
 		} else {

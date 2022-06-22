@@ -47,7 +47,6 @@
 #include <ufo/map/io.h>
 #include <ufo/map/occupancy/occupancy_node.h>
 #include <ufo/map/octree/node.h>
-#include <ufo/map/octree/octree_base.h>
 #include <ufo/map/point.h>
 #include <ufo/map/predicate/occupancy.h>
 #include <ufo/map/types.h>
@@ -66,6 +65,8 @@ template <class Derived, class LeafNode, class InnerNode>
 class OccupancyMapBase
 {
  protected:
+	static_assert(std::is_base_of_v<LeafNode, InnerNode>);
+
 	// Support float and uint8_t Occupancy value right now.
 	// (and uint32_t given that it is packed with Time)
 	static_assert(std::is_base_of_v<OccupancyNode<float>, LeafNode> ||
@@ -1073,16 +1074,6 @@ class OccupancyMapBase
 	{
 	}
 
-	template <class Derived2, class DataType2, class Indicators2>
-	OccupancyMapBase(OccupancyMapBase<Derived2, DataType2, Indicators2> const& other)
-	    : occupancy_clamping_thres_min_log_(other.occupancy_clamping_thres_min_log_),
-	      occupancy_clamping_thres_max_log_(other.occupancy_clamping_thres_max_log_),
-	      occupancy_prop_criteria_(other.occupancy_prop_criteria_)
-	{
-		occupied_thres_log_ = toOccupancyLogit(other.getOccupiedThres());
-		free_thres_log_ = toOccupancyLogit(other.getFreeThres());
-	}
-
 	OccupancyMapBase(OccupancyMapBase&& other)
 	    : occupancy_clamping_thres_min_log_(
 	          std::move(other.occupancy_clamping_thres_min_log_)),
@@ -1104,19 +1095,6 @@ class OccupancyMapBase
 		return *this;
 	}
 
-	template <class Derived2, class DataType2, class Indicators2>
-	OccupancyMapBase& operator=(
-	    OccupancyMapBase<Derived2, DataType2, Indicators2> const& rhs)
-	{
-		occupancy_clamping_thres_min_log_ = rhs.occupancy_clamping_thres_min_log_;
-		occupancy_clamping_thres_max_log_ = rhs.occupancy_clamping_thres_max_log_;
-
-		occupied_thres_log_ = toOccupancyLogit(rhs.getOccupiedThres());
-		free_thres_log_ = toOccupancyLogit(rhs.getFreeThres());
-
-		return *this;
-	}
-
 	OccupancyMapBase& operator=(OccupancyMapBase&& rhs)
 	{
 		occupancy_clamping_thres_min_log_ = std::move(rhs.occupancy_clamping_thres_min_log_);
@@ -1125,12 +1103,6 @@ class OccupancyMapBase
 		free_thres_log_ = std::move(rhs.free_thres_log_);
 		return *this;
 	}
-
-	//
-	// Destructor
-	//
-
-	~OccupancyMapBase() {}
 
 	//
 	// Derived
@@ -1501,22 +1473,20 @@ class OccupancyMapBase
 
 	// Occupancy propagation criteria
 	PropagationCriteria occupancy_prop_criteria_ = PropagationCriteria::Max;
-
-	template <class Derived2, class DataType2, class Indicators2>
-	friend class OccupancyMapBase;
 };
 
-// std::false_type is_occupancy_map_base_impl(...);
-// template <class Derived2, class DataType2, class Indicators2>
-// std::true_type is_occupancy_map_base_impl(
-//     OccupancyMapBase<Derived2, DataType2, Indicators2> const volatile&);
+std::false_type is_occupancy_map_base_impl(...);
 
-// template <typename T>
-// using is_occupancy_map_base = decltype(is_occupancy_map_base_impl(std::declval<T&>()));
+template <class Derived, class LeafNode, class InnerNode>
+std::true_type is_occupancy_map_base_impl(
+    OccupancyMapBase<Derived, LeafNode, InnerNode> const volatile&);
 
-// // Helper variable template
-// template <class T>
-// inline constexpr bool is_occupancy_map_base_v = is_occupancy_map_base<T>::value;
+template <typename T>
+using is_occupancy_map_base = decltype(is_occupancy_map_base_impl(std::declval<T&>()));
+
+// Helper variable template
+template <class T>
+inline constexpr bool is_occupancy_map_base_v = is_occupancy_map_base<T>::value;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_BASE_H

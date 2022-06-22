@@ -870,7 +870,7 @@ class OctreeBase
 	 */
 	Node getNode(Code code) const
 	{
-		auto const& [node, depth] = getNode(code);
+		auto const& [node, depth] = getNodeAndDepth(code);
 		return Node(const_cast<LeafNode*>(&node), code.toDepth(depth));
 	}
 
@@ -1906,24 +1906,6 @@ class OctreeBase
 		init();
 	}
 
-	template <class Derived2, class DataType2, class Indicators2>
-	OctreeBase(OctreeBase<Derived2, DataType2, Indicators2> const& other)
-	    : depth_levels_(other.depth_levels_),
-	      max_value_(other.max_value_),
-	      node_size_(other.node_size_),
-	      node_size_factor_(other.node_size_factor_),
-	      automatic_pruning_enabled_(other.automatic_pruning_enabled_),
-	      parallel_depth_(other.parallel_depth_)
-	{
-		// TODO: Implement
-
-		// num_inner_nodes_ = other.num_inner_nodes_;
-		// num_inner_leaf_nodes_ = other.num_inner_leaf_nodes_;
-		// num_leaf_nodes_ = other.num_leaf_nodes_;
-
-		init();
-	}
-
 	OctreeBase(OctreeBase&& other)
 	    : depth_levels_(std::move(other.depth_levels_)),
 	      max_value_(std::move(other.max_value_)),
@@ -1949,24 +1931,6 @@ class OctreeBase
 	//
 
 	OctreeBase& operator=(OctreeBase const& rhs)
-	{
-		// TODO: Should this clear?
-		clear(rhs.resolution(), rhs.depthLevels());
-
-		depth_levels_ = rhs.depth_levels_;
-		max_value_ = rhs.max_value_;
-		node_size_ = rhs.node_size_;
-		node_size_factor_ = rhs.node_size_factor_;
-		automatic_pruning_enabled_ = rhs.automatic_pruning_enabled_;
-		parallel_depth_ = rhs.parallel_depth_;
-		// num_inner_nodes_.store(rhs.num_inner_nodes_);
-		// num_inner_leaf_nodes_.store(rhs.num_inner_leaf_nodes_);
-		// num_leaf_nodes_.store(rhs.num_leaf_nodes_);
-		return *this;
-	}
-
-	template <class Derived2, class DataType2, class Indicators2>
-	OctreeBase& operator=(OctreeBase<Derived2, DataType2, Indicators2> const& rhs)
 	{
 		// TODO: Should this clear?
 		clear(rhs.resolution(), rhs.depthLevels());
@@ -2415,7 +2379,7 @@ class OctreeBase
 
 	InnerNode& innerNode(Code code) { return static_cast<InnerNode&>(leafNode(code)); }
 
-	std::pair<LeafNode const&, depth_t> getNode(Code code) const
+	std::pair<LeafNode const&, depth_t> getNodeAndDepth(Code code) const
 	{
 		LeafNode const* node = &getRoot();
 		depth_t depth = depthLevels();
@@ -2427,7 +2391,7 @@ class OctreeBase
 		return {*node, depth};
 	}
 
-	std::pair<LeafNode&, depth_t> getNode(Code code)
+	std::pair<LeafNode&, depth_t> getNodeAndDepth(Code code)
 	{
 		LeafNode* node = &getRoot();
 		depth_t depth = depthLevels();
@@ -2795,7 +2759,7 @@ class OctreeBase
 	{
 		if (isLeaf(node)) {
 			if (depth <= max_depth) {
-				updateNodeIndicators(node);
+				derived().updateNodeIndicators(node);
 				if constexpr (!KeepModified) {
 					node.modified = false;
 				}
@@ -2806,7 +2770,7 @@ class OctreeBase
 		if (1 == depth) {
 			for (auto& child : getLeafChildren(node)) {
 				if (isModified(child)) {
-					updateNodeIndicators(child);
+					derived().updateNodeIndicators(child);
 					if constexpr (!KeepModified) {
 						child.modified = false;
 					}
@@ -2821,8 +2785,8 @@ class OctreeBase
 		}
 
 		if (depth <= max_depth) {
-			updateNode(node, depth);
-			updateNodeIndicators(node, depth);
+			derived().updateNode(node, depth);
+			derived().updateNodeIndicators(node, depth);
 			pruneNode(node, depth);
 			if constexpr (!KeepModified) {
 				node.modified = false;
@@ -2843,7 +2807,7 @@ class OctreeBase
 		if (isParent(node)) {
 			if (1 == depth) {
 				for (auto& child : getLeafChildren(node)) {
-					updateNodeIndicators(child);
+					derived().updateNodeIndicators(child);
 					if constexpr (!KeepModified) {
 						setModified(child, false);  // TODO: Create function
 					}
@@ -2867,25 +2831,16 @@ class OctreeBase
 
 		if (depth <= max_depth) {
 			if (isParent(node)) {
-				updateNode(node, depth);
-				updateNodeIndicators(node, depth);
+				derived().updateNode(node, depth);
+				derived().updateNodeIndicators(node, depth);
 				pruneNode(node, depth);
 			} else {
-				updateNodeIndicators(node);
+				derived().updateNodeIndicators(node);
 			}
 			if constexpr (!KeepModified) {
 				setModified(node, false);  // TODO: Create function
 			}
 		}
-	}
-
-	void updateNode(InnerNode& node, depth_t depth) { derived().updateNode(node, depth); }
-
-	void updateNodeIndicators(LeafNode& node) { derived().updateNodeIndicators(node); }
-
-	void updateNodeIndicators(InnerNode& node, depth_t depth)
-	{
-		derived().updateNodeIndicators(node, depth);
 	}
 
 	//
@@ -3368,9 +3323,6 @@ class OctreeBase
 	std::atomic_size_t num_allocated_inner_nodes_ = 0;
 	std::atomic_size_t num_allocated_inner_leaf_nodes_ = 1;
 	std::atomic_size_t num_allocated_leaf_nodes_ = 0;
-
-	template <class Derived2, class DataType2, class Indicators2>
-	friend class OctreeBase;
 
 	friend Derived;
 };
