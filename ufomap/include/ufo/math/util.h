@@ -42,6 +42,9 @@
 #ifndef UFO_MATH_UTIL_H
 #define UFO_MATH_UTIL_H
 
+// STL
+#include <type_traits>
+
 namespace ufo::math
 {
 template <typename T>
@@ -60,6 +63,38 @@ template <typename T>
 constexpr T radToDeg(T rad) noexcept
 {
 	return rad * T(180) / M_PI;
+}
+
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+constexpr T ipow(T base, int exp)
+{
+	if (0 == exp) {
+		return 0 <= base ? T(1) : T(-1);
+	}
+
+	bool positive = 0 < exp;
+	exp = 0 < exp ? exp : -exp;
+
+	T result = base;
+	while (--exp) {
+		result *= base;
+	}
+
+	return positive ? result : T(1) / result;
+}
+
+template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+constexpr T ipow(T base, std::size_t exp)
+{
+	if (0 == exp) {
+		return 1;
+	}
+
+	T result = base;
+	while (--exp) {
+		result *= base;
+	}
+	return result;
 }
 
 }  // namespace ufo::math

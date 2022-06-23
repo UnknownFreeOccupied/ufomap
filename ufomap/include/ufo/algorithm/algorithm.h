@@ -45,7 +45,6 @@
 // STL
 #include <algorithm>
 #include <numeric>
-#include <type_traits>
 #include <vector>
 
 namespace ufo
@@ -119,38 +118,6 @@ void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
 			done[j] = true;
 		}
 	}
-}
-
-template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
-constexpr T ipow(T base, int exp)
-{
-	if (0 == exp) {
-		return 0 <= base ? T(1) : T(-1);
-	}
-
-	bool positive = 0 < exp;
-	exp = 0 < exp ? exp : -exp;
-
-	T result = base;
-	while (--exp) {
-		result *= base;
-	}
-
-	return positive ? result : T(1) / result;
-}
-
-template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
-constexpr T ipow(T base, std::size_t exp)
-{
-	if (0 == exp) {
-		return 1;
-	}
-
-	T result = base;
-	while (--exp) {
-		result *= base;
-	}
-	return result;
 }
 }  // namespace ufo
 
