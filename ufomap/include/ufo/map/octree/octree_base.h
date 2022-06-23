@@ -55,6 +55,7 @@
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/predicate/spatial.h>
 #include <ufo/map/types.h>
+#include <ufo/math/util.h>
 
 // STL
 #include <algorithm>
@@ -74,7 +75,8 @@ namespace ufo::map
 {
 // Utilizing Curiously recurring template pattern (CRTP)
 template <class Derived, class DataType, class Indicators = OctreeIndicators,
-          MemoryModel NodeMemoryModel = MemoryModel::POINTER>
+          MemoryModel NodeMemoryModel = MemoryModel::POINTER,
+          depth_t StaticallyAllocatedDepths = 1>
 class OctreeBase
 {
  private:
@@ -83,9 +85,16 @@ class OctreeBase
 	// Maximum number of depth levels
 	static constexpr depth_t MAX_DEPTH_LEVELS = 21;
 
+	static_assert(0 < StaticallyAllocatedDepths &&
+	              StaticallyAllocatedDepths <= MAX_DEPTH_LEVELS);
+
  protected:
 	using LeafNode = OctreeLeafNode<DataType, Indicators>;
 	using InnerNode = OctreeInnerNode<LeafNode>;
+
+ private:
+	using LeafNodeBlock = std::array<LeafNode, 8>;
+	using InnerNodeBlock = std::array<InnerNode, 8>;
 
  public:
 	using const_iterator = IteratorWrapper<Derived, Node>;
@@ -130,9 +139,7 @@ class OctreeBase
 	 */
 	void clear(double new_resolution, depth_t new_depth_levels, bool prune = false)
 	{
-		if (root_) {
-			deleteChildren(getRoot(), depthLevels(), prune);
-		}
+		deleteChildren(getRoot(), depthLevels(), prune);
 
 		// FIXME: Should this be first?
 		setResolutionAndDepthLevels(new_resolution, new_depth_levels);
@@ -154,9 +161,7 @@ class OctreeBase
 	void clear(ExecutionPolicy policy, double new_resolution, depth_t new_depth_levels,
 	           bool prune = false)
 	{
-		if (root_) {
-			deleteChildren(policy, getRoot(), depthLevels(), prune);
-		}
+		deleteChildren(policy, getRoot(), depthLevels(), prune);
 
 		// FIXME: Should this be first?
 		setResolutionAndDepthLevels(new_resolution, new_depth_levels);
@@ -254,7 +259,11 @@ class OctreeBase
 	 *
 	 * @return The minimum depth levels an octree can have.
 	 */
-	[[nodiscard]] static constexpr depth_t minDepthLevels() { return MIN_DEPTH_LEVELS; }
+	[[nodiscard]] static constexpr depth_t minDepthLevels()
+	{
+		return std::min(MIN_DEPTH_LEVELS,
+		                static_cast<depth_t>(StaticallyAllocatedDepths + depth_t(1)));
+	}
 
 	/*!
 	 * @brief The maximum depth levels an octree can have.
@@ -343,7 +352,15 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr std::size_t numInnerNodes() const noexcept
 	{
-		return num_inner_nodes_ + num_inner_leaf_nodes_;
+		return num_inner_nodes_;
+	}
+
+	/*!
+	 * @return Number of inner leaf nodes in the octree.
+	 */
+	[[nodiscard]] constexpr std::size_t numInnerLeafNodes() const noexcept
+	{
+		return num_inner_leaf_nodes_;
 	}
 
 	/*!
@@ -359,7 +376,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr std::size_t numNodes() const noexcept
 	{
-		return numInnerNodes() + numLeafNodes();
+		return numInnerNodes() + numInnerLeafNodes() + numLeafNodes();
 	}
 
 	/*!
@@ -370,6 +387,18 @@ class OctreeBase
 	 * @return Memory usage of a single inner node.
 	 */
 	[[nodiscard]] constexpr std::size_t memoryInnerNode() const noexcept
+	{
+		return sizeof(InnerNode);
+	}
+
+	/*!
+	 * @brief This is lower bound memeory usage of an inner leaf node.
+	 *
+	 * @note Additional data accessed by pointers inside an inner leaf node are not counted.
+	 *
+	 * @return Memory usage of a single inner leaf node.
+	 */
+	[[nodiscard]] constexpr std::size_t memoryInnerLeafNode() const noexcept
 	{
 		return sizeof(InnerNode);
 	}
@@ -395,23 +424,30 @@ class OctreeBase
 	 */
 	[[nodiscard]] virtual std::size_t memoryUsage() const noexcept
 	{
-		return (numInnerNodes() * memoryInnerNode()) + (numLeafNodes() * memoryLeafNode());
+		return (numInnerNodes() * memoryInnerNode()) +
+		       (numInnerLeafNodes() * memoryInnerLeafNode()) +
+		       (numLeafNodes() * memoryLeafNode());
 	}
 
 	/*!
 	 * @return Number of nodes in the octree.
 	 */
-	[[nodiscard]] constexpr std::size_t size() const noexcept
-	{
-		return numInnerNodes() + numLeafNodes();
-	}
+	[[nodiscard]] constexpr std::size_t size() const noexcept { return numNodes(); }
 
 	/*!
 	 * @return Number of allocated inner nodes.
 	 */
 	[[nodiscard]] constexpr std::size_t numInnerNodesAllocated() const noexcept
 	{
-		return num_allocated_inner_nodes_ + num_allocated_inner_leaf_nodes_;
+		return num_allocated_inner_nodes_;
+	}
+
+	/*!
+	 * @return Number of allocated inner leaf nodes.
+	 */
+	[[nodiscard]] constexpr std::size_t numInnerLeafNodesAllocated() const noexcept
+	{
+		return num_allocated_inner_leaf_nodes_;
 	}
 
 	/*!
@@ -427,7 +463,8 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr std::size_t numNodesAllocated() const noexcept
 	{
-		return numInnerNodesAllocated() + numLeafNodesAllocated();
+		return numInnerNodesAllocated() + numInnerLeafNodesAllocated() +
+		       numLeafNodesAllocated();
 	}
 
 	/*!
@@ -440,6 +477,7 @@ class OctreeBase
 	[[nodiscard]] virtual std::size_t memoryUsageAllocated() const noexcept
 	{
 		return (numInnerNodesAllocated() * memoryInnerNode()) +
+		       (numInnerLeafNodesAllocated() + memoryInnerLeafNode()) +
 		       (numLeafNodesAllocated() * memoryLeafNode());
 	}
 
@@ -448,7 +486,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr std::size_t sizeAllocated() const noexcept
 	{
-		return numInnerNodesAllocated() + numLeafNodesAllocated();
+		return numNodesAllocated();
 	}
 
 	//
@@ -1910,7 +1948,7 @@ class OctreeBase
 	OctreeBase(OctreeBase&& other)
 	    : depth_levels_(std::move(other.depth_levels_)),
 	      max_value_(std::move(other.max_value_)),
-	      root_(std::move(other.root_)),
+	      statically_allocated_nodes_(std::move(other.statically_allocated_nodes_)),
 	      node_size_(std::move(other.node_size_)),
 	      node_size_factor_(std::move(other.node_size_factor_)),
 	      automatic_pruning_enabled_(std::move(other.automatic_pruning_enabled_)),
@@ -1955,7 +1993,7 @@ class OctreeBase
 
 		depth_levels_ = std::move(rhs.depth_levels_);
 		max_value_ = std::move(rhs.max_value_);
-		root_ = std::move(rhs.root_);
+		statically_allocated_nodes_ = std::move(rhs.statically_allocated_nodes_);
 		node_size_ = std::move(rhs.node_size_);
 		node_size_factor_ = std::move(rhs.node_size_factor_);
 		automatic_pruning_enabled_ = std::move(rhs.automatic_pruning_enabled_);
@@ -1973,12 +2011,7 @@ class OctreeBase
 	// Destructor
 	//
 
-	~OctreeBase()
-	{
-		if (root_) {
-			deleteChildren(getRoot(), depthLevels(), true);
-		}
-	}
+	~OctreeBase() { deleteChildren(getRoot(), depthLevels(), true); }
 
 	//
 	// Derived
@@ -2000,7 +2033,29 @@ class OctreeBase
 				l.clear();
 			}
 		}
+
+		// Code code(0, StaticallyAllocatedDepths);
+
+		// TODO: Init statically_allocated_nodes_
+		// for (size_t i = 0; i < math::ipow(8, StaticallyAllocatedDepths - 1); ++i) {
+		// 	statically_allocated_nodes_[i].children = &statically_allocated_nodes_[i + 1];
+		// }
+
+		// initRecurs(code);
 	}
+
+	// void initRecurs(Code code)
+	// {
+	// 	if (1 == code.depth()) {
+	// 		return;
+	// 	}
+
+	// 	printf("Code: %5llu, Depth: %u\n", code.code(), +code.depth());
+
+	// 	for (size_t i = 0; 8 != i; ++i) {
+	// 		initRecurs(code.child(i));
+	// 	}
+	// }
 
 	//
 	// Set resolution and depth levels
@@ -2035,11 +2090,8 @@ class OctreeBase
 
 	void initRoot()
 	{
-		if (!root_) {
-			root_ = std::make_unique<InnerNode>();
-		}
-		root_->is_leaf = true;
-		root_->modified = false;
+		getRoot().is_leaf = true;
+		getRoot().modified = false;
 	}
 
 	//
@@ -2321,9 +2373,12 @@ class OctreeBase
 	// Get root
 	//
 
-	constexpr InnerNode const& getRoot() const noexcept { return *root_; }
+	constexpr InnerNode const& getRoot() const noexcept
+	{
+		return statically_allocated_nodes_[0];
+	}
 
-	constexpr InnerNode& getRoot() noexcept { return *root_; }
+	constexpr InnerNode& getRoot() noexcept { return statically_allocated_nodes_[0]; }
 
 	//
 	// Get node
@@ -2479,7 +2534,7 @@ class OctreeBase
 		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
 			if (!node.children) {
 				// Allocate children
-				node.children = new std::array<LeafNode, 8>();
+				node.children = new LeafNodeBlock();
 				num_allocated_leaf_nodes_ += 8;
 				num_allocated_inner_leaf_nodes_ -= 1;
 				num_allocated_inner_nodes_ += 1;
@@ -2507,7 +2562,7 @@ class OctreeBase
 				}
 
 				// Allocate children
-				node.children = new std::array<LeafNode, 8>();
+				node.children = new LeafNodeBlock();
 				num_allocated_leaf_nodes_ += 8;
 				num_allocated_inner_leaf_nodes_ -= 1;
 				num_allocated_inner_nodes_ += 1;
@@ -2544,7 +2599,7 @@ class OctreeBase
 		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
 			if (!node.children) {
 				// Allocate children
-				node.children = new std::array<InnerNode, 8>();
+				node.children = new InnerNodeBlock();
 				// Get 8 new and 1 is made into a inner node
 				num_allocated_inner_leaf_nodes_ += 7;
 				num_allocated_inner_nodes_ += 1;
@@ -2573,7 +2628,7 @@ class OctreeBase
 				}
 
 				// Allocate children
-				node.children = new std::array<InnerNode, 8>();
+				node.children = new InnerNodeBlock();
 				// Get 8 new and 1 is made into a inner node
 				num_allocated_inner_leaf_nodes_ += 7;
 				num_allocated_inner_nodes_ += 1;
@@ -2671,11 +2726,11 @@ class OctreeBase
 			node.is_leaf = true;
 			num_inner_leaf_nodes_ -= 7;
 			num_inner_nodes_ -= 1;
-		}
 
-		// Need to call it here such that the number of nodes are correctly calculated
-		for (InnerNode& child : getInnerChildren(node)) {
-			deleteChildren(child, depth - 1, true);
+			// Need to call it here such that the number of nodes are correctly calculated
+			for (InnerNode& child : getInnerChildren(node)) {
+				deleteChildren(child, depth - 1, true);
+			}
 		}
 
 		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
@@ -2729,18 +2784,18 @@ class OctreeBase
 			node.is_leaf = true;
 			num_inner_leaf_nodes_ -= 7;
 			num_inner_nodes_ -= 1;
-		}
 
-		// Need to call it here such that the number of nodes are correctly calculated
-		if (parallelExecutionDepth() == depth) {
-			std::for_each(policy, std::begin(getInnerChildren(node)),
-			              std::end(getInnerChildren(node)),
-			              [this, depth, manual_pruning](InnerNode& child) {
-				              deleteChildren(child, depth - 1, manual_pruning);
-			              });
-		} else {
-			for (InnerNode& child : getInnerChildren(node)) {
-				deleteChildren(policy, child, depth - 1, manual_pruning);
+			// Need to call it here such that the number of nodes are correctly calculated
+			if (parallelExecutionDepth() == depth) {
+				std::for_each(policy, std::begin(getInnerChildren(node)),
+				              std::end(getInnerChildren(node)),
+				              [this, depth, manual_pruning](InnerNode& child) {
+					              deleteChildren(child, depth - 1, manual_pruning);
+				              });
+			} else {
+				for (InnerNode& child : getInnerChildren(node)) {
+					deleteChildren(policy, child, depth - 1, manual_pruning);
+				}
 			}
 		}
 
@@ -2784,14 +2839,14 @@ class OctreeBase
 	// Get children
 	//
 
-	static constexpr std::array<LeafNode, 8>& getLeafChildren(InnerNode const& node)
+	static constexpr LeafNodeBlock& getLeafChildren(InnerNode const& node)
 	{
-		return *static_cast<std::array<LeafNode, 8>*>(node.children);
+		return *static_cast<LeafNodeBlock*>(node.children);
 	}
 
-	static constexpr std::array<InnerNode, 8>& getInnerChildren(InnerNode const& node)
+	static constexpr InnerNodeBlock& getInnerChildren(InnerNode const& node)
 	{
-		return *static_cast<std::array<InnerNode, 8>*>(node.children);
+		return *static_cast<InnerNodeBlock*>(node.children);
 	}
 
 	static constexpr LeafNode& getLeafChild(InnerNode const& node, unsigned int const idx)
@@ -3442,13 +3497,17 @@ class OctreeBase
 	}
 
  protected:
-	depth_t depth_levels_;  // The number of depth levels
-	Key::key_t max_value_;  // The maximum coordinate value the octree can store
+	// The number of depth levels
+	depth_t depth_levels_;
+	// The maximum coordinate value the octree can store
+	Key::key_t max_value_;
 
-	std::unique_ptr<InnerNode> root_;  // The root of the octree
-
-	// std::array<Blocks<InnerNode>, maxDepthLevels() - 1> inner_nodes_;
-	// Blocks<LeafNode> leaf_nodes_;
+	// FIXME: Statically allocated nodes of the octree. These are nodes that always exist,
+	// they correspond to the highest StaticallyAllocatedDepths depths of the octree, and
+	// therefore contain the root node. They are ordered based on their code, making it is
+	// possible to skip depths when looking for a specific node.
+	std::array<InnerNode, (math::ipow(8, StaticallyAllocatedDepths) - 1) / 7>
+	    statically_allocated_nodes_;
 
 	// Stores the size of a node at a given depth, where the depth is the index
 	std::array<double, maxDepthLevels()> node_size_;
@@ -3462,23 +3521,49 @@ class OctreeBase
 	depth_t parallel_depth_ = 12;
 
 	// Locks to support parallel insertion, one per level and child
-	std::array<std::array<std::atomic_flag, 8>, maxDepthLevels() + 1>
-	    children_locks_;  // FIXME: Initialize to ATOMIC_FLAG_INIT
+	std::array<std::array<std::atomic_flag, 8>, maxDepthLevels() + 1> children_locks_;
 
-	std::stack<std::array<InnerNode, 8>*, std::vector<std::array<InnerNode, 8>*>>
-	    free_inner_nodes_;
+	//
+	// Only used when NodeMemoryModel is either MemoryModel::POINTER_REUSE or
+	// MemoryModel::POINTER_REUSE_LOCKLESS
+	//
+
+	std::stack<InnerNodeBlock*, std::vector<InnerNodeBlock*>> free_inner_nodes_;
+	std::stack<LeafNodeBlock*, std::vector<LeafNodeBlock*>> free_leaf_nodes_;
+
+	//
+	// Only used when NodeMemoryModel is MemoryModel::POINTER_REUSE
+	//
+
 	std::atomic_flag free_inner_nodes_lock_ = ATOMIC_FLAG_INIT;
-	std::stack<std::array<LeafNode, 8>*, std::vector<std::array<LeafNode, 8>*>>
-	    free_leaf_nodes_;
 	std::atomic_flag free_leaf_nodes_lock_ = ATOMIC_FLAG_INIT;
 
-	// Memory
-	std::atomic_size_t num_inner_nodes_ = 0;       // Current number of inner nodes
-	std::atomic_size_t num_inner_leaf_nodes_ = 1;  // Current number of inner leaf nodes
-	std::atomic_size_t num_leaf_nodes_ = 0;        // Current number of leaf nodes
+	//
+	// FIXME: Only used when NodeMemoryModel is MemoryModel::BLOCK
+	//
 
-	std::atomic_size_t num_allocated_inner_nodes_ = 0;
-	std::atomic_size_t num_allocated_inner_leaf_nodes_ = 1;
+	// std::array<Blocks<InnerNode>, maxDepthLevels() - 1> inner_nodes_;
+	// Blocks<LeafNode> leaf_nodes_;
+
+	//
+	// Memory
+	//
+
+	// Current number of inner nodes
+	std::atomic_size_t num_inner_nodes_ =
+	    (math::ipow(8, StaticallyAllocatedDepths - 1) - 1) / 7;
+	// Current number of inner leaf nodes
+	std::atomic_size_t num_inner_leaf_nodes_ = math::ipow(8, StaticallyAllocatedDepths - 1);
+	// Current number of leaf nodes
+	std::atomic_size_t num_leaf_nodes_ = 0;
+
+	// Current number of allocated inner nodes
+	std::atomic_size_t num_allocated_inner_nodes_ =
+	    (math::ipow(8, StaticallyAllocatedDepths - 1) - 1) / 7;
+	// Current number of allocated inner leaf nodes
+	std::atomic_size_t num_allocated_inner_leaf_nodes_ =
+	    math::ipow(8, StaticallyAllocatedDepths - 1);
+	// Current number of allocated leaf nodes
 	std::atomic_size_t num_allocated_leaf_nodes_ = 0;
 
 	friend Derived;
