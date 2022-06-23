@@ -48,6 +48,7 @@
 
 namespace ufo::map
 {
+// TODO: Change BLOCK to INDEX and INDEX_LOCKLESSS
 enum class MemoryModel { POINTER, POINTER_REUSE, POINTER_REUSE_LOCKLESS, BLOCK };
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
 enum class PropagationCriteria { MAX, MIN, MEAN };
