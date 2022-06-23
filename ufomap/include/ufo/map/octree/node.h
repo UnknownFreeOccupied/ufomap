@@ -46,6 +46,7 @@
 #include <ufo/geometry/aaebb.h>
 #include <ufo/geometry/point.h>
 #include <ufo/map/code/code.h>
+#include <ufo/map/types.h>
 
 // STL
 #include <utility>
@@ -151,7 +152,7 @@ struct Node {
 	// The code for the node
 	Code code_;
 
-	template <class D1, class D2, class I>
+	template <class Derived, class DataType, class Indicators, MemoryModel NodeMemoryModel>
 	friend class OctreeBase;
 };
 
@@ -252,7 +253,7 @@ struct NodeBV : public Node {
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
 
-	template <class D1, class D2, class I>
+	template <class Derived, class DataType, class Indicators, MemoryModel NodeMemoryModel>
 	friend class OctreeBase;
 };
 }  // namespace ufo::map

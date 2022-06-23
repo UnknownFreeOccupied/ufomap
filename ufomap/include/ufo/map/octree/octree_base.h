@@ -73,7 +73,8 @@
 namespace ufo::map
 {
 // Utilizing Curiously recurring template pattern (CRTP)
-template <class Derived, class DataType, class Indicators = OctreeIndicators>
+template <class Derived, class DataType, class Indicators = OctreeIndicators,
+          MemoryModel NodeMemoryModel = MemoryModel::POINTER>
 class OctreeBase
 {
  private:
@@ -2475,26 +2476,63 @@ class OctreeBase
 			return false;
 		}
 
-		// if (isParent(node)) {
-		// 	return false;
-		// }
+		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
+			if (!node.children) {
+				// Allocate children
+				node.children = new std::array<LeafNode, 8>();
+				num_allocated_leaf_nodes_ += 8;
+				num_allocated_inner_leaf_nodes_ -= 1;
+				num_allocated_inner_nodes_ += 1;
+			}
+			num_leaf_nodes_ += 8;
+			num_inner_leaf_nodes_ -= 1;
+			num_inner_nodes_ += 1;
 
-		if (!node.children) {
-			// Allocate children
-			node.children = new std::array<LeafNode, 8>();
-			num_allocated_leaf_nodes_ += 8;
-			num_allocated_inner_leaf_nodes_ -= 1;
-			num_allocated_inner_nodes_ += 1;
+			getLeafChildren(node).fill(static_cast<LeafNode&>(node));
+
+			node.is_leaf = false;
+			unlockChildren(0, index);
+			return true;
+		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel ||
+		                     MemoryModel::POINTER_REUSE_LOCKLESS == NodeMemoryModel) {
+			if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+				while (free_leaf_nodes_lock_.test_and_set(std::memory_order_acquire) &&
+				       !free_leaf_nodes_.empty()) {
+				}
+			}
+
+			if (free_leaf_nodes_.empty()) {
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					free_leaf_nodes_lock_.clear(std::memory_order_release);
+				}
+
+				// Allocate children
+				node.children = new std::array<LeafNode, 8>();
+				num_allocated_leaf_nodes_ += 8;
+				num_allocated_inner_leaf_nodes_ -= 1;
+				num_allocated_inner_nodes_ += 1;
+			} else {
+				// Take existing children
+				node.children = free_leaf_nodes_.top();
+				free_leaf_nodes_.pop();
+
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					free_leaf_nodes_lock_.clear(std::memory_order_release);
+				}
+			}
+
+			num_leaf_nodes_ += 8;
+			num_inner_leaf_nodes_ -= 1;
+			num_inner_nodes_ += 1;
+
+			getLeafChildren(node).fill(static_cast<LeafNode&>(node));
+
+			node.is_leaf = false;
+			unlockChildren(0, index);
+			return true;
+		} else if constexpr (MemoryModel::BLOCK == NodeMemoryModel) {
+			// TODO: Implement
 		}
-		num_leaf_nodes_ += 8;
-		num_inner_leaf_nodes_ -= 1;
-		num_inner_nodes_ += 1;
-
-		getLeafChildren(node).fill(static_cast<LeafNode&>(node));
-
-		node.is_leaf = false;
-		unlockChildren(0, index);
-		return true;
 	}
 
 	bool createInnerChildren(InnerNode& node, depth_t depth, size_t index)
@@ -2503,27 +2541,65 @@ class OctreeBase
 			return false;
 		}
 
-		// if (isParent(node)) {
-		// 	return false;
-		// }
+		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
+			if (!node.children) {
+				// Allocate children
+				node.children = new std::array<InnerNode, 8>();
+				// Get 8 new and 1 is made into a inner node
+				num_allocated_inner_leaf_nodes_ += 7;
+				num_allocated_inner_nodes_ += 1;
+			}
+			num_inner_leaf_nodes_ += 7;
+			num_inner_nodes_ += 1;
 
-		if (!node.children) {
-			// Allocate children
-			node.children = new std::array<InnerNode, 8>();
-			// Get 8 new and 1 is made into a inner node
-			num_allocated_inner_leaf_nodes_ += 7;
-			num_allocated_inner_nodes_ += 1;
+			for (InnerNode& child : getInnerChildren(node)) {
+				static_cast<LeafNode&>(child) = static_cast<LeafNode&>(node);
+			}
+
+			node.is_leaf = false;
+			unlockChildren(depth, index);
+			return true;
+		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel ||
+		                     MemoryModel::POINTER_REUSE_LOCKLESS == NodeMemoryModel) {
+			if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+				while (free_inner_nodes_lock_.test_and_set(std::memory_order_acquire) &&
+				       !free_inner_nodes_.empty()) {
+				}
+			}
+
+			if (free_inner_nodes_.empty()) {
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					free_inner_nodes_lock_.clear(std::memory_order_release);
+				}
+
+				// Allocate children
+				node.children = new std::array<InnerNode, 8>();
+				// Get 8 new and 1 is made into a inner node
+				num_allocated_inner_leaf_nodes_ += 7;
+				num_allocated_inner_nodes_ += 1;
+			} else {
+				// Take existing children
+				node.children = free_inner_nodes_.top();
+				free_inner_nodes_.pop();
+
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					free_inner_nodes_lock_.clear(std::memory_order_release);
+				}
+			}
+
+			num_inner_leaf_nodes_ += 7;
+			num_inner_nodes_ += 1;
+
+			for (InnerNode& child : getInnerChildren(node)) {
+				static_cast<LeafNode&>(child) = static_cast<LeafNode&>(node);
+			}
+
+			node.is_leaf = false;
+			unlockChildren(depth, index);
+			return true;
+		} else if constexpr (MemoryModel::BLOCK == NodeMemoryModel) {
+			// TODO: Implement
 		}
-		num_inner_leaf_nodes_ += 7;
-		num_inner_nodes_ += 1;
-
-		for (InnerNode& child : getInnerChildren(node)) {
-			static_cast<LeafNode&>(child) = static_cast<LeafNode&>(node);
-		}
-
-		node.is_leaf = false;
-		unlockChildren(depth, index);
-		return true;
 	}
 
 	bool createChildren(InnerNode& node, depth_t depth, size_t index)
@@ -2541,22 +2617,46 @@ class OctreeBase
 		// FIXME: Do I need to take lock here?
 
 		if (!node.is_leaf) {
+			node.is_leaf = true;
 			num_leaf_nodes_ -= 8;
 			num_inner_leaf_nodes_ += 1;
 			num_inner_nodes_ -= 1;
 		}
 
-		node.is_leaf = true;
+		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
+			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+				return;
+			}
 
-		if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
-			return;
+			delete &getLeafChildren(node);
+			num_allocated_leaf_nodes_ -= 8;
+			num_allocated_inner_leaf_nodes_ += 1;
+			num_allocated_inner_nodes_ -= 1;
+			node.children = nullptr;
+		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel ||
+		                     MemoryModel::POINTER_REUSE_LOCKLESS == NodeMemoryModel) {
+			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					while (free_leaf_nodes_lock_.test_and_set(std::memory_order_acquire)) {
+					}
+				}
+
+				free_leaf_nodes_.push(&getLeafChildren(node));
+
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					free_leaf_nodes_lock_.clear(std::memory_order_relaxed);
+				}
+			} else {
+				delete &getLeafChildren(node);
+				num_allocated_leaf_nodes_ -= 8;
+				num_allocated_inner_leaf_nodes_ += 1;
+				num_allocated_inner_nodes_ -= 1;
+			}
+
+			node.children = nullptr;
+		} else if constexpr (MemoryModel::BLOCK == NodeMemoryModel) {
+			// TODO: Implement
 		}
-
-		delete &getLeafChildren(node);
-		num_allocated_leaf_nodes_ -= 8;
-		num_allocated_inner_leaf_nodes_ += 1;
-		num_allocated_inner_nodes_ -= 1;
-		node.children = nullptr;
 	}
 
 	void deleteChildren(InnerNode& node, depth_t depth, bool manual_pruning = false)
@@ -2568,25 +2668,50 @@ class OctreeBase
 		}
 
 		if (!node.is_leaf) {
+			node.is_leaf = true;
 			num_inner_leaf_nodes_ -= 7;
 			num_inner_nodes_ -= 1;
 		}
 
-		node.is_leaf = true;
-
-		if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
-			return;
-		}
-
+		// Need to call it here such that the number of nodes are correctly calculated
 		for (InnerNode& child : getInnerChildren(node)) {
 			deleteChildren(child, depth - 1, true);
 		}
 
-		delete &getInnerChildren(node);
-		// Remove 8 and 1 inner node is made into a inner leaf node
-		num_allocated_inner_leaf_nodes_ -= 7;
-		num_allocated_inner_nodes_ -= 1;
-		node.children = nullptr;
+		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
+			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+				return;
+			}
+
+			delete &getInnerChildren(node);
+			// Remove 8 and 1 inner node is made into a inner leaf node
+			num_allocated_inner_leaf_nodes_ -= 7;
+			num_allocated_inner_nodes_ -= 1;
+			node.children = nullptr;
+		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel ||
+		                     MemoryModel::POINTER_REUSE_LOCKLESS == NodeMemoryModel) {
+			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					while (free_inner_nodes_lock_.test_and_set(std::memory_order_acquire)) {
+					}
+				}
+
+				free_inner_nodes_.push(&getLeafChildren(node));
+
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					free_inner_nodes_lock_.clear(std::memory_order_relaxed);
+				}
+			} else {
+				delete &getInnerChildren(node);
+				// Remove 8 and 1 inner node is made into a inner leaf node
+				num_allocated_inner_leaf_nodes_ -= 7;
+				num_allocated_inner_nodes_ -= 1;
+			}
+
+			node.children = nullptr;
+		} else if constexpr (MemoryModel::BLOCK == NodeMemoryModel) {
+			// TODO: Implement
+		}
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -2601,33 +2726,58 @@ class OctreeBase
 		}
 
 		if (!node.is_leaf) {
+			node.is_leaf = true;
 			num_inner_leaf_nodes_ -= 7;
 			num_inner_nodes_ -= 1;
 		}
 
-		node.is_leaf = true;
-
-		if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
-			return;
-		}
-
-		// Manual pruning is true in case automatic_pruning_enabled_ changes between
-		// calls
+		// Need to call it here such that the number of nodes are correctly calculated
 		if (parallelExecutionDepth() == depth) {
-			std::for_each(
-			    policy, std::begin(getInnerChildren(node)), std::end(getInnerChildren(node)),
-			    [this, depth](InnerNode& child) { deleteChildren(child, depth - 1, true); });
+			std::for_each(policy, std::begin(getInnerChildren(node)),
+			              std::end(getInnerChildren(node)),
+			              [this, depth, manual_pruning](InnerNode& child) {
+				              deleteChildren(child, depth - 1, manual_pruning);
+			              });
 		} else {
 			for (InnerNode& child : getInnerChildren(node)) {
-				deleteChildren(policy, child, depth - 1, true);
+				deleteChildren(policy, child, depth - 1, manual_pruning);
 			}
 		}
 
-		delete &getInnerChildren(node);
-		// Remove 8 and 1 inner node is made into a inner leaf node
-		num_allocated_inner_leaf_nodes_ -= 7;
-		num_allocated_inner_nodes_ -= 1;
-		node.children = nullptr;
+		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
+			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+				return;
+			}
+
+			delete &getInnerChildren(node);
+			// Remove 8 and 1 inner node is made into a inner leaf node
+			num_allocated_inner_leaf_nodes_ -= 7;
+			num_allocated_inner_nodes_ -= 1;
+			node.children = nullptr;
+		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel ||
+		                     MemoryModel::POINTER_REUSE_LOCKLESS == NodeMemoryModel) {
+			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					while (free_inner_nodes_lock_.test_and_set(std::memory_order_acquire)) {
+					}
+				}
+
+				free_inner_nodes_.push(&getLeafChildren(node));
+
+				if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+					free_inner_nodes_lock_.clear(std::memory_order_relaxed);
+				}
+			} else {
+				delete &getInnerChildren(node);
+				// Remove 8 and 1 inner node is made into a inner leaf node
+				num_allocated_inner_leaf_nodes_ -= 7;
+				num_allocated_inner_nodes_ -= 1;
+			}
+
+			node.children = nullptr;
+		} else if constexpr (MemoryModel::BLOCK == NodeMemoryModel) {
+			// TODO: Implement
+		}
 	}
 
 	//
@@ -3314,6 +3464,13 @@ class OctreeBase
 	// Locks to support parallel insertion, one per level and child
 	std::array<std::array<std::atomic_flag, 8>, maxDepthLevels() + 1>
 	    children_locks_;  // FIXME: Initialize to ATOMIC_FLAG_INIT
+
+	std::stack<std::array<InnerNode, 8>*, std::vector<std::array<InnerNode, 8>*>>
+	    free_inner_nodes_;
+	std::atomic_flag free_inner_nodes_lock_ = ATOMIC_FLAG_INIT;
+	std::stack<std::array<LeafNode, 8>*, std::vector<std::array<LeafNode, 8>*>>
+	    free_leaf_nodes_;
+	std::atomic_flag free_leaf_nodes_lock_ = ATOMIC_FLAG_INIT;
 
 	// Memory
 	std::atomic_size_t num_inner_nodes_ = 0;       // Current number of inner nodes

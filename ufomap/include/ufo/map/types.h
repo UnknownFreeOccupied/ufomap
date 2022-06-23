@@ -48,8 +48,9 @@
 
 namespace ufo::map
 {
+enum class MemoryModel { POINTER, POINTER_REUSE, POINTER_REUSE_LOCKLESS, BLOCK };
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
-enum class PropagationCriteria { Max, Min, Mean };
+enum class PropagationCriteria { MAX, MIN, MEAN };
 
 using depth_t = uint8_t;
 using time_step_t = uint32_t;
