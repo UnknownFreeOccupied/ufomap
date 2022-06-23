@@ -278,13 +278,13 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 		OccupancyBase::updateNode(node, depth);
 
 		switch (time_step_prop_criteria_) {
-			case PropagationCriteria::Max:
+			case PropagationCriteria::MAX:
 				setTimeStep(node, maxChildTimeStep(node, depth));
 				break;
-			case PropagationCriteria::Min:
+			case PropagationCriteria::MIN:
 				setTimeStep(node, minChildTimeStep(node, depth));
 				break;
-			case PropagationCriteria::Mean:
+			case PropagationCriteria::MEAN:
 				setTimeStep(node, averageChildTimeStep(node, depth));
 				break;
 		}
@@ -414,7 +414,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 
  protected:
 	// Propagation criteria
-	PropagationCriteria time_step_prop_criteria_ = PropagationCriteria::Max;
+	PropagationCriteria time_step_prop_criteria_ = PropagationCriteria::MAX;
 };
 }  // namespace ufo::map
 

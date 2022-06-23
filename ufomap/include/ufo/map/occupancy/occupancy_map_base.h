@@ -1227,13 +1227,13 @@ class OccupancyMapBase
 	void updateNode(InnerNode& node, depth_t depth)
 	{
 		switch (occupancy_prop_criteria_) {
-			case PropagationCriteria::Max:
+			case PropagationCriteria::MAX:
 				setOccupancyLogit(node, maxChildOccupancyLogit(node, depth));
 				break;
-			case PropagationCriteria::Min:
+			case PropagationCriteria::MIN:
 				setOccupancyLogit(node, minChildOccupancyLogit(node, depth));
 				break;
-			case PropagationCriteria::Mean:
+			case PropagationCriteria::MEAN:
 				setOccupancyLogit(node, averageChildOccupancyLogit(node, depth));
 				break;
 		}
@@ -1472,7 +1472,7 @@ class OccupancyMapBase
 	logit_t free_thres_log_;                  // Threshold for free
 
 	// Occupancy propagation criteria
-	PropagationCriteria occupancy_prop_criteria_ = PropagationCriteria::Max;
+	PropagationCriteria occupancy_prop_criteria_ = PropagationCriteria::MAX;
 };
 
 std::false_type is_occupancy_map_base_impl(...);
