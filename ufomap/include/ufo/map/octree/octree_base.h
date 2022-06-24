@@ -3196,12 +3196,12 @@ class OctreeBase
 
 	void addFileInfo(FileInfo& info) const {}
 
-	std::vector<LeafNode*> getNodes(std::istream& in_stream)
-	{
-		return getNodes(getIndicators(in_stream));
+	std::unique_ptr<LeafNode* []> getNodes(std::istream& in_stream) {
+		auto [indicators, size] = getIndicators(in_stream);
+		return getNodes(indicators, size);
 	}
 
-	std::vector<uint8_t> getIndicators(std::istream& in_stream)
+	std::pair<std::unique_ptr<uint8_t[]>, uint64_t> getIndicators(std::istream& in_stream)
 	{
 		uint8_t compressed;
 		in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
@@ -3220,34 +3220,33 @@ class OctreeBase
 			uint64_t num;
 			data.read(reinterpret_cast<char*>(&num), sizeof(num));
 
-			std::vector<uint8_t> indicators(num);
-			data.read(reinterpret_cast<char*>(indicators.data()),
-			          sizeof(typename std::decay_t<decltype(indicators)>::value_type) * num);
+			auto indicators = std::make_unique<uint8_t[]>(num);
+			data.read(reinterpret_cast<char*>(indicators.get()), sizeof(uint8_t) * num);
 
-			return indicators;
+			return {std::move(indicators), num};
 		} else {
 			uint64_t num;
 			in_stream.read(reinterpret_cast<char*>(&num), sizeof(num));
 
-			std::vector<uint8_t> indicators(num);
-			in_stream.read(
-			    reinterpret_cast<char*>(indicators.data()),
-			    sizeof(typename std::decay_t<decltype(indicators)>::value_type) * num);
+			auto indicators = std::make_unique<uint8_t[]>(num);
+			in_stream.read(reinterpret_cast<char*>(indicators.get()), sizeof(uint8_t) * num);
 
-			return indicators;
+			return {std::move(indicators), num};
 		}
 	}
 
-	std::vector<LeafNode*> getNodes(std::vector<uint8_t> const& indicators)
-	{
+	std::unique_ptr<LeafNode* []> getNodes(std::unique_ptr<uint8_t[]> const& indicators,
+	                                       uint64_t const indicators_size) {
 		uint64_t total_nodes = 0;
-		for (size_t i = 0; i < indicators.size(); i += 2) {
+		for (size_t i = 0; i < indicators_size; i += 2) {
 			for (size_t b = 0; 8 != b; ++b) {
-				total_nodes += (indicators[i] >> b) & 1U ? 1 : 0;
+				if ((indicators[i] >> b) & 1U) {
+					++total_nodes;
+				}
 			}
 		}
 
-		std::vector<LeafNode*> nodes(total_nodes);
+		auto nodes = std::make_unique<LeafNode*[]>(total_nodes);
 
 		bool valid_return = 0 != indicators[0];
 		bool valid_inner = 0 != indicators[1];
@@ -3256,49 +3255,47 @@ class OctreeBase
 			nodes[0] = static_cast<LeafNode*>(&getRoot());
 			getRoot().modified = true;
 		} else if (valid_inner) {
-			size_t idx = 2;
-			auto nodes_it = nodes.begin();
-			getNodesRecurs(indicators, idx, nodes_it, getRootNode());
+			size_t indicators_idx = 2;
+			size_t nodes_idx = 0;
+			getNodesRecurs(indicators, indicators_idx, nodes, nodes_idx, getRoot(),
+			               depthLevels());
 		}
 
 		return nodes;
 	}
 
-	void getNodesRecurs(std::vector<uint8_t> const& indicators, size_t& idx,
-	                    typename std::vector<LeafNode*>::iterator& nodes_it, Node node)
+	void getNodesRecurs(std::unique_ptr<uint8_t[]> const& indicators,
+	                    size_t& indicators_idx, std::unique_ptr<LeafNode*[]>& nodes,
+	                    size_t& nodes_idx, InnerNode& node, depth_t const depth)
 	{
-		uint8_t child_valid_return = indicators[idx++];
-		uint8_t child_valid_inner = indicators[idx++];
+		uint8_t const child_valid_return = indicators[indicators_idx++];
+		uint8_t const child_valid_inner = indicators[indicators_idx++];
 
 		if (0 == child_valid_return && 0 == child_valid_inner) {
 			return;
 		}
 
-		InnerNode& inner_node = innerNode(node);
-		inner_node.modified = true;
+		node.modified = true;
 
-		if (1 == node.depth()) {
-			createLeafChildren(inner_node, node.code().indexAtDepth(1));
+		if (1 == depth) {
+			// FIXME: What should index be?
+			createLeafChildren(node, 0);
 
-			auto child = nodeChild(node, 0);
 			for (size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
-					child = nodeSibling(child, i);
-					*nodes_it++ = &leafNode(child);
+					nodes[nodes_idx++] = &getLeafChild(node, i);
 				}
 			}
 		} else {
-			createInnerChildren(inner_node, node.depth(),
-			                    node.code().indexAtDepth(node.depth()));
+			// FIXME: What should index be?
+			createInnerChildren(node, depth, 1);
 
-			auto child = nodeChild(node, 0);
 			for (size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
-					child = nodeSibling(child, i);
-					*nodes_it++ = &leafNode(child);
+					nodes[nodes_idx++] = &getInnerChild(node, i);
 				} else if ((child_valid_inner >> i) & 1U) {
-					child = nodeSibling(child, i);
-					getNodesRecurs(indicators, idx, nodes_it, child);
+					getNodesRecurs(indicators, indicators_idx, nodes, nodes_idx,
+					               getInnerChild(node, i), depth - 1);
 				}
 			}
 		}
@@ -3471,8 +3468,7 @@ class OctreeBase
 			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
 
 			data.write(reinterpret_cast<char*>(&num), sizeof(num));
-			data.write(reinterpret_cast<char const*>(indicators.data()),
-			           sizeof(typename std::decay_t<decltype(indicators)>::value_type) * num);
+			data.write(reinterpret_cast<char const*>(indicators.data()), sizeof(uint8_t) * num);
 
 			uncompressed_data_size = data.tellp();
 
@@ -3480,9 +3476,8 @@ class OctreeBase
 			             compression_acceleration_level, compression_level);
 		} else {
 			out_stream.write(reinterpret_cast<char*>(&num), sizeof(num));
-			out_stream.write(
-			    reinterpret_cast<char const*>(indicators.data()),
-			    sizeof(typename std::decay_t<decltype(indicators)>::value_type) * num);
+			out_stream.write(reinterpret_cast<char const*>(indicators.data()),
+			                 sizeof(uint8_t) * num);
 
 			uncompressed_data_size = out_stream.tellp() - data_pos;
 		}
