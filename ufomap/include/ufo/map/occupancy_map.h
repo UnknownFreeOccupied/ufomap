@@ -45,6 +45,7 @@
 // UFO
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/octree/octree_base.h>
 
 // STL
 #include <filesystem>
