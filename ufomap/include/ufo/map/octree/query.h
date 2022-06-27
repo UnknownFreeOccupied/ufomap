@@ -45,7 +45,7 @@
 namespace ufo::map
 {
 /*!
- * @brief Wrapper for a query making it possible for write queries such as
+ * @brief Wrapper for a query making it possible to write queries such as
  * @code for (auto node : map.query(...)) {} @endcode
  *
  * @tparam The iterator that should be wrapped.
@@ -54,9 +54,12 @@ template <class Iterator>
 class Query
 {
  public:
-	Query(Iterator const& first, Iterator const& last) : first_(first), last_(last) {}
+	constexpr Query(Iterator const& first, Iterator const& last)
+	    : first_(first), last_(last)
+	{
+	}
 
-	Query(Iterator&& first, Iterator&& last)
+	constexpr Query(Iterator&& first, Iterator&& last)
 	    : first_(std::move(first)), last_(std::move(last))
 	{
 	}

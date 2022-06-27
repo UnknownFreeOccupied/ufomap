@@ -3196,7 +3196,8 @@ class OctreeBase
 
 	void addFileInfo(FileInfo& info) const {}
 
-	std::unique_ptr<LeafNode* []> getNodes(std::istream& in_stream) {
+	std::vector<LeafNode*> getNodes(std::istream& in_stream)
+	{
 		auto [indicators, size] = getIndicators(in_stream);
 		return getNodes(indicators, size);
 	}
@@ -3246,27 +3247,26 @@ class OctreeBase
 			}
 		}
 
-		auto nodes = std::make_unique<LeafNode*[]>(total_nodes);
+		std::vector<LeafNode*> nodes;
+		nodes.reserve(total_nodes);
 
 		bool valid_return = 0 != indicators[0];
 		bool valid_inner = 0 != indicators[1];
 
 		if (valid_return) {
-			nodes[0] = static_cast<LeafNode*>(&getRoot());
+			nodes.push_back(static_cast<LeafNode*>(&getRoot()));
 			getRoot().modified = true;
 		} else if (valid_inner) {
 			size_t indicators_idx = 2;
-			size_t nodes_idx = 0;
-			getNodesRecurs(indicators, indicators_idx, nodes, nodes_idx, getRoot(),
-			               depthLevels());
+			getNodesRecurs(indicators, indicators_idx, nodes, getRoot(), depthLevels());
 		}
 
 		return nodes;
 	}
 
 	void getNodesRecurs(std::unique_ptr<uint8_t[]> const& indicators,
-	                    size_t& indicators_idx, std::unique_ptr<LeafNode*[]>& nodes,
-	                    size_t& nodes_idx, InnerNode& node, depth_t const depth)
+	                    size_t& indicators_idx, std::vector<LeafNode*>& nodes,
+	                    InnerNode& node, depth_t const depth)
 	{
 		uint8_t const child_valid_return = indicators[indicators_idx++];
 		uint8_t const child_valid_inner = indicators[indicators_idx++];
@@ -3283,7 +3283,7 @@ class OctreeBase
 
 			for (size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
-					nodes[nodes_idx++] = &getLeafChild(node, i);
+					nodes.push_back(&getLeafChild(node, i));
 				}
 			}
 		} else {
@@ -3292,10 +3292,10 @@ class OctreeBase
 
 			for (size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
-					nodes[nodes_idx++] = &getInnerChild(node, i);
+					nodes.push_back(&getInnerChild(node, i));
 				} else if ((child_valid_inner >> i) & 1U) {
-					getNodesRecurs(indicators, indicators_idx, nodes, nodes_idx,
-					               getInnerChild(node, i), depth - 1);
+					getNodesRecurs(indicators, indicators_idx, nodes, getInnerChild(node, i),
+					               depth - 1);
 				}
 			}
 		}

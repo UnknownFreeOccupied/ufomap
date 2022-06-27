@@ -206,7 +206,7 @@ struct PredicateValueCheck<PureLeaf> {
 	template <class Map>
 	static constexpr bool apply(Pred const&, Map const&, Node const& n) noexcept
 	{
-		return 0 == n.depth();
+		return Map::isPureLeaf(n);
 	}
 };
 
@@ -502,7 +502,7 @@ struct PredicateInnerCheck<Modified> {
 	using Pred = Modified;
 
 	template <class Map>
-	static constexpr bool apply(Pred const&, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred const&, Map const&, Node const& n) noexcept
 	{
 		return Map::isModified(n);
 	}
@@ -513,7 +513,7 @@ struct PredicateInnerCheck<ChildrenOf> {
 	using Pred = ChildrenOf;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred const& p, Map const&, Node const& n) noexcept
 	{
 		if (n.depth() <= p.node.depth()) {
 			return n.code().toDepth(p.node.depth()) == p.node.code();
@@ -528,7 +528,7 @@ struct PredicateInnerCheck<CodePrefix> {
 	using Pred = CodePrefix;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred const& p, Map const&, Node const& n) noexcept
 	{
 		if (n.depth() <= p.code.depth()) {
 			return n.code().toDepth(p.code.depth()) == p.code;
