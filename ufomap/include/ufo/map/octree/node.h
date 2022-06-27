@@ -152,8 +152,8 @@ struct Node {
 	// The code for the node
 	Code code_;
 
-	template <class Derived, class DataType, class Indicators, MemoryModel NodeMemoryModel,
-	          depth_t StaticallyAllocatedDepths>
+	template <class Derived, class DataType, class Indicators, bool LockLess,
+	          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
 	friend class OctreeBase;
 };
 
@@ -254,8 +254,8 @@ struct NodeBV : public Node {
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
 
-	template <class Derived, class DataType, class Indicators, MemoryModel NodeMemoryModel,
-	          depth_t StaticallyAllocatedDepths>
+	template <class Derived, class DataType, class Indicators, bool LockLess,
+	          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
 	friend class OctreeBase;
 };
 }  // namespace ufo::map
