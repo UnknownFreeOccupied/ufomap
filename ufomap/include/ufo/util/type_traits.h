@@ -79,8 +79,12 @@ argument_helper_2_t<ArgNum, Args...> argument_helper(Ret (F::*)(Args...) const);
 template <std::size_t ArgNum, typename F>
 decltype(argument_helper<ArgNum>(&F::operator())) argument_helper(F);
 
-template <typename T, std::size_t ArgNum>
-using argument = decltype(argument_helper<ArgNum>(std::declval<T>()));
+/*!
+ * @brief Get the argument type ArgNum argument of function F.
+ *
+ */
+template <typename F, std::size_t ArgNum>
+using argument = decltype(argument_helper<ArgNum>(std::declval<F>()));
 }  // namespace ufo::util
 
 #endif  // UFO_UTIL_TYPE_TRAITS
