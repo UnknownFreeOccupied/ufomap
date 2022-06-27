@@ -104,31 +104,33 @@ class IteratorBase
 
 	constexpr bool isParent(Node const& node) const { return tree_->isParent(node); }
 
-	constexpr Node child(Node const& node, unsigned int idx) const
+	template <class NodeType>
+	constexpr NodeType child(NodeType const& node, unsigned int idx) const
 	{
 		return tree_->child(node, idx);
 	}
 
-	constexpr Node sibling(Node const& node, unsigned int idx) const
+	template <class NodeType>
+	constexpr NodeType sibling(NodeType const& node, unsigned int idx) const
 	{
 		return tree_->sibling(node, idx);
 	}
 
-	template <class Predicates>
-	constexpr bool validInnerNode(Node const& node, Predicates const& predicates) const
+	template <class NodeType, class Predicates>
+	constexpr bool validInnerNode(NodeType const& node, Predicates const& predicates) const
 	{
 		return isParent(node) && validInnerNodeOnlyLeaves(node, predicates);
 	}
 
-	template <class Predicates>
-	constexpr bool validInnerNodeOnlyLeaves(Node const& node,
+	template <class NodeType, class Predicates>
+	constexpr bool validInnerNodeOnlyLeaves(NodeType const& node,
 	                                        Predicates const& predicates) const
 	{
 		return predicate::PredicateInnerCheck<Predicates>::apply(predicates, *tree_, node);
 	}
 
-	template <class Predicates>
-	constexpr bool validReturnNode(Node const& node, Predicates const& predicates) const
+	template <class NodeType, class Predicates>
+	constexpr bool validReturnNode(NodeType const& node, Predicates const& predicates) const
 	{
 		return predicate::PredicateValueCheck<Predicates>::apply(predicates, *tree_, node);
 	}
@@ -193,12 +195,12 @@ class IteratorWrapper
 	std::unique_ptr<Base> it_base_;
 };
 
-template <class Tree, class Predicates = predicate::TRUE>
+template <class Tree, class NodeType = Node, class Predicates = predicate::TRUE>
 class Iterator : public IteratorBase<Tree, Node>
 {
  private:
 	static constexpr bool OnlyLeaves =
-	    predicate::contains_predicate<predicate::Leaf, Predicates>();
+	    predicate::contains_always_predicate_v<predicate::Leaf, Predicates>;
 
 	using Base = IteratorBase<Tree, Node>;
 
@@ -212,17 +214,17 @@ class Iterator : public IteratorBase<Tree, Node>
 	using typename Base::reference;
 	using typename Base::value_type;
 
-	Iterator(Node const& root)
+	Iterator(NodeType const& root)
 	    : node_(root), predicates_(predicate::TRUE()), valid_inner_(false)
 	{
 	}
 
-	Iterator(Node const& root, Predicates const& predicates)
+	Iterator(NodeType const& root, Predicates const& predicates)
 	    : node_(root), predicates_(predicates), valid_inner_(false)
 	{
 	}
 
-	Iterator(Tree const* tree, Node const& root, Predicates const& predicates)
+	Iterator(Tree const* tree, NodeType const& root, Predicates const& predicates)
 	    : Base(tree), node_(root), predicates_(predicates), valid_inner_(false)
 	{
 		init();
@@ -285,7 +287,7 @@ class Iterator : public IteratorBase<Tree, Node>
 		// Go down the tree
 		if (valid_inner_) {
 			if constexpr (OnlyLeaves) {
-				Node current = this->child(node_, 0);
+				auto current = this->child(node_, 0);
 				for (unsigned int idx = 0; idx != 8; ++idx) {
 					current = this->sibling(current, idx);
 
@@ -302,7 +304,7 @@ class Iterator : public IteratorBase<Tree, Node>
 					}
 				}
 			} else {
-				Node current = this->child(node_, 0);
+				auto current = this->child(node_, 0);
 
 				for (unsigned int idx = 0; idx != 8; ++idx) {
 					current = this->sibling(current, idx);
@@ -364,17 +366,17 @@ class Iterator : public IteratorBase<Tree, Node>
 	bool valid_inner_;
 
 	// Current node
-	Node node_;
+	NodeType node_;
 
 	// Parents
-	std::stack<Node, std::vector<Node>> parents_;
+	std::stack<NodeType, std::vector<NodeType>> parents_;
 };
 
 struct NearestNode {
-	Node node;
+	NodeBV node;
 	float squared_distance;
 
-	constexpr NearestNode(Node const& node, float squared_distance)
+	constexpr NearestNode(NodeBV const& node, float squared_distance)
 	    : node(node), squared_distance(squared_distance)
 	{
 	}
@@ -406,7 +408,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 {
  private:
 	static constexpr bool OnlyLeaves =
-	    predicate::contains_predicate<predicate::Leaf, Predicates>();
+	    predicate::contains_always_predicate_v<predicate::Leaf, Predicates>;
 
 	using Base = IteratorBase<Tree, NearestNode>;
 
@@ -422,13 +424,13 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 
 	NearestIterator() {}
 
-	NearestIterator(Node const& root, Geometry const& geometry,
+	NearestIterator(NodeBV const& root, Geometry const& geometry,
 	                Predicates const& predicates)
 	    : predicates_(predicates), geometry_(geometry)
 	{
 	}
 
-	NearestIterator(Tree const* tree, Node const& root, Geometry const& geometry,
+	NearestIterator(Tree const* tree, NodeBV const& root, Geometry const& geometry,
 	                Predicates const& predicates, float epsilon = 0.0f)
 	    : Base(tree), predicates_(predicates), geometry_(geometry), epsilon_(epsilon)
 	{
@@ -458,7 +460,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 		return geometry::squaredDistance(node.boundingVolume(), geometry_);
 	}
 
-	void init(Node const& node)
+	void init(NodeBV const& node)
 	{
 		if constexpr (OnlyLeaves) {
 			if (this->validReturnNode(node, predicates_)) {
@@ -516,7 +518,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				return;
 			}
 
-			Node current = this->child(inner_nodes_.top().node, 0);
+			NodeBV current = this->child(inner_nodes_.top().node, 0);
 			inner_nodes_.pop();
 
 			for (unsigned int idx = 0; 8 != idx; ++idx) {
