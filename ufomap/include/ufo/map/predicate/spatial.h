@@ -297,6 +297,74 @@ struct PredicateInnerCheck<Spatial<Geometry, SpatialTag::DISJOINT, true>> {
 	}
 };
 
+//
+// Contains spatial predicate
+//
+
+template <typename>
+struct has_spatial_type : std::false_type {
+};
+
+template <typename... T>
+struct has_spatial_type<Spatial<T...>> : std::true_type {
+};
+
+template <typename L, typename R>
+struct has_spatial_type<OR<L, R>>
+    : std::conditional<bool(has_spatial_type<L>::value), std::true_type,
+                       has_spatial_type<R>> {
+};
+
+template <typename L, typename R>
+struct has_spatial_type<THEN<L, R>>
+    : std::conditional<bool(has_spatial_type<L>::value), std::true_type,
+                       has_spatial_type<R>> {
+};
+
+template <typename... Ts>
+struct has_spatial_type<std::tuple<Ts...>> : std::disjunction<has_spatial_type<Ts>...> {
+};
+
+template <typename Predicates>
+using contains_spatial_predicate = has_spatial_type<Predicates>;
+
+template <typename Predicates>
+inline constexpr bool contains_spatial_predicate_v =
+    contains_spatial_predicate<Predicates>::value;
+
+//
+// Contains always spatial predicate
+//
+
+template <typename>
+struct has_always_spatial_type : std::false_type {
+};
+
+template <typename... T>
+struct has_always_spatial_type<Spatial<T...>> : std::true_type {
+};
+
+template <typename L, typename R>
+struct has_always_spatial_type<OR<L, R>> : std::false_type {
+};
+
+// FIXME: Should this be false if L is Spatial predicate?
+template <typename L, typename R>
+struct has_always_spatial_type<THEN<L, R>> : std::false_type {
+};
+
+template <typename... Ts>
+struct has_always_spatial_type<std::tuple<Ts...>>
+    : std::disjunction<has_always_spatial_type<Ts>...> {
+};
+
+template <typename Predicates>
+using contains_always_spatial_predicate = has_always_spatial_type<Predicates>;
+
+template <typename Predicates>
+inline constexpr bool contains_always_spatial_predicate_v =
+    contains_always_spatial_predicate<Predicates>::value;
+
 }  // namespace ufo::map::predicate
 
 #endif  // UFO_MAP_PREDICATE_SPATIAL_H

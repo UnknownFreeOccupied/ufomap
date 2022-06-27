@@ -326,11 +326,8 @@ struct PredicateInnerCheck<FALSE> {
 };
 
 //
-// Something
+// Contains predicate
 //
-
-// template <typename T, typename Tuple>
-// struct has_type;
 
 template <typename T, typename T2>
 struct has_type : std::false_type {
@@ -340,8 +337,24 @@ template <typename T>
 struct has_type<T, std::tuple<>> : std::false_type {
 };
 
+template <typename T, typename L>
+struct has_type<T, OR<L, T>> : std::true_type {
+};
+
+template <typename T, typename R>
+struct has_type<T, OR<T, R>> : std::true_type {
+};
+
 template <typename T, typename L, typename R>
 struct has_type<T, OR<L, R>> : std::false_type {
+};
+
+template <typename T, typename L>
+struct has_type<T, THEN<L, T>> : std::true_type {
+};
+
+template <typename T, typename R>
+struct has_type<T, THEN<T, R>> : std::true_type {
 };
 
 template <typename T, typename L, typename R>
@@ -361,7 +374,51 @@ struct has_type<T, T> : std::true_type {
 };
 
 template <typename Predicate, typename Predicates>
-using contains_predicate = typename has_type<Predicate, Predicates>::type;
+using contains_predicate = has_type<Predicate, Predicates>;
+
+template <typename Predicate, typename Predicates>
+inline constexpr bool contains_predicate_v =
+    contains_predicate<Predicate, Predicates>::value;
+
+//
+// Contains always predicate
+//
+
+template <typename T, typename T2>
+struct has_always_type : std::false_type {
+};
+
+template <typename T>
+struct has_always_type<T, std::tuple<>> : std::false_type {
+};
+
+template <typename T, typename L, typename R>
+struct has_always_type<T, OR<L, R>> : std::false_type {
+};
+
+// FIXME: Should this be false if L is T?
+template <typename T, typename L, typename R>
+struct has_always_type<T, THEN<L, R>> : std::false_type {
+};
+
+template <typename T, typename U, typename... Ts>
+struct has_always_type<T, std::tuple<U, Ts...>> : has_always_type<T, std::tuple<Ts...>> {
+};
+
+template <typename T, typename... Ts>
+struct has_always_type<T, std::tuple<T, Ts...>> : std::true_type {
+};
+
+template <typename T>
+struct has_always_type<T, T> : std::true_type {
+};
+
+template <typename Predicate, typename Predicates>
+using contains_always_predicate = has_always_type<Predicate, Predicates>;
+
+template <typename Predicate, typename Predicates>
+inline constexpr bool contains_always_predicate_v =
+    contains_always_predicate<Predicate, Predicates>::value;
 
 }  // namespace ufo::map::predicate
 
