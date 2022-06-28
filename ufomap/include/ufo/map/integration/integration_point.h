@@ -53,28 +53,56 @@
 namespace ufo::map
 {
 
+template <class P>
+struct ValidPoint : P {
+	bool valid = true;
+
+	constexpr ValidPoint(P const& point, bool valid = true) : P(point), valid(valid) {}
+};
+
+template <class P>
+struct IntegrationPointSmall {
+	ValidPoint<P> point;
+	Code code;
+
+	constexpr IntegrationPointSmall(Code const code, P const& point,
+	                                bool const valid = true)
+	    : code(code), point(point, valid)
+	{
+	}
+
+	[[nodiscard]] bool valid() const { return point.valid; }
+
+	bool operator==(IntegrationPointSmall const& rhs) const { return code == rhs.code; }
+
+	bool operator!=(IntegrationPointSmall const& rhs) const { return !(*this == rhs); }
+
+	bool operator<(IntegrationPointSmall const& rhs) const { return code < rhs.code; }
+
+	bool operator<=(IntegrationPointSmall const& rhs) const { return code <= rhs.code; }
+
+	bool operator>(IntegrationPointSmall const& rhs) const { return code > rhs.code; }
+
+	bool operator>=(IntegrationPointSmall const& rhs) const { return code >= rhs.code; }
+};
+
 /*!
  * @brief
  *
  */
 template <class P>
 struct IntegrationPoint {
-	struct Point {
-		P point;
-		bool valid;
-	};
-
 	Code code;
-	std::vector<Point> points;
+	std::vector<ValidPoint<P>> points;
 
 	IntegrationPoint(Code const code) : code(code) {}
 
 	IntegrationPoint(Code const code, P const& point, bool const valid = true)
-	    : code(code), points(1, Point{point, valid})
+	    : code(code), points(1, ValidPoint<P>(point, valid))
 	{
 	}
 
-	IntegrationPoint(Code code, std::initializer_list<Point> init)
+	IntegrationPoint(Code code, std::initializer_list<ValidPoint<P>> init)
 	    : code(code), points(init)
 	{
 	}

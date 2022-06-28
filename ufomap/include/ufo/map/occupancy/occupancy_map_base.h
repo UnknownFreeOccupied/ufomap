@@ -518,12 +518,12 @@ class OccupancyMapBase
 
 	logit_t getOccupancyLogit(Node const& node) const
 	{
-		return getOccupancyLogit(derived().leafNode(node));
+		return getOccupancyLogit(derived().getLeafNode(node));
 	}
 
 	logit_t getOccupancyLogit(Code code) const
 	{
-		return getOccupancyLogit(derived().leafNode(code));
+		return getOccupancyLogit(derived().getLeafNode(code));
 	}
 
 	logit_t getOccupancyLogit(Key key) const
@@ -1065,44 +1065,13 @@ class OccupancyMapBase
 		free_thres_log_ = toOccupancyLogit(free_thres);
 	}
 
-	OccupancyMapBase(OccupancyMapBase const& other)
-	    : occupancy_clamping_thres_min_log_(other.occupancy_clamping_thres_min_log_),
-	      occupancy_clamping_thres_max_log_(other.occupancy_clamping_thres_max_log_),
-	      occupied_thres_log_(other.occupied_thres_log_),
-	      free_thres_log_(other.free_thres_log_),
-	      occupancy_prop_criteria_(other.occupancy_prop_criteria_)
-	{
-	}
+	OccupancyMapBase(OccupancyMapBase const& other) = default;
 
-	OccupancyMapBase(OccupancyMapBase&& other)
-	    : occupancy_clamping_thres_min_log_(
-	          std::move(other.occupancy_clamping_thres_min_log_)),
-	      occupancy_clamping_thres_max_log_(
-	          std::move(other.occupancy_clamping_thres_max_log_)),
-	      occupied_thres_log_(std::move(other.occupied_thres_log_)),
-	      free_thres_log_(std::move(other.free_thres_log_)),
-	      occupancy_prop_criteria_(std::move(other.occupancy_prop_criteria_))
-	{
-	}
+	OccupancyMapBase(OccupancyMapBase&& other) = default;
 
-	OccupancyMapBase& operator=(OccupancyMapBase const& rhs)
-	{
-		occupancy_clamping_thres_min_log_ = rhs.occupancy_clamping_thres_min_log_;
-		occupancy_clamping_thres_max_log_ = rhs.occupancy_clamping_thres_max_log_;
-		occupied_thres_log_ = rhs.occupied_thres_log_;
-		free_thres_log_ = rhs.free_thres_log_;
-		occupancy_prop_criteria_ = rhs.occupancy_prop_criteria_;
-		return *this;
-	}
+	OccupancyMapBase& operator=(OccupancyMapBase const& rhs) = default;
 
-	OccupancyMapBase& operator=(OccupancyMapBase&& rhs)
-	{
-		occupancy_clamping_thres_min_log_ = std::move(rhs.occupancy_clamping_thres_min_log_);
-		occupancy_clamping_thres_max_log_ = std::move(rhs.occupancy_clamping_thres_max_log_);
-		occupied_thres_log_ = std::move(rhs.occupied_thres_log_);
-		free_thres_log_ = std::move(rhs.free_thres_log_);
-		return *this;
-	}
+	OccupancyMapBase& operator=(OccupancyMapBase&& rhs) = default;
 
 	//
 	// Derived
@@ -1159,17 +1128,17 @@ class OccupancyMapBase
 	// Checking state
 	//
 
-	constexpr bool isUnknown(LeafNode const& node) noexcept
+	constexpr bool isUnknown(LeafNode const& node) const noexcept
 	{
 		return !isFree(node) && !isOccupied(node);
 	}
 
-	constexpr bool isFree(LeafNode const& node) noexcept
+	constexpr bool isFree(LeafNode const& node) const noexcept
 	{
 		return getOccupancyLogit(node) < getFreeThresLogit();
 	}
 
-	constexpr bool isOccupied(LeafNode const& node) noexcept
+	constexpr bool isOccupied(LeafNode const& node) const noexcept
 	{
 		return getOccupancyLogit(node) > getOccupiedThresLogit();
 	}

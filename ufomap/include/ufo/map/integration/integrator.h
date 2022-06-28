@@ -120,7 +120,7 @@ class Integrator
 				if (avg_color.set()) {
 					double total_logit = logit + prob;
 					double weight = prob / total_logit;
-					map.updateColor(node, avg_color, weight, false);
+					map.setColor(node, avg_color, false);  // TODO: Update
 				}
 			}
 
@@ -144,6 +144,9 @@ class Integrator
 				                      semantic_value_hit_ + semantic_value_miss_, false);
 			}
 		});
+
+		// FIXME: Increment time step
+		time_step_ += time_step_auto_inc_;
 	}
 
 	//
@@ -393,7 +396,7 @@ class Integrator
 	float occupancy_prob_miss_ = 0.4;
 
 	// Time step specific
-	time_step_t time_step_ = 1;
+	mutable time_step_t time_step_ = 1;
 	int time_step_auto_inc_ = 1;
 
 	// Semantic specific

@@ -305,19 +305,19 @@ template <typename>
 struct has_spatial_type : std::false_type {
 };
 
-template <typename... T>
-struct has_spatial_type<Spatial<T...>> : std::true_type {
+template <class Geometry, SpatialTag Tag, bool Negated>
+struct has_spatial_type<Spatial<Geometry, Tag, Negated>> : std::true_type {
 };
 
 template <typename L, typename R>
 struct has_spatial_type<OR<L, R>>
-    : std::conditional<bool(has_spatial_type<L>::value), std::true_type,
+    : std::conditional_t<bool(has_spatial_type<L>::value), std::true_type,
                        has_spatial_type<R>> {
 };
 
 template <typename L, typename R>
 struct has_spatial_type<THEN<L, R>>
-    : std::conditional<bool(has_spatial_type<L>::value), std::true_type,
+    : std::conditional_t<bool(has_spatial_type<L>::value), std::true_type,
                        has_spatial_type<R>> {
 };
 
@@ -340,8 +340,8 @@ template <typename>
 struct has_always_spatial_type : std::false_type {
 };
 
-template <typename... T>
-struct has_always_spatial_type<Spatial<T...>> : std::true_type {
+template <class Geometry, SpatialTag Tag, bool Negated>
+struct has_always_spatial_type<Spatial<Geometry, Tag, Negated>> : std::true_type {
 };
 
 template <typename L, typename R>

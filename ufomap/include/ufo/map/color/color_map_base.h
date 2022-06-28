@@ -51,14 +51,11 @@
 
 namespace ufo::map
 {
-template <class Derived, class DataType = ColorNode, class Indicators = OctreeIndicators,
-          class Base = OctreeBase<Derived, DataType, Indicators>>
-class ColorMapBase : public Base
+template <class Derived, class LeafNode, class InnerNode>
+class ColorMapBase
 {
  protected:
-	using typename Base::InnerNode;
-	using typename Base::LeafNode;
-
+	static_assert(std::is_base_of_v<LeafNode, InnerNode>);
 	static_assert(std::is_base_of_v<ColorNode, LeafNode>);
 
  public:
@@ -243,35 +240,21 @@ class ColorMapBase : public Base
 
 	ColorMapBase() = default;
 
-	ColorMapBase(ColorMapBase const& other) {}
+	ColorMapBase(ColorMapBase const& other) = default;
 
-	template <class Derived2, class DataType2, class Indicators2>
-	ColorMapBase(ColorMapBase<Derived2, DataType2, Indicators2> const& other)
-	{
-	}
+	ColorMapBase(ColorMapBase&& other) = default;
 
-	ColorMapBase(ColorMapBase&& other) {}
+	ColorMapBase& operator=(ColorMapBase const& rhs) = default;
 
-	ColorMapBase& operator=(ColorMapBase const& rhs) {}
-
-	template <class Derived2, class DataType2, class Indicators2>
-	ColorMapBase& operator=(ColorMapBase<Derived2, DataType2, Indicators2> const& rhs)
-	{
-	}
-
-	ColorMapBase& operator=(ColorMapBase&& rhs) {}
-
-	//
-	// Destructor
-	//
-
-	~ColorMapBase() {}
+	ColorMapBase& operator=(ColorMapBase&& rhs) = default;
 
 	//
 	// Derived
 	//
 
-	using Base::derived;
+	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
+
+	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
 
 	//
 	// Initilize root
@@ -356,7 +339,7 @@ class ColorMapBase : public Base
 			in_stream.read(reinterpret_cast<char*>(data.get()),
 			               nodes.size() * sizeof(RGBColor));
 
-			for (size_t i = 0; i != data.size(); ++i) {
+			for (size_t i = 0; i != nodes.size(); ++i) {
 				setColor(*nodes[i], data[i]);
 			}
 		} else {
@@ -379,8 +362,6 @@ class ColorMapBase : public Base
 		out_stream.write(reinterpret_cast<char const*>(data.get()),
 		                 nodes.size() * sizeof(RGBColor));
 	}
-	template <class Derived2, class DataType2, class Indicators2>
-	friend class ColorMapBase;
 };
 }  // namespace ufo::map
 

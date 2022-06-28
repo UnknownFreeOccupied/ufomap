@@ -114,7 +114,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 			    render_data.orientation_ =
 			        Ogre::Quaternion(1, 0, 0, 0);  // FIXME: What should this be?
 
-			    for (auto const& node : map_.query(pred)) {
+			    for (auto&& node : map_.queryBV(pred)) {
 				    fillData(render_data.transformed_voxels_[node.depth()], map_, node);
 			    }
 

@@ -85,9 +85,8 @@ struct RGBColor {
 	template <class InputIt>
 	static constexpr RGBColor average(InputIt first, InputIt last)
 	{
-		if constexpr (std::is_same_v<
-		                  std::decay_t<typename std::iterator_traits<InputIt>::value_type>,
-		                  RGBColor>) {
+		if constexpr (std::is_base_of_v<RGBColor,
+		                                typename std::iterator_traits<InputIt>::value_type>) {
 			unsigned r = 0;
 			unsigned g = 0;
 			unsigned b = 0;
@@ -103,9 +102,9 @@ struct RGBColor {
 				++num;
 			}
 			return 0 == num ? RGBColor() : RGBColor(r / num, g / num, b / num);
-		} else if constexpr (std::is_same_v<std::decay_t<typename std::iterator_traits<
-		                                        InputIt>::value_type>,
-		                                    std::pair<RGBColor, double>>) {
+		} else if constexpr (std::is_base_of_v<
+		                         std::pair<RGBColor, double>,
+		                         typename std::iterator_traits<InputIt>::value_type>) {
 			unsigned r = 0;
 			unsigned g = 0;
 			unsigned b = 0;
@@ -124,10 +123,10 @@ struct RGBColor {
 
 		} else {
 			static_assert(
-			    std::is_same_v<std::decay_t<typename std::iterator_traits<InputIt>::value_type>,
-			                   RGBColor> ||
-			    std::is_same_v<std::decay_t<typename std::iterator_traits<InputIt>::value_type>,
-			                   std::pair<RGBColor, double>>);
+			    std::is_base_of_v<RGBColor,
+			                      typename std::iterator_traits<InputIt>::value_type> ||
+			    std::is_base_of_v<std::pair<RGBColor, double>,
+			                      typename std::iterator_traits<InputIt>::value_type>);
 		}
 	}
 

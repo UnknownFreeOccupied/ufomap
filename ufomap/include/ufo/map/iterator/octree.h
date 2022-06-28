@@ -93,27 +93,40 @@ class IteratorBase
 	virtual bool equal(IteratorBase const& other) const = 0;
 
  protected:
-	constexpr depth_t depth(Node const& node) const { return node.depth(); }
+	template <class NodeType>
+	constexpr depth_t depth(NodeType const& node) const
+	{
+		return node.depth();
+	}
 
-	constexpr Code code(Node const& node) const { return node.code(); }
+	template <class NodeType>
+	constexpr Code code(NodeType const& node) const
+	{
+		return node.code();
+	}
 
-	constexpr std::size_t indexAtDepth(Node const& node) const
+	template <class NodeType>
+	constexpr std::size_t indexAtDepth(NodeType const& node) const
 	{
 		return code(node).indexAtDepth(depth(node));
 	}
 
-	constexpr bool isParent(Node const& node) const { return tree_->isParent(node); }
+	template <class NodeType>
+	constexpr bool isParent(NodeType const& node) const
+	{
+		return tree_->isParent(node);
+	}
 
 	template <class NodeType>
 	constexpr NodeType child(NodeType const& node, unsigned int idx) const
 	{
-		return tree_->child(node, idx);
+		return tree_->getNodeChild(node, idx);
 	}
 
 	template <class NodeType>
 	constexpr NodeType sibling(NodeType const& node, unsigned int idx) const
 	{
-		return tree_->sibling(node, idx);
+		return tree_->getNodeSibling(node, idx);
 	}
 
 	template <class NodeType, class Predicates>
@@ -148,13 +161,13 @@ class IteratorWrapper
 
  public:
 	// Tags
-	using typename Base::const_pointer;
-	using typename Base::const_reference;
-	using typename Base::difference_type;
-	using typename Base::iterator_category;
-	using typename Base::pointer;
-	using typename Base::reference;
-	using typename Base::value_type;
+	using iterator_category = typename Base::iterator_category;
+	using difference_type = typename Base::difference_type;
+	using value_type = typename Base::value_type;
+	using pointer = typename Base::pointer;
+	using reference = typename Base::reference;
+	using const_pointer = typename Base::const_pointer;
+	using const_reference = typename Base::const_reference;
 
 	IteratorWrapper(Base* it_base) : it_base_(it_base) {}
 
@@ -195,14 +208,15 @@ class IteratorWrapper
 	std::unique_ptr<Base> it_base_;
 };
 
-template <class Tree, class NodeType = Node, class Predicates = predicate::TRUE>
-class Iterator : public IteratorBase<Tree, Node>
+template <class BaseNodeType, class Tree, class NodeType = Node,
+          class Predicates = predicate::TRUE>
+class Iterator : public IteratorBase<Tree, BaseNodeType>
 {
  private:
 	static constexpr bool OnlyLeaves =
 	    predicate::contains_always_predicate_v<predicate::Leaf, Predicates>;
 
-	using Base = IteratorBase<Tree, Node>;
+	using Base = IteratorBase<Tree, BaseNodeType>;
 
  public:
 	// Tags
@@ -457,7 +471,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
  private:
 	double squaredDistance(NodeBV const& node) const
 	{
-		return geometry::squaredDistance(node.boundingVolume(), geometry_);
+		return geometry::squaredDistance(node.getBoundingVolume(), geometry_);
 	}
 
 	void init(NodeBV const& node)

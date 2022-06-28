@@ -77,33 +77,34 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        TransformFunction trans_f, ValidFunction valid_f,
                                        DepthFunction depth_f)
 {
-	IntegrationCloud<P> i_cloud;
-
 	if (cloud.empty()) {
-		return i_cloud;
+		return IntegrationCloud<P>();
 	}
 
+	IntegrationCloudSmall<P> temp;
+	temp.reserve(cloud.size());
+
 	// Get the corresponding code for each points
-	i_cloud.reserve(cloud.size());
-	std::transform(std::cbegin(cloud), std::cend(cloud), std::back_inserter(i_cloud),
+	std::transform(std::cbegin(cloud), std::cend(cloud), std::back_inserter(temp),
 	               [&map, trans_f, valid_f, depth_f](auto const& p) {
 		               auto tp = trans_f(p);
 		               auto code = map.toCode(tp, depth_f(p));
-		               return IntegrationPoint<P>(code, tp, valid_f(p));
+		               return IntegrationPointSmall<P>(code, tp, valid_f(p));
 	               });
 
 	// Sort
-	std::sort(std::begin(i_cloud), std::end(i_cloud));
+	std::sort(std::begin(temp), std::end(temp));
 
 	// Boundle together points with same code and remove duplicates
-	auto cur = std::begin(i_cloud);
-	for (auto it = std::next(std::begin(i_cloud)); it != std::end(i_cloud);) {
-		if (cur->code == it->code) {
-			cur->points.push_back(it->points.front());
-			it = i_cloud.erase(it);
+	IntegrationCloud<P> i_cloud;
+	i_cloud.reserve(cloud.size());
+	Code prev_code;
+	for (auto&& p : temp) {
+		if (prev_code == p.code) {
+			i_cloud.back().points.emplace_back(p.point);
 		} else {
-			cur = it;
-			++it;
+			prev_code = p.code;
+			i_cloud.emplace_back(p.code, p.point, p.valid());
 		}
 	}
 
@@ -116,7 +117,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        depth_t const depth = 0)
 {
 	return toIntegrationCloud(map, cloud, trans_f, valid_f,
-	                        [depth](auto const&) { return depth; });
+	                          [depth](auto const&) { return depth; });
 }
 
 template <class Map, class P, class DepthFunction>
@@ -160,7 +161,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        depth_t const depth = 0)
 {
 	return toIntegrationCloud(map, cloud, sensor_origin, max_range,
-	                        [depth](auto const&) { return depth; });
+	                          [depth](auto const&) { return depth; });
 }
 
 template <class Map, class P>

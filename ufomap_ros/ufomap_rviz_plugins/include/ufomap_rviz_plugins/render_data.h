@@ -83,14 +83,14 @@ struct RenderData {
 
 	Ogre::SceneNode* scene_node_ = nullptr;
 
-	std::unordered_map<ufo::map::Depth, boost::shared_ptr<Voxels>> voxels_;
+	std::unordered_map<ufo::map::depth_t, boost::shared_ptr<Voxels>> voxels_;
 	RenderMode voxels_render_mode_;
 	Filter voxels_filter_;
 	Heatmap voxels_heatmap_;
 
 	// TODO: selection_handler_;
 
-	std::unordered_map<ufo::map::Depth, Data> transformed_voxels_;
+	std::unordered_map<ufo::map::depth_t, Data> transformed_voxels_;
 
 	Ogre::Quaternion orientation_;
 	Ogre::Vector3 position_;

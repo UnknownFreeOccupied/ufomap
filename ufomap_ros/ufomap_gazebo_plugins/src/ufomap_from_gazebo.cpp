@@ -140,7 +140,7 @@ void UFOMapFromGazebo::createMap2(ufo::map::OccupancyMapColor& map,
                                   ufo::geometry::AABB const& bv, bool as_unknown,
                                   unsigned int depth)
 {
-	float size = map.nodeSize(depth);
+	float size = map.getNodeSize(depth);
 	float half_size = map.nodeHalfSize(depth);
 
 	gazebo::common::MeshManager* mesh_manager = gazebo::common::MeshManager::Instance();
@@ -365,7 +365,7 @@ void UFOMapFromGazebo::createMap(ufo::map::OccupancyMapColor& map,
 	    boost::dynamic_pointer_cast<gazebo::physics::RayShape>(
 	        engine->CreateShape("ray", gazebo::physics::CollisionPtr()));
 
-	float step = map.nodeSize(depth);
+	float step = map.getNodeSize(depth);
 	float res = step;
 	float half_step = map.nodeHalfSize(depth);
 	ufo::math::Vector3 min = bv.min() - half_step;

@@ -174,7 +174,7 @@ struct NodeBV : public Node {
 	 *
 	 * @return The bounding volume of the node.
 	 */
-	constexpr geometry::AAEBB boundingVolume() const noexcept { return aaebb_; }
+	constexpr geometry::AAEBB getBoundingVolume() const noexcept { return aaebb_; }
 
 	/*!
 	 * @brief The center coordinate of the node.

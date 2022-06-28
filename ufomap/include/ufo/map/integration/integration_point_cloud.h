@@ -52,7 +52,10 @@
 namespace ufo::map
 {
 template <class P>
+using IntegrationCloudSmall = PointCloudT<IntegrationPointSmall<P>>;
+
+template <class P>
 using IntegrationCloud = PointCloudT<IntegrationPoint<P>>;
-}
+}  // namespace ufo::map
 
 #endif  // UFO_MAP_INTEGRATION_POINT_CLOUD_H

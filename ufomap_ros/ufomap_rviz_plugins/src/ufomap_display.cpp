@@ -182,7 +182,7 @@ void UFOMapDisplay::processMessages()
 
 		updateMap(local_queue);
 
-		map_.updateModifiedNodes(std::max(static_cast<ufo::map::Depth>(1U), depth) -
+		map_.updateModifiedNodes(std::max(static_cast<ufo::map::depth_t>(1U), depth) -
 		                         1);  // Reset modified up to depth-1
 
 		float duration = std::chrono::duration<float, std::chrono::seconds::period>(
@@ -529,7 +529,7 @@ bool UFOMapDisplay::updateGridSizeDepth()
 	Performance perf = performance_display_->getPerformance();
 	grid_size_depth_ = 0;
 	for (; grid_size_depth_ < map_.depthLevels() &&
-	       map_.nodeSize(grid_size_depth_) < perf.grid_size;
+	       map_.getNodeSize(grid_size_depth_) < perf.grid_size;
 	     ++grid_size_depth_) {
 	}
 
@@ -564,7 +564,6 @@ void UFOMapDisplay::updateStatus()
 		res_str += " m";
 	}
 	QLocale locale;
-	setStatusStd(rviz::StatusProperty::Ok, "Map type", std::string(map_.mapType()));
 	setStatus(rviz::StatusProperty::Ok, "Resolution", res_str);
 	setStatus(rviz::StatusProperty::Ok, "Num. leaf nodes",
 	          QString("%L1").arg(map_.numLeafNodes()));
