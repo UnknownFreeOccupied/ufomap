@@ -115,7 +115,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        TransformFunction trans_f, ValidFunction valid_f,
                                        depth_t const depth = 0)
 {
-	return IntegrationCloud(map, cloud, trans_f, valid_f,
+	return toIntegrationCloud(map, cloud, trans_f, valid_f,
 	                        [depth](auto const&) { return depth; });
 }
 
@@ -123,7 +123,7 @@ template <class Map, class P, class DepthFunction>
 IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
                                        DepthFunction depth_f)
 {
-	return IntegrationCloud(
+	return toIntegrationCloud(
 	    map, cloud, [](auto const& p) { return p; }, [](auto const&) { return true; },
 	    depth_f);
 }
@@ -132,7 +132,7 @@ template <class Map, class P>
 IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
                                        depth_t const depth = 0)
 {
-	return IntegrationCloud(map, cloud, [depth](auto const&) { return depth; });
+	return toIntegrationCloud(map, cloud, [depth](auto const&) { return depth; });
 }
 
 template <class Map, class P, class DepthFunction>
@@ -140,7 +140,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        Point3 const sensor_origin, double const max_range,
                                        DepthFunction depth_function)
 {
-	return IntegrationCloud(
+	return toIntegrationCloud(
 	    map, cloud,
 	    [sensor_origin, max_range](auto p) {
 		    p -= sensor_origin;
@@ -159,7 +159,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        Point3 const sensor_origin, double const max_range,
                                        depth_t const depth = 0)
 {
-	return IntegrationCloud(map, cloud, sensor_origin, max_range,
+	return toIntegrationCloud(map, cloud, sensor_origin, max_range,
 	                        [depth](auto const&) { return depth; });
 }
 

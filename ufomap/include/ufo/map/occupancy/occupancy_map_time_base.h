@@ -97,14 +97,14 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 	void setTimeStep(Node& node, time_step_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
+		    node, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 
 	void setTimeStep(Code code, time_step_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
+		    code, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 
@@ -131,8 +131,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 	                 bool propagate = true)
 	{
 		derived().apply(
-		    policy, node,
-		    [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
+		    policy, node, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 
@@ -142,8 +141,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 	                 bool propagate = true)
 	{
 		derived().apply(
-		    policy, code,
-		    [this, time_step](auto&& node) { setTimeStepImpl(node, time_step); },
+		    policy, code, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 

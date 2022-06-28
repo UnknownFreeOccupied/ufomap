@@ -44,6 +44,7 @@
 
 // UFO
 #include <ufo/map/integration/integration_point.h>
+#include <ufo/map/point_cloud.h>
 
 // STL
 #include <vector>
@@ -51,7 +52,7 @@
 namespace ufo::map
 {
 template <class P>
-using IntegrationCloud = std::vector<IntegrationPoint<P>>;
+using IntegrationCloud = PointCloudT<IntegrationPoint<P>>;
 }
 
 #endif  // UFO_MAP_INTEGRATION_POINT_CLOUD_H

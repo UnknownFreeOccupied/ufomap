@@ -95,17 +95,17 @@ class Integrator
 			}
 
 			// Get the points [first, last) falling into the node
-			auto first_point = std::cbegin(p.points);
-			auto last_point = std::cend(p.points);
+			auto first_point_it = std::cbegin(p.points);
+			auto last_point_it = std::cend(p.points);
 
 			// Create and retrieve the node
-			auto node = map.createNode(cloud.codes()[p.code]);
+			auto node = map.createNode(p.code);
 
 			// Get current occupancy
 			auto logit = map.getOccupancyLogit(node);
 
 			// Update occupancy
-			map.increateOccupancyLogit(node, prob, false);
+			map.increaseOccupancyLogit(node, prob, false);
 
 			// Update time step
 			if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
@@ -115,7 +115,7 @@ class Integrator
 			// Update color
 			if constexpr (is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
 			              std::is_base_of_v<RGBColor, P>) {
-				RGBColor avg_color = RGBColor::average(first_point, last_point);
+				RGBColor avg_color = RGBColor::average(first_point_it, last_point_it);
 
 				if (avg_color.set()) {
 					double total_logit = logit + prob;
@@ -129,7 +129,7 @@ class Integrator
 			              std::is_base_of_v<SemanticPair, P>) {
 				// FIXME: Implement correctly
 
-				std::vector<SemanticPair> semantics(first_point, last_point);
+				std::vector<SemanticPair> semantics(first_point_it, last_point_it);
 
 				// Remove label 0
 				semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
@@ -180,7 +180,8 @@ class Integrator
 	 * @param propagate Whether to update the inner nodes of the map.
 	 */
 	template <class Map, class P>
-	void insertPointCloud(Map& map, PointCloudT<P> cloud, bool const propagate = true) const
+	void insertPointCloud(Map& map, PointCloudT<P> const& cloud,
+	                      bool const propagate = true) const
 	{
 		// Create integration cloud
 		auto ic = toIntegrationCloud(map, cloud, hit_depth_);
@@ -204,7 +205,7 @@ class Integrator
 	 * @param propagate Whether to update the inner nodes of the map.
 	 */
 	template <class Map, class P>
-	void insertPointCloud(Map& map, PointCloudT<P> cloud, Point3 const sensor_origin,
+	void insertPointCloud(Map& map, PointCloudT<P> const& cloud, Point3 const sensor_origin,
 	                      bool const propagate = true) const
 	{
 		// Create integration cloud

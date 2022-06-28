@@ -55,7 +55,7 @@
 
 namespace ufo::map
 {
-template <class P>
+template <class P = Point3>
 using PointCloudT = std::vector<P>;
 using PointCloud = PointCloudT<Point3>;
 using PointCloudColor = PointCloudT<Point3Color>;
