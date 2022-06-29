@@ -171,13 +171,15 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
 {
 	CodeUnorderedSet indices;
 
+	double const step_size = map.getNodeSize(depth);
+
 	for (auto const& p : cloud) {
-		for (auto const& [p, v] : p.points) {
-			if (only_valid && !v) {
+		for (auto const& point : p.points) {
+			if (only_valid && !point.valid) {
 				continue;
 			}
-			for (auto e : computeRay(sensor_origin, p)) {
-				indices.insert(e);
+			for (auto&& e : computeRaySimple(sensor_origin, point, step_size)) {
+				indices.insert(map.toCode(e, depth));
 			}
 		}
 	}
