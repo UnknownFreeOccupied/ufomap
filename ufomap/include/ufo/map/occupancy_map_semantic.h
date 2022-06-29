@@ -45,119 +45,118 @@
 // UFO
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/octree/octree_base.h>
 #include <ufo/map/semantic/semantic_map_base.h>
 
 namespace ufo::map
 {
-template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
-class OccupancyMapSemanticT final
-    : public OccupancyMapBase<
-          OccupancyMapSemanticT<OccupancyType, SemanticType, SemanticValueWidth>,
-          OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>>,
-      public SemanticMapBase<
-          OccupancyMapSemanticT<OccupancyType, SemanticType, SemanticValueWidth>,
+template <class OccupancyType = float, class SemanticType = uint32_t,
+          size_t SemanticValueWidth = 16>
+class OccupancyMapSemantic final
+    : public OctreeBase<
+          OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
           OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
-          OccupancyIndicators>
+          OccupancyIndicators>,
+      public OccupancyMapBase<
+          OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
+          typename OctreeBase<
+              OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancyIndicators>::LeafNode,
+          typename OctreeBase<
+              OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancyIndicators>::InnerNode>,
+      public SemanticMapBase<
+          OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
+          typename OctreeBase<
+              OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancyIndicators>::LeafNode,
+          typename OctreeBase<
+              OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+              OccupancyIndicators>::InnerNode>
 {
  protected:
-	using OctreeNode =
-	    OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>;
-	using OccupancyBase = OccupancyMapBase<OccupancyMapSemanticT, OctreeNode>;
-	using OctreeBase = typename OccupancyBase::Base;
-	using SemanticBase =
-	    SemanticMapBase<OccupancyMapSemanticT, OctreeNode, OccupancyIndicators>;
+	//
+	// Tags
+	//
+
+	using OctreeBase =
+	    OctreeBase<OccupancyMapSemantic<OccupancyType, SemanticType, SemanticValueWidth>,
+	               OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+	               OccupancyIndicators>;
 	using LeafNode = typename OctreeBase::LeafNode;
 	using InnerNode = typename OctreeBase::InnerNode;
+	using OccupancyBase = OccupancyMapBase<OccupancyMapSemantic, LeafNode, InnerNode>;
+	using SemanticBase = SemanticMapBase<OccupancyMapSemantic, LeafNode, InnerNode>;
+
+	//
+	// Friends
+	//
+
+	friend OctreeBase;
+	friend OccupancyBase;
+	friend SemanticBase;
 
  public:
 	//
 	// Constructors
 	//
 
-	OccupancyMapSemanticT(double resolution = 0.1, depth_t depth_levels = 16,
-	                      bool automatic_pruning = true, float occupied_thres = 0.5,
-	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	                      float clamping_thres_max = 0.971)
+	OccupancyMapSemantic(double resolution = 0.1, depth_t depth_levels = 16,
+	                     bool automatic_pruning = true, float occupied_thres = 0.5,
+	                     float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	                     float clamping_thres_max = 0.971)
 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
 	      OccupancyBase(resolution, depth_levels, automatic_pruning, occupied_thres,
 	                    free_thres, clamping_thres_min, clamping_thres_max),
-	      SemanticBase(resolution, depth_levels, automatic_pruning)
+	      SemanticBase()
 	{
-		//  TODO: Implement
 		initRoot();
 	}
 
-	OccupancyMapSemanticT(std::filesystem::path const& filename,
-	                      bool automatic_pruning = true, float occupied_thres = 0.5,
-	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	                      float clamping_thres_max = 0.971)
-	    : OccupancyMapSemanticT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                            clamping_thres_min, clamping_thres_max)
+	OccupancyMapSemantic(std::filesystem::path const& filename,
+	                     bool automatic_pruning = true, float occupied_thres = 0.5,
+	                     float free_thres = 0.5, float clamping_thres_min = 0.1192,
+	                     float clamping_thres_max = 0.971)
+	    : OccupancyMapSemantic(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                           clamping_thres_min, clamping_thres_max)
 	{
 		OctreeBase::read(filename);
-		// TODO: Throw if cannot read
 	}
 
-	OccupancyMapSemanticT(std::istream& in_stream, bool automatic_pruning = true,
-	                      float occupied_thres = 0.5, float free_thres = 0.5,
-	                      float clamping_thres_min = 0.1192,
-	                      float clamping_thres_max = 0.971)
-	    : OccupancyMapSemanticT(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                            clamping_thres_min, clamping_thres_max)
+	OccupancyMapSemantic(std::istream& in_stream, bool automatic_pruning = true,
+	                     float occupied_thres = 0.5, float free_thres = 0.5,
+	                     float clamping_thres_min = 0.1192,
+	                     float clamping_thres_max = 0.971)
+	    : OccupancyMapSemantic(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+	                           clamping_thres_min, clamping_thres_max)
 	{
 		OctreeBase::read(in_stream);
-		// TODO: Throw if cannot read
 	}
 
-	OccupancyMapSemanticT(OccupancyMapSemanticT const& other)
+	OccupancyMapSemantic(OccupancyMapSemantic const& other)
 	    : OctreeBase(other), OccupancyBase(other), SemanticBase(other)
 	{
 		initRoot();
+
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
 		other.write(io_stream);
 		OctreeBase::read(io_stream);
 	}
 
-	template <class T2>
-	OccupancyMapSemanticT(OccupancyMapSemanticT<T2> const& other)
-	    : OctreeBase(other), OccupancyBase(other), SemanticBase(other)
-	{
-		initRoot();
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		other.write(io_stream);
-		OctreeBase::read(io_stream);
-	}
+	OccupancyMapSemantic(OccupancyMapSemantic&& other) = default;
 
-	OccupancyMapSemanticT(OccupancyMapSemanticT&& other)
-	    : OctreeBase(std::move(other)),
-	      OccupancyBase(std::move(other)),
-	      SemanticBase(std::move(other))
-	{
-	}
-
-	OccupancyMapSemanticT& operator=(OccupancyMapSemanticT const& rhs)
+	OccupancyMapSemantic& operator=(OccupancyMapSemantic const& rhs)
 	{
 		OctreeBase::operator=(rhs);
 		OccupancyBase::operator=(rhs);
 		SemanticBase::operator=(rhs);
 
 		initRoot();
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		rhs.write(io_stream);
-		OctreeBase::read(io_stream);
-
-		return *this;
-	}
-
-	template <class T2>
-	OccupancyMapSemanticT& operator=(OccupancyMapSemanticT<T2> const& rhs)
-	{
-		OctreeBase::operator=(rhs);
-		OccupancyBase::operator=(rhs);
-		SemanticBase::operator=(rhs);
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
@@ -167,26 +166,15 @@ class OccupancyMapSemanticT final
 		return *this;
 	}
 
-	OccupancyMapSemanticT& operator=(OccupancyMapSemanticT&& rhs)
-	{
-		OctreeBase::operator=(std::move(rhs));
-		OccupancyBase::operator=(std::move(rhs));
-		SemanticBase::operator=(std::move(rhs));
-		return *this;
-	}
-
-	//
-	// Destructor
-	//
-
-	virtual ~OccupancyMapSemanticT() override {}
+	OccupancyMapSemantic& operator=(OccupancyMapSemantic&& rhs) = default;
 
 	//
 	// Initilize root
 	//
 
-	virtual void initRoot() override
+	void initRoot()
 	{
+		OctreeBase::initRoot();
 		OccupancyBase::initRoot();
 		SemanticBase::initRoot();
 	}
@@ -195,7 +183,7 @@ class OccupancyMapSemanticT final
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, depth_t depth) override
+	void updateNode(InnerNode& node, depth_t depth)
 	{
 		OccupancyBase::updateNode(node, depth);
 		SemanticBase::updateNode(node, depth);
@@ -205,24 +193,22 @@ class OccupancyMapSemanticT final
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
+	void addFileInfo(FileInfo& info) const
 	{
 		OccupancyBase::addFileInfo(info);
 		SemanticBase::addFileInfo(info);
 	}
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
 		return OccupancyBase::readNodes(in_stream, nodes, field, type, size, num) ||
 		       SemanticBase::readNodes(in_stream, nodes, field, type, size, num);
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	                bool compress, int compression_acceleration_level,
+	                int compression_level) const
 	{
 		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
 		                          compression_level);
@@ -231,8 +217,7 @@ class OccupancyMapSemanticT final
 	}
 }
 
-using OccupancyMapSemantic = OccupancyMapSemanticT<float, ..., ...>;
-using OccupancyMapSemanticSmall = OccupancyMapSemanticT<uint8_t, ..., ...>;
+using OccupancyMapSemanticSmall = OccupancyMapSemanticT<uint8_t, uint32_t, 16>;
 
 }  // namespace ufo::map
 

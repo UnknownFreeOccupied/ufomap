@@ -2015,7 +2015,8 @@ class OctreeBase
 		      compression_acceleration_level, compression_level);
 	}
 
-	template <class Predicates, typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
+	template <class Predicates,
+	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
 	void write(std::filesystem::path const& filename, Predicates&& predicates,
 	           depth_t min_depth = 0, bool compress = false,
 	           int compression_acceleration_level = 1, int compression_level = 0) const
@@ -2865,7 +2866,7 @@ class OctreeBase
 					}
 				}
 
-				free_inner_nodes_.push(&getLeafChildren(node));
+				free_inner_nodes_.push(&getInnerChildren(node));
 
 				if constexpr (!LockLess) {
 					free_inner_nodes_lock_.clear(std::memory_order_relaxed);
@@ -2930,7 +2931,7 @@ class OctreeBase
 					}
 				}
 
-				free_inner_nodes_.push(&getLeafChildren(node));
+				free_inner_nodes_.push(&getInnerChildren(node));
 
 				if constexpr (!LockLess) {
 					free_inner_nodes_lock_.clear(std::memory_order_relaxed);

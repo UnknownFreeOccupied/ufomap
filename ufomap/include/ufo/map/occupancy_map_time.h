@@ -43,132 +43,137 @@
 #define UFO_MAP_OCCUPANCY_MAP_TIME_H
 
 // UFO
+#include <ufo/map/map_base.h>
 #include <ufo/map/occupancy/occupancy_map_time_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
 
-// STL
-#include <filesystem>
-#include <string_view>
-
 namespace ufo::map
 {
-	
 class OccupancyMapTime final
-    : public OctreeBase<OccupancyMapTime, OccupancyTimeNode, OccupancyIndicators>,
-      public OccupancyMapTimeBase<OccupancyMapTime,
-                                  typename OctreeBase<OccupancyMapTime, OccupancyTimeNode,
-                                                      OccupancyIndicators>::LeafNode,
-                                  typename OctreeBase<OccupancyMapTime, OccupancyTimeNode,
-                                                      OccupancyIndicators>::InnerNode>
+    : public MapBase<OccupancyTimeNode, OccupancyIndicators, OccupancyMapTimeBase>
 {
- protected:
-	//
-	// Tags
-	//
-
-	using OctreeBase = OctreeBase<OccupancyMapTime, OccupancyTimeNode, OccupancyIndicators>;
-	using LeafNode = typename OctreeBase::LeafNode;
-	using InnerNode = typename OctreeBase::InnerNode;
-	using OccupancyTimeBase = OccupancyMapTimeBase<OccupancyMapTime, LeafNode, InnerNode>;
-	using OccupancyBase = typename OccupancyTimeBase::OccupancyBase;
-
-	//
-	// Friends
-	//
-
-	friend OctreeBase;
-	friend OccupancyBase;
-	friend OccupancyTimeBase;
+ private:
+	using MB = MapBase<OccupancyTimeNode, OccupancyIndicators, OccupancyMapTimeBase>;
 
  public:
-	//
-	// Constructors
-	//
-
-	OccupancyMapTime(double resolution = 0.1, depth_t depth_levels = 16,
-	                 bool automatic_pruning = true, float occupied_thres = 0.5,
-	                 float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	                 float clamping_thres_max = 0.971)
-	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-	      OccupancyTimeBase(occupied_thres, free_thres, clamping_thres_min,
-	                        clamping_thres_max)
-	{
-		initRoot();
-	}
-
-	OccupancyMapTime(std::filesystem::path const& filename, bool automatic_pruning = true,
-	                 float occupied_thres = 0.5, float free_thres = 0.5,
-	                 float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                       clamping_thres_min, clamping_thres_max)
-	{
-		OctreeBase::read(filename);
-	}
-
-	OccupancyMapTime(std::istream& in_stream, bool automatic_pruning = true,
-	                 float occupied_thres = 0.5, float free_thres = 0.5,
-	                 float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                       clamping_thres_min, clamping_thres_max)
-	{
-		OctreeBase::read(in_stream);
-	}
-
-	OccupancyMapTime(OccupancyMapTime const& other)
-	    : OctreeBase(other), OccupancyTimeBase(other)
-	{
-		initRoot();
-
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		other.write(io_stream);
-		OctreeBase::read(io_stream);
-	}
-
-	OccupancyMapTime(OccupancyMapTime&& other) = default;
-
-	OccupancyMapTime& operator=(OccupancyMapTime const& rhs)
-	{
-		OctreeBase::operator=(rhs);
-		OccupancyTimeBase::operator=(rhs);
-
-		initRoot();
-
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		rhs.write(io_stream);
-		OctreeBase::read(io_stream);
-
-		return *this;
-	}
-
-	OccupancyMapTime& operator=(OccupancyMapTime&& rhs) = default;
-
- protected:
-	//
-	// Init root
-	//
-
-	void initRoot()
-	{
-		OctreeBase::initRoot();
-		OccupancyTimeBase::initRoot();
-	}
-
-	//
-	// Input/output (read/write)
-	//
-
-	using OccupancyTimeBase::addFileInfo;
-
-	using OccupancyTimeBase::readNodes;
-
-	using OccupancyTimeBase::writeNodes;
+	// Using base constructors
+	using MB::MB;
 };
 
-// TODO: Fix
-using OccupancyMapTimeMin = OccupancyMapTime;
-using OccupancyMapTimeMax = OccupancyMapTime;
+// class OccupancyMapTime final
+//     : public OctreeBase<OccupancyMapTime, OccupancyTimeNode, OccupancyIndicators>,
+//       public OccupancyMapTimeBase<OccupancyMapTime,
+//                                   typename OctreeBase<OccupancyMapTime,
+//                                   OccupancyTimeNode,
+//                                                       OccupancyIndicators>::LeafNode,
+//                                   typename OctreeBase<OccupancyMapTime,
+//                                   OccupancyTimeNode,
+//                                                       OccupancyIndicators>::InnerNode>
+// {
+//  protected:
+// 	//
+// 	// Tags
+// 	//
+
+// 	using OctreeBase = OctreeBase<OccupancyMapTime, OccupancyTimeNode,
+// OccupancyIndicators>; 	using LeafNode = typename OctreeBase::LeafNode; 	using
+// InnerNode = typename OctreeBase::InnerNode; 	using OccupancyTimeBase =
+// OccupancyMapTimeBase<OccupancyMapTime, LeafNode, InnerNode>; 	using OccupancyBase =
+// typename OccupancyTimeBase::OccupancyBase;
+
+// 	//
+// 	// Friends
+// 	//
+
+// 	friend OctreeBase;
+// 	friend OccupancyBase;
+// 	friend OccupancyTimeBase;
+
+//  public:
+// 	//
+// 	// Constructors
+// 	//
+
+// 	OccupancyMapTime(double resolution = 0.1, depth_t depth_levels = 16,
+// 	                 bool automatic_pruning = true, float occupied_thres = 0.5,
+// 	                 float free_thres = 0.5, float clamping_thres_min = 0.1192,
+// 	                 float clamping_thres_max = 0.971)
+// 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
+// 	      OccupancyTimeBase(occupied_thres, free_thres, clamping_thres_min,
+// 	                        clamping_thres_max)
+// 	{
+// 		initRoot();
+// 	}
+
+// 	OccupancyMapTime(std::filesystem::path const& filename, bool automatic_pruning = true,
+// 	                 float occupied_thres = 0.5, float free_thres = 0.5,
+// 	                 float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+// 	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+// 	                       clamping_thres_min, clamping_thres_max)
+// 	{
+// 		OctreeBase::read(filename);
+// 	}
+
+// 	OccupancyMapTime(std::istream& in_stream, bool automatic_pruning = true,
+// 	                 float occupied_thres = 0.5, float free_thres = 0.5,
+// 	                 float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
+// 	    : OccupancyMapTime(0.1, 16, automatic_pruning, occupied_thres, free_thres,
+// 	                       clamping_thres_min, clamping_thres_max)
+// 	{
+// 		OctreeBase::read(in_stream);
+// 	}
+
+// 	OccupancyMapTime(OccupancyMapTime const& other)
+// 	    : OctreeBase(other), OccupancyTimeBase(other)
+// 	{
+// 		initRoot();
+
+// 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+// 		                            std::ios_base::binary);
+// 		other.write(io_stream);
+// 		OctreeBase::read(io_stream);
+// 	}
+
+// 	OccupancyMapTime(OccupancyMapTime&& other) = default;
+
+// 	OccupancyMapTime& operator=(OccupancyMapTime const& rhs)
+// 	{
+// 		OctreeBase::operator=(rhs);
+// 		OccupancyTimeBase::operator=(rhs);
+
+// 		initRoot();
+
+// 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+// 		                            std::ios_base::binary);
+// 		rhs.write(io_stream);
+// 		OctreeBase::read(io_stream);
+
+// 		return *this;
+// 	}
+
+// 	OccupancyMapTime& operator=(OccupancyMapTime&& rhs) = default;
+
+//  protected:
+// 	//
+// 	// Init root
+// 	//
+
+// 	void initRoot()
+// 	{
+// 		OctreeBase::initRoot();
+// 		OccupancyTimeBase::initRoot();
+// 	}
+
+// 	//
+// 	// Input/output (read/write)
+// 	//
+
+// 	using OccupancyTimeBase::addFileInfo;
+
+// 	using OccupancyTimeBase::readNodes;
+
+// 	using OccupancyTimeBase::writeNodes;
+// };
 
 }  // namespace ufo::map
 

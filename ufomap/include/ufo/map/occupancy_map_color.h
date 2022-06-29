@@ -46,6 +46,7 @@
 #include <ufo/map/color/color_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/octree/octree_base.h>
 
 namespace ufo::map
 {

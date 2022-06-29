@@ -201,8 +201,9 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 	// Constructors
 	//
 
-	OccupancyMapTimeBase(float occupied_thres, float free_thres, float clamping_thres_min,
-	                     float clamping_thres_max)
+	OccupancyMapTimeBase(float occupied_thres = 0.5, float free_thres = 0.5,
+	                     float clamping_thres_min = 0.1192,
+	                     float clamping_thres_max = 0.971)
 	    : OccupancyBase(occupied_thres, free_thres, clamping_thres_min, clamping_thres_max)
 	{
 		// TODO: Implement?
