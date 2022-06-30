@@ -57,12 +57,13 @@ namespace ufo::map
 
 template <class Node, class Indicators,
           template <typename, typename, typename> typename... Bases>
-class OctreeMapBase : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...>, Node, Indicators>,
-                public Bases<OctreeMapBase<Node, Indicators, Bases...>,
-                             typename OctreeBase<OctreeMapBase<Node, Indicators, Bases...>,
-                                                 Node, Indicators>::LeafNode,
-                             typename OctreeBase<OctreeMapBase<Node, Indicators, Bases...>,
-                                                 Node, Indicators>::InnerNode>...
+class OctreeMapBase
+    : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...>, Node, Indicators>,
+      public Bases<OctreeMapBase<Node, Indicators, Bases...>,
+                   typename OctreeBase<OctreeMapBase<Node, Indicators, Bases...>, Node,
+                                       Indicators>::LeafNode,
+                   typename OctreeBase<OctreeMapBase<Node, Indicators, Bases...>, Node,
+                                       Indicators>::InnerNode>...
 {
  protected:
 	//
@@ -78,9 +79,10 @@ class OctreeMapBase : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...
 	//
 
 	friend Octree;
-#define FRIEND(N)                                                             \
-	friend std::tuple_element_t<std::min((std::size_t)N + 1, sizeof...(Bases)), \
-	                            std::tuple<void, Bases<OctreeMapBase, LeafNode, InnerNode>...>>;
+#define FRIEND(N)                                     \
+	friend std::tuple_element_t<                        \
+	    std::min((std::size_t)N + 1, sizeof...(Bases)), \
+	    std::tuple<void, Bases<OctreeMapBase, LeafNode, InnerNode>...>>;
 	REPEAT_128(FRIEND, 0)
 
  public:
@@ -89,7 +91,7 @@ class OctreeMapBase : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...
 	//
 
 	OctreeMapBase(double resolution = 0.1, depth_t depth_levels = 16,
-	        bool automatic_pruning = true)
+	              bool automatic_pruning = true)
 	    : Octree(resolution, depth_levels, automatic_pruning)
 	{
 		initRoot();
@@ -118,6 +120,19 @@ class OctreeMapBase : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...
 		Octree::read(io_stream);
 	}
 
+	template <class Node2, class Indicators2,
+	          template <typename, typename, typename> typename... Bases2>
+	OctreeMapBase(OctreeMapBase<Node2, Indicators2, Bases2...> const& other)
+	    : Octree(other.resolution(), other.depthLevels(), other.automaticPruning())
+	{
+		initRoot();
+
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		other.write(io_stream);
+		Octree::read(io_stream);
+	}
+
 	OctreeMapBase(OctreeMapBase&& other) = default;
 
 	OctreeMapBase& operator=(OctreeMapBase const& rhs)
@@ -125,6 +140,20 @@ class OctreeMapBase : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...
 		Octree::operator=(rhs);
 		(Bases<OctreeMapBase, LeafNode, InnerNode>::operator=(rhs), ...);
 
+		initRoot();
+
+		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
+		                            std::ios_base::binary);
+		rhs.write(io_stream);
+		Octree::read(io_stream);
+
+		return *this;
+	}
+
+	template <class Node2, class Indicators2,
+	          template <typename, typename, typename> typename... Bases2>
+	OctreeMapBase& operator=(OctreeMapBase<Node2, Indicators2, Bases2...> const& rhs)
+	{
 		initRoot();
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
@@ -168,8 +197,8 @@ class OctreeMapBase : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
 	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
-		return (Bases<OctreeMapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes, field, type,
-		                                                       size, num) ||
+		return (Bases<OctreeMapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes, field,
+		                                                             type, size, num) ||
 		        ...);
 	}
 
