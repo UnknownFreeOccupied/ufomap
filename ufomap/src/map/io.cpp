@@ -42,7 +42,7 @@
 // UFO
 #include <ufo/map/io.h>
 
-// STD
+// STL
 #include <fstream>
 #include <memory>
 #include <sstream>
