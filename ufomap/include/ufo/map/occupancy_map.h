@@ -43,14 +43,14 @@
 #define UFO_MAP_OCCUPANCY_MAP_H
 
 // UFO
-#include <ufo/map/map_base.h>
+#include <ufo/map/octree_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
 
 namespace ufo::map
 {
 template <class OccupancyType>
 using OccupancyMapT =
-    MapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, OccupancyMapBase>;
+    OctreeMapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, OccupancyMapBase>;
 		
 using OccupancyMap = OccupancyMapT<float>;
 using OccupancyMapSmall = OccupancyMapT<uint8_t>;

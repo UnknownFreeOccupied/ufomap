@@ -51,7 +51,7 @@ namespace ufo::map
 {
 template <class OccupancyType, class SemanticType, std::size_t SemanticValueWidth>
 using OccupancyMapColorSemanticT =
-    MapBase<OccupancyColorSemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+    OctreeMapBase<OccupancyColorSemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
             OccupancyIndicators, OccupancyMapBase, ColorMapBase, SemanticMapBase>;
 
 using OccupancyMapColorSemantic = OccupancyMapColorSemanticT<float, uint32_t, 16>;

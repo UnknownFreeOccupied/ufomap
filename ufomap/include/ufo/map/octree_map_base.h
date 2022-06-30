@@ -42,6 +42,9 @@
 #ifndef UFO_MAP_BASE_H
 #define UFO_MAP_BASE_H
 
+// UFO
+#include <ufo/map/octree/octree_base.h>
+
 namespace ufo::map
 {
 #define REPEAT_2(M, N) M(N) M(N + 1)
@@ -54,11 +57,11 @@ namespace ufo::map
 
 template <class Node, class Indicators,
           template <typename, typename, typename> typename... Bases>
-class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Indicators>,
-                public Bases<MapBase<Node, Indicators, Bases...>,
-                             typename OctreeBase<MapBase<Node, Indicators, Bases...>,
+class OctreeMapBase : public OctreeBase<OctreeMapBase<Node, Indicators, Bases...>, Node, Indicators>,
+                public Bases<OctreeMapBase<Node, Indicators, Bases...>,
+                             typename OctreeBase<OctreeMapBase<Node, Indicators, Bases...>,
                                                  Node, Indicators>::LeafNode,
-                             typename OctreeBase<MapBase<Node, Indicators, Bases...>,
+                             typename OctreeBase<OctreeMapBase<Node, Indicators, Bases...>,
                                                  Node, Indicators>::InnerNode>...
 {
  protected:
@@ -66,7 +69,7 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 	// Tags
 	//
 
-	using Octree = OctreeBase<MapBase, Node, Indicators>;
+	using Octree = OctreeBase<OctreeMapBase, Node, Indicators>;
 	using LeafNode = typename Octree::LeafNode;
 	using InnerNode = typename Octree::InnerNode;
 
@@ -77,7 +80,7 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 	friend Octree;
 #define FRIEND(N)                                                             \
 	friend std::tuple_element_t<std::min((std::size_t)N + 1, sizeof...(Bases)), \
-	                            std::tuple<void, Bases<MapBase, LeafNode, InnerNode>...>>;
+	                            std::tuple<void, Bases<OctreeMapBase, LeafNode, InnerNode>...>>;
 	REPEAT_128(FRIEND, 0)
 
  public:
@@ -85,27 +88,27 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 	// Constructors
 	//
 
-	MapBase(double resolution = 0.1, depth_t depth_levels = 16,
+	OctreeMapBase(double resolution = 0.1, depth_t depth_levels = 16,
 	        bool automatic_pruning = true)
 	    : Octree(resolution, depth_levels, automatic_pruning)
 	{
 		initRoot();
 	}
 
-	MapBase(std::filesystem::path const& filename, bool automatic_pruning = true)
-	    : MapBase(0.1, 16, automatic_pruning)
+	OctreeMapBase(std::filesystem::path const& filename, bool automatic_pruning = true)
+	    : OctreeMapBase(0.1, 16, automatic_pruning)
 	{
 		Octree::read(filename);
 	}
 
-	MapBase(std::istream& in_stream, bool automatic_pruning = true)
-	    : MapBase(0.1, 16, automatic_pruning)
+	OctreeMapBase(std::istream& in_stream, bool automatic_pruning = true)
+	    : OctreeMapBase(0.1, 16, automatic_pruning)
 	{
 		Octree::read(in_stream);
 	}
 
-	MapBase(MapBase const& other)
-	    : Octree(other), Bases<MapBase, LeafNode, InnerNode>(other)...
+	OctreeMapBase(OctreeMapBase const& other)
+	    : Octree(other), Bases<OctreeMapBase, LeafNode, InnerNode>(other)...
 	{
 		initRoot();
 
@@ -115,12 +118,12 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 		Octree::read(io_stream);
 	}
 
-	MapBase(MapBase&& other) = default;
+	OctreeMapBase(OctreeMapBase&& other) = default;
 
-	MapBase& operator=(MapBase const& rhs)
+	OctreeMapBase& operator=(OctreeMapBase const& rhs)
 	{
 		Octree::operator=(rhs);
-		(Bases<MapBase, LeafNode, InnerNode>::operator=(rhs), ...);
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::operator=(rhs), ...);
 
 		initRoot();
 
@@ -132,7 +135,7 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 		return *this;
 	}
 
-	MapBase& operator=(MapBase&& rhs) = default;
+	OctreeMapBase& operator=(OctreeMapBase&& rhs) = default;
 
 	//
 	// Initilize root
@@ -141,7 +144,7 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 	void initRoot()
 	{
 		Octree::initRoot();
-		(Bases<MapBase, LeafNode, InnerNode>::initRoot(), ...);
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::initRoot(), ...);
 	}
 
 	//
@@ -150,7 +153,7 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 
 	void updateNode(InnerNode& node, depth_t depth)
 	{
-		(Bases<MapBase, LeafNode, InnerNode>::updateNode(node, depth), ...);
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::updateNode(node, depth), ...);
 	}
 
 	//
@@ -159,13 +162,13 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 
 	void addFileInfo(FileInfo& info) const
 	{
-		(Bases<MapBase, LeafNode, InnerNode>::addFileInfo(info), ...);
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::addFileInfo(info), ...);
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
 	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
-		return (Bases<MapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes, field, type,
+		return (Bases<OctreeMapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes, field, type,
 		                                                       size, num) ||
 		        ...);
 	}
@@ -174,7 +177,7 @@ class MapBase : public OctreeBase<MapBase<Node, Indicators, Bases...>, Node, Ind
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
-		(Bases<MapBase, LeafNode, InnerNode>::writeNodes(
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::writeNodes(
 		     out_stream, nodes, compress, compression_acceleration_level, compression_level),
 		 ...);
 	}

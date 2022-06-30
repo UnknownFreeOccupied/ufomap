@@ -49,7 +49,7 @@
 namespace ufo::map
 {
 template <class OccupancyType>
-using OccupancyMapColorT = MapBase<OccupancyColorNode<OccupancyType>, OccupancyIndicators,
+using OccupancyMapColorT = OctreeMapBase<OccupancyColorNode<OccupancyType>, OccupancyIndicators,
                                    OccupancyMapBase, ColorMapBase>;
 																	 
 using OccupancyMapColor = OccupancyMapColorT<float>;

@@ -44,7 +44,7 @@
 
 // UFO
 #include <ufo/map/color/color_map_base.h>
-#include <ufo/map/map_base.h>
+#include <ufo/map/octree_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/semantic/semantic_map_base.h>
 #include <ufo/map/time/time_map_base.h>
@@ -53,7 +53,7 @@ namespace ufo::map
 {
 template <class SemanticType, std::size_t SemanticValueWidth>
 using OccupancyMapTimeColorSemanticT =
-    MapBase<OccupancyTimeColorSemanticNode<SemanticType, SemanticValueWidth>,
+    OctreeMapBase<OccupancyTimeColorSemanticNode<SemanticType, SemanticValueWidth>,
             OccupancyIndicators, OccupancyMapBase, TimeMapBase, ColorMapBase,
             SemanticMapBase>;
 

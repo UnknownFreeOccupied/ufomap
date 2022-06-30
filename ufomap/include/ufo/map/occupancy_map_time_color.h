@@ -44,13 +44,13 @@
 
 // UFO
 #include <ufo/map/color/color_map_base.h>
-#include <ufo/map/map_base.h>
+#include <ufo/map/octree_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/time/time_map_base.h>
 
 namespace ufo::map
 {
-using OccupancyMapTimeColor = MapBase<OccupancyTimeColorNode, OccupancyIndicators,
+using OccupancyMapTimeColor = OctreeMapBase<OccupancyTimeColorNode, OccupancyIndicators,
                                       OccupancyMapBase, TimeMapBase, ColorMapBase>;
 }  // namespace ufo::map
 
