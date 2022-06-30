@@ -137,7 +137,8 @@ struct Pose6 {
 	{
 		Pose6 result(*this);
 		result.rotation.inverse().normalize();
-		result.rotation.rotateInPlace(-result.translation);
+		result.translation = -result.translation;
+		result.rotation.rotateInPlace(result.translation);
 		return result;
 	}
 
