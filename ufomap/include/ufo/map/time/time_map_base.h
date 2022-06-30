@@ -39,30 +39,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_TIME_BASE_H
-#define UFO_MAP_OCCUPANCY_MAP_TIME_BASE_H
+#ifndef UFO_MAP_TIME_MAP_BASE_H
+#define UFO_MAP_TIME_MAP_BASE_H
 
 // UFO
-#include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/occupancy/occupancy_node.h>
-#include <ufo/map/octree/node.h>
 #include <ufo/map/predicate/time.h>
 #include <ufo/map/types.h>
-
-// STL
-#include <chrono>
-#include <type_traits>
 
 namespace ufo::map
 {
 template <class Derived, class LeafNode, class InnerNode>
-class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNode>
+class TimeMapBase
 {
- protected:
-	using OccupancyBase = OccupancyMapBase<Derived, LeafNode, InnerNode>;
-
-	static_assert(std::is_base_of_v<OccupancyTimeNode, LeafNode>);
-
  public:
 	//
 	// Get time step
@@ -198,41 +186,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 
  protected:
 	//
-	// Constructors
-	//
-
-	OccupancyMapTimeBase(float occupied_thres = 0.5, float free_thres = 0.5,
-	                     float clamping_thres_min = 0.1192,
-	                     float clamping_thres_max = 0.971)
-	    : OccupancyBase(occupied_thres, free_thres, clamping_thres_min, clamping_thres_max)
-	{
-		// TODO: Implement?
-	}
-
-	OccupancyMapTimeBase(OccupancyMapTimeBase const& other) : OccupancyBase(other)
-	{
-		// TODO: Implement?
-	}
-
-	OccupancyMapTimeBase(OccupancyMapTimeBase&& other) : OccupancyBase(std::move(other))
-	{
-		// TODO: Implement?
-	}
-
-	OccupancyMapTimeBase& operator=(OccupancyMapTimeBase const& rhs)
-	{
-		OccupancyBase::operator=(rhs);
-		return *this;
-	}
-
-	OccupancyMapTimeBase& operator=(OccupancyMapTimeBase&& rhs)
-	{
-		// TODO: Implement
-		OccupancyBase::operator=(std::move(rhs));
-		return *this;
-	}
-
-	//
 	// Derived
 	//
 
@@ -244,11 +197,7 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 	// Initilize root
 	//
 
-	void initRoot()
-	{
-		OccupancyBase::initRoot();
-		setTimeStep(derived().getRoot(), 0);
-	}
+	void initRoot() { setTimeStep(derived().getRoot(), 0); }
 
 	//
 	// Get time step
@@ -274,8 +223,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 
 	void updateNode(InnerNode& node, depth_t depth)
 	{
-		OccupancyBase::updateNode(node, depth);
-
 		switch (time_step_prop_criteria_) {
 			case PropagationCriteria::MAX:
 				setTimeStep(node, maxChildTimeStep(node, depth));
@@ -362,7 +309,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 
 	void addFileInfo(FileInfo& info) const
 	{
-		OccupancyBase::addFileInfo(info);
 		info["fields"].emplace_back("time_step");
 		info["type"].emplace_back("U");
 		info["size"].emplace_back("4");
@@ -371,10 +317,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
 	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
-		if (OccupancyBase::readNodes(in_stream, nodes, field, type, size, num)) {
-			return true;
-		}
-
 		if ("time_step" != field) {
 			return false;
 		}
@@ -397,9 +339,6 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
-		OccupancyBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-		                          compression_level);
-
 		auto data = std::make_unique<uint32_t[]>(nodes.size());
 		for (size_t i = 0; i != nodes.size(); ++i) {
 			data[i] = getTimeStep(*nodes[i]);
@@ -417,4 +356,4 @@ class OccupancyMapTimeBase : public OccupancyMapBase<Derived, LeafNode, InnerNod
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_TIME_BASE_H
+#endif  // UFO_MAP_TIME_MAP_BASE_H

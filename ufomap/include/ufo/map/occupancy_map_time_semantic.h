@@ -43,172 +43,19 @@
 #define UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
 
 // UFO
-#include <ufo/map/occupancy/occupancy_map_time_base.h>
-#include <ufo/map/occupancy/occupancy_node.h>
-#include <ufo/map/octree/octree_base.h>
+#include <ufo/map/map_base.h>
+#include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/semantic/semantic_map_base.h>
+#include <ufo/map/time/time_map_base.h>
 
 namespace ufo::map
 {
-template <class SemanticType = uint32_t, size_t SemanticValueWidth = 16>
-class OccupancyMapTimeSemantic final
-    : public OctreeBase<OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-                        OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-                        OccupancyIndicators>,
-      public OccupancyMapTimeBase<
-          OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-          typename OctreeBase<OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-                              OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-                              OccupancyIndicators>::LeafNode,
-          typename OctreeBase<OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-                              OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-                              OccupancyIndicators>::InnerNode>,
-      public SemanticMapBase<
-          OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-          typename OctreeBase<OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-                              OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-                              OccupancyIndicators>::LeafNode,
-          typename OctreeBase<OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-                              OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-                              OccupancyIndicators>::InnerNode>
-{
- protected:
-	//
-	// Tags
-	//
+template <class SemanticType, std::size_t SemanticValueWidth>
+using OccupancyMapTimeSemanticT =
+    MapBase<OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
+            OccupancyIndicators, OccupancyMapBase, TimeMapBase, SemanticMapBase>;
 
-	using OctreeBase =
-	    OctreeBase<OccupancyMapTimeSemantic<SemanticType, SemanticValueWidth>,
-	               OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-	               OccupancyIndicators>;
-	using LeafNode = typename OctreeBase::LeafNode;
-	using InnerNode = typename OctreeBase::InnerNode;
-	using OccupancyTimeBase =
-	    OccupancyMapTimeBase<OccupancyMapTimeSemantic, LeafNode, InnerNode>;
-	using OccupancyBase = typename OccupancyTimeBase::OccupancyBase;
-	using SemanticBase = SemanticMapBase<OccupancyMapTimeSemantic, LeafNode, InnerNode>;
-
-	//
-	// Friends
-	//
-
-	friend OctreeBase;
-	friend OccupancyBase;
-	friend OccupancyTimeBase;
-	friend SemanticBase;
-
- public:
-	//
-	// Constructors
-	//
-
-	OccupancyMapTimeSemantic(double resolution = 0.1, depth_t depth_levels = 16,
-	                         bool automatic_pruning = true, float occupied_thres = 0.5,
-	                         float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	                         float clamping_thres_max = 0.971)
-	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-	      OccupancyTimeBase(occupied_thres, free_thres, clamping_thres_min,
-	                        clamping_thres_max),
-	      SemanticBase()
-	{
-		initRoot();
-	}
-
-	OccupancyMapTimeSemantic(std::filesystem::path const& filename,
-	                      bool automatic_pruning = true, float occupied_thres = 0.5,
-	                      float free_thres = 0.5, float clamping_thres_min = 0.1192,
-	                      float clamping_thres_max = 0.971)
-	    : OccupancyMapTimeSemantic(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                            clamping_thres_min, clamping_thres_max)
-	{
-		OctreeBase::read(filename);
-	}
-
-	OccupancyMapTimeSemantic(std::istream& in_stream, bool automatic_pruning = true,
-	                      float occupied_thres = 0.5, float free_thres = 0.5,
-	                      float clamping_thres_min = 0.1192,
-	                      float clamping_thres_max = 0.971)
-	    : OccupancyMapTimeSemantic(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-	                            clamping_thres_min, clamping_thres_max)
-	{
-		OctreeBase::read(in_stream);
-	}
-
-	OccupancyMapTimeSemantic(OccupancyMapTimeSemantic const& other)
-	    : OctreeBase(other), OccupancyTimeBase(other), SemanticBase(other)
-	{
-		initRoot();
-
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		other.write(io_stream);
-		OctreeBase::read(io_stream);
-	}
-
-	OccupancyMapTimeSemantic(OccupancyMapTimeSemantic&& other) = default;
-
-	OccupancyMapTimeSemantic& operator=(OccupancyMapTimeSemantic const& rhs)
-	{
-		OctreeBase::operator=(rhs);
-		OccupancyTimeBase::operator=(rhs);
-		SemanticBase::operator=(rhs);
-
-		initRoot();
-
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		rhs.write(io_stream);
-		OctreeBase::read(io_stream);
-
-		return *this;
-	}
-
-	OccupancyMapTimeSemantic& operator=(OccupancyMapTimeSemantic&& rhs) = default;
-
-	//
-	// Initilize root
-	//
-
-	void initRoot()
-	{
-		OctreeBase::initRoot();
-		OccupancyTimeBase::initRoot();
-		ColorBase::initRoot();
-	}
-
-	void updateNode(InnerNode& node, depth_t depth)
-	{
-		OccupancyTimeBase::updateNode(node, depth);
-		ColorBase::updateNode(node, depth);
-	}
-
-	//
-	// Input/output (read/write)
-	//
-
-	void addFileInfo(FileInfo& info) const
-	{
-		OccupancyTimeBase::addFileInfo(info);
-		ColorBase::addFileInfo(info);
-	}
-
-	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size, uint64_t num)
-	{
-		return OccupancyTimeBase::readNodes(in_stream, nodes, field, type, size, num) ||
-		       ColorBase::readNodes(in_stream, nodes, field, type, size, num);
-	}
-
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
-	                bool compress, int compression_acceleration_level,
-	                int compression_level) const
-	{
-		OccupancyTimeBase::writeNodes(out_stream, nodes, compress,
-		                              compression_acceleration_level, compression_level);
-		ColorBase::writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-		                      compression_level);
-	}
-};
+using OccupancyMapTimeSemantic = OccupancyMapTimeSemanticT<uint32_t, 16>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H

@@ -45,6 +45,7 @@
 // UFO
 #include <ufo/geometry/aabb.h>
 #include <ufo/map/io.h>
+#include <ufo/map/occupancy/occupancy_indicators.h>
 #include <ufo/map/occupancy/occupancy_node.h>
 #include <ufo/map/octree/node.h>
 #include <ufo/map/point.h>

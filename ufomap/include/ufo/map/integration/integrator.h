@@ -51,10 +51,10 @@
 #include <ufo/map/integration/integration_point.h>
 #include <ufo/map/integration/integration_point_cloud.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/occupancy/occupancy_map_time_base.h>
 #include <ufo/map/point_cloud.h>
 #include <ufo/map/ray_caster/ray_caster.h>
 #include <ufo/map/semantic/semantic_map_base.h>
+#include <ufo/map/time/time_map_base.h>
 #include <ufo/map/types.h>
 #include <ufo/math/pose6.h>
 #include <ufo/util/timing.h>
@@ -108,7 +108,7 @@ class Integrator
 			map.increaseOccupancyLogit(node, prob, false);
 
 			// Update time step
-			if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
+			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
 				map.setTimeStep(node, time_step_, false);
 			}
 
@@ -165,7 +165,7 @@ class Integrator
 
 			    map.decreaseOccupancyLogit(node, prob, false);
 
-			    if constexpr (is_base_of_template_v<OccupancyMapTimeBase, std::decay_t<Map>>) {
+			    if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
 				    map.setTimeStep(node, time_step, false);
 			    }
 		    });

@@ -45,142 +45,15 @@
 // UFO
 #include <ufo/map/map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/occupancy/occupancy_node.h>
 
 namespace ufo::map
 {
-template <class OccupancyType = float>
-class OccupancyMapT final
-    : public MapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, OccupancyMapBase>
-{
- private:
-	using MB = MapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, OccupancyMapBase>;
-
- public:
-	// Using base constructors
-	using MB::MB;
-};
-
+template <class OccupancyType>
+using OccupancyMapT =
+    MapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, OccupancyMapBase>;
+		
 using OccupancyMap = OccupancyMapT<float>;
 using OccupancyMapSmall = OccupancyMapT<uint8_t>;
-
-// template <class OccupancyType = float>
-// class OccupancyMap final
-//     : public OctreeBase<OccupancyMap<OccupancyType>, OccupancyNode<OccupancyType>,
-//                         OccupancyIndicators>,
-//       public OccupancyMapBase<
-//           OccupancyMap<OccupancyType>,
-//           typename OctreeBase<OccupancyMap<OccupancyType>,
-//           OccupancyNode<OccupancyType>,
-//                               OccupancyIndicators>::LeafNode,
-//           typename OctreeBase<OccupancyMap<OccupancyType>,
-//           OccupancyNode<OccupancyType>,
-//                               OccupancyIndicators>::InnerNode>
-// {
-//  protected:
-// 	//
-// 	// Tags
-// 	//
-
-// 	using OctreeBase =
-// 	    OctreeBase<OccupancyMap, OccupancyNode<OccupancyType>, OccupancyIndicators>;
-// 	using LeafNode = typename OctreeBase::LeafNode;
-// 	using InnerNode = typename OctreeBase::InnerNode;
-// 	using OccupancyBase = OccupancyMapBase<OccupancyMap, LeafNode, InnerNode>;
-
-// 	//
-// 	// Friends
-// 	//
-
-// 	friend OctreeBase;
-// 	friend OccupancyBase;
-
-//  public:
-// 	//
-// 	// Constructors
-// 	//
-
-// 	OccupancyMap(double resolution = 0.1, depth_t depth_levels = 16,
-// 	             bool automatic_pruning = true, float occupied_thres = 0.5,
-// 	             float free_thres = 0.5, float clamping_thres_min = 0.1192,
-// 	             float clamping_thres_max = 0.971)
-// 	    : OctreeBase(resolution, depth_levels, automatic_pruning),
-// 	      OccupancyBase(occupied_thres, free_thres, clamping_thres_min,
-// clamping_thres_max)
-// 	{
-// 		initRoot();
-// 	}
-
-// 	OccupancyMap(std::filesystem::path const& filename, bool automatic_pruning = true,
-// 	             float occupied_thres = 0.5, float free_thres = 0.5,
-// 	             float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-// 	    : OccupancyMap(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-// 	                   clamping_thres_min, clamping_thres_max)
-// 	{
-// 		OctreeBase::read(filename);
-// 	}
-
-// 	OccupancyMap(std::istream& in_stream, bool automatic_pruning = true,
-// 	             float occupied_thres = 0.5, float free_thres = 0.5,
-// 	             float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-// 	    : OccupancyMap(0.1, 16, automatic_pruning, occupied_thres, free_thres,
-// 	                   clamping_thres_min, clamping_thres_max)
-// 	{
-// 		OctreeBase::read(in_stream);
-// 	}
-
-// 	OccupancyMap(OccupancyMap const& other) : OctreeBase(other), OccupancyBase(other)
-// 	{
-// 		initRoot();
-
-// 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-// 		                            std::ios_base::binary);
-// 		other.write(io_stream);
-// 		OctreeBase::read(io_stream);
-// 	}
-
-// 	OccupancyMap(OccupancyMap&& other) = default;
-
-// 	OccupancyMap& operator=(OccupancyMap const& rhs)
-// 	{
-// 		OctreeBase::operator=(rhs);
-// 		OccupancyBase::operator=(rhs);
-
-// 		initRoot();
-
-// 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-// 		                            std::ios_base::binary);
-// 		rhs.write(io_stream);
-// 		OctreeBase::read(io_stream);
-
-// 		return *this;
-// 	}
-
-// 	OccupancyMap& operator=(OccupancyMap&& rhs) = default;
-
-//  protected:
-// 	//
-// 	// Init root
-// 	//
-
-// 	void initRoot()
-// 	{
-// 		OctreeBase::initRoot();
-// 		OccupancyBase::initRoot();
-// 	}
-
-// 	//
-// 	// Input/output (read/write)
-// 	//
-
-// 	using OccupancyBase::addFileInfo;
-
-// 	using OccupancyBase::readNodes;
-
-// 	using OccupancyBase::writeNodes;
-// };
-
-// using OccupancyMapSmall = OccupancyMap<uint8_t>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_H

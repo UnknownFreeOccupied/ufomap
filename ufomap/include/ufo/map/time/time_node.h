@@ -39,21 +39,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_COLOR_H
-#define UFO_MAP_OCCUPANCY_MAP_COLOR_H
+#ifndef UFO_MAP_TIME_NODE_H
+#define UFO_MAP_TIME_NODE_H
 
 // UFO
-#include <ufo/map/color/color_map_base.h>
-#include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/types.h>
 
 namespace ufo::map
 {
-template <class OccupancyType>
-using OccupancyMapColorT = MapBase<OccupancyColorNode<OccupancyType>, OccupancyIndicators,
-                                   OccupancyMapBase, ColorMapBase>;
-																	 
-using OccupancyMapColor = OccupancyMapColorT<float>;
-using OccupancyMapSmall = OccupancyMapColorT<uint8_t>;
+struct TimeNode {
+	time_step_t time_step;
+
+	constexpr bool operator==(TimeNode const& rhs) const
+	{
+		return time_step == rhs.time_step;
+	}
+
+	constexpr bool operator!=(TimeNode const& rhs) const { return !(*this == rhs); }
+};
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_H
+#endif  // UFO_MAP_TIME_NODE_H

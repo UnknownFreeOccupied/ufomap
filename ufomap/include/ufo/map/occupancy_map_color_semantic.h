@@ -44,22 +44,17 @@
 
 // UFO
 #include <ufo/map/color/color_map_base.h>
-#include <ufo/map/occupancy/occupancy_map_time_base.h>
-#include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/semantic/semantic_map_base.h>
 
 namespace ufo::map
 {
-// class OccupancyMapColorSemantic final
-//     : public OccupancyMapTimeBase<OccupancyMapTimeColorSemantic,
-//                                   OccupancyTimeColorSemanticNode>,
-//       public ColorMapBase<OccupancyMapTimeColorSemantic,
-//       OccupancyTimeColorSemanticNode,
-//                           OccupancyIndicators>,
-//       public SemanticMapBase<OccupancyMapTimeColorSemantic,
-//                              OccupancyTimeColorSemanticNode, OccupancyIndicators>
-// {
-// }
+template <class OccupancyType, class SemanticType, std::size_t SemanticValueWidth>
+using OccupancyMapColorSemanticT =
+    MapBase<OccupancyColorSemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
+            OccupancyIndicators, OccupancyMapBase, ColorMapBase, SemanticMapBase>;
+
+using OccupancyMapColorSemantic = OccupancyMapColorSemanticT<float, uint32_t, 16>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_SEMANTIC_H

@@ -46,6 +46,7 @@
 #include <ufo/map/color/color_node.h>
 #include <ufo/map/octree/octree_node.h>
 #include <ufo/map/semantic/semantic_node.h>
+#include <ufo/map/types.h>
 
 // STL
 #include <cstdint>
@@ -54,22 +55,6 @@
 
 namespace ufo::map
 {
-struct OccupancyIndicators {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	uint8_t is_leaf : 1;
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	uint8_t modified : 1;
-
-	// Indicates whether this node or any of its children contains unknown space
-	uint8_t contains_unknown : 1;
-	// Indicates whether this node or any of its children contains free space
-	uint8_t contains_free : 1;
-	// Indicates whether this node or any of its children contains occupied space
-	uint8_t contains_occupied : 1;
-};
-
 template <typename OccupancyType>
 struct OccupancyNode {
 	OccupancyType occupancy;
@@ -83,8 +68,8 @@ struct OccupancyNode {
 };
 
 struct OccupancyTimeNode {
-	uint32_t occupancy : 8;
-	uint32_t time_step : 24;
+	time_step_t occupancy : 8;
+	time_step_t time_step : 24;
 
 	constexpr bool operator==(OccupancyTimeNode const& rhs) const
 	{
@@ -154,11 +139,10 @@ struct OccupancyTimeSemanticNode : SemanticNode<SemanticType, SemanticValueWidth
 
 template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
 struct OccupancyColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                    OccupancyNode<OccupancyType>,
-                                    ColorNode {
+                                    OccupancyColorNode<OccupancyType> {
 	constexpr bool operator==(OccupancyColorSemanticNode const& rhs) const
 	{
-		return OccupancyNode<OccupancyType>::operator==(rhs) && ColorNode::operator==(rhs) &&
+		return OccupancyColorNode<OccupancyType>::operator==(rhs) &&
 		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
 	}
 
