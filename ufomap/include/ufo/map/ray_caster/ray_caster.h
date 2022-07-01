@@ -43,7 +43,6 @@
 #define UFO_MAP_RAY_CASTER_H
 
 // UFO
-#include <ufo/map/code/code.h>
 #include <ufo/map/key.h>
 #include <ufo/map/point.h>
 #include <ufo/map/types.h>
@@ -51,7 +50,7 @@
 #include <ufo/math/vector3.h>
 
 // STL
-#include <exception>
+#include <cassert>
 #include <limits>
 #include <vector>
 
@@ -59,9 +58,7 @@ namespace ufo::map
 {
 KeyRay computeRay(Key origin, Key goal)
 {
-	if (origin.depth() != goal.depth()) {
-		throw std::invalid_argument("origin and goal need to be at the same depth.");
-	}
+	assert(origin.depth() == goal.depth());
 
 	using namespace ufo::math;
 
@@ -92,6 +89,35 @@ KeyRay computeRay(Key origin, Key goal)
 		origin[advance_dim] += step[advance_dim];
 		t_max[advance_dim] += t_delta[advance_dim];
 		ray.push_back(origin);
+	}
+	return ray;
+}
+
+KeyRay computeRaySimple(Key origin, Key goal, double step_size_factor = 1.0)
+{
+	auto const depth = origin.depth();
+
+	assert(goal.depth() == depth);
+
+	using namespace ufo::math;
+
+	Vector3d current(origin.x(), origin.y(), origin.z());
+	Vector3d last(goal.x(), goal.y(), goal.z());
+
+	Vector3d dir = last - current;
+	double distance = dir.norm();
+	dir /= distance;
+
+	auto step_size = (1U << depth) * step_size_factor;
+
+	std::size_t num_steps = distance / step_size;
+	Vector3d step = dir * step_size;
+
+	KeyRay ray{origin};
+	ray.reserve(num_steps);
+	for (std::size_t i = 0; i != num_steps; ++i) {
+		current += step;
+		ray.emplace_back(current.x, current.y, current.z, depth);
 	}
 	return ray;
 }
