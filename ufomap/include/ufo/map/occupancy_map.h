@@ -43,17 +43,19 @@
 #define UFO_MAP_OCCUPANCY_MAP_H
 
 // UFO
-#include <ufo/map/octree_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/octree_map_base.h>
 
 namespace ufo::map
 {
-template <class OccupancyType>
+template <class OccupancyType, bool LockLess, MemoryModel NodeMemoryModel,
+          depth_t StaticallyAllocatedDepths>
 using OccupancyMapT =
-    OctreeMapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, OccupancyMapBase>;
-		
-using OccupancyMap = OccupancyMapT<float>;
-using OccupancyMapSmall = OccupancyMapT<uint8_t>;
+    OctreeMapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, LockLess,
+                  NodeMemoryModel, StaticallyAllocatedDepths, OccupancyMapBase>;
+
+using OccupancyMap = OccupancyMapT<float, false, MemoryModel::POINTER, 1>;
+using OccupancyMapSmall = OccupancyMapT<uint8_t, false, MemoryModel::POINTER, 1>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_H

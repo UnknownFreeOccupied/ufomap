@@ -43,19 +43,23 @@
 #define UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
 
 // UFO
-#include <ufo/map/octree_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/octree_map_base.h>
 #include <ufo/map/semantic/semantic_map_base.h>
 #include <ufo/map/time/time_map_base.h>
 
 namespace ufo::map
 {
-template <class SemanticType, std::size_t SemanticValueWidth>
+template <class SemanticType, std::size_t SemanticValueWidth, bool LockLess,
+          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
 using OccupancyMapTimeSemanticT =
     OctreeMapBase<OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-            OccupancyIndicators, OccupancyMapBase, TimeMapBase, SemanticMapBase>;
+                  OccupancyIndicators, LockLess, NodeMemoryModel,
+                  StaticallyAllocatedDepths, OccupancyMapBase, TimeMapBase,
+                  SemanticMapBase>;
 
-using OccupancyMapTimeSemantic = OccupancyMapTimeSemanticT<uint32_t, 16>;
+using OccupancyMapTimeSemantic =
+    OccupancyMapTimeSemanticT<uint32_t, 16, false, MemoryModel::POINTER, 1>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H

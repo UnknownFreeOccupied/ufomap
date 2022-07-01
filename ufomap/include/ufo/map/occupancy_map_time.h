@@ -43,14 +43,18 @@
 #define UFO_MAP_OCCUPANCY_MAP_TIME_H
 
 // UFO
-#include <ufo/map/octree_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/octree_map_base.h>
 #include <ufo/map/time/time_map_base.h>
 
 namespace ufo::map
 {
-using OccupancyMapTime =
-    OctreeMapBase<OccupancyTimeNode, OccupancyIndicators, OccupancyMapBase, TimeMapBase>;
+template <bool LockLess, MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+using OccupancyMapTimeT =
+    OctreeMapBase<OccupancyTimeNode, OccupancyIndicators, LockLess, NodeMemoryModel,
+                  StaticallyAllocatedDepths, OccupancyMapBase, TimeMapBase>;
+
+using OccupancyMapTime = OccupancyMapTimeT<false, MemoryModel::POINTER, 1>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_TIME_H
