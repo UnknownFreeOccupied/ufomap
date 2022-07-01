@@ -235,20 +235,6 @@ class ColorMapBase
 
  protected:
 	//
-	// Constructor
-	//
-
-	ColorMapBase() = default;
-
-	ColorMapBase(ColorMapBase const& other) = default;
-
-	ColorMapBase(ColorMapBase&& other) = default;
-
-	ColorMapBase& operator=(ColorMapBase const& rhs) = default;
-
-	ColorMapBase& operator=(ColorMapBase&& rhs) = default;
-
-	//
 	// Derived
 	//
 
