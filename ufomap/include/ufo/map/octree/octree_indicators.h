@@ -39,41 +39,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCTREE_OCTREE_NODE_H
-#define UFO_MAP_OCTREE_OCTREE_NODE_H
+#ifndef UFO_MAP_OCTREE_OCTREE_INDICATORS_H
+#define UFO_MAP_OCTREE_OCTREE_INDICATORS_H
+
+// STL
+#include <cstdint>
 
 namespace ufo::map
 {
-template <typename Data, class Indicators>
-struct OctreeDataLeafNode : Indicators {
-	Data value;
-
-	constexpr bool operator==(OctreeDataLeafNode const& rhs) const
-	{
-		return static_cast<Data const&>(rhs.value) == value;
-	}
-
-	constexpr bool operator!=(OctreeDataLeafNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <class Data, class Indicators>
-struct OctreeLeafNode : Data, Indicators {
-	constexpr bool operator==(OctreeLeafNode const& rhs) const
-	{
-		return static_cast<Data const&>(rhs) == static_cast<Data const&>(*this);
-	}
-
-	constexpr bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
-};
-
-template <class LeafNode>
-struct OctreeInnerNode : LeafNode {
-	// Pointer to children
-	void* children = nullptr;
+struct OctreeIndicators {
+	// Indicates whether this is a leaf node (has no children) or not. If true then the
+	// children are not valid and should not be accessed
+	uint8_t is_leaf : 1;
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	uint8_t modified : 1;
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCTREE_OCTREE_NODE_H
+#endif  // UFO_MAP_OCTREE_OCTREE_INDICATORS_H

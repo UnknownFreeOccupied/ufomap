@@ -48,6 +48,7 @@
 #include <ufo/map/iterator/octree.h>
 #include <ufo/map/key.h>
 #include <ufo/map/octree/node.h>
+#include <ufo/map/octree/octree_indicators.h>
 #include <ufo/map/octree/octree_node.h>
 #include <ufo/map/octree/query.h>
 #include <ufo/map/point.h>
