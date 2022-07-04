@@ -50,6 +50,7 @@
 #include <ufo/map/octree/node.h>
 #include <ufo/map/point.h>
 #include <ufo/map/predicate/occupancy.h>
+#include <ufo/map/predicate/satisfies.h>
 #include <ufo/map/types.h>
 #include <ufo/math/logit.h>
 
@@ -171,38 +172,20 @@ class OccupancyMapBase
 	constexpr void setOccupancyClampingThres(float min_thres_probability,
 	                                         float max_thres_probability)
 	{
-		// FIXME: Should this be applied?
-		setOccupancyClampingThresLogit(math::logit(min_thres_probability),
-		                               math::logit(max_thres_probability));
-	}
-
-	constexpr void setOccupancyClampingThresLogit(logit_t min_thres, logit_t max_thres)
-	{
-		// FIXME: What happens if uint8_t?
-		setOccupancyClampingThresMinLogit(min_thres);
-		setOccupancyClampingThresMaxLogit(max_thres);
+		setOccupancyClampingThresMin(min_thres_probability);
+		setOccupancyClampingThresMax(max_thres_probability);
 	}
 
 	constexpr void setOccupancyClampingThresMin(float probability)
 	{
-		setOccupancyClampingThresMinLogit(math::logit(probability));
-	}
-
-	constexpr void setOccupancyClampingThresMinLogit(logit_t min_thres)
-	{
-		// FIXME: What happens if uint8_t?
-		occupancy_clamping_thres_min_log_ = min_thres;
+		occupancy_clamping_thres_min_log_ = math::logit(probability);
+		// FIXME: Should this update occupancy values?
 	}
 
 	constexpr void setOccupancyClampingThresMax(float probability)
 	{
-		setOccupancyClampingThresMaxLogit(math::logit(probability));
-	}
-
-	constexpr void setOccupancyClampingThresMaxLogit(logit_t max_thres)
-	{
-		// FIXME: What happens if uint8_t?
-		occupancy_clamping_thres_max_log_ = max_thres;
+		occupancy_clamping_thres_max_log_ = math::logit(probability);
+		// FIXME: Should this update occupancy values?
 	}
 
 	//
@@ -233,12 +216,39 @@ class OccupancyMapBase
 	}
 
 	//
-	// Get bounding volume containing all known
+	// Get bounding volume containing all known, i.e., occupied and free space
 	//
 
 	geometry::AABB getKnownBBX() const
 	{
-		// TODO: ement
+		if (!containsOccupied(derived().getRootNode()) &&
+		    !containsFree(derived().getRootNode())) {
+			return geometry::AABB();
+		}
+
+		Point3 min = derived().max();
+		Point3 max = derived().min();
+
+		auto pred = predicate::Leaf() && predicate::OccupancyStates(false, true, true) &&
+		            predicate::SatisfiesInner([this, &min, &max](auto const& node) {
+			            auto node_min = derived().getNodeMin(node);
+			            auto node_max = derived().getNodeMax(node);
+			            return node_min.x < min.x || node_min.y < min.y || node_min.z < min.z ||
+			                   node_max.x > max.x || node_max.y > max.y || node_max.z > max.z;
+		            });
+
+		for (auto const node : derived().queryBV(pred)) {
+			auto node_min = derived().getNodeMin(node);
+			auto node_max = derived().getNodeMax(node);
+			min.x = std::min(min.x, node_min.x);
+			min.y = std::min(min.y, node_min.y);
+			min.z = std::min(min.z, node_min.z);
+			max.x = std::max(max.x, node_max.x);
+			max.y = std::max(max.y, node_max.y);
+			max.z = std::max(max.z, node_max.z);
+		}
+
+		return geometry::AABB(min, max);
 	}
 
 	//
