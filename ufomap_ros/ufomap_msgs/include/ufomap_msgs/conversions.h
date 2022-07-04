@@ -64,6 +64,7 @@ void msgToUfo(ufomap_msgs::UFOMap const& msg, Map& map, bool propagate = true)
 
 	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+	data.imbue(std::locale());
 
 	data.write(reinterpret_cast<char const*>(msg.data.data()),
 	           sizeof(typename decltype(msg.data)::value_type) * msg.data.size());
@@ -84,14 +85,16 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, Predicates const& predicates,
 {
 	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+	data.imbue(std::locale());
 
 	map.write(data, predicates, depth, compress, compression_acceleration_level,
 	          compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.resize(data.tellp());
-	data.seekg(0, std::ios_base::beg);
-	data.read(reinterpret_cast<char*>(msg.data.data()), msg.data.size());
+	msg.data.reserve(data.tellp());
+	std::copy(std::istreambuf_iterator<char>(data), std::istreambuf_iterator<char>(),
+	          std::back_inserter(msg.data));
+
 	return msg;
 }
 
@@ -103,13 +106,35 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, unsigned int depth = 0,
 {
 	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+	data.imbue(std::locale());
 
 	map.write(data, depth, compress, compression_acceleration_level, compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.resize(data.tellp());
-	data.seekg(0, std::ios_base::beg);
-	data.read(reinterpret_cast<char*>(msg.data.data()), msg.data.size());
+	msg.data.reserve(data.tellp());
+	std::copy(std::istreambuf_iterator<char>(data), std::istreambuf_iterator<char>(),
+	          std::back_inserter(msg.data));
+
+	return msg;
+}
+
+template <class Map>
+ufomap_msgs::UFOMap ufoToMsgClearModified(Map& map, bool compress = false,
+                                          int compression_acceleration_level = 1,
+                                          int compression_level = 0)
+{
+	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+	data.imbue(std::locale());
+
+	map.writeAndClearModified(data, compress, compression_acceleration_level,
+	                          compression_level);
+
+	ufomap_msgs::UFOMap msg;
+	msg.data.reserve(data.tellp());
+	std::copy(std::istreambuf_iterator<char>(data), std::istreambuf_iterator<char>(),
+	          std::back_inserter(msg.data));
+
 	return msg;
 }
 

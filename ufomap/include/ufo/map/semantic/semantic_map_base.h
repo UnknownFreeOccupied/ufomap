@@ -1230,7 +1230,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	}
 
 	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode const*> const& nodes, bool compress,
+	                        std::vector<LeafNode> const& nodes, bool compress,
 	                        int compression_acceleration_level,
 	                        int compression_level) const override
 	{

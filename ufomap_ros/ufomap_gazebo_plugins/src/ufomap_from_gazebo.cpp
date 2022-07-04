@@ -108,19 +108,19 @@ bool UFOMapFromGazebo::getMapCallback(GetMap::Request& req, GetMap::Response& re
 
 	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+	data.imbue(std::locale());
 
 	map.write(data, req.depth, req.compress, 1, req.compression_level);
 
-	ufomap_msgs::UFOMap msg;
-	res.map.data.resize(data.tellp());
-	data.seekg(0, std::ios_base::beg);
-	data.read(reinterpret_cast<char*>(res.map.data.data()), res.map.data.size());
+	res.map.data.reserve(data.tellp());
+	std::copy(std::istreambuf_iterator<char>(data), std::istreambuf_iterator<char>(),
+	          std::back_inserter(res.map.data));
 	res.success = true;
 
 	if ("" != req.filename) {
 		std::ofstream file;
 		file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-
+		file.imbue(std::locale());
 		file.open(filename, std::ios_base::out | std::ios_base::binary);
 		file << data.rdbuf();
 	}

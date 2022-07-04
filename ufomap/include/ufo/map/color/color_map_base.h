@@ -334,17 +334,18 @@ class ColorMapBase
 		return true;
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
+		uint64_t const size = nodes.size();
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(uint64_t));
+
 		auto data = std::make_unique<RGBColor[]>(nodes.size());
 		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = getColor(*nodes[i]);
+			data[i] = getColor(nodes[i]);
 		}
 
-		uint64_t size = nodes.size();
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(uint64_t));
 		out_stream.write(reinterpret_cast<char const*>(data.get()),
 		                 nodes.size() * sizeof(RGBColor));
 	}

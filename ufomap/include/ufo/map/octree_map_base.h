@@ -129,6 +129,9 @@ class OctreeMapBase
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
+		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		io_stream.imbue(std::locale());
+
 		other.write(io_stream);
 		Octree::read(io_stream);
 	}
@@ -144,6 +147,9 @@ class OctreeMapBase
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
+		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		io_stream.imbue(std::locale());
+
 		other.write(io_stream);
 		Octree::read(io_stream);
 	}
@@ -159,6 +165,9 @@ class OctreeMapBase
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
+		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		io_stream.imbue(std::locale());
+
 		rhs.write(io_stream);
 		Octree::read(io_stream);
 
@@ -176,6 +185,9 @@ class OctreeMapBase
 
 		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
 		                            std::ios_base::binary);
+		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		io_stream.imbue(std::locale());
+
 		rhs.write(io_stream);
 		Octree::read(io_stream);
 
@@ -220,7 +232,7 @@ class OctreeMapBase
 		        ...);
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{

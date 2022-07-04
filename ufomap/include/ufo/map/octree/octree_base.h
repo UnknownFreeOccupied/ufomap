@@ -1920,8 +1920,9 @@ class OctreeBase
 	{
 		std::ifstream file;
 		file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
+		file.imbue(std::locale());
 		file.open(filename, std::ios_base::in | std::ios_base::binary);
+
 		return canMerge(file);
 	}
 
@@ -1945,7 +1946,7 @@ class OctreeBase
 	{
 		std::ifstream file;
 		file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
+		file.imbue(std::locale());
 		file.open(filename, std::ios_base::in | std::ios_base::binary);
 
 		read(file, propagate);
@@ -1986,6 +1987,7 @@ class OctreeBase
 			std::stringstream data(std::ios_base::in | std::ios_base::out |
 			                       std::ios_base::binary);
 			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data.imbue(std::locale());
 
 			decompressData(in_stream, data, uncompressed_data_size);
 
@@ -2024,7 +2026,7 @@ class OctreeBase
 	{
 		std::ofstream file;
 		file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-
+		file.imbue(std::locale());
 		file.open(filename, std::ios_base::out | std::ios_base::binary);
 
 		write(file, std::forward<Predicates>(predicates), min_depth, compress,
@@ -2040,6 +2042,27 @@ class OctreeBase
 		writeHeader(out_stream, getFileInfo());
 		writeData(out_stream, std::forward<Predicates>(predicates), min_depth, compress,
 		          compression_acceleration_level, compression_level);
+	}
+	void writeAndClearModified(std::filesystem::path const& filename, bool compress = false,
+	                           int compression_acceleration_level = 1,
+	                           int compression_level = 0)
+	{
+		std::ofstream file;
+		file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+		file.imbue(std::locale());
+		file.open(filename, std::ios_base::out | std::ios_base::binary);
+
+		writeAndClearModified(file, compress, compression_acceleration_level,
+		                      compression_level);
+	}
+
+	void writeAndClearModified(std::ostream& out_stream, bool compress = false,
+	                           int compression_acceleration_level = 1,
+	                           int compression_level = 0)
+	{
+		writeHeader(out_stream, getFileInfo());
+		writeAndClearModifiedData(out_stream, compress, compression_acceleration_level,
+		                          compression_level);
 	}
 
  protected:
@@ -3330,6 +3353,7 @@ class OctreeBase
 			std::stringstream data(std::ios_base::in | std::ios_base::out |
 			                       std::ios_base::binary);
 			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data.imbue(std::locale());
 
 			decompressData(in_stream, data, uncompressed_data_size);
 
@@ -3463,6 +3487,56 @@ class OctreeBase
 			std::stringstream data(std::ios_base::in | std::ios_base::out |
 			                       std::ios_base::binary);
 			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data.imbue(std::locale());
+
+			writeIndicators(data, indicators, compress, compression_acceleration_level,
+			                compression_level);
+			derived().writeNodes(data, nodes, compress, compression_acceleration_level,
+			                     compression_level);
+
+			uncompressed_data_size = data.tellp();
+
+			compressData(data, out_stream, uncompressed_data_size,
+			             compression_acceleration_level, compression_level);
+		} else {
+			writeIndicators(out_stream, indicators, compress, compression_acceleration_level,
+			                compression_level);
+			derived().writeNodes(out_stream, nodes, compress, compression_acceleration_level,
+			                     compression_level);
+
+			uncompressed_data_size = out_stream.tellp() - data_pos;
+		}
+
+		auto end_pos = out_stream.tellp();
+
+		out_stream.seekp(size_pos);
+		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
+		                 sizeof(uncompressed_data_size));
+
+		out_stream.seekp(end_pos);
+	}
+
+	void writeAndClearModifiedData(std::ostream& out_stream, bool compress,
+	                               int compression_acceleration_level,
+	                               int compression_level)
+	{
+		uint8_t compressed = compress ? UINT8_MAX : 0U;
+		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
+
+		auto size_pos = out_stream.tellp();
+		uint64_t uncompressed_data_size = 0;
+		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
+		                 sizeof(uncompressed_data_size));
+
+		auto data_pos = out_stream.tellp();
+
+		auto [indicators, nodes] = modifiedData();
+
+		if (compress) {
+			std::stringstream data(std::ios_base::in | std::ios_base::out |
+			                       std::ios_base::binary);
+			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data.imbue(std::locale());
 
 			writeIndicators(data, indicators, compress, compression_acceleration_level,
 			                compression_level);
@@ -3492,11 +3566,11 @@ class OctreeBase
 	}
 
 	template <class Predicates>
-	std::pair<std::vector<uint8_t>, std::vector<LeafNode const*>> data(
+	std::pair<std::vector<uint8_t>, std::vector<LeafNode>> data(
 	    Predicates const& predicates) const
 	{
 		std::vector<uint8_t> indicators;
-		std::vector<LeafNode const*> nodes;
+		std::vector<LeafNode> nodes;
 
 		std::conditional_t<predicate::contains_spatial_predicate_v<Predicates>, NodeBV, Node>
 		    root = getRootNodeBV();
@@ -3510,7 +3584,7 @@ class OctreeBase
 		indicators.push_back(valid_inner ? UINT8_MAX : 0U);
 
 		if (valid_return) {
-			nodes.push_back(&getLeafNode(root));
+			nodes.push_back(getLeafNode(root));
 		} else if (valid_inner) {
 			dataRecurs(indicators, nodes, predicates, root);
 			if (nodes.empty()) {
@@ -3523,7 +3597,7 @@ class OctreeBase
 	}
 
 	template <class Predicates, class NodeType>
-	void dataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode const*>& nodes,
+	void dataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode>& nodes,
 	                Predicates const& predicates, NodeType const& node) const
 	{
 		auto cur_indicators_size = indicators.size();
@@ -3548,10 +3622,14 @@ class OctreeBase
 		indicators.push_back(child_valid_return);
 		indicators.push_back(child_valid_inner);
 
+		if (0 == child_valid_return && 0 == child_valid_inner) {
+			return;
+		}
+
 		for (size_t i = 0; 8 != i; ++i) {
 			if ((child_valid_return >> i) & 1U) {
 				child = getNodeSibling(child, i);
-				nodes.push_back(&getLeafNode(child));
+				nodes.push_back(getLeafNode(child));
 			} else if ((child_valid_inner >> i) & 1U) {
 				child = getNodeSibling(child, i);
 				dataRecurs(indicators, nodes, predicates, child);
@@ -3559,9 +3637,97 @@ class OctreeBase
 		}
 
 		if (nodes.size() == cur_nodes_size) {
-			indicators.resize(cur_indicators_size);
-			indicators.push_back(0U);
-			indicators.push_back(0U);
+			indicators.resize(cur_indicators_size + 2);
+			indicators.back() = 0U;
+			*std::prev(std::end(indicators), 2) = 0U;
+		}
+	}
+
+	std::pair<std::vector<uint8_t>, std::vector<LeafNode>> modifiedData()
+	{
+		std::vector<uint8_t> indicators;
+		std::vector<LeafNode> nodes;
+
+		InnerNode& root = getRoot();
+
+		bool valid_return = isLeaf(root) && isModified(root);
+		bool valid_inner = isModified(root);
+
+		root.modified = false;  // FIXME: Create method
+
+		indicators.push_back(valid_return ? UINT8_MAX : 0U);
+		indicators.push_back(valid_inner ? UINT8_MAX : 0U);
+
+		if (valid_return) {
+			nodes.push_back(root);
+		} else if (valid_inner) {
+			modifiedDataRecurs(indicators, nodes, root, depthLevels());
+			if (nodes.empty()) {
+				//  Nothing was added
+				indicators.clear();
+			}
+		}
+
+		return {indicators, nodes};
+	}
+
+	void modifiedDataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode>& nodes,
+	                        InnerNode& node, depth_t depth)
+	{
+		auto cur_indicators_size = indicators.size();
+		auto cur_nodes_size = nodes.size();
+
+		uint8_t child_valid_return = 0;
+		uint8_t child_valid_inner = 0;
+		if (1 == depth) {
+			for (size_t i = 0; 8 != i; ++i) {
+				auto& child = getLeafChild(node, i);
+				if (isModified(child)) {
+					child_valid_return |= 1U << i;
+				}
+				child.modified = false;  // FIXME: Create method
+			}
+		} else {
+			for (size_t i = 0; 8 != i; ++i) {
+				auto& child = getInnerChild(node, i);
+				if (isModified(child)) {
+					if (isLeaf(child)) {
+						child_valid_return |= 1U << i;
+					} else {
+						child_valid_inner |= 1U << i;
+					}
+				}
+				child.modified = false;  // FIXME: Create method
+			}
+		}
+
+		indicators.push_back(child_valid_return);
+		indicators.push_back(child_valid_inner);
+
+		if (0 == child_valid_return && 0 == child_valid_inner) {
+			return;
+		}
+
+		if (1 == depth) {
+			for (size_t i = 0; 8 != i; ++i) {
+				if ((child_valid_return >> i) & 1U) {
+					nodes.push_back(getLeafChild(node, i));
+				}
+			}
+		} else {
+			for (size_t i = 0; 8 != i; ++i) {
+				if ((child_valid_return >> i) & 1U) {
+					nodes.push_back(getInnerChild(node, i));
+				} else if ((child_valid_inner >> i) & 1U) {
+					modifiedDataRecurs(indicators, nodes, getInnerChild(node, i), depth - 1);
+				}
+			}
+		}
+
+		if (nodes.size() == cur_nodes_size) {
+			indicators.resize(cur_indicators_size + 2);
+			indicators.back() = 0U;
+			*std::prev(std::end(indicators), 2) = 0U;
 		}
 	}
 
@@ -3584,6 +3750,7 @@ class OctreeBase
 			std::stringstream data(std::ios_base::in | std::ios_base::out |
 			                       std::ios_base::binary);
 			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data.imbue(std::locale());
 
 			data.write(reinterpret_cast<char*>(&num), sizeof(num));
 			data.write(reinterpret_cast<char const*>(indicators.data()), sizeof(uint8_t) * num);

@@ -311,7 +311,7 @@ class TimeMapBase
 	{
 		info["fields"].emplace_back("time_step");
 		info["type"].emplace_back("U");
-		info["size"].emplace_back("4");
+		info["size"].emplace_back(std::to_string(sizeof(uint32_t)));
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
@@ -321,7 +321,7 @@ class TimeMapBase
 			return false;
 		}
 
-		if ('U' == type && 4 == size) {
+		if ('U' == type && sizeof(uint32_t) == size) {
 			auto data = std::make_unique<uint32_t[]>(nodes.size());
 			in_stream.read(reinterpret_cast<char*>(data.get()),
 			               nodes.size() * sizeof(uint32_t));
@@ -335,17 +335,18 @@ class TimeMapBase
 		return true;
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
+		uint64_t const size = nodes.size();
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+
 		auto data = std::make_unique<uint32_t[]>(nodes.size());
 		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = getTimeStep(*nodes[i]);
+			data[i] = getTimeStep(nodes[i]);
 		}
 
-		uint64_t size = nodes.size();
-		out_stream.write(reinterpret_cast<char*>(&size), sizeof(size));
 		out_stream.write(reinterpret_cast<char const*>(data.get()),
 		                 nodes.size() * sizeof(uint32_t));
 	}

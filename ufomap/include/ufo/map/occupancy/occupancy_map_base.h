@@ -1344,11 +1344,10 @@ class OccupancyMapBase
 		info["fields"].emplace_back("occupancy");
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			info["type"].emplace_back("U");
-			info["size"].emplace_back("1");
 		} else {
 			info["type"].emplace_back("F");
-			info["size"].emplace_back("4");
 		}
+		info["size"].emplace_back(std::to_string(sizeof(logit_t)));
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
@@ -1358,7 +1357,7 @@ class OccupancyMapBase
 			return false;
 		}
 
-		if ('U' == type && 1 == size) {
+		if ('U' == type && sizeof(uint8_t) == size) {
 			// Get min/max threshold
 			float min_logit;
 			float max_logit;
@@ -1391,7 +1390,7 @@ class OccupancyMapBase
 					                             getOccupancyClampingThresMaxLogit()));
 				}
 			}
-		} else if ('F' == type && 4 == size) {
+		} else if ('F' == type && sizeof(float) == size) {
 			auto data = std::make_unique<float[]>(nodes.size());
 			in_stream.read(reinterpret_cast<char*>(data.get()), nodes.size() * sizeof(float));
 
@@ -1416,15 +1415,10 @@ class OccupancyMapBase
 		return true;
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode const*> const& nodes,
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
-		auto data = std::make_unique<logit_t[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = getOccupancyLogit(*nodes[i]);
-		}
-
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			uint64_t const size = nodes.size() + sizeof(occupancy_clamping_thres_min_log_) +
 			                      sizeof(occupancy_clamping_thres_max_log_);
@@ -1438,6 +1432,11 @@ class OccupancyMapBase
 		} else {
 			uint64_t const size = nodes.size();
 			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+		}
+
+		auto data = std::make_unique<logit_t[]>(nodes.size());
+		for (size_t i = 0; i != nodes.size(); ++i) {
+			data[i] = getOccupancyLogit(nodes[i]);
 		}
 
 		out_stream.write(reinterpret_cast<char const*>(data.get()),

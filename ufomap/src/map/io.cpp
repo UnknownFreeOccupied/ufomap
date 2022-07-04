@@ -56,13 +56,11 @@ namespace ufo::map
 {
 bool correctFileType(std::filesystem::path const& filename)
 {
-	std::ifstream file(filename.c_str(), std::ios_base::in | std::ios_base::binary);
-	if (!file.is_open()) {
-		throw std::runtime_error("Could not open file " + filename.string() + ".");
-	}
-	if (!file.good()) {
-		throw std::runtime_error("Error opening file " + filename.string() + ".");
-	}
+	std::ifstream file;
+	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+	file.imbue(std::locale());
+	file.open(filename, std::ios_base::in | std::ios_base::binary);
+
 	return correctFileType(file);
 }
 
@@ -75,13 +73,11 @@ bool correctFileType(std::istream& in_stream)
 
 FileInfo readHeader(std::filesystem::path const& filename)
 {
-	std::ifstream file(filename.c_str(), std::ios_base::in | std::ios_base::binary);
-	if (!file.is_open()) {
-		throw std::runtime_error("Error opening file " + filename.string() + ".");
-	}
-	if (!file.good()) {
-		throw std::runtime_error("Error opening file " + filename.string() + ".");
-	}
+	std::ifstream file;
+	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+	file.imbue(std::locale());
+	file.open(filename, std::ios_base::in | std::ios_base::binary);
+
 	return readHeader(file);
 }
 
