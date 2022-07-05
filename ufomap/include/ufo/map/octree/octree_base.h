@@ -2740,11 +2740,11 @@ class OctreeBase
 	// Create children
 	//
 
-	bool createLeafChildren(InnerNode& node, size_t index)
+	void createLeafChildren(InnerNode& node, size_t index)
 	{
 		if constexpr (!LockLess) {
 			if (!lockIfLeaf(node, 0, index)) {
-				return false;
+				return;
 			}
 		}
 
@@ -2798,14 +2798,13 @@ class OctreeBase
 		if constexpr (!LockLess) {
 			unlockChildren(0, index);
 		}
-		return true;
 	}
 
-	bool createInnerChildren(InnerNode& node, depth_t depth, size_t index)
+	void createInnerChildren(InnerNode& node, depth_t depth, size_t index)
 	{
 		if constexpr (!LockLess) {
 			if (!lockIfLeaf(node, depth, index)) {
-				return false;
+				return;
 			}
 		}
 
@@ -2860,13 +2859,15 @@ class OctreeBase
 		if constexpr (!LockLess) {
 			unlockChildren(depth, index);
 		}
-		return true;
 	}
 
-	bool createChildren(InnerNode& node, depth_t depth, size_t index)
+	void createChildren(InnerNode& node, depth_t depth, size_t index)
 	{
-		return (1 == depth) ? createLeafChildren(node, index)
-		                    : createInnerChildren(node, depth, index);
+		if (1 == depth) {
+			createLeafChildren(node, index);
+		} else {
+			createInnerChildren(node, depth, index);
+		}
 	}
 
 	//
