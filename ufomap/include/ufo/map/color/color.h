@@ -114,9 +114,9 @@ struct RGBColor {
 					continue;
 				}
 
-				r += first->first.red;
-				g += first->first.green;
-				b += first->first.blue;
+				r += first->first.red * first->second;
+				g += first->first.green * first->second;
+				b += first->first.blue * first->second;
 				weight += first->second;
 			}
 			return 0 == weight ? RGBColor() : RGBColor(r / weight, g / weight, b / weight);
