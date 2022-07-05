@@ -2676,6 +2676,66 @@ class OctreeBase
 	}
 
 	//
+	// Leaf/inner lock
+	//
+
+	bool tryLockLeaves()
+	{
+		return !free_leaf_nodes_lock_.test_and_set(std::memory_order_acquire);
+	}
+
+	void lockLeaves()
+	{
+		while (!tryLockLeaves())
+			;
+	}
+
+	bool lockIfNonEmptyLeaves()
+	{
+		do {
+			if (free_leaf_nodes_.empty()) {
+				return false;
+			}
+		} while (!tryLockLeaves());
+
+		if (free_leaf_nodes_.empty()) {
+			unlockLeaves();
+			return false;
+		}
+		return true;
+	}
+
+	void unlockLeaves() { free_leaf_nodes_lock_.clear(std::memory_order_release); }
+
+	bool tryLockInner()
+	{
+		return !free_inner_nodes_lock_.test_and_set(std::memory_order_acquire);
+	}
+
+	void lockInner()
+	{
+		while (!tryLockInner())
+			;
+	}
+
+	bool lockIfNonEmptyInner()
+	{
+		do {
+			if (free_inner_nodes_.empty()) {
+				return false;
+			}
+		} while (!tryLockInner());
+
+		if (free_inner_nodes_.empty()) {
+			unlockInner();
+			return false;
+		}
+		return true;
+	}
+
+	void unlockInner() { free_inner_nodes_lock_.clear(std::memory_order_release); }
+
+	//
 	// Create children
 	//
 
@@ -2697,28 +2757,30 @@ class OctreeBase
 			}
 		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
 			if constexpr (!LockLess) {
-				while (free_leaf_nodes_lock_.test_and_set(std::memory_order_acquire) &&
-				       !free_leaf_nodes_.empty()) {
-				}
-			}
+				if (lockIfNonEmptyLeaves()) {
+					// Take existing children
+					node.children = free_leaf_nodes_.top();
+					free_leaf_nodes_.pop();
 
-			if (free_leaf_nodes_.empty()) {
-				if constexpr (!LockLess) {
-					free_leaf_nodes_lock_.clear(std::memory_order_release);
+					unlockLeaves();
+				} else {
+					// Allocate children
+					node.children = new LeafNodeBlock();
+					num_allocated_leaf_nodes_ += 8;
+					num_allocated_inner_leaf_nodes_ -= 1;
+					num_allocated_inner_nodes_ += 1;
 				}
-
-				// Allocate children
-				node.children = new LeafNodeBlock();
-				num_allocated_leaf_nodes_ += 8;
-				num_allocated_inner_leaf_nodes_ -= 1;
-				num_allocated_inner_nodes_ += 1;
 			} else {
-				// Take existing children
-				node.children = free_leaf_nodes_.top();
-				free_leaf_nodes_.pop();
-
-				if constexpr (!LockLess) {
-					free_leaf_nodes_lock_.clear(std::memory_order_release);
+				if (!free_leaf_nodes_.empty()) {
+					// Take existing children
+					node.children = free_leaf_nodes_.top();
+					free_leaf_nodes_.pop();
+				} else {
+					// Allocate children
+					node.children = new LeafNodeBlock();
+					num_allocated_leaf_nodes_ += 8;
+					num_allocated_inner_leaf_nodes_ -= 1;
+					num_allocated_inner_nodes_ += 1;
 				}
 			}
 		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel) {
@@ -2756,28 +2818,30 @@ class OctreeBase
 			}
 		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
 			if constexpr (!LockLess) {
-				while (free_inner_nodes_lock_.test_and_set(std::memory_order_acquire) &&
-				       !free_inner_nodes_.empty()) {
-				}
-			}
+				if (lockIfNonEmptyInner()) {
+					// Take existing children
+					node.children = free_inner_nodes_.top();
+					free_inner_nodes_.pop();
 
-			if (free_inner_nodes_.empty()) {
-				if constexpr (!LockLess) {
-					free_inner_nodes_lock_.clear(std::memory_order_release);
+					unlockInner();
+				} else {
+					// Allocate children
+					node.children = new InnerNodeBlock();
+					// Get 8 new and 1 is made into a inner node
+					num_allocated_inner_leaf_nodes_ += 7;
+					num_allocated_inner_nodes_ += 1;
 				}
-
-				// Allocate children
-				node.children = new InnerNodeBlock();
-				// Get 8 new and 1 is made into a inner node
-				num_allocated_inner_leaf_nodes_ += 7;
-				num_allocated_inner_nodes_ += 1;
 			} else {
-				// Take existing children
-				node.children = free_inner_nodes_.top();
-				free_inner_nodes_.pop();
-
-				if constexpr (!LockLess) {
-					free_inner_nodes_lock_.clear(std::memory_order_release);
+				if (!free_inner_nodes_.empty()) {
+					// Take existing children
+					node.children = free_inner_nodes_.top();
+					free_inner_nodes_.pop();
+				} else {
+					// Allocate children
+					node.children = new InnerNodeBlock();
+					// Get 8 new and 1 is made into a inner node
+					num_allocated_inner_leaf_nodes_ += 7;
+					num_allocated_inner_nodes_ += 1;
 				}
 			}
 		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel) {
@@ -2819,8 +2883,12 @@ class OctreeBase
 			num_inner_nodes_ -= 1;
 		}
 
+		if (nullptr == node.children) {
+			return;
+		}
+
 		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+			if (!manual_pruning && !automaticPruning()) {
 				return;
 			}
 
@@ -2830,16 +2898,13 @@ class OctreeBase
 			num_allocated_inner_nodes_ -= 1;
 			node.children = nullptr;
 		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
-			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+			if (!manual_pruning && !automaticPruning()) {
 				if constexpr (!LockLess) {
-					while (free_leaf_nodes_lock_.test_and_set(std::memory_order_acquire)) {
-					}
-				}
-
-				free_leaf_nodes_.push(&getLeafChildren(node));
-
-				if constexpr (!LockLess) {
-					free_leaf_nodes_lock_.clear(std::memory_order_relaxed);
+					lockLeaves();
+					free_leaf_nodes_.push(&getLeafChildren(node));
+					unlockLeaves();
+				} else {
+					free_leaf_nodes_.push(&getLeafChildren(node));
 				}
 			} else {
 				delete &getLeafChildren(node);
@@ -2873,8 +2938,12 @@ class OctreeBase
 			}
 		}
 
+		if (nullptr == node.children) {
+			return;
+		}
+
 		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+			if (!manual_pruning && !automaticPruning()) {
 				return;
 			}
 
@@ -2884,16 +2953,13 @@ class OctreeBase
 			num_allocated_inner_nodes_ -= 1;
 			node.children = nullptr;
 		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
-			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+			if (!manual_pruning && !automaticPruning()) {
 				if constexpr (!LockLess) {
-					while (free_inner_nodes_lock_.test_and_set(std::memory_order_acquire)) {
-					}
-				}
-
-				free_inner_nodes_.push(&getInnerChildren(node));
-
-				if constexpr (!LockLess) {
-					free_inner_nodes_lock_.clear(std::memory_order_relaxed);
+					lockInner();
+					free_inner_nodes_.push(&getInnerChildren(node));
+					unlockInner();
+				} else {
+					free_inner_nodes_.push(&getInnerChildren(node));
 				}
 			} else {
 				delete &getInnerChildren(node);
@@ -2938,8 +3004,12 @@ class OctreeBase
 			}
 		}
 
+		if (nullptr == node.children) {
+			return;
+		}
+
 		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+			if (!manual_pruning && !automaticPruning()) {
 				return;
 			}
 
@@ -2949,16 +3019,13 @@ class OctreeBase
 			num_allocated_inner_nodes_ -= 1;
 			node.children = nullptr;
 		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
-			if (nullptr == node.children || (!manual_pruning && !automaticPruning())) {
+			if (!manual_pruning && !automaticPruning()) {
 				if constexpr (!LockLess) {
-					while (free_inner_nodes_lock_.test_and_set(std::memory_order_acquire)) {
-					}
-				}
-
-				free_inner_nodes_.push(&getInnerChildren(node));
-
-				if constexpr (!LockLess) {
-					free_inner_nodes_lock_.clear(std::memory_order_relaxed);
+					lockInner();
+					free_inner_nodes_.push(&getInnerChildren(node));
+					unlockInner();
+				} else {
+					free_inner_nodes_.push(&getInnerChildren(node));
 				}
 			} else {
 				delete &getInnerChildren(node);
