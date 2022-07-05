@@ -119,16 +119,16 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, unsigned int depth = 0,
 }
 
 template <class Map>
-ufomap_msgs::UFOMap ufoToMsgClearModified(Map& map, bool compress = false,
-                                          int compression_acceleration_level = 1,
-                                          int compression_level = 0)
+ufomap_msgs::UFOMap ufoToMsgUpdateModified(Map& map, bool compress = false,
+                                           int compression_acceleration_level = 1,
+                                           int compression_level = 0)
 {
 	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
 	data.imbue(std::locale());
 
-	map.writeAndClearModified(data, compress, compression_acceleration_level,
-	                          compression_level);
+	map.writeAndUpdateModified(data, compress, compression_acceleration_level,
+	                           compression_level);
 
 	ufomap_msgs::UFOMap msg;
 	msg.data.reserve(data.tellp());

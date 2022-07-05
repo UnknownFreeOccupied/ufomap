@@ -2043,26 +2043,27 @@ class OctreeBase
 		writeData(out_stream, std::forward<Predicates>(predicates), min_depth, compress,
 		          compression_acceleration_level, compression_level);
 	}
-	void writeAndClearModified(std::filesystem::path const& filename, bool compress = false,
-	                           int compression_acceleration_level = 1,
-	                           int compression_level = 0)
+	void writeAndUpdateModified(std::filesystem::path const& filename,
+	                            bool compress = false,
+	                            int compression_acceleration_level = 1,
+	                            int compression_level = 0)
 	{
 		std::ofstream file;
 		file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
 		file.imbue(std::locale());
 		file.open(filename, std::ios_base::out | std::ios_base::binary);
 
-		writeAndClearModified(file, compress, compression_acceleration_level,
-		                      compression_level);
+		writeAndUpdateModified(file, compress, compression_acceleration_level,
+		                       compression_level);
 	}
 
-	void writeAndClearModified(std::ostream& out_stream, bool compress = false,
-	                           int compression_acceleration_level = 1,
-	                           int compression_level = 0)
+	void writeAndUpdateModified(std::ostream& out_stream, bool compress = false,
+	                            int compression_acceleration_level = 1,
+	                            int compression_level = 0)
 	{
 		writeHeader(out_stream, getFileInfo());
-		writeAndClearModifiedData(out_stream, compress, compression_acceleration_level,
-		                          compression_level);
+		writeAndUpdateModifiedData(out_stream, compress, compression_acceleration_level,
+		                           compression_level);
 	}
 
  protected:
@@ -3583,9 +3584,9 @@ class OctreeBase
 		out_stream.seekp(end_pos);
 	}
 
-	void writeAndClearModifiedData(std::ostream& out_stream, bool compress,
-	                               int compression_acceleration_level,
-	                               int compression_level)
+	void writeAndUpdateModifiedData(std::ostream& out_stream, bool compress,
+	                                int compression_acceleration_level,
+	                                int compression_level)
 	{
 		uint8_t compressed = compress ? UINT8_MAX : 0U;
 		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
@@ -3720,20 +3721,24 @@ class OctreeBase
 		bool valid_return = isLeaf(root) && isModified(root);
 		bool valid_inner = isModified(root);
 
-		root.modified = false;  // FIXME: Create method
-
 		indicators.push_back(valid_return ? UINT8_MAX : 0U);
 		indicators.push_back(valid_inner ? UINT8_MAX : 0U);
 
 		if (valid_return) {
 			nodes.push_back(root);
+			derived().updateNodeIndicators(root);
 		} else if (valid_inner) {
 			modifiedDataRecurs(indicators, nodes, root, depthLevels());
+			derived().updateNode(root, depthLevels());
+			derived().updateNodeIndicators(root, depthLevels());
+			pruneNode(root, depthLevels());
 			if (nodes.empty()) {
 				//  Nothing was added
 				indicators.clear();
 			}
 		}
+
+		root.modified = false;  // FIXME: Create method
 
 		return {indicators, nodes};
 	}
@@ -3752,7 +3757,6 @@ class OctreeBase
 				if (isModified(child)) {
 					child_valid_return |= 1U << i;
 				}
-				child.modified = false;  // FIXME: Create method
 			}
 		} else {
 			for (size_t i = 0; 8 != i; ++i) {
@@ -3764,7 +3768,6 @@ class OctreeBase
 						child_valid_inner |= 1U << i;
 					}
 				}
-				child.modified = false;  // FIXME: Create method
 			}
 		}
 
@@ -3777,16 +3780,27 @@ class OctreeBase
 
 		if (1 == depth) {
 			for (size_t i = 0; 8 != i; ++i) {
-				if ((child_valid_return >> i) & 1U) {
-					nodes.push_back(getLeafChild(node, i));
+				auto& child = getLeafChild(node, i);
+				if (isModified(child)) {
+					nodes.push_back(child);
+					derived().updateNodeIndicators(child);
+					child.modified = false;  // FIXME: Create method
 				}
 			}
 		} else {
 			for (size_t i = 0; 8 != i; ++i) {
-				if ((child_valid_return >> i) & 1U) {
-					nodes.push_back(getInnerChild(node, i));
-				} else if ((child_valid_inner >> i) & 1U) {
-					modifiedDataRecurs(indicators, nodes, getInnerChild(node, i), depth - 1);
+				auto& child = getInnerChild(node, i);
+				if (isModified(child)) {
+					if (isLeaf(child)) {
+						nodes.push_back(child);
+						derived().updateNodeIndicators(node, depth);
+					} else {
+						modifiedDataRecurs(indicators, nodes, child, depth - 1);
+						derived().updateNode(child, depth - 1);
+						derived().updateNodeIndicators(child, depth - 1);
+						pruneNode(child, depth - 1);
+					}
+					child.modified = false;  // FIXME: Create method
 				}
 			}
 		}
