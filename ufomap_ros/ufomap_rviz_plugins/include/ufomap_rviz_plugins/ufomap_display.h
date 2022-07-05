@@ -178,7 +178,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 
  private:
 	//  Map
-	ufo::map::OccupancyMapTimeColor map_;
+	ufo::map::OccupancyMapTimeColorT<false, ufo::map::MemoryModel::POINTER_REUSE, 1> map_;
 
 	// Flag to tell the other threads to stop
 	std::atomic_bool done_ = false;
