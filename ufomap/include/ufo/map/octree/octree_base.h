@@ -481,7 +481,7 @@ class OctreeBase
 	[[nodiscard]] virtual std::size_t memoryUsageAllocated() const noexcept
 	{
 		return (numInnerNodesAllocated() * memoryInnerNode()) +
-		       (numInnerLeafNodesAllocated() + memoryInnerLeafNode()) +
+		       (numInnerLeafNodesAllocated() * memoryInnerLeafNode()) +
 		       (numLeafNodesAllocated() * memoryLeafNode());
 	}
 
