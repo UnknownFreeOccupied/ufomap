@@ -83,7 +83,7 @@ class Integrator
 	template <class Map, class P>
 	void integrateHits(Map& map, IntegrationCloud<P> const& cloud) const
 	{
-		auto prob = map.toOccupancyLogit(occupancy_prob_hit_);
+		auto prob = map.toOccupancyChangeLogit(occupancy_prob_hit_);
 
 		// TODO: Something with semantics
 
@@ -120,7 +120,10 @@ class Integrator
 				if (avg_color.set()) {
 					double total_logit = logit + prob;
 					double weight = prob / total_logit;
-					map.setColor(node, avg_color, false);  // TODO: Update
+					map.setColor(node,
+					             RGBColor::average(
+					                 {{avg_color, weight}, {map.getColor(node), 1.0 - weight}}),
+					             false);  // TODO: Update
 				}
 			}
 
@@ -154,21 +157,20 @@ class Integrator
 	//
 
 	template <class Map>
-	void integrateMisses(Map& map, Misses const& codes) const
+	void integrateMisses(Map& map, Misses const& misses) const
 	{
-		auto prob = map.toOccupancyLogit(occupancy_prob_miss_);
+		auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss_);
 
-		std::for_each(
-		    std::cbegin(codes), std::cend(codes),
-		    [&map, prob, time_step = time_step_](auto code) {
-			    auto node = map.createNode(code);
+		std::for_each(std::cbegin(misses), std::cend(misses),
+		              [&map, prob, time_step = time_step_](auto code) {
+			              auto node = map.createNode(code);
 
-			    map.decreaseOccupancyLogit(node, prob, false);
+			              map.decreaseOccupancyLogit(node, prob, false);
 
-			    if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				    map.setTimeStep(node, time_step, false);
-			    }
-		    });
+			              if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+				              map.setTimeStep(node, time_step, false);
+			              }
+		              });
 	}
 
 	//

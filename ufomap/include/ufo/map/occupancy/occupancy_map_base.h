@@ -138,6 +138,17 @@ class OccupancyMapBase
 		}
 	}
 
+	constexpr logit_t toOccupancyChangeLogit(float probability) const
+	{
+		if constexpr (std::is_same_v<logit_t, uint8_t>) {
+			return math::logitChangeValue<uint8_t>(probability,
+			                                       getOccupancyClampingThresMinLogit(),
+			                                       getOccupancyClampingThresMaxLogit());
+		} else {
+			return math::logit(probability);
+		}
+	}
+
 	//
 	// Set sensor model
 	//
@@ -704,16 +715,7 @@ class OccupancyMapBase
 
 	void increaseOccupancy(Node& node, float inc, bool propagate = true)
 	{
-		logit_t inc_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			inc_logit = math::logit(inc, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		increaseOccupancyLogit(node, inc_logit, propagate);
+		increaseOccupancyLogit(node, toOccupancyChangeLogit(inc), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -721,16 +723,7 @@ class OccupancyMapBase
 	void increaseOccupancy(ExecutionPolicy policy, Node& node, float inc,
 	                       bool propagate = true)
 	{
-		logit_t inc_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			inc_logit = math::logit(inc, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		increaseOccupancyLogit(policy, node, inc_logit, propagate);
+		increaseOccupancyLogit(policy, node, toOccupancyChangeLogit(inc), propagate);
 	}
 
 	void increaseOccupancyLogit(Node& node, logit_t inc, bool propagate = true)
@@ -752,16 +745,7 @@ class OccupancyMapBase
 
 	void increaseOccupancy(Code code, float inc, bool propagate = true)
 	{
-		logit_t inc_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			inc_logit = math::logit(inc, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		increaseOccupancyLogit(code, inc_logit, propagate);
+		increaseOccupancyLogit(code, toOccupancyChangeLogit(inc), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -769,16 +753,7 @@ class OccupancyMapBase
 	void increaseOccupancy(ExecutionPolicy policy, Code code, float inc,
 	                       bool propagate = true)
 	{
-		logit_t inc_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			inc_logit = math::logitChangeValue(inc, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			inc_logit = math::logit(inc, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		increaseOccupancyLogit(policy, code, inc_logit, propagate);
+		increaseOccupancyLogit(policy, code, toOccupancyChangeLogit(inc), propagate);
 	}
 
 	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
@@ -886,16 +861,7 @@ class OccupancyMapBase
 
 	void decreaseOccupancy(Node& node, float dec, bool propagate = true)
 	{
-		logit_t dec_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			dec_logit = math::logit(dec, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		decreaseOccupancyLogit(node, dec_logit, propagate);
+		decreaseOccupancyLogit(node, toOccupancyChangeLogit(dec), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -903,16 +869,7 @@ class OccupancyMapBase
 	void decreaseOccupancy(ExecutionPolicy policy, Node& node, float dec,
 	                       bool propagate = true)
 	{
-		logit_t dec_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			dec_logit = math::logit(dec, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		decreaseOccupancyLogit(policy, node, dec_logit, propagate);
+		decreaseOccupancyLogit(policy, node, toOccupancyChangeLogit(dec), propagate);
 	}
 
 	void decreaseOccupancyLogit(Node& node, logit_t dec, bool propagate = true)
@@ -934,16 +891,7 @@ class OccupancyMapBase
 
 	void decreaseOccupancy(Code code, float dec, bool propagate = true)
 	{
-		logit_t dec_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			dec_logit = math::logit(dec, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		decreaseOccupancyLogit(code, dec_logit, propagate);
+		decreaseOccupancyLogit(code, toOccupancyChangeLogit(dec), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -951,16 +899,7 @@ class OccupancyMapBase
 	void decreaseOccupancy(ExecutionPolicy policy, Code code, float dec,
 	                       bool propagate = true)
 	{
-		logit_t dec_logit;
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			dec_logit = math::logitChangeValue(dec, getOccupancyClampingThresMinLogit(),
-			                                   getOccupancyClampingThresMaxLogit());
-		} else {
-			dec_logit = math::logit(dec, getOccupancyClampingThresMinLogit(),
-			                        getOccupancyClampingThresMaxLogit());
-		}
-
-		decreaseOccupancyLogit(policy, code, dec_logit, propagate);
+		decreaseOccupancyLogit(policy, code, toOccupancyChangeLogit(dec), propagate);
 	}
 
 	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)

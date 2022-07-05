@@ -115,9 +115,10 @@ template <
     typename = std::enable_if_t<std::is_unsigned_v<U> && std::is_floating_point_v<F>>>
 constexpr U logitChangeValue(F probability, F min_logit, F max_logit) noexcept
 {
-	probability = F(0.5) > probability ? probability : F(1.0) - probability;
-	return logit<U>(F(0.5), min_logit, max_logit) -
-	       logit<U>(probability, min_logit, max_logit);
+	return F(0.5) > probability ? logit<U>(F(0.5), min_logit, max_logit) -
+	                                  logit<U>(probability, min_logit, max_logit)
+	                            : logit<U>(probability, min_logit, max_logit) -
+	                                  logit<U>(F(0.5), min_logit, max_logit);
 }
 
 template <typename U, typename = std::enable_if_t<std::is_unsigned_v<U>>>
