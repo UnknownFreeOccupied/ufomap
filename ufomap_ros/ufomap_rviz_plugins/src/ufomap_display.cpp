@@ -567,10 +567,14 @@ void UFOMapDisplay::updateStatus()
 	setStatus(rviz::StatusProperty::Ok, "Resolution", res_str);
 	setStatus(rviz::StatusProperty::Ok, "Num. leaf nodes",
 	          QString("%L1").arg(map_.numLeafNodes()));
+	setStatus(rviz::StatusProperty::Ok, "Num. inner leaf nodes",
+	          QString("%L1").arg(map_.numInnerLeafNodes()));
 	setStatus(rviz::StatusProperty::Ok, "Num. inner nodes",
 	          QString("%L1").arg(map_.numInnerNodes()));
 	setStatus(rviz::StatusProperty::Ok, "Memory usage",
 	          locale.formattedDataSize(map_.memoryUsage()));
+	setStatus(rviz::StatusProperty::Ok, "Memory allocated",
+	          locale.formattedDataSize(map_.memoryUsageAllocated()));
 }
 
 }  // namespace ufomap_ros::rviz_plugins
