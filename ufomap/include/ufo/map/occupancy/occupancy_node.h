@@ -95,13 +95,14 @@ struct OccupancyColorNode : OccupancyNode<OccupancyType>, ColorNode {
 	}
 };
 
-template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
-struct OccupancySemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
+template <typename OccupancyType, typename SemanticType, std::size_t SemanticValueWidth,
+          std::size_t FixedSize>
+struct OccupancySemanticNode : SemanticNode<SemanticType, SemanticValueWidth, FixedSize>,
                                OccupancyNode<OccupancyType> {
 	constexpr bool operator==(OccupancySemanticNode const& rhs) const
 	{
 		return OccupancyNode<OccupancyType>::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
+		       SemanticNode<SemanticType, SemanticValueWidth, FixedSize>::operator==(rhs);
 	}
 
 	constexpr bool operator!=(OccupancySemanticNode const& rhs) const
@@ -122,13 +123,14 @@ struct OccupancyTimeColorNode : OccupancyTimeNode, ColorNode {
 	}
 };
 
-template <typename SemanticType, size_t SemanticValueWidth>
-struct OccupancyTimeSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                   OccupancyTimeNode {
+template <typename SemanticType, std::size_t SemanticValueWidth, std::size_t FixedSize>
+struct OccupancyTimeSemanticNode
+    : SemanticNode<SemanticType, SemanticValueWidth, FixedSize>,
+      OccupancyTimeNode {
 	constexpr bool operator==(OccupancyTimeSemanticNode const& rhs) const
 	{
 		return OccupancyTimeNode::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
+		       SemanticNode<SemanticType, SemanticValueWidth, FixedSize>::operator==(rhs);
 	}
 
 	constexpr bool operator!=(OccupancyTimeSemanticNode const& rhs) const
@@ -137,13 +139,15 @@ struct OccupancyTimeSemanticNode : SemanticNode<SemanticType, SemanticValueWidth
 	}
 };
 
-template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
-struct OccupancyColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                    OccupancyColorNode<OccupancyType> {
+template <typename OccupancyType, typename SemanticType, std::size_t SemanticValueWidth,
+          std::size_t FixedSize>
+struct OccupancyColorSemanticNode
+    : SemanticNode<SemanticType, SemanticValueWidth, FixedSize>,
+      OccupancyColorNode<OccupancyType> {
 	constexpr bool operator==(OccupancyColorSemanticNode const& rhs) const
 	{
 		return OccupancyColorNode<OccupancyType>::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
+		       SemanticNode<SemanticType, SemanticValueWidth, FixedSize>::operator==(rhs);
 	}
 
 	constexpr bool operator!=(OccupancyColorSemanticNode const& rhs) const
@@ -152,13 +156,14 @@ struct OccupancyColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidt
 	}
 };
 
-template <typename SemanticType, size_t SemanticValueWidth>
-struct OccupancyTimeColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                        OccupancyTimeColorNode {
+template <typename SemanticType, std::size_t SemanticValueWidth, std::size_t FixedSize>
+struct OccupancyTimeColorSemanticNode
+    : SemanticNode<SemanticType, SemanticValueWidth, FixedSize>,
+      OccupancyTimeColorNode {
 	constexpr bool operator==(OccupancyTimeColorSemanticNode const& rhs) const
 	{
 		return OccupancyTimeColorNode::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
+		       SemanticNode<SemanticType, SemanticValueWidth, FixedSize>::operator==(rhs);
 	}
 
 	constexpr bool operator!=(OccupancyTimeColorSemanticNode const& rhs) const

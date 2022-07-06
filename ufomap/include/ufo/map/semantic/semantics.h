@@ -39,11 +39,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEMANTIC_CONTAINER_H
-#define UFO_MAP_SEMANTIC_CONTAINER_H
+#ifndef UFO_MAP_SEMANTICS_H
+#define UFO_MAP_SEMANTICS_H
 
 // UFO
 #include <ufo/container/range.h>
+#include <ufo/container/range_map.h>
+#include <ufo/container/range_set.h>
 
 // STL
 #include <algorithm>
@@ -69,11 +71,10 @@ namespace ufo::map
  * the key will be 15 bits and the value 1 bit.
  */
 template <typename DataType, std::size_t ValueWidth, std::size_t FixedSize = 0>
-class SemanticContainer
+class Semantics
 {
  private:
-	static_assert(std::is_unsigned_v<DataType>,
-	              "SemanticContainer require unsigned data type.");
+	static_assert(std::is_unsigned_v<DataType>, "Semantics require unsigned data type.");
 
 	static constexpr std::size_t LabelWidth =
 	    std::numeric_limits<DataType>::digits - ValueWidth;
@@ -88,6 +89,18 @@ class SemanticContainer
 	// Tags
 	using key_type = DataType;
 	using mapped_type = DataType;
+
+	[[nodiscard]] static constexpr std::size_t getLabelBits() noexcept
+	{
+		return LabelWidth;
+	}
+
+	[[nodiscard]] static constexpr std::size_t getValueBits() noexcept
+	{
+		return ValueWidth;
+	}
+
+	[[nodiscard]] static constexpr bool isFixedSize() noexcept { return 0 != FixedSize; }
 
 	struct Element {
 	 public:
@@ -175,7 +188,7 @@ class SemanticContainer
 
 	 private:
 		DataType data_ = 0;
-		friend class SemanticContainer;
+		friend class Semantics;
 	};
 
 	// Tags
@@ -193,25 +206,25 @@ class SemanticContainer
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	// Constructors
-	constexpr SemanticContainer() = default;
+	constexpr Semantics() = default;
 
 	template <class InputIt>
-	SemanticContainer(InputIt first, InputIt last)
+	Semantics(InputIt first, InputIt last)
 	{
 		insert(first, last);
 	}
 
-	SemanticContainer(SemanticContainer const &other) { *this = other; }
+	Semantics(Semantics const &other) { *this = other; }
 
-	SemanticContainer(SemanticContainer &&other) noexcept = default;
+	Semantics(Semantics &&other) noexcept = default;
 
-	SemanticContainer(std::initializer_list<value_type> init) { insert(init); }
+	Semantics(std::initializer_list<value_type> init) { insert(init); }
 
 	// Destructor
-	~SemanticContainer() { clear(); }
+	~Semantics() { clear(); }
 
 	// operator=
-	SemanticContainer &operator=(SemanticContainer const &rhs)
+	Semantics &operator=(Semantics const &rhs)
 	{
 		if (rhs.empty()) {
 			clear();
@@ -222,9 +235,9 @@ class SemanticContainer
 		return *this;
 	}
 
-	SemanticContainer &operator=(SemanticContainer &&rhs) noexcept = default;
+	Semantics &operator=(Semantics &&rhs) noexcept = default;
 
-	SemanticContainer &operator=(std::initializer_list<value_type> ilist)
+	Semantics &operator=(std::initializer_list<value_type> ilist)
 	{
 		insert(ilist);
 		return *this;
@@ -348,33 +361,32 @@ class SemanticContainer
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> emplace(Args &&... args)
+	std::pair<iterator, bool> emplace(Args &&...args)
 	{
 		return insert_impl(std::forward<Args>(args)...);
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(key_type const &k, Args &&... args)
+	std::pair<iterator, bool> try_emplace(key_type const &k, Args &&...args)
 	{
 		return insert(value_type(k, std::forward<Args>(args)...));
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(key_type &&k, Args &&... args)
+	std::pair<iterator, bool> try_emplace(key_type &&k, Args &&...args)
 	{
 		return insert(value_type(std::move(k), std::forward<Args>(args)...));
 	}
 
 	template <class... Args>
 	std::pair<iterator, bool> try_emplace(const_iterator hint, key_type const &k,
-	                                      Args &&... args)
+	                                      Args &&...args)
 	{
 		return insert(hint, value_type(k, std::forward<Args>(args)...));
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(const_iterator hint, key_type &&k,
-	                                      Args &&... args)
+	std::pair<iterator, bool> try_emplace(const_iterator hint, key_type &&k, Args &&...args)
 	{
 		return insert(hint, value_type(std::move(k), std::forward<Args>(args)...));
 	}
@@ -438,16 +450,16 @@ class SemanticContainer
 	 * Assign value to Keys present in the given Range.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(Range<T> const &range, mapped_type value)
+	void assign_values(container::Range<T> const &range, mapped_type value)
 	{
-		assign_values(RangeSet<T>(range), value);
+		assign_values(container::RangeSet<T>(range), value);
 	}
 
 	/*
 	 * Assign value to Keys present in each Range of the RangeSet.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(RangeSet<T> const &rangeSet, mapped_type value)
+	void assign_values(container::RangeSet<T> const &rangeSet, mapped_type value)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -462,16 +474,16 @@ class SemanticContainer
 	 * Increase the value by inc for all Keys present in Range
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(Range<T> const &range, mapped_type inc)
+	void increase_values(container::Range<T> const &range, mapped_type inc)
 	{
-		increase_values(RangeSet<T>(range), inc);
+		increase_values(container::RangeSet<T>(range), inc);
 	}
 
 	/*
 	 * Increase the value by inc for all Keys in each Range of the RangeSet
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(RangeSet<T> const &rangeSet, mapped_type inc)
+	void increase_values(container::RangeSet<T> const &rangeSet, mapped_type inc)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -486,16 +498,16 @@ class SemanticContainer
 	 * Decrease the value by dec for all Keys present in Range
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(Range<T> const &range, mapped_type dec)
+	void decrease_values(container::Range<T> const &range, mapped_type dec)
 	{
-		decrease_values(RangeSet<T>(range), dec);
+		decrease_values(container::RangeSet<T>(range), dec);
 	}
 
 	/*
 	 * Decrease the value by dec for all Keys in each Range of the RangeSet
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(RangeSet<T> const &rangeSet, mapped_type dec)
+	void decrease_values(container::RangeSet<T> const &rangeSet, mapped_type dec)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -599,15 +611,15 @@ class SemanticContainer
 	 * comp(Element.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(Range<T> const &range, mapped_type value, Compare comp)
+	size_type erase(container::Range<T> const &range, mapped_type value, Compare comp)
 	{
-		return erase(RangeSet<T>(range), value, comp);
+		return erase(container::RangeSet<T>(range), value, comp);
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(Range<T> const &range)
+	size_type erase(container::Range<T> const &range)
 	{
-		return erase(RangeSet<T>(range));
+		return erase(container::RangeSet<T>(range));
 	}
 
 	/*
@@ -615,7 +627,7 @@ class SemanticContainer
 	 * comp(Element.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(RangeSet<T> const &rangeSet, mapped_type value, Compare comp)
+	size_type erase(container::RangeSet<T> const &rangeSet, mapped_type value, Compare comp)
 	{
 		size_type old_size = size();
 		for (auto const &range : rangeSet) {
@@ -636,7 +648,7 @@ class SemanticContainer
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(RangeSet<T> const &rangeSet)
+	size_type erase(container::RangeSet<T> const &rangeSet)
 	{
 		size_type old_size = size();
 		for (auto const &range : rangeSet) {
@@ -647,7 +659,7 @@ class SemanticContainer
 		return old_size - size();
 	}
 
-	void swap(SemanticContainer &other) noexcept { std::swap(data_, other.data_); }
+	void swap(Semantics &other) noexcept { std::swap(data_, other.data_); }
 
 	// Lookup
 	[[nodiscard]] mapped_type at(key_type key) const
@@ -733,7 +745,7 @@ class SemanticContainer
 	 * I.e., the container does not have to contain the full range.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(Range<T> const &range) const
+	[[nodiscard]] bool containsAny(container::Range<T> const &range) const
 	{
 		return containsAny({range});
 	}
@@ -743,7 +755,7 @@ class SemanticContainer
 	 * binary comparison comp.  I.e., the container does not have to contain the full range.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(Range<T> const &range, mapped_type value,
+	[[nodiscard]] bool containsAny(container::Range<T> const &range, mapped_type value,
 	                               Compare comp) const
 	{
 		return containsAny({range}, value, comp);
@@ -754,7 +766,7 @@ class SemanticContainer
 	 * I.e., the container does not have to contain the full range.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(RangeSet<T> const &rangeSet) const
+	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
 		if (rangeSet.size() == size_type(0)) {
@@ -784,8 +796,8 @@ class SemanticContainer
 	 * the full range.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(RangeSet<T> const &rangeSet, mapped_type value,
-	                               Compare comp) const
+	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet,
+	                               mapped_type value, Compare comp) const
 	{
 		// map contains empty set of ranges
 		if (rangeSet.size() == size_type(0)) {
@@ -816,7 +828,7 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(Range<T> const &range) const
+	[[nodiscard]] bool containsNone(container::Range<T> const &range) const
 	{
 		return containsNone({range});
 	}
@@ -825,7 +837,7 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(Range<T> const &range, mapped_type value,
+	[[nodiscard]] bool containsNone(container::Range<T> const &range, mapped_type value,
 	                                Compare comp) const
 	{
 		return !containsAny({range}, value, comp);
@@ -835,7 +847,7 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(RangeSet<T> const &rangeSet) const
+	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet) const
 	{
 		return !containsAny(rangeSet);
 	}
@@ -844,8 +856,8 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(RangeSet<T> const &rangeSet, mapped_type value,
-	                                Compare comp) const
+	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet,
+	                                mapped_type value, Compare comp) const
 	{
 		return !containsAny(rangeSet, value, comp);
 	}
@@ -855,7 +867,7 @@ class SemanticContainer
 	 * is true for all such elements.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(Range<T> const &range, mapped_type value,
+	[[nodiscard]] bool containsAll(container::Range<T> const &range, mapped_type value,
 	                               Compare comp) const
 	{
 		return containsAll({range}, value, comp);
@@ -865,7 +877,7 @@ class SemanticContainer
 	 * True if container contains all Keys of the range
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(Range<T> const &range) const
+	[[nodiscard]] bool containsAll(container::Range<T> const &range) const
 	{
 		return containsAll({range});
 	}
@@ -875,8 +887,8 @@ class SemanticContainer
 	 * comp(Element.value, value) is true for all such elements.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(RangeSet<T> const &rangeSet, mapped_type value,
-	                               Compare comp) const
+	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet,
+	                               mapped_type value, Compare comp) const
 	{
 		// map contains empty set of ranges
 		if (rangeSet.size() == size_type(0)) {
@@ -885,7 +897,7 @@ class SemanticContainer
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::size_type checked_elems = 0;
+		typename container::RangeSet<uint32_t>::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elements are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -914,7 +926,7 @@ class SemanticContainer
 	 * True if container contains all Keys of each Range in the set
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(RangeSet<T> const &rangeSet) const
+	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
 		if (rangeSet.size() == size_type(0)) {
@@ -923,7 +935,7 @@ class SemanticContainer
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::size_type checked_elems = 0;
+		typename container::RangeSet<uint32_t>::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elemnts are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -948,7 +960,8 @@ class SemanticContainer
 	 * Return (end(), end()) if none present.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] std::pair<iterator, iterator> limits(Range<T> const &range, Compare comp)
+	[[nodiscard]] std::pair<iterator, iterator> limits(container::Range<T> const &range,
+	                                                   Compare comp)
 	{
 		return limits({range}, comp);
 	}
@@ -958,8 +971,8 @@ class SemanticContainer
 	 * Return (end(), end()) if none present.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] std::pair<iterator, iterator> limits(RangeSet<T> const &rangeSet,
-	                                                   Compare comp)
+	[[nodiscard]] std::pair<iterator, iterator> limits(
+	    container::RangeSet<T> const &rangeSet, Compare comp)
 	{
 		if (rangeSet.size() == 0 || size() == 0) {
 			return {end(), end()};
@@ -1002,7 +1015,7 @@ class SemanticContainer
 		return in_stream.read(reinterpret_cast<char *>(getData()), sizeof(Element) * num);
 	}
 
-	friend std::ostream &operator<<(std::ostream &os, SemanticContainer const &map)
+	friend std::ostream &operator<<(std::ostream &os, Semantics const &map)
 	{
 		if (!map.empty()) {
 			std::copy(std::begin(map), std::prev(std::end(map)),
@@ -1188,29 +1201,29 @@ class SemanticContainer
 };
 
 template <typename DataType, std::size_t ValueWidth>
-bool operator==(SemanticContainer<DataType, ValueWidth> const &lhs,
-                SemanticContainer<DataType, ValueWidth> const &rhs)
+bool operator==(Semantics<DataType, ValueWidth> const &lhs,
+                Semantics<DataType, ValueWidth> const &rhs)
 {
 	return std::equal(std::begin(lhs), std::end(lhs), std::begin(rhs), std::end(rhs));
 }
 
 template <typename DataType, std::size_t ValueWidth>
-bool operator!=(SemanticContainer<DataType, ValueWidth> const &lhs,
-                SemanticContainer<DataType, ValueWidth> const &rhs)
+bool operator!=(Semantics<DataType, ValueWidth> const &lhs,
+                Semantics<DataType, ValueWidth> const &rhs)
 {
 	return !(lhs == rhs);
 }
 
 template <typename DataType, std::size_t ValueWidth>
-void swap(SemanticContainer<DataType, ValueWidth> &lhs,
-          SemanticContainer<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
+void swap(Semantics<DataType, ValueWidth> &lhs,
+          Semantics<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }
 
 template <typename DataType, std::size_t ValueWidth, class Pred>
-typename SemanticContainer<DataType, ValueWidth>::size_type erase_if(
-    SemanticContainer<DataType, ValueWidth> &c, Pred pred)
+typename Semantics<DataType, ValueWidth>::size_type erase_if(
+    Semantics<DataType, ValueWidth> &c, Pred pred)
 {
 	auto old_size = c.size();
 	for (auto it = std::begin(c), last = std::end(c); it != last;) {
@@ -1225,4 +1238,4 @@ typename SemanticContainer<DataType, ValueWidth>::size_type erase_if(
 
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_SEMANTIC_CONTAINER_H
+#endif  // UFO_MAP_SEMANTICS_H

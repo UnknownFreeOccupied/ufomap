@@ -65,6 +65,7 @@ enum class ColoringMode {
 	VOXEL_COLOR,
 	TIME_STEP_COLOR,
 	SEMANTIC_COLOR,
+	// AXIS_COLOR,
 	X_AXIS_COLOR,
 	Y_AXIS_COLOR,
 	Z_AXIS_COLOR,
@@ -106,6 +107,8 @@ static constexpr auto getStr(ColoringMode const& mode)
 			return "Time Step Color"sv;
 		case ColoringMode::SEMANTIC_COLOR:
 			return "Semantic Color"sv;
+		// case ColoringMode::AXIS_COLOR:
+		// 	return "Axis Color"sv;
 		case ColoringMode::X_AXIS_COLOR:
 			return "X-Axis"sv;
 		case ColoringMode::Y_AXIS_COLOR:

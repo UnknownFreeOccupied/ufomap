@@ -43,13 +43,18 @@
 #define UFO_MAP_SEMANTIC_NODE_H
 
 // UFO
-#include <ufo/container/flat_map.h>
+#include <ufo/map/semantic/semantics.h>
 
 namespace ufo::map
 {
-template <typename SemanticType, size_t SemanticValueWidth>
+template <typename SemanticType, std::size_t SemanticValueWidth, std::size_t FixedSize>
 struct SemanticNode {
-	container::FlatMap<SemanticType, SemanticValueWidth> semantics;
+	using semantic_type = SemanticType;
+	using semantic_label_type = SemanticType;
+	using Semantic_value_type = SemanticType;
+	using semantic_container_type = Semantics<semantic_type, SemanticValueWidth, FixedSize>;
+
+	semantic_container_type semantics;
 
 	constexpr bool operator==(SemanticNode const& rhs) const
 	{
@@ -58,12 +63,20 @@ struct SemanticNode {
 
 	constexpr bool operator!=(SemanticNode const& rhs) const { return !(*this == rhs); }
 
-	static constexpr size_t getSemanticLabelBits()
+	[[nodiscard]] static constexpr std::size_t getSemanticLabelBits() noexcept
 	{
-		return std::numeric_limits<SemanticType>::digits - getSemanticValueBits();
+		return semantic_container_type::getLabelBits();
 	}
 
-	static constexpr size_t getSemanticValueBits() { return SemanticValueWidth; }
+	[[nodiscard]] static constexpr std::size_t getSemanticValueBits() noexcept
+	{
+		return semantic_container_type::getValueBits();
+	}
+
+	[[nodiscard]] static constexpr bool isSemanticFixedSize() noexcept
+	{
+		return semantic_container_type::isFixedSize();
+	}
 };
 }  // namespace ufo::map
 

@@ -45,7 +45,6 @@
 // UFO
 #include <ufo/container/flat_map.h>
 #include <ufo/container/range_map.h>
-#include <ufo/map/octree/octree_base.h>
 #include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/types.h>
 
@@ -57,187 +56,236 @@
 
 namespace ufo::map
 {
-template <class Derived, class DataType = SemanticNode<uint32_t, 16>,
-          class Indicators = OctreeIndicators>
-class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
+template <class Derived, class LeafNode, class InnerNode>
+class SemanticMapBase
 {
- protected:
-	using Base = OctreeBase<Derived, DataType, Indicators>;
-	using LeafNode = typename Base::LeafNode;
-	using InnerNode = typename Base::InnerNode;
-
-	// FIXME: static_assert(is_base_of_template_v<SemanticNode, DataType>);
-
  public:
-	using SemanticMap = decltype(LeafNode::semantics);
-	using SemanticElement = typename SemanticMap::value_type;
-	using SemanticType = typename SemanticMap::key_type;
+	using semantic_container_type = typename LeafNode::semantic_container_type;
+	using semantic_type = typename LeafNode::semantic_type;
+	using semantic_label_type = typename LeafNode::semantic_label_type;
+	using semantic_value_type = typename LeafNode::semantic_value_type;
 
- public:
 	//
 	// Get bits
 	//
 
-	static constexpr size_t getSemanticLabelBits()
+	[[nodiscard]] static constexpr std::size_t getSemanticLabelBits() noexcept
 	{
-		return DataType::getSemanticLabelBits();
+		return LeafNode::getSemanticLabelBits();
 	}
 
-	static constexpr size_t getSemanticValueBits()
+	[[nodiscard]] static constexpr std::size_t getSemanticValueBits() noexcept
 	{
-		return DataType::getSemanticValueBits();
+		return LeafNode::getSemanticValueBits();
+	}
+
+	//
+	// Is fixed size
+	//
+
+	[[nodiscard]] static constexpr bool isSemanticFixedSize() noexcept
+	{
+		return LeafNode::isSemanticFixedSize();
 	}
 
 	//
 	// Get semantics
 	//
 
-	SemanticMap getSemantics(Node const& node) const
+	static constexpr semantic_container_type const& getSemantics(Node node) noexcept
 	{
-		return Base::getLeafNode(node)->semantics;
+		return getSemantics(std::as_const(Derived::getLeafNode(node)));
 	}
 
-	SemanticMap getSemantics(Code code) const { return Base::getLeafNode(code).semantics; }
-
-	SemanticMap getSemantics(Key key) const { return getSemantics(Base::toCode(key)); }
-
-	SemanticMap getSemantics(Point3 coord, depth_t depth = 0) const
+	semantic_container_type const& getSemantics(Code code) const noexcept
 	{
-		return getSemantics(Base::toCode(coord, depth));
+		return getSemantics(derived().getLeafNode(code));
 	}
 
-	SemanticMap getSemantics(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	semantic_container_type const& getSemantics(Key key) const noexcept
 	{
-		return getSemantics(Base::toCode(x, y, z, depth));
+		return getSemantics(Derived::toCode(key));
+	}
+
+	semantic_container_type const& getSemantics(Point3 coord,
+	                                            depth_t depth = 0) const noexcept
+	{
+		return getSemantics(derived().toCode(coord, depth));
+	}
+
+	semantic_container_type const& getSemantics(coord_t x, coord_t y, coord_t z,
+	                                            depth_t depth = 0) const noexcept
+	{
+		return getSemantics(derived().toCode(x, y, z, depth));
 	}
 
 	//
 	// Get semantic value
 	//
 
-	semantic_value_t getSemanticValue(Node const& node, semantic_label_t label) const
+	static std::optional<semantic_value_type> getSemanticValue(Node node,
+	                                                           semantic_label_type label)
 	{
-		return Base::getLeafNode(node)->semantics.getValue(label);
+		return getSemanticValue(Derived::getLeafNode(node), label);
 	}
 
-	semantic_value_t getSemanticValue(Code code, semantic_label_t label) const
+	std::optional<semantic_value_type> getSemanticValue(Code code,
+	                                                    semantic_label_type label) const
 	{
-		return Base::getLeafNode(code).semantics.getValue(label);
+		return getSemanticValue(derived().getLeafNode(code), label);
 	}
 
-	semantic_value_t getSemanticValue(Key key, semantic_label_t label) const
+	std::optional<semantic_value_type> getSemanticValue(Key key,
+	                                                    semantic_label_type label) const
 	{
-		return getSemanticValue(Base::toCode(key), label);
+		return getSemanticValue(Derived::toCode(key), label);
 	}
 
-	semantic_value_t getSemanticValue(Point3 coord, semantic_label_t label,
-	                                  depth_t depth = 0) const
+	std::optional<semantic_value_type> getSemanticValue(Point3 coord,
+	                                                    semantic_label_type label,
+	                                                    depth_t depth = 0) const
 	{
-		return getSemanticValue(Base::toCode(coord, depth), label);
+		return getSemanticValue(derived().toCode(coord, depth), label);
 	}
 
-	semantic_value_t getSemanticValue(coord_t x, coord_t y, coord_t z,
-	                                  semantic_label_t label, depth_t depth = 0) const
+	std::optional<semantic_value_type> getSemanticValue(coord_t x, coord_t y, coord_t z,
+	                                                    semantic_label_type label,
+	                                                    depth_t depth = 0) const
 	{
-		return getSemanticValue(Base::toCode(x, y, z, depth), label);
+		return getSemanticValue(derived().toCode(x, y, z, depth), label);
 	}
 
 	//
 	// Get max semantic value
 	//
 
-	SemanticPair maxSemanticValue(Node const& node) const
+	SemanticPair getMaxSemanticValue(Node const& node) const noexcept
 	{
-		auto const it =
-		    std::max_element(std::cbegin(Base::getLeafNode(node)->semantics),
-		                     std::cend(Base::getLeafNode(node)->semantics),
-		                     [](auto const& a, auto const& b) { return a.value < b.value; });
-
-		return SemanticPair(it->label, it->value);
+		return getMaxSemanticValue(Derived::getLeafNode(node));
 	}
 
-	SemanticPair maxSemanticValue(Code code) const
+	SemanticPair getMaxSemanticValue(Code code) const noexcept
 	{
-		auto const& node = Base::getLeafNode(code);
-		auto const it =
-		    std::max_element(std::cbegin(node.semantics), std::cend(node.semantics),
-		                     [](auto const& a, auto const& b) { return a.value < b.value; });
-
-		return SemanticPair(it->label, it->value);
+		return getMaxSemanticValue(derived().getLeafNode(code));
 	}
 
-	SemanticPair maxSemanticValue(Key key) const
+	SemanticPair getMaxSemanticValue(Key key) const noexcept
 	{
-		return maxSemanticValue(Base::toCode(key));
+		return getMaxSemanticValue(Derived::toCode(key));
 	}
 
-	SemanticPair maxSemanticValue(Point3 coord, depth_t depth = 0) const
+	SemanticPair getMaxSemanticValue(Point3 coord, depth_t depth = 0) const noexcept
 	{
-		return maxSemanticValue(Base::toCode(coord, depth));
+		return getMaxSemanticValue(derived().toCode(coord, depth));
 	}
 
-	SemanticPair maxSemanticValue(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	SemanticPair getMaxSemanticValue(coord_t x, coord_t y, coord_t z,
+	                                 depth_t depth = 0) const noexcept
 	{
-		return maxSemanticValue(Base::toCode(x, y, z, depth));
+		return getMaxSemanticValue(derived().toCode(x, y, z, depth));
 	}
 
 	//
 	// Insert semantics
 	//
 
-	// TODO: Node
-
-	void insertSemantics(Code code, semantic_label_t label, semantic_value_t value,
+	void insertSemantics(semantic_label_t label, semantic_value_t value, Node node,
 	                     bool propagate = true)
 	{
-		insertSemantics(std::execution::seq, code, label, value, propagate);
+		derived().apply(
+		    node,
+		    [this, label, value](LeafNode& node) { insertSemantics(node, label, value); },
+		    propagate);
 	}
 
-	void insertSemantics(Code code, SemanticPair semantic, bool propagate = true)
+	void insertSemantics(SemanticPair semantic, Node node, bool propagate = true)
 	{
-		insertSemantics(std::execution::seq, code, semantic, propagate);
+		insertSemantics(semantic.label, semantic.value, node, propagate);
 	}
 
 	template <class InputIt>
-	void insertSemantics(Code code, InputIt first, InputIt last, bool propagate = true)
+	void insertSemantics(InputIt first, InputIt last, Node node, bool propagate = true)
 	{
-		insertSemantics(std::execution::seq, code, first, last, propagate);
+		derived().apply(node, [this, first, last](LeafNode& node) {
+			insertSemantics(node, first, last);
+		});
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertSemantics(ExecutionPolicy policy, Code code, semantic_label_t label,
-	                     semantic_value_t value, bool propagate = true)
-	{
-		insertSemantics(policy, code, SemanticPair(label, value), propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void insertSemantics(ExecutionPolicy policy, Code code, SemanticPair semantic,
+	void insertSemantics(semantic_label_t label, semantic_value_t value, Code code,
 	                     bool propagate = true)
 	{
-		Base::apply(
-		    policy, code,
-		    [this, semantic](LeafNode& node) { insertSemanticsImpl(node, semantic); },
-		    propagate);
+		derived().apply(code, [this, label, value](LeafNode& node) {
+			insertSemantics(node, label, value);
+		});
 	}
 
-	template <class ExecutionPolicy, class InputIt,
-	          typename = std::enable_if_t<
-	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-	void insertSemantics(ExecutionPolicy policy, Code code, InputIt first, InputIt last,
+	void insertSemantics(SemanticPair semantic, Code code, bool propagate = true)
+	{
+		insertSemantics(semantic.label, semantic.value, code, propagate);
+	}
+
+	template <class InputIt>
+	void insertSemantics(InputIt first, InputIt last, Code code, bool propagate = true)
+	{
+		derived().apply(code, [this, first, last](LeafNode& node) {
+			insertSemantics(node, first, last);
+		});
+	}
+
+	void insertSemantics(semantic_label_t label, semantic_value_t value, Key key,
 	                     bool propagate = true)
 	{
-		Base::apply(
-		    policy, code,
-		    [this, first, last](LeafNode& node) { insertSemanticsImpl(node, first, last); },
-		    propagate);
+		insertSemantics(label, value, Derived::toCode(key), propagate);
 	}
 
-	// TODO: Key
+	void insertSemantics(SemanticPair semantic, Key key, bool propagate = true)
+	{
+		insertSemantics(semantic, Derived::toCode(key), propagate);
+	}
 
-	// TODO: Coord
+	template <class InputIt>
+	void insertSemantics(InputIt first, InputIt last, Key key, bool propagate = true)
+	{
+		insertSemantics(first, last, Derived::toCode(key), propagate);
+	}
+
+	void insertSemantics(semantic_label_t label, semantic_value_t value, Point3 coord,
+	                     depth_t depth = 0, bool propagate = true)
+	{
+		insertSemantics(label, value, derived().toCode(coord, depth), propagate);
+	}
+
+	void insertSemantics(SemanticPair semantic, Point3 coord, depth_t depth = 0,
+	                     bool propagate = true)
+	{
+		insertSemantics(semantic, derived().toCode(coord, depth), propagate);
+	}
+
+	template <class InputIt>
+	void insertSemantics(InputIt first, InputIt last, Point3 coord, depth_t depth = 0,
+	                     bool propagate = true)
+	{
+		insertSemantics(first, last, derived().toCode(coord, depth), propagate);
+	}
+
+	void insertSemantics(semantic_label_t label, semantic_value_t value, coord_t x,
+	                     coord_t y, coord_t z, depth_t depth = 0, bool propagate = true)
+	{
+		insertSemantics(label, value, derived().toCode(x, y, z, depth), propagate);
+	}
+
+	void insertSemantics(SemanticPair semantic, coord_t x, coord_t y, coord_t z,
+	                     depth_t depth = 0, bool propagate = true)
+	{
+		insertSemantics(semantic, derived().toCode(x, y, z, depth), propagate);
+	}
+
+	template <class InputIt>
+	void insertSemantics(InputIt first, InputIt last, coord_t x, coord_t y, coord_t z,
+	                     depth_t depth = 0, bool propagate = true)
+	{
+		insertSemantics(first, last, derived().toCode(x, y, z, depth), propagate);
+	}
 
 	//
 	// Insert or assign semantics
@@ -350,7 +398,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Node& node, SemanticPair semantic,
 	                             bool propagate = true)
 	{
-		Base::apply(
+		derived().apply(
 		    policy, node,
 		    [this, semantic](LeafNode& node) { insertOrAssignSemanticsImpl(node, semantic); },
 		    propagate);
@@ -362,7 +410,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Node& node, InputIt first,
 	                             InputIt last, bool propagate = true)
 	{
-		Base::apply(
+		derived().apply(
 		    policy, node,
 		    [this, first, last](LeafNode& node) {
 			    insertOrAssignSemanticsImpl(node, first, last);
@@ -383,7 +431,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Code code, SemanticPair semantic,
 	                             bool propagate = true)
 	{
-		Base::apply(
+		derived().apply(
 		    policy, code,
 		    [this, semantic](LeafNode& node) { insertOrAssignSemanticsImpl(node, semantic); },
 		    propagate);
@@ -395,7 +443,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Code code, InputIt first,
 	                             InputIt last, bool propagate = true)
 	{
-		Base::apply(
+		derived().apply(
 		    policy, code,
 		    [this, first, last](LeafNode& node) {
 			    insertOrAssignSemanticsImpl(node, first, last);
@@ -408,7 +456,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Key key, semantic_label_t label,
 	                             semantic_value_t value, bool propagate = true)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(key), label, value, propagate);
+		insertOrAssignSemantics(policy, Derived::toCode(key), label, value, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -416,7 +464,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Key key, SemanticPair semantic,
 	                             bool propagate = true)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(key), semantic, propagate);
+		insertOrAssignSemantics(policy, Derived::toCode(key), semantic, propagate);
 	}
 
 	template <class ExecutionPolicy, class InputIt,
@@ -425,7 +473,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Key key, InputIt first,
 	                             InputIt last, bool propagate = true)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(key), first, last, propagate);
+		insertOrAssignSemantics(policy, Derived::toCode(key), first, last, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -434,7 +482,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                             semantic_label_t label, semantic_value_t value,
 	                             bool propagate = true, depth_t depth = 0)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(coord, depth), label, value, propagate);
+		insertOrAssignSemantics(policy, derived().toCode(coord, depth), label, value,
+		                        propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -443,7 +492,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                             SemanticPair semantic, bool propagate = true,
 	                             depth_t depth = 0)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(coord, depth), semantic, propagate);
+		insertOrAssignSemantics(policy, derived().toCode(coord, depth), semantic, propagate);
 	}
 
 	template <class ExecutionPolicy, class InputIt,
@@ -452,7 +501,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void insertOrAssignSemantics(ExecutionPolicy policy, Point3 coord, InputIt first,
 	                             InputIt last, bool propagate = true, depth_t depth = 0)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(coord, depth), first, last, propagate);
+		insertOrAssignSemantics(policy, derived().toCode(coord, depth), first, last,
+		                        propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -461,7 +511,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                             semantic_label_t label, semantic_value_t value,
 	                             bool propagate = true, depth_t depth = 0)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(x, y, z, depth), label, value,
+		insertOrAssignSemantics(policy, derived().toCode(x, y, z, depth), label, value,
 		                        propagate);
 	}
 
@@ -471,7 +521,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                             SemanticPair semantic, bool propagate = true,
 	                             depth_t depth = 0)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(x, y, z, depth), semantic, propagate);
+		insertOrAssignSemantics(policy, derived().toCode(x, y, z, depth), semantic,
+		                        propagate);
 	}
 
 	template <class ExecutionPolicy, class InputIt,
@@ -481,7 +532,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                             InputIt first, InputIt last, bool propagate = true,
 	                             depth_t depth = 0)
 	{
-		insertOrAssignSemantics(policy, Base::toCode(x, y, z, depth), first, last, propagate);
+		insertOrAssignSemantics(policy, derived().toCode(x, y, z, depth), first, last,
+		                        propagate);
 	}
 
 	//
@@ -534,7 +586,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void increaseSemantics(ExecutionPolicy policy, Code code, SemanticPair semantic,
 	                       semantic_value_t init_value = 0, bool propagate = true)
 	{
-		Base::apply(
+		derived().apply(
 		    policy, code,
 		    [this, semantic, init_value](LeafNode& node) {
 			    increaseSemanticsImpl(node, semantic, init_value);
@@ -548,7 +600,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void increaseSemantics(ExecutionPolicy policy, Code code, InputIt first, InputIt last,
 	                       semantic_value_t init_value = 0, bool propagate = true)
 	{
-		Base::apply(
+		derived().apply(
 		    policy, code,
 		    [this, first, last, init_value](LeafNode& node) {
 			    increaseSemanticsImpl(node, first, last, init_value);
@@ -622,7 +674,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void changeLabel(ExecutionPolicy policy, semantic_label_t old_label,
 	                 semantic_label_t new_label, bool propagate = true)
 	{
-		changeLabel(policy, Base::getRootCode(), old_label, new_label, propagate);
+		changeLabel(policy, derived().getRootCode(), old_label, new_label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -646,7 +698,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void changeLabel(ExecutionPolicy policy, Key key, semantic_label_t old_label,
 	                 semantic_label_t new_label, bool propagate = true)
 	{
-		changeLabel(policy, Base::toCode(key), old_label, new_label, propagate);
+		changeLabel(policy, Derived::toCode(key), old_label, new_label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -654,7 +706,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void changeLabel(ExecutionPolicy policy, Point3 coord, semantic_label_t old_label,
 	                 semantic_label_t new_label, bool propagate = true, depth_t depth = 0)
 	{
-		changeLabel(policy, Base::toCode(coord, depth), old_label, new_label, propagate);
+		changeLabel(policy, derived().toCode(coord, depth), old_label, new_label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -663,7 +715,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                 semantic_label_t old_label, semantic_label_t new_label,
 	                 bool propagate = true, depth_t depth = 0)
 	{
-		changeLabel(policy, Base::toCode(x, y, z, depth), old_label, new_label, propagate);
+		changeLabel(policy, derived().toCode(x, y, z, depth), old_label, new_label,
+		            propagate);
 	}
 
 	//
@@ -706,7 +759,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void deleteLabel(ExecutionPolicy policy, semantic_label_t label, bool propagate = true)
 	{
-		deleteLabel(policy, Base::getRootCode(), label, propagate);
+		deleteLabel(policy, derived().getRootCode(), label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -730,7 +783,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void deleteLabel(ExecutionPolicy policy, Key key, semantic_label_t label,
 	                 bool propagate = true)
 	{
-		deleteLabel(policy, Base::toCode(key), label, propagate);
+		deleteLabel(policy, Derived::toCode(key), label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -738,7 +791,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void deleteLabel(ExecutionPolicy policy, Point3 coord, semantic_label_t label,
 	                 bool propagate = true, depth_t depth = 0)
 	{
-		deleteLabel(policy, Base::toCode(coord, depth), label, propagate);
+		deleteLabel(policy, derived().toCode(coord, depth), label, propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -746,7 +799,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void deleteLabel(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                 semantic_label_t label, bool propagate = true, depth_t depth = 0)
 	{
-		deleteLabel(policy, Base::toCode(x, y, z, depth), label, propagate);
+		deleteLabel(policy, derived().toCode(x, y, z, depth), label, propagate);
 	}
 
 	//
@@ -776,25 +829,25 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void clearSemantics(ExecutionPolicy policy, Code code, bool propagate = true)
 	{
-		Base::apply(
+		derived().apply(
 		    policy, code, [this](LeafNode& node) { clearSemanticsImpl(node); }, propagate);
 	}
 
 	void clearSemantics(Key key, bool propagate = true)
 	{
-		clearSemantics(Base::toCode(key), propagate);
+		clearSemantics(Derived::toCode(key), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
 	void clearSemantics(ExecutionPolicy policy, Key key, bool propagate = true)
 	{
-		clearSemantics(policy, Base::toCode(key), propagate);
+		clearSemantics(policy, Derived::toCode(key), propagate);
 	}
 
 	void clearSemantics(Point3 coord, bool propagate = true, depth_t depth = 0)
 	{
-		clearSemantics(Base::toCode(coord, depth), propagate);
+		clearSemantics(derived().toCode(coord, depth), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -802,13 +855,13 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void clearSemantics(ExecutionPolicy policy, Point3 coord, bool propagate = true,
 	                    depth_t depth = 0)
 	{
-		clearSemantics(policy, Base::toCode(coord, depth), propagate);
+		clearSemantics(policy, derived().toCode(coord, depth), propagate);
 	}
 
 	void clearSemantics(coord_t x, coord_t y, coord_t z, bool propagate = true,
 	                    depth_t depth = 0)
 	{
-		clearSemantics(Base::toCode(x, y, z, depth), propagate);
+		clearSemantics(derived().toCode(x, y, z, depth), propagate);
 	}
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
@@ -816,7 +869,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	void clearSemantics(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
 	                    bool propagate = true, depth_t depth = 0)
 	{
-		clearSemantics(policy, Base::toCode(x, y, z, depth), propagate);
+		clearSemantics(policy, derived().toCode(x, y, z, depth), propagate);
 	}
 
 	//
@@ -835,7 +888,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	//                                      std::decay_t<ExecutionPolicy>>>>
 	// void filterSemantics(ExecutionPolicy policy, float min_prob, bool propagate = true)
 	// {
-	// 	filterSemantics(policy, Base::getRootCode(), min_prob, propagate);
+	// 	filterSemantics(policy, derived().getRootCode(), min_prob, propagate);
 	// }
 
 	// void filterSemantics(Code code, float min_prob, bool propagate = true)
@@ -854,7 +907,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
 	// void filterSemantics(Key key, float min_prob, bool propagate = true)
 	// {
-	// 	filterSemantics(Base::toCode(key), min_prob, propagate);
+	// 	filterSemantics(Derived::toCode(key), min_prob, propagate);
 	// }
 
 	// template <class ExecutionPolicy, typename =
@@ -863,13 +916,13 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// void filterSemantics(ExecutionPolicy policy, Key key, float min_prob,
 	//                      bool propagate = true, depth_t depth = 0)
 	// {
-	// 	filterSemantics(policy, Base::toCode(key), min_prob, propagate);
+	// 	filterSemantics(policy, Derived::toCode(key), min_prob, propagate);
 	// }
 
 	// void filterSemantics(Point3 coord, float min_prob, bool propagate = true,
 	//                      depth_t depth = 0)
 	// {
-	// 	filterSemantics(Base::toCode(coord, depth), min_prob, propagate);
+	// 	filterSemantics(derived().toCode(coord, depth), min_prob, propagate);
 	// }
 
 	// template <class ExecutionPolicy, typename =
@@ -878,14 +931,14 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// void filterSemantics(ExecutionPolicy policy, Point3 coord, float min_prob,
 	//                      bool propagate = true, depth_t depth = 0)
 	// {
-	// 	filterSemantics(policy, Base::toCode(coord, depth), min_prob, propagate);
+	// 	filterSemantics(policy, derived().toCode(coord, depth), min_prob, propagate);
 	// }
 
 	// void filterSemantics(coord_t x, coord_t y, coord_t z, float min_prob, bool propagate
 	// = true,
 	//                      depth_t depth = 0)
 	// {
-	// 	filterSemantics(Base::toCode(x, y, z, depth), min_prob, propagate);
+	// 	filterSemantics(derived().toCode(x, y, z, depth), min_prob, propagate);
 	// }
 
 	// template <class ExecutionPolicy, typename =
@@ -895,7 +948,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// min_prob,
 	//                      bool propagate = true, depth_t depth = 0)
 	// {
-	// 	filterSemantics(policy, Base::toCode(x, y, z, depth), min_prob, propagate);
+	// 	filterSemantics(policy, derived().toCode(x, y, z, depth), min_prob, propagate);
 	// }
 
 	//
@@ -971,63 +1024,87 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 
  protected:
 	//
-	// Constructors
+	// Derived
 	//
 
-	SemanticMapBase(double resolution, depth_t depth_levels, bool automatic_pruning)
-	    : Base(resolution, depth_levels, automatic_pruning)
-	{
-	}
+	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
 
-	SemanticMapBase(SemanticMapBase const& other) : Base(other) {}
-
-	template <class Derived2, class DataType2, class Indicators2>
-	SemanticMapBase(SemanticMapBase<Derived2, DataType2, Indicators2> const& other)
-	    : Base(other)
-	{
-	}
-
-	SemanticMapBase(SemanticMapBase&& other) : Base(std::move(other)) {}
-
-	SemanticMapBase& operator=(SemanticMapBase const& rhs) { Base::operator=(rhs); }
-
-	template <class Derived2, class DataType2, class Indicators2>
-	SemanticMapBase& operator=(SemanticMapBase<Derived2, DataType2, Indicators2> const& rhs)
-	{
-		Base::operator=(rhs);
-	}
-
-	SemanticMapBase& operator=(SemanticMapBase&& rhs) { Base::operator=(std::move(rhs)); }
-
-	//
-	// Destructor
-	//
-
-	virtual ~SemanticMapBase() override {}
+	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
 
 	//
 	// Initilize root
 	//
 
-	virtual void initRoot() override
+	void initRoot() { clearSemantics(derived().getRoot()); }
+
+	//
+	// Clear semantics
+	//
+
+	static void clearSemantics(LeafNode& node) { getSemantics(node).clear(); }
+
+	//
+	// Get semantics
+	//
+
+	static constexpr semantic_container_type& getSemantics(LeafNode& node) noexcept
 	{
-		Base::initRoot();
-		Base::getRoot().semantics.clear();
+		return node.semantics;
+	}
+
+	static constexpr semantic_container_type getSemantics(LeafNode const& node) noexcept
+	{
+		return node.semantics;
+	}
+
+	//
+	// Get semantic value
+	//
+
+	static std::optional<semantic_value_type> getSemanticValue(LeafNode const& node,
+	                                                           semantic_label_type label)
+	{
+		return getSemantics(node).getValue(label);
+	}
+
+	//
+	// Insert semantics
+	//
+
+	static void insertSemantics(LeafNode& node, semantic_label_type label,
+	                            semantic_value_type value)
+	{
+		getSemantics(node).emplace(label, value);
+	}
+
+	template <class InputIt>
+	static void insertSemantics(LeafNode& node, InputIt first, InputIt last)
+	{
+		getSemantics(node).insert(first, last);
+	}
+
+	//
+	// Get max semantic value
+	//
+
+	SemanticPair getMaxSemanticValue(LeafNode const& node) noexcept
+	{
+		auto semantics = getSemantics(node);
+		auto const it =
+		    std::max_element(std::cbegin(semantics), std::cend(semantics),
+		                     [](auto const& a, auto const& b) { return a.value < b.value; });
+		return SemanticPair(it->label, it->value);
 	}
 
 	//
 	// Update node
 	//
 
-	virtual void updateNode(InnerNode& node, depth_t const depth) override
+	void updateNode(InnerNode& node, depth_t const depth)
 	{
-		if (Base::isLeaf(node)) {
-			return;
-		}
-
-		std::array<typename SemanticMap::size_type, 8> sizes;
+		std::array<typename semantics_t::size_type, 8> sizes;
 		for (size_t i = 0; i != sizes.size(); ++i) {
-			sizes[i] = Base::getChild(node, depth - 1, i).semantics.size();
+			sizes[i] = Derived::getChild(node, depth - 1, i).semantics.size();
 		}
 
 		size_t total_size = std::reduce(sizes.cbegin(), sizes.cend());
@@ -1037,13 +1114,13 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 			return;
 		}
 
-		std::vector<typename SemanticMap::Element> semantics(total_size);
+		std::vector<typename semantics_t::Element> semantics(total_size);
 
 		// Get childrens semantics
 		auto it_beg = semantics.begin();
 		for (size_t i = 0; i != sizes.size(); ++i) {
 			if (0 != sizes[i]) {
-				auto const& child_sem = Base::getChild(node, depth - 1, i).semantics;
+				auto const& child_sem = Derived::getChild(node, depth - 1, i).semantics;
 				auto it_end = std::copy(child_sem.cbegin(), child_sem.cend(), it_beg);
 				std::inplace_merge(semantics.begin(), it_beg, it_end);
 				it_beg = std::move(it_end);
@@ -1062,29 +1139,10 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	}
 
 	//
-	//
-	//
-
-	//
-	// Insert semantics
-	//
-
-	virtual void insertSemanticsImpl(LeafNode& node, SemanticPair semantic)
-	{
-		node.semantics.emplace(semantic.label, semantic.value);
-	}
-
-	template <class InputIt>
-	void insertSemanticsImpl(LeafNode& node, InputIt first, InputIt last)
-	{
-		node.semantics.insert(first, last);
-	}
-
-	//
 	// Insert or assign semantics
 	//
 
-	virtual void insertOrAssignSemanticsImpl(LeafNode& node, SemanticPair semantic)
+	void insertOrAssignSemanticsImpl(LeafNode& node, SemanticPair semantic)
 	{
 		node.semantics.insert_or_assign(semantic.label, semantic.value);
 	}
@@ -1099,7 +1157,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Increase semantics
 	//
 
-	virtual void increaseSemanticsImpl(LeafNode& node, semantic_value_t inc)
+	void increaseSemanticsImpl(LeafNode& node, semantic_value_t inc)
 	{
 		// FIXME: Improve?
 		for (auto semantic : node.semantics) {
@@ -1107,8 +1165,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		}
 	}
 
-	virtual void increaseSemanticsImpl(LeafNode& node, SemanticPair semantic,
-	                                   semantic_value_t init_value)
+	void increaseSemanticsImpl(LeafNode& node, SemanticPair semantic,
+	                           semantic_value_t init_value)
 	{
 		node.semantics.increase_value(semantic.label, semantic.value, init_value);
 	}
@@ -1132,7 +1190,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Decrease semantics
 	//
 
-	virtual void decreaseSemanticsImpl(LeafNode& node, semantic_value_t dec)
+	void decreaseSemanticsImpl(LeafNode& node, semantic_value_t dec)
 	{
 		// FIXME: Improve?
 		for (auto semantic : node.semantics) {
@@ -1140,8 +1198,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		}
 	}
 
-	virtual void decreaseSemanticsImpl(LeafNode& node, SemanticPair semantic,
-	                                   semantic_value_t init_value)
+	void decreaseSemanticsImpl(LeafNode& node, SemanticPair semantic,
+	                           semantic_value_t init_value)
 	{
 		node.semantics.decrease_value(semantic.label, semantic.value, init_value);
 	}
@@ -1165,8 +1223,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Change label
 	//
 
-	virtual void changeLabelImpl(LeafNode& node, semantic_label_t old_label,
-	                             semantic_label_t new_label)
+	void changeLabelImpl(LeafNode& node, semantic_label_t old_label,
+	                     semantic_label_t new_label)
 	{
 		// TODO: Implement
 	}
@@ -1175,7 +1233,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Delete label
 	//
 
-	virtual void deleteSemanticLabelImpl(LeafNode& node, semantic_label_t label)
+	void deleteSemanticLabelImpl(LeafNode& node, semantic_label_t label)
 	{
 		node.semantics.erase(label);
 	}
@@ -1184,14 +1242,14 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Clear semantics
 	//
 
-	virtual void clearSemanticsImpl(LeafNode& node) { node.semantics.clear(); }
+	void clearSemanticsImpl(LeafNode& node) { node.semantics.clear(); }
 
 	//
 	// Filter semantics
 	//
 
 	// FIXME: Implement
-	// virtual void filterSemanticsLogitImpl(LeafNode& node, semantic_value_t min_value)
+	//  void filterSemanticsLogitImpl(LeafNode& node, semantic_value_t min_value)
 	// {
 	// 	node.semantics.filter(min_value);
 	// }
@@ -1200,21 +1258,20 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
+	void addFileInfo(FileInfo& info) const
 	{
 		info["fields"].emplace_back("semantics");
 		info["type"].emplace_back("U");
+		// TODO: Fix
 		info["size"].emplace_back(std::to_string(sizeof(semantic_label_t)));
 	}
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               std::string const& field, char type, uint64_t size, uint64_t num)
 	{
 		if ("semantics" != field) {
 			return false;
 		}
-		// TODO: Make parallel
 
 		if ('U' == type && sizeof(semantic_label_t) == size) {
 			semantic_label_t bits_for_label;
@@ -1223,59 +1280,70 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 				node->semantics.readData(in_stream);
 			}
 		} else {
-			// TODO: Error
 			return false;
 		}
 		return true;
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode> const& nodes, bool compress,
-	                        int compression_acceleration_level,
+	virtual void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
+	                        bool compress, int compression_acceleration_level,
 	                        int compression_level) const override
 	{
-		// uint64_t node_size = nodes.size();
-		// for (auto const& node : nodes) {
-		// 	node_size += node->semantics.size();
-		// }
-		// // node_size += 1;  // For number of bits
-		// node_size *= sizeof(SemanticType);
+		std::vector<uint64_t> has_semantics((nodes.size() + 64 - 1) / 64);
+		uint64_t semantics_size = 0;
+		std::size_t index = 0;
+		std::size_t element = 0;
+		for (auto const& node : nodes) {
+			if (!getSemantics(node).empty()) {
+				has_semantics[index] |= 1U << element;
+				semantics_size += getSemantics(node).size();
+			}
+			if (63 == element) {
+				++index;
+				element = 0;
+			} else {
+				++element;
+			}
+		}
+		semantics_size *= sizeof(SemanticType);
 
-		// uint64_t mapping_size = 0;
-		// for (auto const& mapping : label_mapping_) {
-		// 	// TODO: Implement
-		// }
+		constexpr uint8_t value_bits = getSemanticValueBits();
 
-		// uint64_t propagation_size = 0;
-		// for (auto const& propagation : label_propagation_) {
-		// 	// TODO: Implement
-		// }
+		uint64_t mapping_size = 0;
+		for (auto const& mapping : label_mapping_) {
+			// TODO: Implement
+		}
 
-		// total_size = node_size + mapping_size + propagation_size;
-		// total_size += sizeof(SemanticValue);  // For number of bits
+		uint64_t propagation_size = 0;
+		for (auto const& propagation : label_propagation_) {
+			// TODO: Implement
+		}
 
-		// out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
-		// out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
+		total_size = node_size + mapping_size + propagation_size;
+		total_size += sizeof(SemanticValue);  // For number of bits
 
-		// // FIXME: Improve
+		out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
+		out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
 
-		// // FIXME: Write mappings
+		// FIXME: Improve
 
-		// // FIXME: Write propagation strategies
-		// out_stream.write(reinterpret_cast<char*>(&num), sizeof(uint64_t));
+		// FIXME: Write mappings
 
-		// semantic_value_t bits_for_value = LeafNode::getSemanticValueBits();
-		// out_stream.write(reinterpret_cast<char*>(&bits_for_value), sizeof(SemanticValue));
+		// FIXME: Write propagation strategies
+		out_stream.write(reinterpret_cast<char*>(&num), sizeof(uint64_t));
 
-		// for (auto const& node : nodes) {
-		// 	node->semantics.writeData(out_stream);
-		// }
+		semantic_value_t bits_for_value = LeafNode::getSemanticValueBits();
+		out_stream.write(reinterpret_cast<char*>(&bits_for_value), sizeof(SemanticValue));
+
+		for (auto const& node : nodes) {
+			node->semantics.writeData(out_stream);
+		}
 	}
 
  protected:
 	// Label mapping
 	struct LabelMapping {
-		container::RangeSet<SemanticType> ranges;
+		container::RangeSet<semantic_t> ranges;
 		std::unordered_set<std::string> strings;
 		RGBColor color;
 	};
@@ -1283,10 +1351,10 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	std::unordered_map<std::string, LabelMapping> label_mapping_;
 
 	// Propagation
-	container::RangeMap<SemanticType, PropagationCriteria> label_propagation_;
+	container::RangeMap<semantic_t, PropagationCriteria> label_propagation_;
 
 	// Deserialize
-	// TODO: container::RangeMap<SemanticType, DeserializeCriteria> label_deserialize_;
+	// TODO: container::RangeMap<semantic_t, DeserializeCriteria> label_deserialize_;
 };
 }  // namespace ufo::map
 
