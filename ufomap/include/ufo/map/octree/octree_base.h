@@ -3143,23 +3143,18 @@ class OctreeBase
 	// NOTE: Only call with nodes that have children
 	static bool isNodeCollapsible(InnerNode const& node, depth_t depth) noexcept
 	{
-		if (1 == depth) {
-			return std::all_of(std::cbegin(getLeafChildren(node)),
-			                   std::cend(getLeafChildren(node)),
-			                   [&node](LeafNode const& child) {
-				                   return static_cast<LeafNode const&>(node) == child;
-			                   });
-		} else {
-			return std::all_of(std::cbegin(getInnerChildren(node)),
-			                   std::cend(getInnerChildren(node)),
-			                   [](InnerNode const& child) { return isLeaf(child); }) &&
-			       std::all_of(std::cbegin(getInnerChildren(node)),
-			                   std::cend(getInnerChildren(node)),
-			                   [&node](InnerNode const& child) {
-				                   return static_cast<LeafNode const&>(node) ==
-				                          static_cast<LeafNode const&>(child);
-			                   });
-		}
+		return 1 == depth
+		           ? std::all_of(std::cbegin(getLeafChildren(node)),
+		                         std::cend(getLeafChildren(node)),
+		                         [node = static_cast<LeafNode const&>(node)](auto&& child) {
+			                         return node == child;
+		                         })
+		           : std::all_of(std::cbegin(getInnerChildren(node)),
+		                         std::cend(getInnerChildren(node)),
+		                         [node = static_cast<LeafNode const&>(node)](auto&& child) {
+			                         return isLeaf(child) &&
+			                                node == static_cast<LeafNode const&>(child);
+		                         });
 	}
 
 	//
