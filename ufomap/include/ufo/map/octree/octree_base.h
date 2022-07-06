@@ -912,14 +912,14 @@ class OctreeBase
 		depth_t cur_depth = depthLevels();
 		for (; min_depth < cur_depth; --cur_depth) {
 			if (isLeaf(*node)) {
-				createInnerChildren(*node, cur_depth, code.indexAtDepth(cur_depth));
+				createInnerChildren(*node, cur_depth);
 			}
 			node = &getInnerChild(*node, code.indexAtDepth(cur_depth - 1));
 		}
 
 		if (0 == code.depth()) {
 			if (isLeaf(*node)) {
-				createLeafChildren(*node, code.indexAtDepth(1));
+				createLeafChildren(*node);
 			}
 			return Node(&getLeafChild(*node, code.indexAtDepth(0)), code);
 		} else {
@@ -951,8 +951,7 @@ class OctreeBase
 
 		while (code.depth() != node.depth()) {
 			if (isLeaf(node)) {
-				createChildren(getInnerNode(node), node.depth(),
-				               node.code().indexAtDepth(node.depth()));
+				createChildren(getInnerNode(node), node.depth());
 			}
 			node = getNodeChild(node, code.indexAtDepth(node.depth() - 1));
 		}
@@ -2181,9 +2180,7 @@ class OctreeBase
 	{
 		size_t i = 0;
 		for (auto& a_l : children_locks_) {
-			for (auto& l : a_l) {
-				l.clear();
-			}
+			a_l.clear();
 		}
 
 		// Code code(0, StaticallyAllocatedDepths);
@@ -2435,12 +2432,12 @@ class OctreeBase
 				applyAllRecurs(node, depth, f);
 			}
 		} else if (1 == depth) {
-			createLeafChildren(node, code.indexAtDepth(depth));
+			createLeafChildren(node);
 			LeafNode& child = getLeafChild(node, code.indexAtDepth(0));
 			f(child);
 			child.modified = true;
 		} else {
-			createInnerChildren(node, depth, code.indexAtDepth(depth));
+			createInnerChildren(node, depth);
 			applyRecurs(getInnerChild(node, code.indexAtDepth(depth - 1)), depth - 1, code, f);
 		}
 
@@ -2461,12 +2458,12 @@ class OctreeBase
 				applyAllRecurs(policy, node, depth, f);
 			}
 		} else if (1 == depth) {
-			createLeafChildren(node, code.indexAtDepth(depth));
+			createLeafChildren(node);
 			LeafNode& child = getLeafChild(node, code.indexAtDepth(0));
 			f(child);
 			child.modified = true;
 		} else {
-			createInnerChildren(node, depth, code.indexAtDepth(depth));
+			createInnerChildren(node, depth);
 			applyRecurs(policy, getInnerChild(node, code.indexAtDepth(depth - 1)), depth - 1,
 			            code, f);
 		}
@@ -2644,36 +2641,36 @@ class OctreeBase
 	// (Un)lock children
 	//
 
-	bool tryLockChildren(depth_t depth, size_t index)
+	bool tryLockChildren(depth_t depth)
 	{
-		return !children_locks_[depth][index].test_and_set(std::memory_order_acquire);
+		return !children_locks_[depth].test_and_set(std::memory_order_acquire);
 	}
 
-	void lockChildren(depth_t depth, size_t index)
+	void lockChildren(depth_t depth)
 	{
-		while (!tryLockChildren(depth, index))
+		while (!tryLockChildren(depth))
 			;
 	}
 
-	bool lockIfLeaf(InnerNode const& node, depth_t depth, size_t index)
+	bool lockIfLeaf(InnerNode const& node, depth_t depth)
 	{
 		do {
 			if (isParent(node)) {
 				return false;
 			}
-		} while (!tryLockChildren(depth, index));
+		} while (!tryLockChildren(depth));
 
 		if (isParent(node)) {
-			unlockChildren(depth, index);
+			unlockChildren(depth);
 			return false;
 		}
 
 		return true;
 	}
 
-	void unlockChildren(depth_t depth, size_t index)
+	void unlockChildren(depth_t depth)
 	{
-		children_locks_[depth][index].clear(std::memory_order_release);
+		children_locks_[depth].clear(std::memory_order_release);
 	}
 
 	//
@@ -2740,10 +2737,10 @@ class OctreeBase
 	// Create children
 	//
 
-	void createLeafChildren(InnerNode& node, size_t index)
+	void createLeafChildren(InnerNode& node)
 	{
 		if constexpr (!LockLess) {
-			if (!lockIfLeaf(node, 0, index)) {
+			if (!lockIfLeaf(node, 0)) {
 				return;
 			}
 		}
@@ -2796,14 +2793,14 @@ class OctreeBase
 
 		node.is_leaf = false;
 		if constexpr (!LockLess) {
-			unlockChildren(0, index);
+			unlockChildren(0);
 		}
 	}
 
-	void createInnerChildren(InnerNode& node, depth_t depth, size_t index)
+	void createInnerChildren(InnerNode& node, depth_t depth)
 	{
 		if constexpr (!LockLess) {
-			if (!lockIfLeaf(node, depth, index)) {
+			if (!lockIfLeaf(node, depth)) {
 				return;
 			}
 		}
@@ -2857,16 +2854,16 @@ class OctreeBase
 
 		node.is_leaf = false;
 		if constexpr (!LockLess) {
-			unlockChildren(depth, index);
+			unlockChildren(depth);
 		}
 	}
 
-	void createChildren(InnerNode& node, depth_t depth, size_t index)
+	void createChildren(InnerNode& node, depth_t depth)
 	{
 		if (1 == depth) {
-			createLeafChildren(node, index);
+			createLeafChildren(node);
 		} else {
-			createInnerChildren(node, depth, index);
+			createInnerChildren(node, depth);
 		}
 	}
 
@@ -3487,8 +3484,7 @@ class OctreeBase
 		node.modified = true;
 
 		if (1 == depth) {
-			// FIXME: What should index be?
-			createLeafChildren(node, 0);
+			createLeafChildren(node);
 
 			for (size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
@@ -3496,8 +3492,7 @@ class OctreeBase
 				}
 			}
 		} else {
-			// FIXME: What should index be?
-			createInnerChildren(node, depth, 1);
+			createInnerChildren(node, depth);
 
 			for (size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
@@ -3883,7 +3878,7 @@ class OctreeBase
 	depth_t parallel_depth_ = 12;
 
 	// Locks to support parallel insertion, one per level and child
-	std::array<std::array<std::atomic_flag, 8>, maxDepthLevels() + 1> children_locks_;
+	std::array<std::atomic_flag, maxDepthLevels() + 1> children_locks_;
 
 	//
 	// Only used when NodeMemoryModel is either MemoryModel::POINTER_REUSE or
