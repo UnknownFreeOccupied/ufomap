@@ -84,10 +84,12 @@ class Range
 	struct Comparator {
 		using range_t = std::pair<T, T>;
 		using is_transparent = std::true_type;
+
 		[[nodiscard]] constexpr bool operator()(Range lhs, range_t rhs) const noexcept
 		{
 			return lhs.upper() < rhs.first;
 		}
+
 		[[nodiscard]] constexpr bool operator()(range_t lhs, Range rhs) const noexcept
 		{
 			return lhs.second < rhs.upper();
@@ -98,42 +100,45 @@ class Range
 	// Tags
 	using value_type = T;
 
-	Range() = default;
+	constexpr Range() = default;
 
-	Range(T value) : lower_(value), upper_(value) {}
+	constexpr Range(T value) : Range(value, value) {}
 
-	Range(T lower, T upper) : lower_(lower), upper_(upper) { assert(lower <= upper); }
+	constexpr Range(T lower, T upper) : lower_(lower), upper_(upper)
+	{
+		assert(lower <= upper);
+	}
 
 	template <typename V, typename = std::enable_if_t<std::is_arithmetic_v<V>>>
-	Range(V value) : Range(value, value)
+	constexpr Range(V value) : Range(value, value)
 	{
 	}
 
 	template <typename V, typename = std::enable_if_t<std::is_arithmetic_v<V>>>
-	Range(V lower, V upper)
+	constexpr Range(V lower, V upper)
 	{
 		setRange(lower, upper);
 	}
 
-	Range(Range const &other) = default;
+	constexpr Range(Range const &other) = default;
 
 	template <typename T2>
-	Range(Range<T2> other) : Range(other.lower(), other.upper())
+	constexpr Range(Range<T2> other) : Range(other.lower(), other.upper())
 	{
 	}
 
-	Range(Range &&other) = default;
+	constexpr Range(Range &&other) = default;
 
-	Range &operator=(Range const &rhs) = default;
+	constexpr Range &operator=(Range const &rhs) = default;
 
 	template <typename T2>
-	Range &operator=(Range<T2> rhs)
+	constexpr Range &operator=(Range<T2> rhs)
 	{
 		setRange(rhs.lower(), rhs.upper());
 		return *this;
 	}
 
-	Range &operator=(Range &&rhs) = default;
+	constexpr Range &operator=(Range &&rhs) = default;
 
 	constexpr void setValue(T value)
 	{
@@ -239,7 +244,7 @@ class Range
 		}
 	}
 
-	void swap(Range other)
+	constexpr void swap(Range other)
 	{
 		std::swap(lower_, other.lower_);
 		std::swap(upper_, other.upper_);
@@ -261,71 +266,55 @@ class Range
 	// Friends
 	//
 
-	template <typename T2>
-	friend bool operator==(Range<T2> lhs, Range<T2> rhs);
-	template <typename T2>
-	friend bool operator!=(Range<T2> lhs, Range<T2> rhs);
-	template <typename T2>
-	friend bool operator<(Range<T2> lhs, Range<T2> rhs);
-	template <typename T2>
-	friend bool operator<=(Range<T2> lhs, Range<T2> rhs);
-	template <typename T2>
-	friend bool operator>(Range<T2> lhs, Range<T2> rhs);
-	template <typename T2>
-	friend bool operator>=(Range<T2> lhs, Range<T2> rhs);
+	template <typename T>
+	friend constexpr bool operator==(Range<T> lhs, Range<T> rhs)
+	{
+		return lhs.lower_ == rhs.lower_ && lhs.upper_ == rhs.upper_;
+	}
 
-	template <typename T2>
-	friend void swap(Range<T2> &lhs, Range<T2> &rhs) noexcept(noexcept(lhs.swap(rhs)));
+	template <typename T>
+	friend constexpr bool operator!=(Range<T> lhs, Range<T> rhs)
+	{
+		return !(lhs == rhs);
+	}
 
-	template <typename T2>
-	friend std::ostream &operator<<(std::ostream &os, Range<T2> range);
+	template <typename T>
+	friend constexpr bool operator<(Range<T> lhs, Range<T> rhs)
+	{
+		return lhs.upper_ < rhs.lower_;
+	}
+
+	template <typename T>
+	friend constexpr bool operator<=(Range<T> lhs, Range<T> rhs)
+	{
+		return lhs.upper_ <= rhs.lower_;
+	}
+
+	template <typename T>
+	friend constexpr bool operator>(Range<T> lhs, Range<T> rhs)
+	{
+		return lhs.lower_ > rhs.upper_;
+	}
+
+	template <typename T>
+	friend constexpr bool operator>=(Range<T> lhs, Range<T> rhs)
+	{
+		return lhs.lower_ >= rhs.upper_;
+	}
+
+	template <typename T>
+	friend void swap(Range<T> &lhs, Range<T> &rhs) noexcept(noexcept(lhs.swap(rhs)))
+	{
+		lhs.swap(rhs);
+	}
+
+	template <typename T>
+	friend std::ostream &operator<<(std::ostream &os, Range<T> range);
 
  private:
 	T lower_;
 	T upper_;
 };
-
-template <typename T>
-bool operator==(Range<T> lhs, Range<T> rhs)
-{
-	return lhs.lower_ == rhs.lower_ && lhs.upper_ == rhs.upper_;
-}
-
-template <typename T>
-bool operator!=(Range<T> lhs, Range<T> rhs)
-{
-	return lhs.lower_ != rhs.lower_ || lhs.upper_ != rhs.upper_;
-}
-
-template <typename T>
-bool operator<(Range<T> lhs, Range<T> rhs)
-{
-	return lhs.upper_ < rhs.lower_;
-}
-
-template <typename T>
-bool operator<=(Range<T> lhs, Range<T> rhs)
-{
-	return lhs.upper_ <= rhs.lower_;
-}
-
-template <typename T>
-bool operator>(Range<T> lhs, Range<T> rhs)
-{
-	return lhs.lower_ > rhs.upper_;
-}
-
-template <typename T>
-bool operator>=(Range<T> lhs, Range<T> rhs)
-{
-	return lhs.lower_ >= rhs.upper_;
-}
-
-template <typename T>
-void swap(Range<T> &lhs, Range<T> &rhs) noexcept(noexcept(lhs.swap(rhs)))
-{
-	lhs.swap(rhs);
-}
 
 template <typename T>
 std::ostream &operator<<(std::ostream &os, Range<T> range)
