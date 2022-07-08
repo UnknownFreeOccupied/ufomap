@@ -119,6 +119,421 @@ void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
 		}
 	}
 }
+
+//
+// All of
+//
+
+template <class Container, class UnaryPredicate>
+bool all_of(Container&& data, UnaryPredicate p)
+{
+	return std::all_of(std::begin(data), std::end(data), p);
+}
+
+template <class ExecutionPolicy, class Container, class UnaryPredicate>
+bool all_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+{
+	return std::all_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                   std::end(data), p);
+}
+
+//
+// Any of
+//
+
+template <class Container, class UnaryPredicate>
+bool any_of(Container&& data, UnaryPredicate p)
+{
+	return std::any_of(std::begin(data), std::end(data), p);
+}
+
+template <class ExecutionPolicy, class Container, class UnaryPredicate>
+bool any_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+{
+	return std::any_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                   std::end(data), p);
+}
+
+//
+// None of
+//
+
+template <class Container, class UnaryPredicate>
+bool none_of(Container&& data, UnaryPredicate p)
+{
+	return std::none_of(std::begin(data), std::end(data), p);
+}
+
+template <class ExecutionPolicy, class Container, class UnaryPredicate>
+bool none_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+{
+	return std::none_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                    std::end(data), p);
+}
+
+//
+// For each
+//
+
+template <class Container, class UnaryFunction>
+UnaryFunction for_each(Container&& data, UnaryFunction f)
+{
+	return std::for_each(std::begin(data), std::end(data), f);
+}
+
+template <class ExecutionPolicy, class Container, class UnaryFunction>
+void for_each(ExecutionPolicy&& policy, Container&& data, UnaryFunction f)
+{
+	std::for_each(std::forward<ExecutionPolicy>(policy), std::begin(data), std::end(data),
+	              f);
+}
+
+//
+// For each n
+//
+
+// FIXME: Return type
+template <class Container, class Size, class UnaryFunction>
+auto for_each_n(Container&& first, Size n, UnaryFunction f)
+{
+	return std::for_each_n(std::begin(first), n, f);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class Size, class UnaryFunction>
+auto for_each_n(ExecutionPolicy&& policy, Container&& first, Size n, UnaryFunction f)
+{
+	return std::for_each_n(std::forward<ExecutionPolicy>(policy), std::begin(first), n, f);
+}
+
+//
+// Count
+//
+
+// FIXME: Return type
+template <class Container, class T>
+auto count(Container&& data, T const& value)
+{
+	return std::count(std::begin(data), std::end(data), value);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class T>
+auto count(ExecutionPolicy&& policy, Container&& data, T const& value)
+{
+	return std::count(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                  std::end(data), value);
+}
+
+//
+// Count if
+//
+
+// FIXME: Return type
+template <class Container, class UnaryPredicate>
+auto count_if(Container&& data, UnaryPredicate p)
+{
+	return std::count_if(std::begin(data), std::end(data), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class UnaryPredicate>
+auto count_if(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+{
+	return std::count_if(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                     std::end(data), p);
+}
+
+//
+// Mismatch
+//
+
+// FIXME: Return type
+template <class Container1, class Container2>
+auto mismatch(Container1&& data1, Container2&& data2)
+{
+	return std::mismatch(std::begin(data1), std::end(data1), std::begin(data2));
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2>
+auto mismatch(ExecutionPolicy&& policy, Container1&& data1, Container2&& data2)
+{
+	return std::mismatch(std::forward<ExecutionPolicy>(policy), std::begin(data1),
+	                     std::end(data1), std::begin(data_2));
+}
+
+// FIXME: Return type
+template <class Container1, class Container2, class BinaryPredicate>
+auto mismatch(Container1&& data1, Container2&& data2, BinaryPredicate p)
+{
+	return std::mismatch(std::begin(data1), std::end(data1), std::begin(data2), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2,
+          class BinaryPredicate>
+auto mismatch(ExecutionPolicy&& policy, Container1&& data1, Container2&& data2,
+              BinaryPredicate p)
+{
+	return std::mismatch(std::forward<ExecutionPolicy>(policy), std::begin(data1),
+	                     std::end(data1), std::begin(data2), p);
+}
+
+// FIXME: Return type
+template <class Container1, class Container2>
+auto mismatch(Container1&& data1, Container2&& data2)
+{
+	return std::mismatch(std::begin(data1), std::end(data1), std::begin(data2),
+	                     std::end(data2));
+}
+
+//
+// Find
+//
+
+// FIXME: Return type
+template <class Container, class T>
+auto find(Container&& data, T const& value)
+{
+	return std::find(std::begin(data), std::end(data), value);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class T>
+auto find(ExecutionPolicy&& policy, Container&& data, T const& value)
+{
+	return std::find(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                 std::end(data), value);
+}
+
+//
+// Find if
+//
+
+// FIXME: Return type
+template <class Container, class UnaryPredicate>
+auto find_if(Container&& data, UnaryPredicate p)
+{
+	return std::find_if(std::begin(data), std::end(data), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class UnaryPredicate>
+auto find_if(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+{
+	return std::find_if(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                    std::end(data), p);
+}
+
+//
+// Find if not
+//
+
+// FIXME: Return type
+template <class Container, class UnaryPredicate>
+auto find_if_not(Container&& data, UnaryPredicate q)
+{
+	return std::find_if_not(std::begin(data), std::end(data), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class UnaryPredicate>
+auto find_if_not(ExecutionPolicy&& policy, Container&& data, UnaryPredicate q)
+{
+	return std::find_if_not(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                        std::end(data), p);
+}
+
+//
+// Find end
+//
+
+// FIXME: Return type
+template <class Container1, class Container2>
+auto find_end(Container1&& data, Container2&& s_data)
+{
+	return std::find_end(std::begin(data), std::end(data), std::begin(s_data),
+	                     std::end(s_data));
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2>
+auto find_end(ExecutionPolicy&& policy, Container1&& data, Container2&& s_data)
+{
+	return std::find_end(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                     std::end(data), std::begin(s_data), std::end(s_data));
+}
+
+// FIXME: Return type
+template <class Container1, class Container2, class BinaryPredicate>
+auto find_end(Container1&& data, Container2&& s_data, BinaryPredicate p)
+{
+	return std::find_end(std::begin(data), std::end(data), std::begin(s_data),
+	                     std::end(s_data), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2,
+          class BinaryPredicate>
+auto find_end(ExecutionPolicy&& policy, Container1&& data, Container2&& s_data,
+              BinaryPredicate p)
+{
+	return std::find_end(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                     std::end(data), std::begin(s_data), std::end(s_data), p);
+}
+
+//
+// Find first of
+//
+
+// FIXME: Return type
+template <class Container1, class Container2>
+auto find_first_of(Container1&& data, Container2&& s_data)
+{
+	return std::find_first_of(std::begin(data), std::end(data), std::begin(s_data),
+	                          std::end(s_data));
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2>
+auto find_first_of(ExecutionPolicy&& policy, Container1&& data, Container2&& s_data)
+{
+	return std::find_first_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                          std::end(data), std::begin(s_data), std::end(s_data));
+}
+
+// FIXME: Return type
+template <class Container1, class Container2, class BinaryPredicate>
+auto find_first_of(Container1&& data, Container2&& s_data, BinaryPredicate p)
+{
+	return std::find_first_of(std::begin(data), std::end(data), std::begin(s_data),
+	                          std::end(s_data), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2,
+          class BinaryPredicate>
+auto find_first_of(ExecutionPolicy&& policy, Container1&& data, Container2&& s_data,
+                   BinaryPredicate p)
+{
+	return std::find_first_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                          std::end(data), std::begin(s_data), std::end(s_data), p);
+}
+
+//
+// Adjecent find
+//
+
+// FIXME: Return type
+template <class Container>
+auto adjacent_find(Container&& data)
+{
+	return std::adjacent_find(std::begin(data), std::end(data));
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container>
+auto adjacent_find(ExecutionPolicy&& policy, Container&& data)
+{
+	return std::adjacent_find(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                          std::end(data));
+}
+
+// FIXME: Return type
+template <class Container, class BinaryPredicate>
+auto adjacent_find(Container&& data, BinaryPredicate p)
+{
+	return std::adjacent_find(std::begin(data), std::end(data), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class BinaryPredicate>
+auto adjacent_find(ExecutionPolicy&& policy, Container&& data, BinaryPredicate p)
+{
+	return std::adjacent_find(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                          std::end(data), p);
+}
+
+//
+// Search
+//
+
+// FIXME: Return type
+template <class Container1, class Container2>
+auto search(Container1&& data, Container2&& s_data)
+{
+	return std::search(std::begin(data), std::end(data), std::begin(s_data),
+	                   std::end(s_data));
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2>
+auto search(ExecutionPolicy&& policy, Container1&& data, Container2&& s_data)
+{
+	return std::search(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                   std::end(data), std::begin(s_data), std::end(s_data));
+}
+
+template <class Container1, class Container2, class BinaryPredicate>
+auto search(Container1&& data, Container2&& s_data, BinaryPredicate p)
+{
+	return std::search(std::begin(data), std::end(data), std::begin(s_data),
+	                   std::end(s_data), p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container1, class Container2,
+          class BinaryPredicate>
+auto search(ExecutionPolicy&& policy, Container1&& data, Container2&& s_data,
+            BinaryPredicate p)
+{
+	return std::search(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                   std::end(data), std::begin(s_data), std::end(s_data), p);
+}
+
+// FIXME: Return type
+template <class Container, class Searcher>
+auto search(Container&& data, Searcher const& searcher)
+{
+	return std::search(std::begin(data), std::end(data), searcher);
+}
+
+//
+// Search n
+//
+
+// FIXME: Return type
+template <class Container, class Size, class T>
+auto search_n(Container&& data, Size count, T const& value)
+{
+	return std::search_n(std::begin(data), std::end(data), count, value);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class Size, class T>
+auto search_n(ExecutionPolicy&& policy, Container&& data, Size count, T const& value)
+{
+	return std::search_n(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                     std::end(data), count, value);
+}
+
+// FIXME: Return type
+template <class Container, class Size, class T, class BinaryPredicate>
+auto search_n(Container&& data, Size count, T const& value, BinaryPredicate p)
+{
+	return std::search_n(std::begin(data), std::end(data), count, value, p);
+}
+
+// FIXME: Return type
+template <class ExecutionPolicy, class Container, class Size, class T,
+          class BinaryPredicate>
+auto search_n(ExecutionPolicy&& policy, Container&& data, Size count, T const& value,
+              BinaryPredicate p)
+{
+	return std::search_n(std::forward<ExecutionPolicy>(policy), std::begin(data),
+	                     std::end(data), count, value, p);
+}
 }  // namespace ufo
 
 #endif  // UFO_ALGORITHM_H
