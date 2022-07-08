@@ -248,19 +248,19 @@ auto count_if(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
 // Mismatch
 //
 
-// FIXME: Return type
-template <class Container1, class Container2>
-auto mismatch(Container1&& data1, Container2&& data2)
-{
-	return std::mismatch(std::begin(data1), std::end(data1), std::begin(data2));
-}
+// // FIXME: Return type
+// template <class Container1, class Container2>
+// auto mismatch(Container1&& data1, Container2&& data2)
+// {
+// 	return std::mismatch(std::begin(data1), std::end(data1), std::begin(data2));
+// }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container1, class Container2>
 auto mismatch(ExecutionPolicy&& policy, Container1&& data1, Container2&& data2)
 {
 	return std::mismatch(std::forward<ExecutionPolicy>(policy), std::begin(data1),
-	                     std::end(data1), std::begin(data_2));
+	                     std::end(data1), std::begin(data2));
 }
 
 // FIXME: Return type
@@ -334,7 +334,7 @@ auto find_if(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
 template <class Container, class UnaryPredicate>
 auto find_if_not(Container&& data, UnaryPredicate q)
 {
-	return std::find_if_not(std::begin(data), std::end(data), p);
+	return std::find_if_not(std::begin(data), std::end(data), q);
 }
 
 // FIXME: Return type
@@ -342,7 +342,7 @@ template <class ExecutionPolicy, class Container, class UnaryPredicate>
 auto find_if_not(ExecutionPolicy&& policy, Container&& data, UnaryPredicate q)
 {
 	return std::find_if_not(std::forward<ExecutionPolicy>(policy), std::begin(data),
-	                        std::end(data), p);
+	                        std::end(data), q);
 }
 
 //
