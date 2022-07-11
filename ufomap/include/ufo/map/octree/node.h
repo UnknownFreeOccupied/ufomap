@@ -53,6 +53,12 @@
 
 namespace ufo::map
 {
+
+struct IndexData {
+	uint32_t block_index_;
+	uint8_t child_index_;
+};
+
 /*!
  * @brief A wrapper around a UFOMap inner/leaf node.
  *
@@ -124,14 +130,17 @@ struct Node {
 	};
 
  protected:
-	constexpr Node() noexcept = default;
-
 	constexpr Node(void* data, Code code) noexcept : data_(data), code_(code) {}
+
+	constexpr Node(uint32_t block_index, uint8_t child_index, Code code) noexcept
+	    : data_index_{block_index, child_index}, code_(code)
+	{
+	}
 
 	/*!
 	 * @brief Get the corresponding data.
 	 *
-	 * @note Use the octree that generate the node to read the data.
+	 * @note Use the octree that generated the node to read the data.
 	 *
 	 * @return The corresponding data.
 	 */
@@ -140,15 +149,27 @@ struct Node {
 	/*!
 	 * @brief Get the corresponding data.
 	 *
-	 * @note Use the octree that generate the node to read the data.
+	 * @note Use the octree that generated the node to read the data.
 	 *
 	 * @return The corresponding data.
 	 */
 	constexpr void const* data() const noexcept { return data_; }
 
+	/*!
+	 * @brief Get the index to the corresponding data.
+	 *
+	 * @note Use the octree that generated the node to read the data.
+	 *
+	 * @return The index to the corresponding data.
+	 */
+	constexpr IndexData dataIndex() const noexcept { return data_index_; }
+
  protected:
-	// Pointer to the actual node
-	void* data_ = nullptr;
+	union {
+		// Pointer to the actual node
+		void* data_;
+		IndexData data_index_;
+	};
 	// The code for the node
 	Code code_;
 
@@ -233,10 +254,14 @@ struct NodeBV : public Node {
 	constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	constexpr NodeBV() noexcept = default;
-
 	constexpr NodeBV(void* data, Code code, geometry::AAEBB const& aaebb) noexcept
 	    : Node(data, code), aaebb_(aaebb)
+	{
+	}
+
+	constexpr NodeBV(uint32_t block_index, uint8_t child_index, Code code,
+	                 geometry::AAEBB const& aaebb) noexcept
+	    : Node(block_index, child_index, code), aaebb_(aaebb)
 	{
 	}
 

@@ -56,14 +56,14 @@ class TimeMapBase
 	// Get time step
 	//
 
-	static constexpr time_step_t getTimeStep(Node const& node) noexcept
+	constexpr time_step_t getTimeStep(Node node) const noexcept
 	{
-		return getTimeStep(Derived::getLeafNode(node));
+		return getTimeStep(derived().getLeafNode(node));
 	}
 
 	time_step_t getTimeStep(Code code) const
 	{
-		return getTimeStep(Derived::getLeafNode(code));
+		return getTimeStep(derived().getLeafNode(code));
 	}
 
 	time_step_t getTimeStep(Key key) const { return getTimeStep(Derived::toCode(key)); }
@@ -224,11 +224,11 @@ class TimeMapBase
 	void updateNode(InnerNode& node, depth_t depth)
 	{
 		switch (time_step_prop_criteria_) {
-			case PropagationCriteria::MAX:
-				setTimeStep(node, maxChildTimeStep(node, depth));
-				break;
 			case PropagationCriteria::MIN:
 				setTimeStep(node, minChildTimeStep(node, depth));
+				break;
+			case PropagationCriteria::MAX:
+				setTimeStep(node, maxChildTimeStep(node, depth));
 				break;
 			case PropagationCriteria::MEAN:
 				setTimeStep(node, averageChildTimeStep(node, depth));
@@ -240,64 +240,64 @@ class TimeMapBase
 	// Max child time step
 	//
 
-	static constexpr time_step_t maxChildTimeStep(InnerNode const& node, depth_t depth)
+	constexpr time_step_t maxChildTimeStep(InnerNode const& node, depth_t depth) const
 	{
-		return 1 == depth ? std::max({getTimeStep(Derived::getLeafChild(node, 0)),
-		                              getTimeStep(Derived::getLeafChild(node, 1)),
-		                              getTimeStep(Derived::getLeafChild(node, 2)),
-		                              getTimeStep(Derived::getLeafChild(node, 3)),
-		                              getTimeStep(Derived::getLeafChild(node, 4)),
-		                              getTimeStep(Derived::getLeafChild(node, 5)),
-		                              getTimeStep(Derived::getLeafChild(node, 6)),
-		                              getTimeStep(Derived::getLeafChild(node, 7))})
-		                  : std::max({getTimeStep(Derived::getInnerChild(node, 0)),
-		                              getTimeStep(Derived::getInnerChild(node, 1)),
-		                              getTimeStep(Derived::getInnerChild(node, 2)),
-		                              getTimeStep(Derived::getInnerChild(node, 3)),
-		                              getTimeStep(Derived::getInnerChild(node, 4)),
-		                              getTimeStep(Derived::getInnerChild(node, 5)),
-		                              getTimeStep(Derived::getInnerChild(node, 6)),
-		                              getTimeStep(Derived::getInnerChild(node, 7))});
+		return 1 == depth ? std::max({getTimeStep(derived().getLeafChild(node, 0)),
+		                              getTimeStep(derived().getLeafChild(node, 1)),
+		                              getTimeStep(derived().getLeafChild(node, 2)),
+		                              getTimeStep(derived().getLeafChild(node, 3)),
+		                              getTimeStep(derived().getLeafChild(node, 4)),
+		                              getTimeStep(derived().getLeafChild(node, 5)),
+		                              getTimeStep(derived().getLeafChild(node, 6)),
+		                              getTimeStep(derived().getLeafChild(node, 7))})
+		                  : std::max({getTimeStep(derived().getInnerChild(node, 0)),
+		                              getTimeStep(derived().getInnerChild(node, 1)),
+		                              getTimeStep(derived().getInnerChild(node, 2)),
+		                              getTimeStep(derived().getInnerChild(node, 3)),
+		                              getTimeStep(derived().getInnerChild(node, 4)),
+		                              getTimeStep(derived().getInnerChild(node, 5)),
+		                              getTimeStep(derived().getInnerChild(node, 6)),
+		                              getTimeStep(derived().getInnerChild(node, 7))});
 	}
 
 	//
 	// Min child time step
 	//
 
-	static constexpr time_step_t minChildTimeStep(InnerNode const& node, depth_t depth)
+	constexpr time_step_t minChildTimeStep(InnerNode const& node, depth_t depth) const
 	{
-		return 1 == depth ? std::min({getTimeStep(Derived::getLeafChild(node, 0)),
-		                              getTimeStep(Derived::getLeafChild(node, 1)),
-		                              getTimeStep(Derived::getLeafChild(node, 2)),
-		                              getTimeStep(Derived::getLeafChild(node, 3)),
-		                              getTimeStep(Derived::getLeafChild(node, 4)),
-		                              getTimeStep(Derived::getLeafChild(node, 5)),
-		                              getTimeStep(Derived::getLeafChild(node, 6)),
-		                              getTimeStep(Derived::getLeafChild(node, 7))})
-		                  : std::min({getTimeStep(Derived::getInnerChild(node, 0)),
-		                              getTimeStep(Derived::getInnerChild(node, 1)),
-		                              getTimeStep(Derived::getInnerChild(node, 2)),
-		                              getTimeStep(Derived::getInnerChild(node, 3)),
-		                              getTimeStep(Derived::getInnerChild(node, 4)),
-		                              getTimeStep(Derived::getInnerChild(node, 5)),
-		                              getTimeStep(Derived::getInnerChild(node, 6)),
-		                              getTimeStep(Derived::getInnerChild(node, 7))});
+		return 1 == depth ? std::min({getTimeStep(derived().getLeafChild(node, 0)),
+		                              getTimeStep(derived().getLeafChild(node, 1)),
+		                              getTimeStep(derived().getLeafChild(node, 2)),
+		                              getTimeStep(derived().getLeafChild(node, 3)),
+		                              getTimeStep(derived().getLeafChild(node, 4)),
+		                              getTimeStep(derived().getLeafChild(node, 5)),
+		                              getTimeStep(derived().getLeafChild(node, 6)),
+		                              getTimeStep(derived().getLeafChild(node, 7))})
+		                  : std::min({getTimeStep(derived().getInnerChild(node, 0)),
+		                              getTimeStep(derived().getInnerChild(node, 1)),
+		                              getTimeStep(derived().getInnerChild(node, 2)),
+		                              getTimeStep(derived().getInnerChild(node, 3)),
+		                              getTimeStep(derived().getInnerChild(node, 4)),
+		                              getTimeStep(derived().getInnerChild(node, 5)),
+		                              getTimeStep(derived().getInnerChild(node, 6)),
+		                              getTimeStep(derived().getInnerChild(node, 7))});
 	}
 
 	//
 	// Average child time step
 	//
 
-	static constexpr time_step_t averageChildTimeStep(InnerNode const& node, depth_t depth)
+	constexpr time_step_t averageChildTimeStep(InnerNode const& node, depth_t depth) const
 	{
 		time_step_t sum =
 		    1 == depth ? std::accumulate(
-		                     std::begin(Derived::getLeafChildren(node)),
-		                     std::end(Derived::getLeafChildren(node)), time_step_t(0),
+		                     std::begin(derived().getLeafChildren(node)),
+		                     std::end(derived().getLeafChildren(node)), time_step_t(0),
 		                     [](auto cur, auto&& child) { return cur + getTimeStep(child); })
 		               : std::accumulate(
-		                     std::begin(Derived::getInnerChildren(node)),
-		                     std::end(Derived::getInnerChildren(node)), time_step_t(0),
+		                     std::begin(derived().getInnerChildren(node)),
+		                     std::end(derived().getInnerChildren(node)), time_step_t(0),
 		                     [](auto cur, auto&& child) { return cur + getTimeStep(child); });
 
 		return sum / time_step_t(8);

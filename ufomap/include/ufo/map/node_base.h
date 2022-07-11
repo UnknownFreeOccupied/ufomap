@@ -39,62 +39,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCTREE_OCTREE_NODE_H
-#define UFO_MAP_OCTREE_OCTREE_NODE_H
-
-// STL
-#include <array>
-#include <cstdint>
-#include <limits>
-#include <type_traits>
+#ifndef UFO_MAP_NODE_BASE_H
+#define UFO_MAP_NODE_BASE_H
 
 namespace ufo::map
 {
-template <typename Data, class Indicators>
-struct OctreeDataLeafNode : Indicators {
-	Data value;
-
-	constexpr bool operator==(OctreeDataLeafNode const& rhs) const
+template <typename... Nodes>
+struct NodeBase : Nodes... {
+	constexpr bool operator==(NodeBase<Nodes...> const& rhs) const
 	{
-		return static_cast<Data const&>(rhs.value) == value;
+		return (Nodes::operator==(rhs) && ...);
 	}
 
-	constexpr bool operator!=(OctreeDataLeafNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <class Data, class Indicators>
-struct OctreeLeafNode : Data, Indicators {
-	constexpr bool operator==(OctreeLeafNode const& rhs) const
-	{
-		return static_cast<Data const&>(rhs) == static_cast<Data const&>(*this);
-	}
-
-	constexpr bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
-};
-
-template <class LeafNode>
-struct OctreePointerInnerNode : LeafNode {
-	using InnerChildrenBlock = std::array<OctreePointerInnerNode, 8>;
-	using LeafChildrenBlock = std::array<LeafNode, 8>;
-
-	// Pointer to children
-	union {
-		InnerChildrenBlock* inner_children = nullptr;
-		LeafChildrenBlock* leaf_children;
-	};
-};
-
-template <class LeafNode>
-struct OctreeIndexInnerNode : LeafNode {
-	using InnerChildrenBlock = std::array<OctreeIndexInnerNode, 8>;
-	using LeafChildrenBlock = std::array<LeafNode, 8>;
-
-	// Index to children
-	uint32_t children_index = std::numeric_limits<uint32_t>::max();
+	constexpr bool operator!=(NodeBase const& rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCTREE_OCTREE_NODE_H
+#endif  // UFO_MAP_NODE_BASE_H

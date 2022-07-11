@@ -63,14 +63,14 @@ class ColorMapBase
 	// Get color
 	//
 
-	static constexpr RGBColor getColor(Node const& node) noexcept
+	constexpr RGBColor getColor(Node node) const
 	{
-		return getColor(Derived::getLeafNode(node));
+		return getColor(derived().getLeafNode(node));
 	}
 
 	constexpr RGBColor getColor(Code code) const
 	{
-		return getColor(Derived::getLeafNode(code));
+		return getColor(derived().getLeafNode(code));
 	}
 
 	constexpr RGBColor getColor(Key key) const { return getColor(Derived::toCode(key)); }
@@ -282,24 +282,24 @@ class ColorMapBase
 	// Average child color
 	//
 
-	static constexpr RGBColor averageChildColor(InnerNode const& node, depth_t depth)
+	constexpr RGBColor averageChildColor(InnerNode const& node, depth_t depth) const
 	{
-		return 1 == depth ? RGBColor::average({Derived::getLeafChild(node, 0).color,
-		                                       Derived::getLeafChild(node, 1).color,
-		                                       Derived::getLeafChild(node, 2).color,
-		                                       Derived::getLeafChild(node, 3).color,
-		                                       Derived::getLeafChild(node, 4).color,
-		                                       Derived::getLeafChild(node, 5).color,
-		                                       Derived::getLeafChild(node, 6).color,
-		                                       Derived::getLeafChild(node, 7).color})
-		                  : RGBColor::average({Derived::getInnerChild(node, 0).color,
-		                                       Derived::getInnerChild(node, 1).color,
-		                                       Derived::getInnerChild(node, 2).color,
-		                                       Derived::getInnerChild(node, 3).color,
-		                                       Derived::getInnerChild(node, 4).color,
-		                                       Derived::getInnerChild(node, 5).color,
-		                                       Derived::getInnerChild(node, 6).color,
-		                                       Derived::getInnerChild(node, 7).color});
+		return 1 == depth ? RGBColor::average({derived().getLeafChild(node, 0).color,
+		                                       derived().getLeafChild(node, 1).color,
+		                                       derived().getLeafChild(node, 2).color,
+		                                       derived().getLeafChild(node, 3).color,
+		                                       derived().getLeafChild(node, 4).color,
+		                                       derived().getLeafChild(node, 5).color,
+		                                       derived().getLeafChild(node, 6).color,
+		                                       derived().getLeafChild(node, 7).color})
+		                  : RGBColor::average({derived().getInnerChild(node, 0).color,
+		                                       derived().getInnerChild(node, 1).color,
+		                                       derived().getInnerChild(node, 2).color,
+		                                       derived().getInnerChild(node, 3).color,
+		                                       derived().getInnerChild(node, 4).color,
+		                                       derived().getInnerChild(node, 5).color,
+		                                       derived().getInnerChild(node, 6).color,
+		                                       derived().getInnerChild(node, 7).color});
 	}
 
 	//

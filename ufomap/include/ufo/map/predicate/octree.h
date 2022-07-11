@@ -217,7 +217,7 @@ struct PredicateValueCheck<Leaf> {
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
 	{
-		return Map::isLeaf(n) || n.depth() == p.min_depth;
+		return m.isLeaf(n) || n.depth() == p.min_depth;
 	}
 };
 
@@ -334,7 +334,7 @@ struct PredicateValueCheck<Modified> {
 	template <class Map>
 	static constexpr bool apply(Pred const&, Map const& m, Node const& n) noexcept
 	{
-		return Map::isModified(n);
+		return m.isModified(n);
 	}
 };
 
@@ -383,7 +383,7 @@ struct PredicateInnerCheck<Leaf> {
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
 	{
-		return Map::isParent(n) && n.depth() > p.min_depth;
+		return m.isParent(n) && n.depth() > p.min_depth;
 	}
 };
 
@@ -502,9 +502,9 @@ struct PredicateInnerCheck<Modified> {
 	using Pred = Modified;
 
 	template <class Map>
-	static constexpr bool apply(Pred const&, Map const&, Node const& n) noexcept
+	static constexpr bool apply(Pred const&, Map const& m, Node const& n) noexcept
 	{
-		return Map::isModified(n);
+		return m.isModified(n);
 	}
 };
 
