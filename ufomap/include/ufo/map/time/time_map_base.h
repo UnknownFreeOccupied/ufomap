@@ -82,7 +82,7 @@ class TimeMapBase
 	// Set time step
 	//
 
-	void setTimeStep(Node& node, time_step_t time_step, bool propagate = true)
+	void setTimeStep(Node node, time_step_t time_step, bool propagate = true)
 	{
 		derived().apply(
 		    node, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
@@ -115,7 +115,7 @@ class TimeMapBase
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	void setTimeStep(ExecutionPolicy policy, Node& node, time_step_t time_step,
+	void setTimeStep(ExecutionPolicy policy, Node node, time_step_t time_step,
 	                 bool propagate = true)
 	{
 		derived().apply(
