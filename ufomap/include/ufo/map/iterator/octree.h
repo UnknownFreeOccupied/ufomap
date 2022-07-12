@@ -417,7 +417,10 @@ struct NearestNode {
 };
 
 template <class Tree, class Geometry = geometry::Point,
-          class Predicates = predicate::TRUE>
+          class Predicates = predicate::TRUE, class SquaredDistance = void,
+          typename =
+              std::enable_if_t<std::is_void_v<SquaredDistance> ||
+                               std::is_invocable_r_v<double, SquaredDistance, NodeBV>>>
 class NearestIterator : public IteratorBase<Tree, NearestNode>
 {
  private:
@@ -451,6 +454,13 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 		init(root);
 	}
 
+	NearestIterator(Tree const* tree, NodeBV const& root, SquaredDistance const& sq_dist,
+	                Predicates const& predicates, float epsilon)
+	    : Base(tree), predicates_(predicates), sq_dist_(sq_dist), epsilon_(epsilon)
+	{
+		init(root);
+	}
+
 	NearestIterator& next() override
 	{
 		increment();
@@ -471,7 +481,11 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
  private:
 	double squaredDistance(NodeBV const& node) const
 	{
-		return geometry::squaredDistance(node.getBoundingVolume(), geometry_);
+		if constexpr (std::is_void_v<SquaredDistance>) {
+			return geometry::squaredDistance(node.getBoundingVolume(), geometry_);
+		} else {
+			return SquaredDistance(node);
+		}
 	}
 
 	void init(NodeBV const& node)
@@ -571,7 +585,10 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 	Predicates predicates_;
 
 	// Geometry
-	Geometry geometry_;
+	std::conditional_t<std::is_void_v<SquaredDistance>, Geometry, bool> geometry_;
+
+	// Squared distance function
+	std::conditional_t<std::is_void_v<SquaredDistance>, bool, SquaredDistance> sq_dist_;
 
 	// Epsilon for approximate search
 	float epsilon_;

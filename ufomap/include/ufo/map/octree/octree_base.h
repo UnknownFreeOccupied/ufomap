@@ -1388,12 +1388,26 @@ class OctreeBase
 		    beginQueryBV(std::forward<Predicates>(predicates)), endQueryBV());
 	}
 
-	template <class Geometry, class Predicates>
+	template <
+	    class Geometry, class Predicates,
+	    std::enable_if_t<not std::is_invocable_r_v<double, Geometry, NodeBV>, bool> = true>
 	Query<const_query_nearest_iterator> queryNearest(Geometry&& geometry,
 	                                                 Predicates&& predicates) const
 	{
 		return Query<const_query_nearest_iterator>(
 		    beginQueryNearest(std::forward<Geometry>(geometry),
+		                      std::forward<Predicates>(predicates)),
+		    endQueryNearest());
+	}
+
+	template <class SquaredDistance, class Predicates,
+	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
+	                           bool> = true>
+	Query<const_query_nearest_iterator> queryNearest(SquaredDistance&& sq_dist,
+	                                                 Predicates&& predicates) const
+	{
+		return Query<const_query_nearest_iterator>(
+		    beginQueryNearest(std::forward<SquaredDistance>(sq_dist),
 		                      std::forward<Predicates>(predicates)),
 		    endQueryNearest());
 	}
@@ -1451,18 +1465,33 @@ class OctreeBase
 		return queryK(k, std::forward<Predicates>(predicates), d_first);
 	}
 
-	template <class Geometry, class Predicates, class OutputIt>
-	OutputIt queryNearest(Geometry const& geometry, Predicates&& predicates,
-	                      OutputIt d_first, double epsilon = 0.0) const
+	template <
+	    class Geometry, class Predicates, class OutputIt,
+	    std::enable_if_t<not std::is_invocable_r_v<double, Geometry, NodeBV>, bool> = true>
+	OutputIt queryNearest(Geometry&& geometry, Predicates&& predicates, OutputIt d_first,
+	                      double epsilon = 0.0) const
 	{
 		return std::copy(
 		    beginQueryNearest(geometry, std::forward<Predicates>(predicates), epsilon),
 		    endQueryNearest(geometry, std::forward<Predicates>(predicates)), d_first);
 	}
 
-	template <class ExecutionPolicy, class Geometry, class Predicates, class OutputIt,
-	          typename = std::enable_if_t<
-	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
+	template <class SquaredDistance, class Predicates, class OutputIt,
+	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
+	                           bool> = true>
+	OutputIt queryNearest(SquaredDistance&& sq_dist, Predicates&& predicates,
+	                      OutputIt d_first, double epsilon = 0.0) const
+	{
+		return std::copy(
+		    beginQueryNearest(sq_dist, std::forward<Predicates>(predicates), epsilon),
+		    endQueryNearest(sq_dist, std::forward<Predicates>(predicates)), d_first);
+	}
+
+	template <
+	    class ExecutionPolicy, class Geometry, class Predicates, class OutputIt,
+	    std::enable_if_t<not std::is_invocable_r_v<double, Geometry, NodeBV>, bool> = true,
+	    typename =
+	        std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
 	OutputIt queryNearest(ExecutionPolicy policy, Geometry&& geometry,
 	                      Predicates&& predicates, OutputIt d_first,
 	                      double epsilon = 0.0) const
@@ -1473,7 +1502,25 @@ class OctreeBase
 		                 endQueryNearest(), d_first);
 	}
 
-	template <class Geometry, class Predicates, class OutputIt>
+	template <
+	    class ExecutionPolicy, class SquaredDistance, class Predicates, class OutputIt,
+	    std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>, bool> =
+	        true,
+	    typename =
+	        std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
+	OutputIt queryNearest(ExecutionPolicy policy, SquaredDistance&& sq_dist,
+	                      Predicates&& predicates, OutputIt d_first,
+	                      double epsilon = 0.0) const
+	{
+		return std::copy(policy,
+		                 beginQueryNearest(std::forward<SquaredDistance>(sq_dist),
+		                                   std::forward<Predicates>(predicates), epsilon),
+		                 endQueryNearest(), d_first);
+	}
+
+	template <
+	    class Geometry, class Predicates, class OutputIt,
+	    std::enable_if_t<not std::is_invocable_r_v<double, Geometry, NodeBV>, bool> = true>
 	OutputIt queryNearestK(size_t k, Geometry&& geometry, Predicates&& predicates,
 	                       OutputIt d_first, double epsilon = 0.0) const
 	{
@@ -1486,15 +1533,51 @@ class OctreeBase
 		return d_first;
 	}
 
-	template <class ExecutionPolicy, class Geometry, class Predicates, class OutputIt,
-	          typename = std::enable_if_t<
-	              std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
+	template <class SquaredDistance, class Predicates, class OutputIt,
+	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
+	                           bool> = true>
+	OutputIt queryNearestK(size_t k, SquaredDistance&& sq_dist, Predicates&& predicates,
+	                       OutputIt d_first, double epsilon = 0.0) const
+	{
+		size_t count = 0;
+		for (auto it = beginQueryNearest(std::forward<SquaredDistance>(sq_dist),
+		                                 std::forward<Predicates>(predicates), epsilon);
+		     count < k && it != endQueryNearest(); ++it, ++count) {
+			*d_first++ = *it;
+		}
+		return d_first;
+	}
+
+	template <
+	    class ExecutionPolicy, class Geometry, class Predicates, class OutputIt,
+	    std::enable_if_t<not std::is_invocable_r_v<double, Geometry, NodeBV>, bool> = true,
+	    typename =
+	        std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
 	OutputIt queryNearestK(ExecutionPolicy policy, size_t k, Geometry&& geometry,
 	                       Predicates&& predicates, OutputIt d_first,
 	                       double epsilon = 0.0) const
 	{
 		size_t count = 0;
 		for (auto it = beginQueryNearest(std::forward<Geometry>(geometry),
+		                                 std::forward<Predicates>(predicates), epsilon);
+		     count < k && it != endQueryNearest(); ++it, ++count) {
+			*d_first++ = *it;
+		}
+		return d_first;
+	}
+
+	template <
+	    class ExecutionPolicy, class SquaredDistance, class Predicates, class OutputIt,
+	    std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>, bool> =
+	        true,
+	    typename =
+	        std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
+	OutputIt queryNearestK(ExecutionPolicy policy, size_t k, SquaredDistance&& sq_dist,
+	                       Predicates&& predicates, OutputIt d_first,
+	                       double epsilon = 0.0) const
+	{
+		size_t count = 0;
+		for (auto it = beginQueryNearest(std::forward<SquaredDistance>(sq_dist),
 		                                 std::forward<Predicates>(predicates), epsilon);
 		     count < k && it != endQueryNearest(); ++it, ++count) {
 			*d_first++ = *it;
@@ -1539,7 +1622,9 @@ class OctreeBase
 		    new Iterator<NodeBV, Derived, NodeBV>(getRootNodeBV()));
 	}
 
-	template <class Geometry, class Predicates>
+	template <
+	    class Geometry, class Predicates,
+	    std::enable_if_t<not std::is_invocable_r_v<double, Geometry, NodeBV>, bool> = true>
 	const_query_nearest_iterator beginQueryNearest(Geometry&& geometry,
 	                                               Predicates&& predicates,
 	                                               double epsilon = 0.0) const
@@ -1547,6 +1632,18 @@ class OctreeBase
 		return const_query_nearest_iterator(
 		    new NearestIterator(&derived(), getRootNodeBV(), std::forward<Geometry>(geometry),
 		                        std::forward<Predicates>(predicates), epsilon));
+	}
+
+	template <class SquaredDistance, class Predicates,
+	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
+	                           bool> = true>
+	const_query_nearest_iterator beginQueryNearest(SquaredDistance&& sq_dist,
+	                                               Predicates&& predicates,
+	                                               double epsilon = 0.0) const
+	{
+		return const_query_nearest_iterator(new NearestIterator(
+		    &derived(), getRootNodeBV(), std::forward<SquaredDistance>(sq_dist),
+		    std::forward<Predicates>(predicates), epsilon));
 	}
 
 	const_query_nearest_iterator endQueryNearest() const
