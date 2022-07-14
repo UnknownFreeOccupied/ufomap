@@ -47,18 +47,36 @@
 
 // STL
 #include <cstdint>
+#include <memory>
 
 namespace ufo::map
 {
 template <typename T>
 struct SurfelNode {
 	using surfel_type = Surfel<T>;
-	using surfel_point_counter_type = uintptr_t;
 
-	union {
-		surfel_type* surfel = nullptr;
-		surfel_point_counter_type num_sufel_points;
-	};
+	std::unique_ptr<surfel_type> surfel = nullptr;
+
+	constexpr SurfelNode() = default;
+
+	constexpr SurfelNode(SurfelNode const& other)
+	    : surfel(other.surfel ? new Surfel(*other.surfel) : nullptr)
+	{
+	}
+
+	constexpr SurfelNode(SurfelNode&& other) = default;
+
+	constexpr SurfelNode& operator=(SurfelNode const& rhs)
+	{
+		if (rhs.surfel) {
+			surfel = std::make_unique<surfel_type>(*rhs.surfel);
+		} else {
+			surfel.reset();
+		}
+		return *this;
+	}
+
+	constexpr SurfelNode& operator=(SurfelNode&& rhs) = default;
 
 	constexpr bool operator==(SurfelNode const& rhs) const { return surfel == rhs.surfel; }
 

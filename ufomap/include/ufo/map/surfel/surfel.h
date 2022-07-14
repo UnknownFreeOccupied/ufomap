@@ -42,7 +42,11 @@
 #ifndef UFO_MAP_SURFEL_H
 #define UFO_MAP_SURFEL_H
 
+// UFO
 #include <ufo/math/vector3.h>
+
+// STL
+#include <cstdint>
 
 namespace ufo::map
 {
@@ -50,17 +54,38 @@ template <typename T>
 struct Surfel {
 	using scalar_t = T;
 
-	scalar_t num_points;
-	math::Vector3<scalar_t> sum;
-	std::array<std::array<scalar_t, 3>, 3> sum_squares;
-
-	math::Vector3<scalar_t> mean;
-	math::Vector3<scalar_t> normal;
-
 	constexpr Surfel() = default;
 
-	constexpr Surfel(math::Vector3<scalar_t> position, math::Vector3 normal)
-	    : position(position), normal(normal)
+	constexpr Surfel(math::Vector3<scalar_t> point) : num_points_(1), sum_(point) {}
+
+	template <class InputIt>
+	constexpr Surfel(InputIt first, InputIt last) : num_points_(std::distance(first, last))
+	{
+		if (first == last) {
+			return;
+		}
+
+		for (; first != last; ++first) {
+			sum_ += *first;
+
+			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
+				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
+					sum_squares_[i][j] = (*first)[i] * (*first)[j];
+				}
+			}
+		}
+
+		scalar_t n = scalar_t(1) / scalar_t(num_points_);
+
+		for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
+			for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
+				sum_squares_[i][j] -= sum_[i] * sum_[j] / n;
+			}
+		}
+	}
+
+	constexpr Surfel(std::initializer_list<math::Vector3<scalar_t>> points)
+	    : Surfel(std::begin(points), std::end(points))
 	{
 	}
 
@@ -70,10 +95,237 @@ struct Surfel {
 
 	constexpr bool operator==(Surfel const& rhs) const
 	{
-		return position == rhs.position && normal == rhs.normal;
+		return num_points_ == rhs.num_points_ && sum_ == rhs.sum_ &&
+		       sum_squares_ == rhs.sum_squares_;
 	}
 
 	constexpr bool operator!=(Surfel const& rhs) const { return !(*this == rhs); }
+
+	//
+	// Empty
+	//
+
+	[[nodiscard]] constexpr bool empty() const { return 0 == num_points_; }
+
+	//
+	// Add surfel
+	//
+
+	Surfel& operator+=(Surfel const& rhs)
+	{
+		addSurfel(rhs);
+		return *this;
+	}
+
+	constexpr void addSurfel(Surfel const& other)
+	{
+		if (0 == num_points_) {
+			num_points_ = other.num_points_;
+			sum_ = other.sum_;
+			sum_squares_ = other.sum_squares_;
+		} else {
+			scalar_t const n = num_points_;
+			scalar_t const n_o = other.num_points_;
+
+			auto const alpha = scalar_t(1) / (n * n_o * (n + n_o));
+			auto const beta = (sum_ * n_o) - (other.sum_ * n);
+
+			num_points_ += other.num_points_;
+			sum_ += other.sum_;
+
+			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
+				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
+					sum_squares_[i][j] += other.sum_squares_[i][j] + alpha * beta[i] * beta[j];
+				}
+			}
+		}
+	}
+
+	//
+	// Remove surfel
+	//
+
+	Surfel& operator-=(Surfel const& rhs)
+	{
+		removeSurfel(rhs);
+		return *this;
+	}
+
+	constexpr void removeSurfel(Surfel const& other)
+	{
+		if (other.num_points_ >= num_points_) {
+			clear();
+			return;
+		}
+
+		num_points_ -= other.num_points_;
+		sum_ -= other.sum_;
+
+		scalar_t const n = num_points_;
+		scalar_t const n_o = other.num_points_;
+
+		auto const& alpha = scalar_t(1) / (n * n_o * (n + n_o));
+		auto const& beta = (sum_ * n_o) - (other.sum_ * n);
+
+		for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
+			for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
+				sum_squares_[i][j] -= other.sum_squares_[i][j] - alpha * beta[i] * beta[j];
+			}
+		}
+	}
+
+	//
+	// Add point
+	//
+
+	constexpr void addPoint(math::Vector3<scalar_t> point)
+	{
+		if (0 == num_points_) {
+			num_points_ = 1;
+			sum_ = point;
+		} else {
+			scalar_t const n = num_points_;
+
+			auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
+			auto const beta = (sum_ - (point * n));
+
+			num_points_ += 1;
+			sum_ += point;
+
+			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
+				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
+					sum_squares_[i][j] += alpha * beta[i] * beta[j];
+				}
+			}
+		}
+	}
+
+	template <class InputIt>
+	constexpr void addPoint(InputIt first, InputIt last)
+	{
+		// FIXME: Improve
+		std::for_each(first, last, [this](auto&& p) { addPoint(p); });
+	}
+
+	constexpr void addPoint(std::initializer_list<math::Vector3<scalar_t>> points)
+	{
+		addPoint(std::begin(points), std::end(points));
+	}
+
+	//
+	// Remove point
+	//
+
+	constexpr void removePoint(math::Vector3<scalar_t> point)
+	{
+		if (0 == num_points_) {
+			return;
+		} else if (1 == num_points_) {
+			clear();
+		} else {
+			num_points_ -= 1;
+			sum_ -= point;
+
+			scalar_t const n = num_points_;
+
+			auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
+			auto const beta = (sum_ - (point * n));
+
+			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
+				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
+					sum_squares_[i][j] -= alpha * beta[i] * beta[j];
+				}
+			}
+		}
+	}
+
+	template <class InputIt>
+	constexpr void removePoint(InputIt first, InputIt last)
+	{
+		// FIXME: Improve
+		std::for_each(first, last, [this](auto&& p) { removePoint(p); });
+	}
+
+	constexpr void removePoint(std::initializer_list<math::Vector3<scalar_t>> points)
+	{
+		removePoint(std::begin(points), std::end(points));
+	}
+
+	//
+	// Clear
+	//
+
+	constexpr void clear()
+	{
+		num_points_ = 0;
+		sum_ = math::Vector3<scalar_t>();
+		sum_squares_ = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+	}
+
+	//
+	// Get mean
+	//
+
+	constexpr math::Vector3<scalar_t> getMean() const
+	{
+		return sum_ / scalar_t(num_points_);
+	}
+
+	//
+	// Get covariance
+	//
+
+	constexpr std::array<std::array<scalar_t, 3>, 3> getCovariance() const
+	{
+		scalar_t f = scalar_t(1) / (scalar_t(num_points_) - scalar_t(1));
+
+		std::array<std::array<scalar_t, 3>, 3> covariance;
+		for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
+			for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
+				covariance[i][j] = f * sum_squares_[i][j];
+			}
+		}
+		return covariance;
+	}
+
+	//
+	// Get normal
+	//
+
+	constexpr math::Vector3<scalar_t> getNormal() const
+	{
+		// TODO: Implement
+
+		return math::Vector3<scalar_t>();
+	}
+
+	//
+	// Get num points
+	//
+
+	constexpr uint32_t numPoints() const { return num_points_; }
+
+	//
+	// Get sum
+	//
+
+	constexpr math::Vector3<scalar_t> getSum() const { return sum_; }
+
+	//
+	// Get sum squares
+	//
+
+	constexpr std::array<std::array<scalar_t, 3>, 3> getSumSquares() const
+	{
+		return sum_squares_;
+	}
+
+ private:
+	uint32_t num_points_ = 0;
+	math::Vector3<scalar_t> sum_;
+	std::array<std::array<scalar_t, 3>, 3> sum_squares_ = {
+	    std::array<scalar_t, 3>{0, 0, 0}, std::array<scalar_t, 3>{0, 0, 0},
+	    std::array<scalar_t, 3>{0, 0, 0}};
 };
 }  // namespace ufo::map
 

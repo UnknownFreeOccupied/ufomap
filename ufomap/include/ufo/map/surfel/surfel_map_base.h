@@ -44,11 +44,13 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-// #include <ufo/map/predicate/surfel.h>
+#include <ufo/map/code/code_unordered_map.h>
+#include <ufo/map/predicate/surfel.h>
 // #include <ufo/map/types.h>
 
 // STL
 #include <cstdint>
+#include <functional>
 #include <type_traits>
 #include <utility>
 
@@ -58,7 +60,7 @@ template <class Derived, class LeafNode, class InnerNode>
 class SurfelMapBase
 {
  public:
-	using Surfel = std::remove_pointer_t<typename LeafNode::surfel>;
+	using Surfel = typename LeafNode::surfel_type;
 
  public:
 	//
@@ -67,12 +69,12 @@ class SurfelMapBase
 
 	std::optional<Surfel> getSurfel(Node node) const
 	{
-		// TODO: Implement
+		return getSurfel(derived().getLeafNode(node));
 	}
 
 	std::optional<Surfel> getSurfel(Code code) const
 	{
-		// TODO: Implement
+		return getSurfel(derived().getLeafNode(code));
 	}
 
 	std::optional<Surfel> getSurfel(Key key) const
@@ -92,65 +94,157 @@ class SurfelMapBase
 	}
 
 	//
-	// Get surfel points
+	// Get number of surfel points
 	//
 
-	std::vector<std::pair<Point3, std::size_t>> getSurfelPoints(Node node) const
+	std::size_t getNumSurfelPoints(Node node) const
 	{
-		// TODO: Implement
+		if (auto surfel = getSurfel(node)) {
+			return surfel->numPoints();
+		} else {
+			return 0;
+		}
 	}
 
-	std::vector<std::pair<Point3, std::size_t>> getSurfelPoints(Code code) const
+	std::size_t getNumSurfelPoints(Code code) const
 	{
-		// TODO: Implement
+		if (auto surfel = getSurfel(code)) {
+			return surfel->numPoints();
+		} else {
+			return 0;
+		}
 	}
 
-	std::vector<std::pair<Point3, std::size_t>> getSurfelPoints(Key key) const
+	std::size_t getNumSurfelPoints(Key key) const
 	{
-		return getSurfelPoints(Derived::toCode(key));
+		return getNumSurfelPoints(derived().toCode(key));
 	}
 
-	std::vector<std::pair<Point3, std::size_t>> getSurfelPoints(Point3 coord,
-	                                                            depth_t depth = 0) const
+	std::size_t getNumSurfelPoints(Point3 coord, depth_t depth = 0) const
 	{
-		return getSurfelPoints(derived().toCode(coord, depth));
+		return getNumSurfelPoints(derived().toCode(coord, depth));
 	}
 
-	std::vector<std::pair<Point3, std::size_t>> getSurfelPoints(coord_t x, coord_t y,
-	                                                            coord_t z,
-	                                                            depth_t depth = 0) const
+	std::size_t getNumSurfelPoints(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
-		return getSurfelPoints(derived().toCode(x, y, z, depth));
+		return getNumSurfelPoints(derived().toCode(x, y, z, depth));
 	}
+
+	//
+	// Set surfel
+	//
+
+	void setSurfel(Node node, Surfel const& surfel, bool propagate = true)
+	{
+		derived().apply(
+		    node, [this, &surfel](auto&& node) { setSurfel(node, surfel); }, propagate);
+	}
+
+	void setSurfel(Code code, Surfel const& surfel, bool propagate = true)
+	{
+		derived().apply(
+		    code, [this, &surfel](auto&& node) { setSurfel(node, surfel); }, propagate);
+	}
+
+	void setSurfel(Key key, Surfel const& surfel, bool propagate = true)
+	{
+		setSurfel(derived().toCode(key), surfel, propagate);
+	}
+
+	void setSurfel(Point3 coord, Surfel const& surfel, depth_t depth = 0,
+	               bool propagate = true)
+	{
+		setSurfel(derived().toCode(coord, depth), surfel, propagate);
+	}
+
+	void setSurfel(coord_t x, coord_t y, coord_t z, Surfel const& surfel, depth_t depth = 0,
+	               bool propagate = true)
+	{
+		setSurfel(derived().toCode(x, y, z, depth), surfel, propagate);
+	}
+
+	//
+	// TODO: Insert surfel
+	//
+
+	//
+	// TODO: Remove surfel
+	//
 
 	//
 	// Insert surfel point
 	//
 
-	void insertSurfelPoint(Node node, bool propagate = true)
+	void insertSurfelPoint(Point3 point, bool propagate = true)
 	{
-		// TODO: Implement
+		derived().apply(
+		    derived().toCode(point),
+		    [this, point](auto&& node) { insertSurfelPoint(node, point); }, propagate);
 	}
 
-	void insertSurfelPoint(Code code, bool propagate = true)
+	template <class InputIt>
+	void insertSurfelPoint(InputIt first, InputIt last, bool propagate = true)
 	{
-		// TODO: Implement
+		CodeUnorderedMap<std::vector<Point3>> codes;
+		std::for_each(first, last, [this, &codes](auto&& point) {
+			codes[derived().toCode(point)].push_back(point);
+		});
+
+		for (auto const& elem : codes) {
+			derived().apply(
+			    elem.first,
+			    [this, &elem](auto&& node) {
+				    insertSurfelPoint(node, std::begin(elem.second), std::end(elem.second));
+			    },
+			    false);
+		}
+
+		if (propagate) {
+			derived().updateModifiedNodes();
+		}
 	}
 
-	void insertSurfelPoint(Key key, bool propagate = true)
+	void insertSurfelPoint(std::initializer_list<Point3> points, bool propagate = true)
 	{
-		insertSurfelPoint(Derived::toCode(key), propagate);
+		insertSurfelPoint(std::begin(points), std::end(points), propagate);
 	}
 
-	void insertSurfelPoint(Point3 point, depth_t depth = 0, bool propagate = true)
+	//
+	// Erase surfel point
+	//
+
+	void eraseSurfelPoint(Point3 point, bool propagate = true)
 	{
-		insertSurfelPoint(derived().toCode(point, depth), propagate);
+		derived().apply(
+		    derived().toCode(point),
+		    [this, point](auto&& node) { eraseSurfelPoint(node, point); }, propagate);
 	}
 
-	void insertSurfelPoint(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
-	                       bool propagate = true)
+	template <class InputIt>
+	void eraseSurfelPoint(InputIt first, InputIt last, bool propagate = true)
 	{
-		insertSurfelPoint(derived().toCode(x, y, z, depth), propagate);
+		CodeUnorderedMap<std::vector<Point3>> codes;
+		std::for_each(first, last, [this, &codes](auto&& point) {
+			codes[derived().toCode(point)].push_back(point);
+		});
+
+		for (auto const& elem : codes) {
+			derived().apply(
+			    elem.first,
+			    [this, &elem](auto&& node) {
+				    eraseSurfelPoint(node, std::begin(elem.second), std::end(elem.second));
+			    },
+			    false);
+		}
+
+		if (propagate) {
+			derived().updateModifiedNodes();
+		}
+	}
+
+	void eraseSurfelPoint(std::initializer_list<Point3> points, bool propagate = true)
+	{
+		eraseSurfelPoint(std::begin(points), std::end(points), propagate);
 	}
 
  protected:
@@ -166,24 +260,45 @@ class SurfelMapBase
 	// Initilize root
 	//
 
-	void initRoot() { setSurfel(derived().getRoot(), nullptr); }
+	void initRoot() { clearSurfel(derived().getRoot()); }
 
 	//
 	// Get surfel
 	//
 
-	static constexpr Surfel& getSurfel(LeafNode& node) { return *node.surfel; }
+	static constexpr std::optional<std::reference_wrapper<Surfel>> getSurfel(LeafNode& node)
+	{
+		return node.surfel ? std::optional<std::reference_wrapper<Surfel>>{*node.surfel}
+		                   : std::nullopt;
+	}
 
-	static constexpr Surfel const& getSurfel(LeafNode const& node) { return *node.surfel; }
+	static constexpr std::optional<std::reference_wrapper<Surfel const>> getSurfel(
+	    LeafNode const& node)
+	{
+		return node.surfel ? std::optional<std::reference_wrapper<Surfel const>>{*node.surfel}
+		                   : std::nullopt;
+	}
 
 	//
 	// Set surfel
 	//
 
-	static constexpr void setSurfel(LeafNode& node, Surfel* surfel) noexcept
+	static constexpr void setSurfel(LeafNode& node, Surfel const& surfel) noexcept
 	{
-		node.surfel = surfel;
+		node.surfel = std::make_unique<Surfel>(surfel);
 	}
+
+	template <class... Args>
+	static constexpr void setSurfel(LeafNode& node, Args&&... args)
+	{
+		node.surfel = std::make_unique<Surfel>(std::forward<Args>(args)...);
+	}
+
+	//
+	// Clear surfel
+	//
+
+	static constexpr void clearSurfel(LeafNode& node) noexcept { node.surfel.reset(); }
 
 	//
 	// Has surfel
@@ -194,161 +309,96 @@ class SurfelMapBase
 		return nullptr != node.surfel;
 	}
 
-	//
-	// Add surfels
-	//
-
-	Surfel addSurfel(Surfel surfel, Sufel const& other)
+	void insertSurfel(LeafNode& node, Surfel const& surfel)
 	{
-		auto const alpha = Surfel::scalar_t(1) / (surfel.num_points * other.num_points *
-		                                          (other.num_points + surfel.num_points));
-		auto const beta = other.num_points * surfel.sum - surfel.num_points * other.sum;
-
-		for (std::size_t i = 0; i != surfel.sum_squares.size(); ++i) {
-			for (std::size_t j = 0; j != surfel.sum_squares[i].size(); ++j) {
-				surfel.sum_squares[i][j] += other.sum_squares[i][j] + alpha * beta[i] * beta[j];
-			}
+		if (hasSurfel(node)) {
+			node.surfel->addSurfel(surfel);
+		} else {
+			setSurfel(node, surfel);
 		}
-		surfel.sum += other.sum;
-		surfel.num_points += other.num_points;
-
-		return surfel;
 	}
 
-	//
-	// Calculate surfel from surfels
-	//
-
-	std::optional<Surfel> calculateSurfelFromSurfels(InnerNode const& node, depth_t depth)
+	template <class InputIt>
+	void insertSurfel(LeafNode& node, InputIt first, InputIt last)
 	{
-		if (isLeaf(node)) {
-			return std::nullopt;
-		}
-
-		if (1 == depth) {
-			if (none_of(derived().getLeafChildren(node),
-			            [this](auto const& child) { return hasSurfel(child); })) {
-				return std::nullopt;
-			}
-		} else {
-			if (none_of(derived().getInnerChildren(node),
-			            [this](auto const& child) { return hasSurfel(child); })) {
-				return std::nullopt;
-			}
-		}
-
-		Surfel surfel;
-
-		bool first = true;
-		if (1 == depth) {
-			for (LeafNode const& node : derived().getLeafChildren(node)) {
-				if (!hasSurfel(child)) {
-					continue;
-				}
-
-				if (first) {
-					first = false;
-					surfel = getSurfel(child);
-					continue;
-				} else {
-					surfel = addSurfel(surfel, getSurfel(child));
-				}
-			}
-		} else {
-			for (InnerNode const& node : derived().getInnerChildren(node)) {
-				if (!hasSurfel(child)) {
-					continue;
-				}
-
-				if (first) {
-					first = false;
-					surfel = getSurfel(child);
-					continue;
-				} else {
-					surfel = addSurfel(surfel, getSurfel(child));
-				}
-			}
-		}
-
-		return surfel;
-	}
-
-	//
-	// Calculate surfel from points
-	//
-
-	std::optional<Surfel> calculateSurfelFromPoints(InnerNode const& node, depth_t depth)
-	{
-		if (isLeaf(node)) {
-			return std::nullopt;
-		}
-
-		surfel_point_counter_type total_points;
-		if (1 == depth) {
-			surfel_point_counter_type =
-			    reduce(derived().getLeafChildren(node), surfel_point_counter_type(0),
-			           [](auto const& a, auto const& b) { return a + b.num_sufel_points; });
-		} else {
-			surfel_point_counter_type =
-			    reduce(derived().getInnerChildren(node), surfel_point_counter_type(0),
-			           [](auto const& a, auto const& b) { return a + b.num_sufel_points; });
-		}
-
-		if (0 == total_points) {
-			return std::nullopt;
-		}
-
-		std::vector<std::pair<Point3, uintptr_t>> points_with_weight;
-		points_with_weight.reserve(total_points);
-		getSurfelPointsRecurs(points_with_weight, node, Point3(0, 0, 0), depth);
-
-		// if (points_with_weight.empty()) {
-		// 	return std::nullopt;
-		// }
-
-		Surfel surfel;
-
-		Point3 position(0, 0, 0);
-		// uintptr_t total_weight = 0;
-		for (auto [point, weight] : points_with_weight) {
-			position.x += point.x * weight;
-			position.y += point.y * weight;
-			position.z += point.z * weight;
-			// total_weight += weight;
-		}
-		// position /= total_weight;
-		position /= total_points;
-
-		Point3 normal(0, 0, 0);
-		// TODO: Implement
-
-		return surfel;
-	}
-
-	void getSurfelPointsRecurs(std::vector<std::pair<Point3, uintptr_t>>& points,
-	                           InnerNode const& node, Point3 center, depth_t depth)
-	{
-		if (nullptr == getSurfel(node) || 0 == reinterpret_cast<uintptr_t>(getSurfel(node))) {
+		if (first == last) {
 			return;
 		}
 
-		if (isLeaf(node)) {
-			points.emplace_back(center, reinterpret_cast<uintptr_t>(getSurfel(node)));
-		} else if (1 == depth) {
-			for (std::size_t i = 0; i != 8; ++i) {
-				LeafNode const& child = derived().getLeafChild(node, i);
+		if (!hasSurfel(node)) {
+			setSurfel(node, *first);
+			++first;
+		}
 
-				if (nullptr != getSurfel(child) &&
-				    0 != reinterpret_cast<uintptr_t>(getSurfel(child))) {
-					points.emplace_back(Derived::childCenter(center, derived().getNodeSize(0), i),
-					                    reinterpret_cast<uintptr_t>(getSurfel(child)));
-				}
-			}
+		for (; first != last; ++first) {
+			node.surfel->addSurfel(*first);
+		}
+	}
+
+	//
+	// Erase surfel
+	//
+
+	void eraseSurfel(LeafNode& node, Surfel const& surfel)
+	{
+		if (!hasSurfel(node)) {
+			return;
+		}
+
+		if (node.surfel->numPoints() <= surfel.numPoints()) {
+			clearSurfel();
+
 		} else {
-			for (std::size_t i = 0; i != 8; ++i) {
-				getSurfelPointsRecurs(points, derived().getInnerChild(node, i),
-				                      Derived::childCenter(center, derived().getNodeSize(0), i),
-				                      depth - 1);
+			node.surfel->removeSurfel(surfel);
+		}
+	}
+
+	//
+	// Insert surfel point
+	//
+
+	void insertSurfelPoint(LeafNode& node, Point3 point)
+	{
+		if (hasSurfel(node)) {
+			node.surfel->addPoint(point);
+		} else {
+			setSurfel(node, point);
+		}
+	}
+
+	template <class InputIt>
+	void insertSurfelPoint(LeafNode& node, InputIt first, InputIt last)
+	{
+		if (hasSurfel(node)) {
+			node.surfel->addPoint(first, last);
+		} else {
+			setSurfel(node, first, last);
+		}
+	}
+
+	//
+	// Erase surfel point
+	//
+
+	void eraseSurfelPoint(LeafNode& node, Point3 point)
+	{
+		if (hasSurfel(node)) {
+			if (1 == node.surfel->num_points) {
+				clearSurfel(node);
+			} else {
+				node.surfel->removePoint(point);
+			}
+		}
+	}
+
+	template <class InputIt>
+	void eraseSurfelPoint(LeafNode& node, InputIt first, InputIt last)
+	{
+		if (hasSurfel(node)) {
+			if (node.surfel->numPoints() <= std::distance(first, last)) {
+				clearSurfel(node);
+			} else {
+				node.surfel->removePoint(first, last);
 			}
 		}
 	}
@@ -359,39 +409,35 @@ class SurfelMapBase
 
 	void updateNode(InnerNode& node, depth_t depth)
 	{
-		if (depth > surfel_depth_) {
-			setSurfel(node, calculateSurfelFromSurfels(node, depth));
-		} else if (depth == surfel_depth_) {
-			setSurfel(node, calculateSurfelFromPoints(node, depth));
-		} else {
-			setSurfel(node, reinterpret_cast<Surfel*>(numChildrenSurfelPoints(node, depth)));
-		}
-	}
-
-	//
-	// Has children surfel points
-	//
-
-	uintptr_t numChildrenSurfelPoints(InnerNode const& node, depth_t depth)
-	{
-		uintptr_t num_points = 0;
-
+		std::vector<Surfel> surfels;
 		if (1 == depth) {
 			for (LeafNode const& child : derived().getLeafChildren(node)) {
-				if (nullptr != getSurfel(child)) {
-					num_points += reinterpret_cast<uintptr_t>(getSurfel(child));
+				if (hasSurfel(child)) {
+					surfels.push_back(*child.surfel);
 				}
 			}
 		} else {
 			for (InnerNode const& child : derived().getInnerChildren(node)) {
-				if (nullptr != getSurfel(child)) {
-					num_points += reinterpret_cast<uintptr_t>(getSurfel(child));
+				if (hasSurfel(child)) {
+					surfels.push_back(*child.surfel);
 				}
 			}
 		}
 
-		return num_points;
+		if (surfels.empty()) {
+			clearSurfel(node);
+		} else {
+			insertSurfel(node, std::begin(surfels), std::end(surfels));
+		}
 	}
+
+	//
+	// FIXME: REMOVE Update node indicators
+	//
+
+	void updateNodeIndicators(LeafNode&) {}
+
+	void updateNodeIndicators(InnerNode&, depth_t) {}
 
 	//
 	// Input/output (read/write)
@@ -401,7 +447,7 @@ class SurfelMapBase
 	{
 		info["fields"].emplace_back("surfel");
 		info["type"].emplace_back("U");
-		info["size"].emplace_back(std::to_string(sizeof(uintptr_t)));
+		info["size"].emplace_back(std::to_string(sizeof(Surfel)));
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
@@ -411,8 +457,8 @@ class SurfelMapBase
 			return false;
 		}
 
-		if ('U' == type && sizeof(uintptr_t) == size) {
-			auto data = std::make_unique<uintptr_t[]>(nodes.size());
+		if ('U' == type && sizeof(Surfel) == size) {
+			auto data = std::make_unique<Surfel[]>(nodes.size());
 			in_stream.read(reinterpret_cast<char*>(data.get()),
 			               nodes.size() * sizeof(uintptr_t));
 

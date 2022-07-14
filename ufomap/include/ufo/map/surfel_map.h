@@ -45,6 +45,7 @@
 // UFO
 #include <ufo/map/octree_map_base.h>
 #include <ufo/map/surfel/surfel_map_base.h>
+#include <ufo/map/surfel/surfel_node.h>
 
 namespace ufo::map
 {
