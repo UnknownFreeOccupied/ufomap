@@ -236,7 +236,7 @@ class Code
 	};
 
  private:
-	static code_t splitBy3(Key::key_t a)
+	static constexpr code_t splitBy3(Key::key_t a)
 	{
 #if defined(__BMI2__)
 		return _pdep_u64(static_cast<code_t>(a), 0x9249249249249249);
@@ -251,7 +251,7 @@ class Code
 #endif
 	}
 
-	static Key::key_t get3Bits(code_t code)
+	static constexpr Key::key_t get3Bits(code_t code)
 	{
 #if defined(__BMI2__)
 		return static_cast<Key::key_t>(_pext_u64(code, 0x9249249249249249));
