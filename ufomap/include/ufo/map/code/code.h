@@ -78,7 +78,7 @@ class Code
 	 *
 	 * @return The corresponding key to code
 	 */
-	constexpr operator Key() const noexcept
+	operator Key() const noexcept
 	{
 #if defined(__BMI2__)
 		return Key(_pext_u64(code_, 0x9249249249249249), _pext_u64(code_, 0x2492492492492492),
