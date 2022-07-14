@@ -59,7 +59,7 @@ struct Triangle {
 
 	bool operator==(Triangle const& rhs) const noexcept { return rhs.points == points; }
 
-	constexpr bool operator!=(Triangle const& rhs) const noexcept
+	bool operator!=(Triangle const& rhs) const noexcept
 	{
 		return !(*this == rhs);
 	}
