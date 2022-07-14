@@ -50,7 +50,7 @@
 
 namespace ufo::map
 {
-template <typename T>
+template <typename T = float>
 struct Surfel {
 	using scalar_t = T;
 
