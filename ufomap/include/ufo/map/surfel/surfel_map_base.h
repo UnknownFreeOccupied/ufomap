@@ -79,25 +79,51 @@ class SurfelMapBase
 
 	std::optional<Surfel> getSurfel(Key key) const
 	{
-		return getTimeStep(Derived::toCode(key));
+		return getSurfel(Derived::toCode(key));
 	}
 
 	std::optional<Surfel> getSurfel(Point3 coord, depth_t depth = 0) const
 	{
-		return getTimeStep(derived().toCode(coord, depth));
+		return getSurfel(derived().toCode(coord, depth));
 	}
 
 	std::optional<Surfel> getSurfel(coord_t x, coord_t y, coord_t z,
 	                                depth_t depth = 0) const
 	{
-		return getTimeStep(derived().toCode(x, y, z, depth));
+		return getSurfel(derived().toCode(x, y, z, depth));
+	}
+
+	//
+	// Has surfel
+	//
+
+	[[nodiscard]] bool hasSurfel(Node node) const
+	{
+		return hasSurfel(derived().getLeafNode(node));
+	}
+
+	[[nodiscard]] bool hasSurfel(Code code) const
+	{
+		return hasSurfel(derived().getLeafNode(code));
+	}
+
+	[[nodiscard]] bool hasSurfel(Key key) const { return hasSurfel(Derived::toCode(key)); }
+
+	[[nodiscard]] bool hasSurfel(Point3 coord, depth_t depth = 0) const
+	{
+		return hasSurfel(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] bool hasSurfel(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	{
+		return hasSurfel(derived().toCode(x, y, z, depth));
 	}
 
 	//
 	// Get number of surfel points
 	//
 
-	std::size_t getNumSurfelPoints(Node node) const
+	[[nodiscard]] std::size_t getNumSurfelPoints(Node node) const
 	{
 		if (auto surfel = getSurfel(node)) {
 			return surfel->numPoints();
@@ -106,7 +132,7 @@ class SurfelMapBase
 		}
 	}
 
-	std::size_t getNumSurfelPoints(Code code) const
+	[[nodiscard]] std::size_t getNumSurfelPoints(Code code) const
 	{
 		if (auto surfel = getSurfel(code)) {
 			return surfel->numPoints();
@@ -115,17 +141,18 @@ class SurfelMapBase
 		}
 	}
 
-	std::size_t getNumSurfelPoints(Key key) const
+	[[nodiscard]] std::size_t getNumSurfelPoints(Key key) const
 	{
 		return getNumSurfelPoints(derived().toCode(key));
 	}
 
-	std::size_t getNumSurfelPoints(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] std::size_t getNumSurfelPoints(Point3 coord, depth_t depth = 0) const
 	{
 		return getNumSurfelPoints(derived().toCode(coord, depth));
 	}
 
-	std::size_t getNumSurfelPoints(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	[[nodiscard]] std::size_t getNumSurfelPoints(coord_t x, coord_t y, coord_t z,
+	                                             depth_t depth = 0) const
 	{
 		return getNumSurfelPoints(derived().toCode(x, y, z, depth));
 	}
@@ -458,13 +485,15 @@ class SurfelMapBase
 		}
 
 		if ('U' == type && sizeof(Surfel) == size) {
-			auto data = std::make_unique<Surfel[]>(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.get()),
-			               nodes.size() * sizeof(uintptr_t));
+			// TODO: Implement
+			
+			// auto data = std::make_unique<Surfel[]>(nodes.size());
+			// in_stream.read(reinterpret_cast<char*>(data.get()),
+			//                nodes.size() * sizeof(uintptr_t));
 
-			for (size_t i = 0; i != nodes.size(); ++i) {
-				setSurfel(*nodes[i], reinterpret_cast<Surfel*>(data[i]));
-			}
+			// for (size_t i = 0; i != nodes.size(); ++i) {
+			// 	setSurfel(*nodes[i], reinterpret_cast<Surfel*>(data[i]));
+			// }
 		} else {
 			return false;
 		}
@@ -475,16 +504,18 @@ class SurfelMapBase
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
-		uint64_t const size = nodes.size();
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+		// TODO: Implement
 
-		auto data = std::make_unique<uintptr_t[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = reinterpret_cast<uintptr_t>(getSurfel(nodes[i]));
-		}
+		// uint64_t const size = nodes.size();
+		// out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(uintptr_t));
+		// auto data = std::make_unique<uintptr_t[]>(nodes.size());
+		// for (size_t i = 0; i != nodes.size(); ++i) {
+		// 	data[i] = reinterpret_cast<uintptr_t>(getSurfel(nodes[i]));
+		// }
+
+		// out_stream.write(reinterpret_cast<char const*>(data.get()),
+		//                  nodes.size() * sizeof(uintptr_t));
 	}
 
  protected:
