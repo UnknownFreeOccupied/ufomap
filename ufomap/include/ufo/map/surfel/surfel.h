@@ -93,6 +93,10 @@ struct Surfel {
 
 	constexpr Surfel(Surfel&& other) = default;
 
+	constexpr Surfel& operator=(Surfel const& rhs) = default;
+
+	constexpr Surfel& operator=(Surfel&& rhs) = default;
+
 	constexpr bool operator==(Surfel const& rhs) const
 	{
 		return num_points_ == rhs.num_points_ && sum_ == rhs.sum_ &&

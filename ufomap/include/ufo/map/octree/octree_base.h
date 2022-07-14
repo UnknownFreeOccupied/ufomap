@@ -3541,8 +3541,6 @@ class OctreeBase
 		return info;
 	}
 
-	void addFileInfo(FileInfo& info) const {}
-
 	std::vector<LeafNode*> getNodes(std::istream& in_stream)
 	{
 		auto [indicators, size] = getIndicators(in_stream);
@@ -3662,12 +3660,12 @@ class OctreeBase
 			uint64_t size = static_cast<uint64_t>(std::stoi(header.at("size")[i]));
 			char type = header.at("type")[i][0];
 
-			uint64_t num;
-			in_stream.read(reinterpret_cast<char*>(&num), sizeof(num));
+			uint64_t data_size;
+			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if (!derived().readNodes(in_stream, nodes, field, type, size, num)) {
+			if (!derived().readNodes(in_stream, nodes, field, type, size)) {
 				// Skip forward
-				in_stream.seekg(size * num, std::istream::cur);
+				in_stream.seekg(data_size, std::istream::cur);
 			}
 		}
 	}

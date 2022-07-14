@@ -1292,7 +1292,7 @@ class OccupancyMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size, uint64_t num)
+	               std::string const& field, char type, uint64_t size)
 	{
 		if ("occupancy" != field) {
 			return false;
@@ -1361,7 +1361,7 @@ class OccupancyMapBase
 	                int compression_level) const
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			uint64_t const size = nodes.size() + sizeof(occupancy_clamping_thres_min_log_) +
+			uint64_t const size = (nodes.size() * sizeof(logit_t)) + sizeof(occupancy_clamping_thres_min_log_) +
 			                      sizeof(occupancy_clamping_thres_max_log_);
 
 			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
@@ -1371,7 +1371,7 @@ class OccupancyMapBase
 			out_stream.write(reinterpret_cast<char const*>(&occupancy_clamping_thres_max_log_),
 			                 sizeof(occupancy_clamping_thres_max_log_));
 		} else {
-			uint64_t const size = nodes.size();
+			uint64_t const size = nodes.size() * sizeof(logit_t);
 			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
 		}
 

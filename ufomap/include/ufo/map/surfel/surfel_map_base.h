@@ -478,22 +478,40 @@ class SurfelMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size, uint64_t num)
+	               std::string const& field, char type, uint64_t size)
 	{
 		if ("surfel" != field) {
 			return false;
 		}
 
 		if ('U' == type && sizeof(Surfel) == size) {
-			// TODO: Implement
-			
-			// auto data = std::make_unique<Surfel[]>(nodes.size());
-			// in_stream.read(reinterpret_cast<char*>(data.get()),
-			//                nodes.size() * sizeof(uintptr_t));
+			auto has_surfel = std::make_unique<uint64_t[]>((nodes.size() + 64 - 1) / 64);
+			in_stream.read(reinterpret_cast<char*>(has_surfel.get()),
+			               ((nodes.size() + 64 - 1) / 64) * sizeof(uint64_t));
 
-			// for (size_t i = 0; i != nodes.size(); ++i) {
-			// 	setSurfel(*nodes[i], reinterpret_cast<Surfel*>(data[i]));
-			// }
+			uint64_t num_surfels;
+			in_stream.read(reinterpret_cast<char*>(&num_surfels), sizeof(uint64_t));
+
+			auto data = std::make_unique<Surfel[]>(num_surfels);
+			in_stream.read(reinterpret_cast<char*>(data.get()), num_surfels * sizeof(Surfel));
+
+			std::size_t i = 0;
+			std::size_t j = 0;
+			std::size_t index = 0;
+			for (auto& node : nodes) {
+				if ((has_surfel[i] >> j) & 1U) {
+					setSurfel(node, data[index++]);
+				} else {
+					clearSurfel(node);
+				}
+
+				if (63 == j) {
+					++i;
+					j = 0;
+				} else {
+					++j;
+				}
+			}
 		} else {
 			return false;
 		}
@@ -504,18 +522,44 @@ class SurfelMapBase
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
-		// TODO: Implement
+		auto has_surfel = std::make_unique<uint64_t[]>((nodes.size() + 64 - 1) / 64);
+		std::size_t i = 0;
+		std::size_t j = 0;
+		uint64_t num_surfels = 0;
+		for (auto const& node : nodes) {
+			if (hasSurfel(node)) {
+				++num_surfels;
+				has_surfel[i] |= uint64_t(1) << j;
+			} else {
+				has_surfel[i] &= ~(uint64_t(1) << j);
+			}
 
-		// uint64_t const size = nodes.size();
-		// out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			if (63 == j) {
+				++i;
+				j = 0;
+			} else {
+				++j;
+			}
+		}
 
-		// auto data = std::make_unique<uintptr_t[]>(nodes.size());
-		// for (size_t i = 0; i != nodes.size(); ++i) {
-		// 	data[i] = reinterpret_cast<uintptr_t>(getSurfel(nodes[i]));
-		// }
+		uint64_t const size = sizeof(uint64_t) + (num_surfels * sizeof(Surfel)) +
+		                      (((nodes.size() + 64 - 1) / 64) * sizeof(uint64_t));
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
 
-		// out_stream.write(reinterpret_cast<char const*>(data.get()),
-		//                  nodes.size() * sizeof(uintptr_t));
+		out_stream.write(reinterpret_cast<char const*>(has_surfel.get()),
+		                 ((nodes.size() + 64 - 1) / 64) * sizeof(uint64_t));
+
+		out_stream.write(reinterpret_cast<char const*>(&num_surfels), sizeof(uint64_t));
+
+		auto data = std::make_unique<Surfel[]>(num_surfels);
+		for (size_t i = 0; i != nodes.size(); ++i) {
+			if (hasSurfel(nodes[i])) {
+				data[i] = *(nodes[i].surfel);
+			}
+		}
+
+		out_stream.write(reinterpret_cast<char const*>(data.get()),
+		                 num_surfels * sizeof(Surfel));
 	}
 
  protected:

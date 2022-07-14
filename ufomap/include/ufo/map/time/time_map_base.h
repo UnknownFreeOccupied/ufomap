@@ -315,7 +315,7 @@ class TimeMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size, uint64_t num)
+	               std::string const& field, char type, uint64_t size)
 	{
 		if ("time_step" != field) {
 			return false;
@@ -339,7 +339,7 @@ class TimeMapBase
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
-		uint64_t const size = nodes.size();
+		uint64_t const size = nodes.size() * sizeof(uint32_t);
 		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
 
 		auto data = std::make_unique<uint32_t[]>(nodes.size());
