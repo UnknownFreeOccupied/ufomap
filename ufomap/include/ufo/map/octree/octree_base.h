@@ -93,7 +93,7 @@ class OctreeBase
 
 	friend Derived;
 
- protected:
+ public:
 	using LeafNode = OctreeLeafNode<DataType, Indicators>;
 	using InnerNode = std::conditional_t<MemoryModel::POINTER == NodeMemoryModel ||
 	                                         MemoryModel::POINTER_REUSE == NodeMemoryModel,

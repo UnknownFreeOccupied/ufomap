@@ -258,7 +258,7 @@ constexpr bool intersects(AABB const& aabb, LineSegment const& line_segment) noe
 	return intersectsLine(aabb, ray, 0.0, length);
 }
 
-constexpr bool intersects(AABB const& aabb, OBB const& obb) noexcept
+bool intersects(AABB const& aabb, OBB const& obb) noexcept
 {
 	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
 
@@ -342,7 +342,7 @@ constexpr bool intersects(AAEBB const& aaebb, LineSegment const& line_segment) n
 	return intersectsLine(aaebb, ray, 0.0, length);
 }
 
-constexpr bool intersects(AAEBB const& aaebb, OBB const& obb) noexcept
+bool intersects(AAEBB const& aaebb, OBB const& obb) noexcept
 {
 	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
 
@@ -442,12 +442,12 @@ constexpr bool intersects(AAEBB const& aaebb, Triangle triangle) noexcept
 // OBB
 //
 
-constexpr bool intersects(OBB const& obb, AABB const& aabb) noexcept
+bool intersects(OBB const& obb, AABB const& aabb) noexcept
 {
 	return intersects(aabb, obb);
 }
 
-constexpr bool intersects(OBB const& obb, AAEBB const& aaebb) noexcept
+bool intersects(OBB const& obb, AAEBB const& aaebb) noexcept
 {
 	return intersects(aaebb, obb);
 }
@@ -523,7 +523,7 @@ constexpr bool intersects(OBB const& obb, LineSegment const& line_segment) noexc
 	return t_result >= 0 && t_result * t_result <= line_length_squared;
 }
 
-constexpr bool intersects(OBB const& obb_1, OBB const& obb_2) noexcept
+bool intersects(OBB const& obb_1, OBB const& obb_2) noexcept
 {
 	std::array<float, 9> obb_1_rot_matrix = obb_1.rotation.getRotMatrix();
 	std::array<float, 9> obb_2_rot_matrix = obb_2.rotation.getRotMatrix();
