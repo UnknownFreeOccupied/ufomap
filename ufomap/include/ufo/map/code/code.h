@@ -71,7 +71,7 @@ class Code
 	{
 	}
 
-	constexpr Code(Key const& key) : code_(toCode(key)), depth_(key.depth()) {}
+	Code(Key const& key) : code_(toCode(key)), depth_(key.depth()) {}
 
 	/*!
 	 * @brief Get the corresponding key to code
@@ -133,7 +133,7 @@ class Code
 	 * @param key The key to convert
 	 * @return uint64_t The code corresponding to the key
 	 */
-	static constexpr code_t toCode(Key const& key)
+	static code_t toCode(Key const& key)
 	{
 #if defined(__BMI2__)
 		return _pdep_u64(static_cast<code_t>(key[0]), 0x9249249249249249) |
@@ -236,7 +236,7 @@ class Code
 	};
 
  private:
-	static constexpr code_t splitBy3(Key::key_t a)
+	static code_t splitBy3(Key::key_t a)
 	{
 #if defined(__BMI2__)
 		return _pdep_u64(static_cast<code_t>(a), 0x9249249249249249);
@@ -251,7 +251,7 @@ class Code
 #endif
 	}
 
-	static constexpr Key::key_t get3Bits(code_t code)
+	static Key::key_t get3Bits(code_t code)
 	{
 #if defined(__BMI2__)
 		return static_cast<Key::key_t>(_pext_u64(code, 0x9249249249249249));

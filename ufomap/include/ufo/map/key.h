@@ -188,7 +188,7 @@ class Key
 	 *
 	 */
 	struct Hash {
-		constexpr std::size_t operator()(Key const& key) const
+		std::size_t operator()(Key const& key) const
 		{
 #if defined(__BMI2__)
 			return _pdep_u64(key[0], 0x9249249249249249) |
@@ -201,7 +201,7 @@ class Key
 	};
 
  private:
-	static constexpr uint64_t splitBy3(key_t a)
+	static uint64_t splitBy3(key_t a)
 	{
 #if defined(__BMI2__)
 		return _pdep_u64(a, 0x9249249249249249);
