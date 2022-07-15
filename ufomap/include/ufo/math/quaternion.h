@@ -169,53 +169,31 @@ struct Quaternion {
 		return Vector3<T>(roll, pitch, yaw);
 	}
 
-	constexpr void toRotMatrix(std::array<T, 9>& rot_matrix_3_3) const noexcept
-	{
-		// create rotational matrix
-		T n = norm();
-		T s = n > T(0) ? T(2) / (n * n) : T(0);
-
-		T xs = x * s;
-		T ys = y * s;
-		T zs = z * s;
-
-		T wx = w * xs;
-		T wy = w * ys;
-		T wz = w * zs;
-
-		T xx = x * xs;
-		T xy = x * ys;
-		T xz = x * zs;
-
-		T yy = y * ys;
-		T yz = y * zs;
-		T zz = z * zs;
-
-		T m[3][3];
-		m[0][0] = T(1) - (yy + zz);
-		m[1][1] = T(1) - (xx + zz);
-		m[2][2] = T(1) - (xx + yy);
-
-		m[1][0] = xy + wz;
-		m[0][1] = xy - wz;
-
-		m[2][0] = xz - wy;
-		m[0][2] = xz + wy;
-		m[2][1] = yz + wx;
-		m[1][2] = yz - wx;
-
-		for (unsigned int i = 0; i < 3; i++) {
-			rot_matrix_3_3[i * 3] = m[i][0];
-			rot_matrix_3_3[i * 3 + 1] = m[i][1];
-			rot_matrix_3_3[i * 3 + 2] = m[i][2];
-		}
-	}
-
 	constexpr std::array<T, 9> getRotMatrix() const noexcept
 	{
-		std::array<T, 9> rot_matrix_3_3;
-		toRotMatrix(rot_matrix_3_3);
-		return rot_matrix_3_3;
+		// create rotational matrix
+		T const n = norm();
+		T const s = n > T(0) ? T(2) / (n * n) : T(0);
+
+		T const xs = x * s;
+		T const ys = y * s;
+		T const zs = z * s;
+
+		T const wx = w * xs;
+		T const wy = w * ys;
+		T const wz = w * zs;
+
+		T const xx = x * xs;
+		T const xy = x * ys;
+		T const xz = x * zs;
+
+		T const yy = y * ys;
+		T const yz = y * zs;
+		T const zz = z * zs;
+
+		return std::array<T, 9>{T(1) - (yy + zz), xy - wz,          xz + wy,
+		                        xy + wz,          T(1) - (xx + zz), yz - wx,
+		                        xz - wy,          yz + wx,          T(1) - (xx + yy)};
 	}
 
 	constexpr T const& operator[](size_t index) const noexcept { return *(&w + index); }
