@@ -58,7 +58,7 @@ struct TimeStepMap {
 
 template <PredicateCompare PC = PredicateCompare::EQUAL>
 struct TimeStep {
-	TimeStep(time_step_t time_step) : time_step(time_step) {}
+	constexpr TimeStep(time_step_t time_step) : time_step(time_step) {}
 
 	time_step_t time_step;
 };
@@ -73,7 +73,7 @@ using TimeStepMin = TimeStepGE;
 using TimeStepMax = TimeStepLE;
 
 struct TimeStepInterval {
-	TimeStepInterval(time_step_t min, time_step_t max) : min(min), max(max) {}
+	constexpr TimeStepInterval(time_step_t min, time_step_t max) : min(min), max(max) {}
 
 	TimeStepMin min;
 	TimeStepMax max;
@@ -117,7 +117,7 @@ struct PredicateValueCheck<TimeStep<PC>> {
 	using Pred = TimeStep<PC>;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		if constexpr (PredicateCompare::EQUAL == PC) {
 			return m.getTimeStep(n) == p.time_step;
