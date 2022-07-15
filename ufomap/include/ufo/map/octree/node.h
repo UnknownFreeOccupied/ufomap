@@ -65,6 +65,12 @@ struct IndexData {
  */
 struct Node {
  public:
+	//
+	// Constructor
+	//
+
+	Node() = default;
+
 	/*!
 	 * @brief Compare two nodes.
 	 *
@@ -167,7 +173,7 @@ struct Node {
  protected:
 	union {
 		// Pointer to the actual node
-		void* data_;
+		void* data_ = nullptr;
 		IndexData data_index_;
 	};
 	// The code for the node
@@ -180,6 +186,12 @@ struct Node {
 
 struct NodeBV : public Node {
  public:
+	//
+	// Constructor
+	//
+
+	NodeBV() = default;
+
 	friend constexpr bool operator==(NodeBV const& lhs, NodeBV const& rhs) noexcept
 	{
 		return static_cast<Node const&>(lhs) == static_cast<Node const&>(rhs);
