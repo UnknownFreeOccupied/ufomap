@@ -3602,7 +3602,7 @@ class OctreeBase
 
 			for (std::size_t i = 0; 8 != i; ++i) {
 				if ((child_valid_return >> i) & 1U) {
-					nodes.push_back(*getLeafChild(node, i));
+					nodes.push_back(&getLeafChild(node, i));
 				}
 			}
 		} else {
