@@ -232,13 +232,9 @@ class OctreeMapBase
 		        ...);
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
-	                bool compress, int compression_acceleration_level,
-	                int compression_level) const
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::writeNodes(
-		     out_stream, nodes, compress, compression_acceleration_level, compression_level),
-		 ...);
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::writeNodes(out_stream, nodes), ...);
 	}
 };
 }  // namespace ufo::map

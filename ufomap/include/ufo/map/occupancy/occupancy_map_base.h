@@ -1356,12 +1356,11 @@ class OccupancyMapBase
 		return true;
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
-	                bool compress, int compression_acceleration_level,
-	                int compression_level) const
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			uint64_t const size = (nodes.size() * sizeof(logit_t)) + sizeof(occupancy_clamping_thres_min_log_) +
+			uint64_t const size = (nodes.size() * sizeof(logit_t)) +
+			                      sizeof(occupancy_clamping_thres_min_log_) +
 			                      sizeof(occupancy_clamping_thres_max_log_);
 
 			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));

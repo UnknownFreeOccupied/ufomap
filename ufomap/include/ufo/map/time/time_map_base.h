@@ -335,9 +335,7 @@ class TimeMapBase
 		return true;
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
-	                bool compress, int compression_acceleration_level,
-	                int compression_level) const
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
 		uint64_t const size = nodes.size() * sizeof(uint32_t);
 		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));

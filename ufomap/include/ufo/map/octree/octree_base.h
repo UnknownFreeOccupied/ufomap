@@ -3549,37 +3549,13 @@ class OctreeBase
 
 	std::pair<std::unique_ptr<uint8_t[]>, uint64_t> getIndicators(std::istream& in_stream)
 	{
-		uint8_t compressed;
-		in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
+		uint64_t num;
+		in_stream.read(reinterpret_cast<char*>(&num), sizeof(num));
 
-		uint64_t uncompressed_data_size;
-		in_stream.read(reinterpret_cast<char*>(&uncompressed_data_size),
-		               sizeof(uncompressed_data_size));
+		auto indicators = std::make_unique<uint8_t[]>(num);
+		in_stream.read(reinterpret_cast<char*>(indicators.get()), sizeof(uint8_t) * num);
 
-		if (UINT8_MAX == compressed) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
-
-			decompressData(in_stream, data, uncompressed_data_size);
-
-			uint64_t num;
-			data.read(reinterpret_cast<char*>(&num), sizeof(num));
-
-			auto indicators = std::make_unique<uint8_t[]>(num);
-			data.read(reinterpret_cast<char*>(indicators.get()), sizeof(uint8_t) * num);
-
-			return {std::move(indicators), num};
-		} else {
-			uint64_t num;
-			in_stream.read(reinterpret_cast<char*>(&num), sizeof(num));
-
-			auto indicators = std::make_unique<uint8_t[]>(num);
-			in_stream.read(reinterpret_cast<char*>(indicators.get()), sizeof(uint8_t) * num);
-
-			return {std::move(indicators), num};
-		}
+		return {std::move(indicators), num};
 	}
 
 	std::vector<LeafNode*> getNodes(std::unique_ptr<uint8_t[]> const& indicators,
@@ -3604,46 +3580,53 @@ class OctreeBase
 			nodes.push_back(static_cast<LeafNode*>(&getRoot()));
 			setModified(getRoot(), true);
 		} else if (valid_inner) {
-			size_t indicators_idx = 2;
-			getNodesRecurs(indicators, indicators_idx, nodes, getRoot(), depthLevels());
+			getNodesRecurs(std::next(indicators.get(), 2), nodes, getRoot(), depthLevels());
 		}
 
 		return nodes;
 	}
 
-	void getNodesRecurs(std::unique_ptr<uint8_t[]> const& indicators,
-	                    size_t& indicators_idx, std::vector<LeafNode*>& nodes,
-	                    InnerNode& node, depth_t const depth)
+	uint8_t* getNodesRecurs(uint8_t* indicators, std::vector<LeafNode*>& nodes,
+	                        InnerNode& node, depth_t const depth)
 	{
-		uint8_t const child_valid_return = indicators[indicators_idx++];
-		uint8_t const child_valid_inner = indicators[indicators_idx++];
-
-		if (0 == child_valid_return && 0 == child_valid_inner) {
-			return;
-		}
-
-		setModified(node, true);
+		uint8_t const child_valid_return = *indicators++;
 
 		if (1 == depth) {
+			if (0 == child_valid_return) {
+				return indicators;
+			}
+
+			setModified(node, true);
+
 			createLeafChildren(node);
 
-			for (size_t i = 0; i != 8; ++i) {
+			for (std::size_t i = 0; 8 != i; ++i) {
 				if ((child_valid_return >> i) & 1U) {
-					nodes.push_back(&getLeafChild(node, i));
+					nodes.push_back(*getLeafChild(node, i));
 				}
 			}
 		} else {
+			uint8_t const child_valid_inner = *indicators++;
+
+			if (0 == child_valid_return && 0 == child_valid_inner) {
+				return indicators;
+			}
+
+			setModified(node, true);
+
 			createInnerChildren(node, depth);
 
 			for (size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
 					nodes.push_back(&getInnerChild(node, i));
 				} else if ((child_valid_inner >> i) & 1U) {
-					getNodesRecurs(indicators, indicators_idx, nodes, getInnerChild(node, i),
-					               depth - 1);
+					indicators =
+					    getNodesRecurs(indicators, nodes, getInnerChild(node, i), depth - 1);
 				}
 			}
 		}
+
+		return indicators;
 	}
 
 	void readNodes(std::istream& in_stream, FileInfo const& header,
@@ -3694,20 +3677,16 @@ class OctreeBase
 			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
 			data.imbue(std::locale());
 
-			writeIndicators(data, indicators, compress, compression_acceleration_level,
-			                compression_level);
-			derived().writeNodes(data, nodes, compress, compression_acceleration_level,
-			                     compression_level);
+			writeIndicators(data, indicators);
+			derived().writeNodes(data, nodes);
 
 			uncompressed_data_size = data.tellp();
 
 			compressData(data, out_stream, uncompressed_data_size,
 			             compression_acceleration_level, compression_level);
 		} else {
-			writeIndicators(out_stream, indicators, compress, compression_acceleration_level,
-			                compression_level);
-			derived().writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-			                     compression_level);
+			writeIndicators(out_stream, indicators);
+			derived().writeNodes(out_stream, nodes);
 
 			uncompressed_data_size = out_stream.tellp() - data_pos;
 		}
@@ -3743,20 +3722,16 @@ class OctreeBase
 			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
 			data.imbue(std::locale());
 
-			writeIndicators(data, indicators, compress, compression_acceleration_level,
-			                compression_level);
-			derived().writeNodes(data, nodes, compress, compression_acceleration_level,
-			                     compression_level);
+			writeIndicators(data, indicators);
+			derived().writeNodes(data, nodes);
 
 			uncompressed_data_size = data.tellp();
 
 			compressData(data, out_stream, uncompressed_data_size,
 			             compression_acceleration_level, compression_level);
 		} else {
-			writeIndicators(out_stream, indicators, compress, compression_acceleration_level,
-			                compression_level);
-			derived().writeNodes(out_stream, nodes, compress, compression_acceleration_level,
-			                     compression_level);
+			writeIndicators(out_stream, indicators);
+			derived().writeNodes(out_stream, nodes);
 
 			uncompressed_data_size = out_stream.tellp() - data_pos;
 		}
@@ -3808,43 +3783,61 @@ class OctreeBase
 		auto cur_indicators_size = indicators.size();
 		auto cur_nodes_size = nodes.size();
 
-		auto child = getNodeChild(node, 0);
-
 		uint8_t child_valid_return = 0;
-		uint8_t child_valid_inner = 0;
-		for (size_t i = 0; 8 != i; ++i) {
-			child = getNodeSibling(child, i);
 
-			if (predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(),
-			                                                      child)) {
-				child_valid_return |= 1U << i;
-			} else if (predicate::PredicateInnerCheck<Predicates>::apply(predicates, derived(),
-			                                                             child)) {
-				child_valid_inner |= 1U << i;
+		if (1 == getDepth(node)) {
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if (predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(),
+				                                                      getNodeChild(node, i))) {
+					child_valid_return |= 1U << i;
+				}
 			}
-		}
 
-		indicators.push_back(child_valid_return);
-		indicators.push_back(child_valid_inner);
+			indicators.push_back(child_valid_return);
 
-		if (0 == child_valid_return && 0 == child_valid_inner) {
-			return;
-		}
-
-		for (size_t i = 0; 8 != i; ++i) {
-			if ((child_valid_return >> i) & 1U) {
-				child = getNodeSibling(child, i);
-				nodes.push_back(getLeafNode(child));
-			} else if ((child_valid_inner >> i) & 1U) {
-				child = getNodeSibling(child, i);
-				dataRecurs(indicators, nodes, predicates, child);
+			if (0 == child_valid_return) {
+				return;
 			}
-		}
 
-		if (nodes.size() == cur_nodes_size) {
-			indicators.resize(cur_indicators_size + 2);
-			indicators.back() = 0U;
-			*std::prev(std::end(indicators), 2) = 0U;
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if ((child_valid_return >> i) & 1U) {
+					nodes.push_back(getLeafChild(getInnerNode(node), i));
+				}
+			}
+		} else {
+			uint8_t child_valid_inner = 0;
+			for (size_t i = 0; 8 != i; ++i) {
+				auto child = getNodeChild(node, i);
+
+				if (predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(),
+				                                                      child)) {
+					child_valid_return |= 1U << i;
+				} else if (predicate::PredicateInnerCheck<Predicates>::apply(predicates,
+				                                                             derived(), child)) {
+					child_valid_inner |= 1U << i;
+				}
+			}
+
+			indicators.push_back(child_valid_return);
+			indicators.push_back(child_valid_inner);
+
+			if (0 == child_valid_return && 0 == child_valid_inner) {
+				return;
+			}
+
+			for (size_t i = 0; 8 != i; ++i) {
+				if ((child_valid_return >> i) & 1U) {
+					nodes.push_back(getInnerChild(getInnerNode(node), i));
+				} else if ((child_valid_inner >> i) & 1U) {
+					dataRecurs(indicators, nodes, predicates, getNodeChild(node, i));
+				}
+			}
+
+			if (nodes.size() == cur_nodes_size) {
+				indicators.resize(cur_indicators_size + 2);
+				indicators.back() = 0U;
+				*std::prev(std::end(indicators), 2) = 0U;
+			}
 		}
 	}
 
@@ -3949,49 +3942,13 @@ class OctreeBase
 		}
 	}
 
-	void writeIndicators(std::ostream& out_stream, std::vector<uint8_t> const& indicators,
-	                     bool compress, int compression_acceleration_level,
-	                     int compression_level) const
+	void writeIndicators(std::ostream& out_stream,
+	                     std::vector<uint8_t> const& indicators) const
 	{
-		uint8_t compressed = compress ? UINT8_MAX : 0U;
-		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
-
-		auto size_pos = out_stream.tellp();
-		uint64_t uncompressed_data_size = 0;
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		auto data_pos = out_stream.tellp();
-
 		uint64_t num = indicators.size();
-		if (compress) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
-
-			data.write(reinterpret_cast<char*>(&num), sizeof(num));
-			data.write(reinterpret_cast<char const*>(indicators.data()), sizeof(uint8_t) * num);
-
-			uncompressed_data_size = data.tellp();
-
-			compressData(data, out_stream, uncompressed_data_size,
-			             compression_acceleration_level, compression_level);
-		} else {
-			out_stream.write(reinterpret_cast<char*>(&num), sizeof(num));
-			out_stream.write(reinterpret_cast<char const*>(indicators.data()),
-			                 sizeof(uint8_t) * num);
-
-			uncompressed_data_size = out_stream.tellp() - data_pos;
-		}
-
-		auto end_pos = out_stream.tellp();
-
-		out_stream.seekp(size_pos);
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		out_stream.seekp(end_pos);
+		out_stream.write(reinterpret_cast<char*>(&num), sizeof(num));
+		out_stream.write(reinterpret_cast<char const*>(indicators.data()),
+		                 sizeof(uint8_t) * num);
 	}
 
  protected:

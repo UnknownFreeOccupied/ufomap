@@ -518,9 +518,7 @@ class SurfelMapBase
 		return true;
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
-	                bool compress, int compression_acceleration_level,
-	                int compression_level) const
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
 		auto has_surfel = std::make_unique<uint64_t[]>((nodes.size() + 64 - 1) / 64);
 		std::size_t i = 0;
