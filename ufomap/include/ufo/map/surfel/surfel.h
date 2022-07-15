@@ -47,10 +47,12 @@
 
 // STL
 #include <cstdint>
+#include <type_traits>
 
 namespace ufo::map
 {
-template <typename T = float>
+template <typename T = float,
+          typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 struct Surfel {
 	using scalar_t = T;
 
@@ -123,6 +125,12 @@ struct Surfel {
 		return *this;
 	}
 
+	friend Surfel operator+(Surfel lhs, Surfel const& rhs)
+	{
+		lhs += rhs;
+		return lhs;
+	}
+
 	constexpr void addSurfel(Surfel const& other)
 	{
 		if (0 == num_points_) {
@@ -158,6 +166,12 @@ struct Surfel {
 		return *this;
 	}
 
+	friend Surfel operator-(Surfel lhs, Surfel const& rhs)
+	{
+		lhs -= rhs;
+		return lhs;
+	}
+
 	constexpr void removeSurfel(Surfel const& other)
 	{
 		if (other.num_points_ >= num_points_) {
@@ -188,32 +202,67 @@ struct Surfel {
 
 	constexpr void addPoint(math::Vector3<scalar_t> point)
 	{
-		if (0 == num_points_) {
-			num_points_ = 1;
-			sum_ = point;
-		} else {
-			scalar_t const n = num_points_;
+		switch (num_points_) {
+			case 0:
+				num_points_ = 1;
+				sum_ = point;
+				return;
+			case 1:
+				++num_points_;
+				sum_ += point;
+			default:
+				scalar_t const n = num_points_;
 
-			auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
-			auto const beta = (sum_ - (point * n));
+				auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
+				auto const beta = (sum_ - (point * n));
 
-			num_points_ += 1;
-			sum_ += point;
+				++num_points_;
+				sum_ += point;
 
-			sum_squares_[0] += alpha * beta[0] * beta[0];
-			sum_squares_[1] += alpha * beta[0] * beta[1];
-			sum_squares_[2] += alpha * beta[0] * beta[2];
-			sum_squares_[3] += alpha * beta[1] * beta[1];
-			sum_squares_[4] += alpha * beta[1] * beta[2];
-			sum_squares_[5] += alpha * beta[2] * beta[2];
+				sum_squares_[0] += alpha * beta[0] * beta[0];
+				sum_squares_[1] += alpha * beta[0] * beta[1];
+				sum_squares_[2] += alpha * beta[0] * beta[2];
+				sum_squares_[3] += alpha * beta[1] * beta[1];
+				sum_squares_[4] += alpha * beta[1] * beta[2];
+				sum_squares_[5] += alpha * beta[2] * beta[2];
+				break;
 		}
 	}
 
 	template <class InputIt>
 	constexpr void addPoint(InputIt first, InputIt last)
 	{
-		// FIXME: Improve
-		std::for_each(first, last, [this](auto&& p) { addPoint(p); });
+		if (empty()) {
+			// FIXME: Make into a function
+			if (first == last) {
+				return;
+			}
+
+			num_points_ = std::distance(first, last);
+
+			for (; first != last; ++first) {
+				sum_ += *first;
+
+				sum_squares_[0] = (*first)[0] * (*first)[0];
+				sum_squares_[1] = (*first)[0] * (*first)[1];
+				sum_squares_[2] = (*first)[0] * (*first)[2];
+				sum_squares_[3] = (*first)[1] * (*first)[1];
+				sum_squares_[4] = (*first)[1] * (*first)[2];
+				sum_squares_[5] = (*first)[2] * (*first)[2];
+			}
+
+			scalar_t n = scalar_t(1) / scalar_t(num_points_);
+
+			sum_squares_[0] -= sum_[0] * sum_[0] * n;
+			sum_squares_[1] -= sum_[0] * sum_[1] * n;
+			sum_squares_[2] -= sum_[0] * sum_[2] * n;
+			sum_squares_[3] -= sum_[1] * sum_[1] * n;
+			sum_squares_[4] -= sum_[1] * sum_[2] * n;
+			sum_squares_[5] -= sum_[2] * sum_[2] * n;
+		} else {
+			// FIXME: Improve
+			std::for_each(first, last, [this](auto&& p) { addPoint(p); });
+		}
 	}
 
 	constexpr void addPoint(std::initializer_list<math::Vector3<scalar_t>> points)
@@ -227,25 +276,27 @@ struct Surfel {
 
 	constexpr void removePoint(math::Vector3<scalar_t> point)
 	{
-		if (0 == num_points_) {
-			return;
-		} else if (1 == num_points_) {
-			clear();
-		} else {
-			num_points_ -= 1;
-			sum_ -= point;
+		switch (num_points_) {
+			case 0:
+				return;
+			case 1:
+				clear();
+				return;
+			default:
+				num_points_ -= 1;
+				sum_ -= point;
 
-			scalar_t const n = num_points_;
+				scalar_t const n = num_points_;
 
-			auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
-			auto const beta = (sum_ - (point * n));
+				auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
+				auto const beta = (sum_ - (point * n));
 
-			sum_squares_[0] -= alpha * beta[0] * beta[0];
-			sum_squares_[1] -= alpha * beta[0] * beta[1];
-			sum_squares_[2] -= alpha * beta[0] * beta[2];
-			sum_squares_[3] -= alpha * beta[1] * beta[1];
-			sum_squares_[4] -= alpha * beta[1] * beta[2];
-			sum_squares_[5] -= alpha * beta[2] * beta[2];
+				sum_squares_[0] -= alpha * beta[0] * beta[0];
+				sum_squares_[1] -= alpha * beta[0] * beta[1];
+				sum_squares_[2] -= alpha * beta[0] * beta[2];
+				sum_squares_[3] -= alpha * beta[1] * beta[1];
+				sum_squares_[4] -= alpha * beta[1] * beta[2];
+				sum_squares_[5] -= alpha * beta[2] * beta[2];
 		}
 	}
 
@@ -269,7 +320,7 @@ struct Surfel {
 	{
 		num_points_ = 0;
 		sum_ = math::Vector3<scalar_t>();
-		sum_squares_ = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+		sum_squares_ = {0, 0, 0, 0, 0, 0};
 	}
 
 	//
@@ -289,16 +340,12 @@ struct Surfel {
 	{
 		scalar_t f = scalar_t(1) / (scalar_t(num_points_) - scalar_t(1));
 
-		std::array<std::array<scalar_t, 3>, 3> covariance;
+		using as = std::array<scalar_t, 3>;
+		using cov = std::array<as, 3>;
 
-		covariance[0][0] = f * sum_squares_[0];
-		covariance[0][1] = covariance[1][0] = f * sum_squares_[1];
-		covariance[0][2] = covariance[2][0] = f * sum_squares_[2];
-		covariance[1][1] = f * sum_squares_[3];
-		covariance[1][2] = covariance[2][1] = f * sum_squares_[4];
-		covariance[2][2] = f * sum_squares_[5];
-
-		return covariance;
+		return cov{as{f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2]},
+		           as{f * sum_squares_[1], f * sum_squares_[3], f * sum_squares_[4]},
+		           as{f * sum_squares_[2], f * sum_squares_[4], f * sum_squares_[5]}};
 	}
 
 	//

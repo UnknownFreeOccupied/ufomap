@@ -55,28 +55,7 @@ template <typename T>
 struct SurfelNode {
 	using surfel_type = Surfel<T>;
 
-	std::unique_ptr<surfel_type> surfel = nullptr;
-
-	constexpr SurfelNode() = default;
-
-	constexpr SurfelNode(SurfelNode const& other)
-	    : surfel(other.surfel ? new Surfel(*other.surfel) : nullptr)
-	{
-	}
-
-	constexpr SurfelNode(SurfelNode&& other) = default;
-
-	constexpr SurfelNode& operator=(SurfelNode const& rhs)
-	{
-		if (rhs.surfel) {
-			surfel = std::make_unique<surfel_type>(*rhs.surfel);
-		} else {
-			surfel.reset();
-		}
-		return *this;
-	}
-
-	constexpr SurfelNode& operator=(SurfelNode&& rhs) = default;
+	surfel_type surfel;
 
 	constexpr bool operator==(SurfelNode const& rhs) const { return surfel == rhs.surfel; }
 
