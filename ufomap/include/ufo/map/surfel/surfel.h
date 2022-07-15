@@ -68,20 +68,22 @@ struct Surfel {
 		for (; first != last; ++first) {
 			sum_ += *first;
 
-			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
-				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
-					sum_squares_[i][j] = (*first)[i] * (*first)[j];
-				}
-			}
+			sum_squares_[0] = (*first)[0] * (*first)[0];
+			sum_squares_[1] = (*first)[0] * (*first)[1];
+			sum_squares_[2] = (*first)[0] * (*first)[2];
+			sum_squares_[3] = (*first)[1] * (*first)[1];
+			sum_squares_[4] = (*first)[1] * (*first)[2];
+			sum_squares_[5] = (*first)[2] * (*first)[2];
 		}
 
 		scalar_t n = scalar_t(1) / scalar_t(num_points_);
 
-		for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
-			for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
-				sum_squares_[i][j] -= sum_[i] * sum_[j] / n;
-			}
-		}
+		sum_squares_[0] -= sum_[0] * sum_[0] * n;
+		sum_squares_[1] -= sum_[0] * sum_[1] * n;
+		sum_squares_[2] -= sum_[0] * sum_[2] * n;
+		sum_squares_[3] -= sum_[1] * sum_[1] * n;
+		sum_squares_[4] -= sum_[1] * sum_[2] * n;
+		sum_squares_[5] -= sum_[2] * sum_[2] * n;
 	}
 
 	constexpr Surfel(std::initializer_list<math::Vector3<scalar_t>> points)
@@ -137,11 +139,12 @@ struct Surfel {
 			num_points_ += other.num_points_;
 			sum_ += other.sum_;
 
-			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
-				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
-					sum_squares_[i][j] += other.sum_squares_[i][j] + alpha * beta[i] * beta[j];
-				}
-			}
+			sum_squares_[0] += other.sum_squares_[0] + alpha * beta[0] * beta[0];
+			sum_squares_[1] += other.sum_squares_[1] + alpha * beta[0] * beta[1];
+			sum_squares_[2] += other.sum_squares_[2] + alpha * beta[0] * beta[2];
+			sum_squares_[3] += other.sum_squares_[3] + alpha * beta[1] * beta[1];
+			sum_squares_[4] += other.sum_squares_[4] + alpha * beta[1] * beta[2];
+			sum_squares_[5] += other.sum_squares_[5] + alpha * beta[2] * beta[2];
 		}
 	}
 
@@ -171,11 +174,12 @@ struct Surfel {
 		auto const& alpha = scalar_t(1) / (n * n_o * (n + n_o));
 		auto const& beta = (sum_ * n_o) - (other.sum_ * n);
 
-		for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
-			for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
-				sum_squares_[i][j] -= other.sum_squares_[i][j] - alpha * beta[i] * beta[j];
-			}
-		}
+		sum_squares_[0] -= other.sum_squares_[0] - alpha * beta[0] * beta[0];
+		sum_squares_[1] -= other.sum_squares_[1] - alpha * beta[0] * beta[1];
+		sum_squares_[2] -= other.sum_squares_[2] - alpha * beta[0] * beta[2];
+		sum_squares_[3] -= other.sum_squares_[3] - alpha * beta[1] * beta[1];
+		sum_squares_[4] -= other.sum_squares_[4] - alpha * beta[1] * beta[2];
+		sum_squares_[5] -= other.sum_squares_[5] - alpha * beta[2] * beta[2];
 	}
 
 	//
@@ -196,11 +200,12 @@ struct Surfel {
 			num_points_ += 1;
 			sum_ += point;
 
-			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
-				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
-					sum_squares_[i][j] += alpha * beta[i] * beta[j];
-				}
-			}
+			sum_squares_[0] += alpha * beta[0] * beta[0];
+			sum_squares_[1] += alpha * beta[0] * beta[1];
+			sum_squares_[2] += alpha * beta[0] * beta[2];
+			sum_squares_[3] += alpha * beta[1] * beta[1];
+			sum_squares_[4] += alpha * beta[1] * beta[2];
+			sum_squares_[5] += alpha * beta[2] * beta[2];
 		}
 	}
 
@@ -235,11 +240,12 @@ struct Surfel {
 			auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
 			auto const beta = (sum_ - (point * n));
 
-			for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
-				for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
-					sum_squares_[i][j] -= alpha * beta[i] * beta[j];
-				}
-			}
+			sum_squares_[0] -= alpha * beta[0] * beta[0];
+			sum_squares_[1] -= alpha * beta[0] * beta[1];
+			sum_squares_[2] -= alpha * beta[0] * beta[2];
+			sum_squares_[3] -= alpha * beta[1] * beta[1];
+			sum_squares_[4] -= alpha * beta[1] * beta[2];
+			sum_squares_[5] -= alpha * beta[2] * beta[2];
 		}
 	}
 
@@ -284,11 +290,14 @@ struct Surfel {
 		scalar_t f = scalar_t(1) / (scalar_t(num_points_) - scalar_t(1));
 
 		std::array<std::array<scalar_t, 3>, 3> covariance;
-		for (std::size_t i = 0; i != sum_squares_.size(); ++i) {
-			for (std::size_t j = 0; j != sum_squares_.size(); ++j) {
-				covariance[i][j] = f * sum_squares_[i][j];
-			}
-		}
+
+		covariance[0][0] = f * sum_squares_[0];
+		covariance[0][1] = covariance[1][0] = f * sum_squares_[1];
+		covariance[0][2] = covariance[2][0] = f * sum_squares_[2];
+		covariance[1][1] = f * sum_squares_[3];
+		covariance[1][2] = covariance[2][1] = f * sum_squares_[4];
+		covariance[2][2] = f * sum_squares_[5];
+
 		return covariance;
 	}
 
@@ -319,17 +328,12 @@ struct Surfel {
 	// Get sum squares
 	//
 
-	constexpr std::array<std::array<scalar_t, 3>, 3> getSumSquares() const
-	{
-		return sum_squares_;
-	}
+	constexpr std::array<scalar_t, 6> getSumSquares() const { return sum_squares_; }
 
  private:
 	uint32_t num_points_ = 0;
 	math::Vector3<scalar_t> sum_;
-	std::array<std::array<scalar_t, 3>, 3> sum_squares_ = {
-	    std::array<scalar_t, 3>{0, 0, 0}, std::array<scalar_t, 3>{0, 0, 0},
-	    std::array<scalar_t, 3>{0, 0, 0}};
+	std::array<scalar_t, 6> sum_squares_ = {0, 0, 0, 0, 0, 0};
 };
 }  // namespace ufo::map
 
