@@ -354,7 +354,7 @@ struct Surfel {
 
 	constexpr math::Vector3<scalar_t> getEigenValues() const
 	{
-		return getEigenValues(getCovariance());
+		return getEigenValues(getSymmetricCovariance());
 	}
 
 	//
@@ -363,7 +363,7 @@ struct Surfel {
 
 	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors() const
 	{
-		return getEigenVector(getCovariance());
+		return getEigenVector(getSymmetricCovariance());
 	}
 
 	//
@@ -396,6 +396,17 @@ struct Surfel {
 
  private:
 	//
+	// Get symmetric convariance
+	//
+
+	constexpr std::array<scalar_t, 6> getSymmetricCovariance() const
+	{
+		scalar_t f = scalar_t(1) / (scalar_t(num_points_) - scalar_t(1));
+		return {f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2],
+		        f * sum_squares_[3], f * sum_squares_[4], f * sum_squares_[5]};
+	}
+
+	//
 	// Get eigen values
 	//
 
@@ -426,6 +437,34 @@ struct Surfel {
 		        3);
 	}
 
+	constexpr math::Vector3<scalar_t> getEigenValues(
+	    std::array<scalar_t, 6> const& sym_m) const
+	{
+		auto x_1 = sym_m[0] * sym_m[0] + sym_m[3] * sym_m[3] + sym_m[5] * sym_m[5] -
+		           sym_m[0] * sym_m[3] - sym_m[0] * sym_m[5] - sym_m[3] * sym_m[5] +
+		           3 * (sym_m[1] * sym_m[1] + sym_m[2] * sym_m[2] + sym_m[4] * sym_m[4]);
+
+		auto x_2 = -(2 * sym_m[0] - sym_m[3] - sym_m[5]) *
+		               (2 * sym_m[3] - sym_m[0] - sym_m[5]) *
+		               (2 * sym_m[5] - sym_m[0] - sym_m[3]) +
+		           9 * ((2 * sym_m[5] - sym_m[0] - sym_m[3]) * (sym_m[1] * sym_m[1]) +
+		                (2 * sym_m[3] - sym_m[0] - sym_m[5]) * (sym_m[2] * sym_m[2]) +
+		                (2 * sym_m[0] - sym_m[3] - sym_m[5]) * (sym_m[4] * sym_m[4])) -
+		           54 * (sym_m[1] * sym_m[4] * sym_m[2]);
+
+		auto phi = 0 != x_2 ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - (x_2 * x_2)) / x_2)
+		                    : scalar_t(M_PI) / 2;
+
+		return math::Vector3<scalar_t>(
+		    (sym_m[0] + sym_m[3] + sym_m[5] - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
+		    (sym_m[0] + sym_m[3] + sym_m[5] +
+		     2 * std::sqrt(x_1) * std::cos((phi - scalar_t(M_PI)) / 3)) /
+		        3,
+		    (sym_m[0] + sym_m[3] + sym_m[5] +
+		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
+		        3);
+	}
+
 	//
 	// Get eigen vectors
 	//
@@ -434,6 +473,12 @@ struct Surfel {
 	    std::array<std::array<scalar_t, 3>, 3> const& m) const
 	{
 		return getEigenVectors(m, getEigenValues(m));
+	}
+
+	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
+	    std::array<scalar_t, 6> const& sym_m) const
+	{
+		return getEigenVectors(sym_m, getEigenValues(sym_m));
 	}
 
 	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
@@ -455,6 +500,27 @@ struct Surfel {
 		                                m_2, 1),
 		        math::Vector3<scalar_t>((eigen_values[2] - m[2][2] - m[2][1] * m_3) / m[2][0],
 		                                m_3, 1)};
+	}
+
+	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
+	    std::array<scalar_t, 6> const& sym_m,
+	    math::Vector3<scalar_t> const& eigen_values) const
+	{
+		auto m_1 = (sym_m[1] * (sym_m[5] - eigen_values[0]) - sym_m[4] * sym_m[2]) /
+		           (sym_m[2] * (sym_m[3] - eigen_values[0]) - sym_m[1] * sym_m[4]);
+
+		auto m_2 = (sym_m[1] * (sym_m[5] - eigen_values[1]) - sym_m[4] * sym_m[2]) /
+		           (sym_m[2] * (sym_m[3] - eigen_values[1]) - sym_m[1] * sym_m[4]);
+
+		auto m_3 = (sym_m[1] * (sym_m[5] - eigen_values[2]) - sym_m[4] * sym_m[2]) /
+		           (sym_m[2] * (sym_m[3] - eigen_values[2]) - sym_m[1] * sym_m[4]);
+
+		return {math::Vector3<scalar_t>(
+		            (eigen_values[0] - sym_m[5] - sym_m[4] * m_1) / sym_m[2], m_1, 1),
+		        math::Vector3<scalar_t>(
+		            (eigen_values[1] - sym_m[5] - sym_m[4] * m_2) / sym_m[2], m_2, 1),
+		        math::Vector3<scalar_t>(
+		            (eigen_values[2] - sym_m[5] - sym_m[4] * m_3) / sym_m[2], m_3, 1)};
 	}
 
  private:
