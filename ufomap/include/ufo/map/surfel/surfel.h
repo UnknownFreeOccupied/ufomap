@@ -349,11 +349,122 @@ struct Surfel {
 	}
 
 	//
+	// Get eigenvalues
+	//
+
+	constexpr math::Vector3<scalar_t> getEigenValues() const
+	{
+		auto m = getCovariance();
+
+		auto x_1 = m[0][0] * m[0][0] + m[1][1] * m[1][1] + m[2][2] * m[2][2] -
+		           m[0][0] * m[1][1] - m[0][0] * m[2][2] - m[1][1] * m[2][2] +
+		           3 * (m[1][0] * m[1][0] + m[0][2] * m[0][2] + m[2][1] * m[2][1]);
+
+		auto x_2 = -(2 * m[0][0] - m[1][1] - m[2][2]) * (2 * m[1][1] - m[0][0] - m[2][2]) *
+		               (2 * m[2][2] - m[0][0] - m[1][1]) +
+		           9 * ((2 * m[2][2] - m[0][0] - m[1][1]) * (m[1][0] * m[1][0]) +
+		                (2 * m[1][1] - m[0][0] - m[2][2]) * (m[0][2] * m[0][2]) +
+		                (2 * m[0][0] - m[1][1] - m[2][2]) * (m[2][1] * m[2][1])) -
+		           54 * (m[0][1] * m[1][2] * m[0][2]);
+
+		auto phi = 0 != x_2 ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - (x_2 * x_2)) / x_2)
+		                    : scalar_t(M_PI) / 2;
+
+		return math::Vector3<scalar_t>(
+		    (m[0][0] + m[1][1] + m[2][2] - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
+		    (m[0][0] + m[1][1] + m[2][2] +
+		     2 * std::sqrt(x_1) * std::cos((phi - scalar_t(M_PI)) / 3)) /
+		        3,
+		    (m[0][0] + m[1][1] + m[2][2] +
+		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
+		        3);
+	}
+
+	// constexpr math::Vector3<scalar_t> getEigenValues() const
+	// {
+	// 	auto cov = getCovariance();
+
+	// 	auto p_1 = cov[0][1] * cov[0][1] + cov[0][2] * cov[0][2] + cov[1][2] * cov[1][2];
+
+	// 	auto diag_sq = cov[0][0] * cov[0][0] + cov[1][1] * cov[1][1] + cov[2][2];
+
+	// 	if (0 == p_1 ||
+	// 	    2 * p_1 / (2 * p_1 + diag_sq) < std::numeric_limits<scalar_t>::epsilon()) {
+	// 		// Diagonal
+	// 		return math::Vector3<scalar_t>(cov[0][0], cov[1][1], cov[2][2]);
+	// 	}
+
+	// 	auto q = (cov[0][0] + cov[1][1] + cov[2][2]) / 3;
+
+	// 	auto t_1 = cov[0][0] - q;
+	// 	auto t_2 = cov[1][1] - q;
+	// 	auto t_3 = cov[2][2] - q;
+	// 	auto p_2 = t_1 * t_1 + t_2 * t_2 + t_3 * t_3 + 2 * p_1;
+
+	// 	std::array<scalar_t, 6> b{t_1, cov[0][1], cov[0][2], t_2, cov[1][2], t_3};
+
+	// 	auto det_b = b[0] * (b[3] * b[5] - b[4] * b[4]) - b[1] * (b[1] * b[5] - b[4] * b[2])
+	// + 	             b[2] * (b[1] * b[4] - b[3] * b[2]);
+
+	// 	auto p = std::sqrt(p_2 / 6);
+
+	// 	auto inv_p = 1 / p;
+
+	// 	auto r = inv_p * inv_p * inv_p * det_b / 2;
+
+	// 	if (1 <= r) {
+	// 		auto eig_1 = q + 2 * p;
+	// 		auto eig_2 = q - p;
+	// 		auto eig_3 = 3 * q - eig_2 - eig_1;
+	// 		return {eig_1, eig_2, eig_3};
+	// 	} else if (-1 >= r) {
+	// 		auto eig_1 = q + p;
+	// 		auto eig_2 = q - 2 * p;
+	// 		auto eig_3 = 3 * q - eig_2 - eig_1;
+	// 		return {eig_1, eig_2, eig_3};
+	// 	} else {
+	// 		auto phi = std::acos(r) / 3;
+	// 		auto eig_1 = q + 2 * p * std::cos(phi);
+	// 		auto eig_2 = q + 2 * p * std::cos(phi + scalar_t(2) * scalar_t(M_PI) /
+	// scalar_t(3)); 		auto eig_3 = 3 * q - eig_1 - eig_2; 		return {eig_1, eig_2,
+	// eig_3};
+	// 	}
+	// }
+
+	//
+	// Get eigen vectors
+	//
+
+	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors() const
+	{
+		auto m = getCovariance();
+
+		auto e = getEigenValues();
+
+		auto m_1 = (m[1][0] * (m[2][2] - e[0]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - e[0]) - m[1][0] * m[2][1]);
+
+		auto m_2 = (m[1][0] * (m[2][2] - e[1]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - e[1]) - m[1][0] * m[2][1]);
+
+		auto m_3 = (m[1][0] * (m[2][2] - e[2]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - e[2]) - m[1][0] * m[2][1]);
+
+		return {math::Vector3<scalar_t>((e[0] - m[2][2] - m[2][1] * m_1) / m[2][0], m_1, 1),
+		        math::Vector3<scalar_t>((e[1] - m[2][2] - m[2][1] * m_2) / m[2][0], m_2, 1),
+		        math::Vector3<scalar_t>((e[2] - m[2][2] - m[2][1] * m_3) / m[2][0], m_3, 1)};
+	}
+
+	//
 	// Get normal
 	//
 
 	constexpr math::Vector3<scalar_t> getNormal() const
 	{
+		auto cov = getCovariance();
+		auto eigen_values = getEigenValues(cov);
+		auto eigen_vectors = getEigenVectors(cov, eigen_values);
+
 		// TODO: Implement
 
 		return math::Vector3<scalar_t>();
@@ -376,6 +487,82 @@ struct Surfel {
 	//
 
 	constexpr std::array<scalar_t, 6> getSumSquares() const { return sum_squares_; }
+
+ private:
+	//
+	// Get eigen values
+	//
+
+	constexpr math::Vector3<scalar_t> getEigenValues(
+	    std::array<std::array<scalar_t, 3>, 3> const& m) const
+	{
+		auto x_1 = m[0][0] * m[0][0] + m[1][1] * m[1][1] + m[2][2] * m[2][2] -
+		           m[0][0] * m[1][1] - m[0][0] * m[2][2] - m[1][1] * m[2][2] +
+		           3 * (m[1][0] * m[1][0] + m[0][2] * m[0][2] + m[2][1] * m[2][1]);
+
+		auto x_2 = -(2 * m[0][0] - m[1][1] - m[2][2]) * (2 * m[1][1] - m[0][0] - m[2][2]) *
+		               (2 * m[2][2] - m[0][0] - m[1][1]) +
+		           9 * ((2 * m[2][2] - m[0][0] - m[1][1]) * (m[1][0] * m[1][0]) +
+		                (2 * m[1][1] - m[0][0] - m[2][2]) * (m[0][2] * m[0][2]) +
+		                (2 * m[0][0] - m[1][1] - m[2][2]) * (m[2][1] * m[2][1])) -
+		           54 * (m[0][1] * m[1][2] * m[0][2]);
+
+		auto phi = 0 != x_2 ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - (x_2 * x_2)) / x_2)
+		                    : scalar_t(M_PI) / 2;
+
+		return math::Vector3<scalar_t>(
+		    (m[0][0] + m[1][1] + m[2][2] - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
+		    (m[0][0] + m[1][1] + m[2][2] +
+		     2 * std::sqrt(x_1) * std::cos((phi - scalar_t(M_PI)) / 3)) /
+		        3,
+		    (m[0][0] + m[1][1] + m[2][2] +
+		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
+		        3);
+	}
+
+	//
+	// Get eigen vectors
+	//
+
+	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
+	    std::array<std::array<scalar_t, 3>, 3> const& m) const
+	{
+		auto e = getEigenValues(m);
+
+		auto m_1 = (m[1][0] * (m[2][2] - e[0]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - e[0]) - m[1][0] * m[2][1]);
+
+		auto m_2 = (m[1][0] * (m[2][2] - e[1]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - e[1]) - m[1][0] * m[2][1]);
+
+		auto m_3 = (m[1][0] * (m[2][2] - e[2]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - e[2]) - m[1][0] * m[2][1]);
+
+		return {math::Vector3<scalar_t>((e[0] - m[2][2] - m[2][1] * m_1) / m[2][0], m_1, 1),
+		        math::Vector3<scalar_t>((e[1] - m[2][2] - m[2][1] * m_2) / m[2][0], m_2, 1),
+		        math::Vector3<scalar_t>((e[2] - m[2][2] - m[2][1] * m_3) / m[2][0], m_3, 1)};
+	}
+
+	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
+	    std::array<std::array<scalar_t, 3>, 3> const& m,
+	    math::Vector3<scalar_t> const& eigen_values) const
+	{
+		auto m_1 = (m[1][0] * (m[2][2] - eigen_values[0]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - eigen_values[0]) - m[1][0] * m[2][1]);
+
+		auto m_2 = (m[1][0] * (m[2][2] - eigen_values[1]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - eigen_values[1]) - m[1][0] * m[2][1]);
+
+		auto m_3 = (m[1][0] * (m[2][2] - eigen_values[2]) - m[1][2] * m[2][0]) /
+		           (m[2][0] * (m[1][1] - eigen_values[2]) - m[1][0] * m[2][1]);
+
+		return {math::Vector3<scalar_t>((eigen_values[0] - m[2][2] - m[2][1] * m_1) / m[2][0],
+		                                m_1, 1),
+		        math::Vector3<scalar_t>((eigen_values[1] - m[2][2] - m[2][1] * m_2) / m[2][0],
+		                                m_2, 1),
+		        math::Vector3<scalar_t>((eigen_values[2] - m[2][2] - m[2][1] * m_3) / m[2][0],
+		                                m_3, 1)};
+	}
 
  private:
 	uint32_t num_points_ = 0;
