@@ -3780,12 +3780,9 @@ class OctreeBase
 	void dataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode>& nodes,
 	                Predicates const& predicates, NodeType const& node) const
 	{
-		auto cur_indicators_size = indicators.size();
-		auto cur_nodes_size = nodes.size();
-
 		uint8_t child_valid_return = 0;
 
-		if (1 == getDepth(node)) {
+		if (1 == node.depth()) {
 			for (std::size_t i = 0; 8 != i; ++i) {
 				if (predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(),
 				                                                      getNodeChild(node, i))) {
@@ -3805,6 +3802,9 @@ class OctreeBase
 				}
 			}
 		} else {
+			auto cur_indicators_size = indicators.size();
+			auto cur_nodes_size = nodes.size();
+
 			uint8_t child_valid_inner = 0;
 			for (size_t i = 0; 8 != i; ++i) {
 				auto child = getNodeChild(node, i);
@@ -3876,19 +3876,33 @@ class OctreeBase
 	void modifiedDataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode>& nodes,
 	                        InnerNode& node, depth_t depth)
 	{
-		auto cur_indicators_size = indicators.size();
-		auto cur_nodes_size = nodes.size();
-
 		uint8_t child_valid_return = 0;
-		uint8_t child_valid_inner = 0;
 		if (1 == depth) {
-			for (size_t i = 0; 8 != i; ++i) {
-				auto& child = getLeafChild(node, i);
-				if (isModified(child)) {
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if (isModified(getLeafChild(node, i))) {
 					child_valid_return |= 1U << i;
 				}
 			}
+
+			indicators.push_back(child_valid_return);
+
+			if (0 == child_valid_return) {
+				return;
+			}
+
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if ((child_valid_return >> i) & 1U) {
+					auto& child = getLeafChild(node, i);
+					nodes.push_back(child);
+					derived().updateNodeIndicators(child);
+					setModified(child, false);
+				}
+			}
 		} else {
+			auto cur_indicators_size = indicators.size();
+			auto cur_nodes_size = nodes.size();
+
+			uint8_t child_valid_inner = 0;
 			for (size_t i = 0; 8 != i; ++i) {
 				auto& child = getInnerChild(node, i);
 				if (isModified(child)) {
@@ -3899,46 +3913,34 @@ class OctreeBase
 					}
 				}
 			}
-		}
+			indicators.push_back(child_valid_return);
+			indicators.push_back(child_valid_inner);
 
-		indicators.push_back(child_valid_return);
-		indicators.push_back(child_valid_inner);
+			if (0 == child_valid_return && 0 == child_valid_inner) {
+				return;
+			}
 
-		if (0 == child_valid_return && 0 == child_valid_inner) {
-			return;
-		}
-
-		if (1 == depth) {
 			for (size_t i = 0; 8 != i; ++i) {
-				auto& child = getLeafChild(node, i);
-				if (isModified(child)) {
+				if ((child_valid_return >> i) & 1U) {
+					auto& child = getInnerChild(node, i);
 					nodes.push_back(child);
 					derived().updateNodeIndicators(child);
 					setModified(child, false);
-				}
-			}
-		} else {
-			for (size_t i = 0; 8 != i; ++i) {
-				auto& child = getInnerChild(node, i);
-				if (isModified(child)) {
-					if (isLeaf(child)) {
-						nodes.push_back(child);
-						derived().updateNodeIndicators(node, depth);
-					} else {
-						modifiedDataRecurs(indicators, nodes, child, depth - 1);
-						derived().updateNode(child, depth - 1);
-						derived().updateNodeIndicators(child, depth - 1);
-						pruneNode(child, depth - 1);
-					}
+				} else if ((child_valid_inner >> i) & 1U) {
+					auto& child = getInnerChild(node, i);
+					modifiedDataRecurs(indicators, nodes, child, depth - 1);
+					derived().updateNode(child, depth - 1);
+					derived().updateNodeIndicators(child, depth - 1);
+					pruneNode(child, depth - 1);
 					setModified(child, false);
 				}
 			}
-		}
 
-		if (nodes.size() == cur_nodes_size) {
-			indicators.resize(cur_indicators_size + 2);
-			indicators.back() = 0U;
-			*std::prev(std::end(indicators), 2) = 0U;
+			if (nodes.size() == cur_nodes_size) {
+				indicators.resize(cur_indicators_size + 2);
+				indicators.back() = 0U;
+				*std::prev(std::end(indicators), 2) = 0U;
+			}
 		}
 	}
 
