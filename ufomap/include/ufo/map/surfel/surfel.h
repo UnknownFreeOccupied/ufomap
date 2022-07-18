@@ -459,7 +459,11 @@ struct Surfel {
 	// Get normal
 	//
 
-	constexpr math::Vector3<scalar_t> getNormal() const { return getEigenVectors()[0]; }
+	constexpr math::Vector3<scalar_t> getNormal() const
+	{
+		// TODO: Normalize?
+		return getEigenVectors()[0];
+	}
 
 	//
 	// Get num points
