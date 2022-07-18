@@ -57,33 +57,31 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Node, class Indicators, bool LockLess, MemoryModel NodeMemoryModel,
-          depth_t StaticallyAllocatedDepths,
+template <class Node, class Indicators, bool LockLess, bool ReuseNodes,
+          template <typename, typename, bool, bool> typename MemoryModel,
           template <typename, typename, typename> typename... Bases>
 class OctreeMapBase
-    : public OctreeBase<OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                                      StaticallyAllocatedDepths, Bases...>,
-                        Node, Indicators, LockLess, NodeMemoryModel,
-                        StaticallyAllocatedDepths>,
+    : public OctreeBase<
+          OctreeMapBase<Node, Indicators, LockLess, ReuseNodes, MemoryModel, Bases...>,
+          Node, Indicators, LockLess, ReuseNodes, MemoryModel>,
       public Bases<
-          OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                        StaticallyAllocatedDepths, Bases...>,
-          typename OctreeBase<OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                                            StaticallyAllocatedDepths, Bases...>,
-                              Node, Indicators, LockLess, NodeMemoryModel,
-                              StaticallyAllocatedDepths>::LeafNode,
-          typename OctreeBase<OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                                            StaticallyAllocatedDepths, Bases...>,
-                              Node, Indicators, LockLess, NodeMemoryModel,
-                              StaticallyAllocatedDepths>::InnerNode>...
+          OctreeMapBase<Node, Indicators, LockLess, ReuseNodes, MemoryModel, Bases...>,
+          typename OctreeBase<OctreeMapBase<Node, Indicators, LockLess, ReuseNodes,
+                                            MemoryModel, Bases...>,
+                              Node, Indicators, LockLess, ReuseNodes,
+                              MemoryModel>::LeafNode,
+          typename OctreeBase<OctreeMapBase<Node, Indicators, LockLess, ReuseNodes,
+                                            MemoryModel, Bases...>,
+                              Node, Indicators, LockLess, ReuseNodes,
+                              MemoryModel>::InnerNode>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMapBase, Node, Indicators, LockLess, NodeMemoryModel,
-	                          StaticallyAllocatedDepths>;
+	using Octree =
+	    OctreeBase<OctreeMapBase, Node, Indicators, LockLess, ReuseNodes, MemoryModel>;
 	using LeafNode = typename Octree::LeafNode;
 	using InnerNode = typename Octree::InnerNode;
 
@@ -136,11 +134,11 @@ class OctreeMapBase
 		Octree::read(io_stream);
 	}
 
-	template <class Node2, class Indicators2, bool LockLess2, MemoryModel NodeMemoryModel2,
-	          depth_t StaticallyAllocatedDepths2,
+	template <class Node2, class Indicators2, bool LockLess2, bool ReuseNodes2,
+	          template <typename, typename, bool, bool> typename MemoryModel2,
 	          template <typename, typename, typename> typename... Bases2>
-	OctreeMapBase(OctreeMapBase<Node2, Indicators2, LockLess2, NodeMemoryModel2,
-	                            StaticallyAllocatedDepths2, Bases2...> const& other)
+	OctreeMapBase(OctreeMapBase<Node2, Indicators2, LockLess2, ReuseNodes2, MemoryModel2,
+	                            Bases2...> const& other)
 	    : Octree(other.resolution(), other.depthLevels(), other.automaticPruning())
 	{
 		initRoot();
@@ -174,12 +172,11 @@ class OctreeMapBase
 		return *this;
 	}
 
-	template <class Node2, class Indicators2, bool LockLess2, MemoryModel NodeMemoryModel2,
-	          depth_t StaticallyAllocatedDepths2,
+	template <class Node2, class Indicators2, bool LockLess2, bool ReuseNodes2,
+	          template <typename, typename, bool, bool> typename MemoryModel2,
 	          template <typename, typename, typename> typename... Bases2>
-	OctreeMapBase& operator=(
-	    OctreeMapBase<Node2, Indicators2, LockLess2, NodeMemoryModel2,
-	                  StaticallyAllocatedDepths2, Bases2...> const& rhs)
+	OctreeMapBase& operator=(OctreeMapBase<Node2, Indicators2, LockLess2, ReuseNodes2,
+	                                       MemoryModel2, Bases2...> const& rhs)
 	{
 		initRoot();
 

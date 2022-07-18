@@ -45,17 +45,19 @@
 // UFO
 #include <ufo/map/color/color_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/octree/memory/pointer.h>
 #include <ufo/map/octree_map_base.h>
 #include <ufo/map/time/time_map_base.h>
 
 namespace ufo::map
 {
-template <bool LockLess, MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+template <bool LockLess, bool ReuseNodes,
+          template <typename, typename, bool, bool> typename MemoryModel>
 using OccupancyMapTimeColorT =
-    OctreeMapBase<OccupancyTimeColorNode, OccupancyIndicators, LockLess, NodeMemoryModel,
-                  StaticallyAllocatedDepths, OccupancyMapBase, TimeMapBase, ColorMapBase>;
+    OctreeMapBase<OccupancyTimeColorNode, OccupancyIndicators, LockLess, ReuseNodes,
+                  MemoryModel, OccupancyMapBase, TimeMapBase, ColorMapBase>;
 
-using OccupancyMapTimeColor = OccupancyMapTimeColorT<false, MemoryModel::POINTER, 1>;
+using OccupancyMapTimeColor = OccupancyMapTimeColorT<false, false, OctreePointerMemory>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_TIME_COLOR_H

@@ -39,28 +39,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
-#define UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
+#ifndef UFO_MAP_COLOR_MAP_H
+#define UFO_MAP_COLOR_MAP_H
 
 // UFO
-#include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/color/color_map_base.h>
 #include <ufo/map/octree/memory/pointer.h>
-#include <ufo/map/octree_map_base.h>
-#include <ufo/map/semantic/semantic_map_base.h>
-#include <ufo/map/time/time_map_base.h>
 
 namespace ufo::map
 {
-template <class SemanticType, std::size_t SemanticValueWidth, bool LockLess,
-          bool ReuseNodes,
+template <bool LockLess, bool ReuseNodes,
           template <typename, typename, bool, bool> typename MemoryModel>
-using OccupancyMapTimeSemanticT =
-    OctreeMapBase<OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-                  OccupancyIndicators, LockLess, ReuseNodes, MemoryModel,
-                  OccupancyMapBase, TimeMapBase, SemanticMapBase>;
+using ColorMapT = OctreeMapBase<ColorNode, OctreeIndicators, LockLess, ReuseNodes,
+                                MemoryModel, ColorMapBase>;
 
-using OccupancyMapTimeSemantic =
-    OccupancyMapTimeSemanticT<uint32_t, 16, false, false, OctreePointerMemory>;
+using ColorMap = ColorMapT<false, false, OctreePointerMemory>;
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
+#endif  // UFO_MAP_COLOR_MAP_H

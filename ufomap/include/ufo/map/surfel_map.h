@@ -43,19 +43,20 @@
 #define UFO_MAP_SURFEL_MAP_H
 
 // UFO
+#include <ufo/map/octree/memory/index.h>
+#include <ufo/map/octree/memory/pointer.h>
 #include <ufo/map/octree_map_base.h>
 #include <ufo/map/surfel/surfel_map_base.h>
 #include <ufo/map/surfel/surfel_node.h>
 
 namespace ufo::map
 {
-template <class SurfelType, bool LockLess, MemoryModel NodeMemoryModel,
-          depth_t StaticallyAllocatedDepths>
-using SurfelMapT =
-    OctreeMapBase<SurfelNode<SurfelType>, OctreeIndicators, LockLess, NodeMemoryModel,
-                  StaticallyAllocatedDepths, SurfelMapBase>;
+template <class SurfelType, bool LockLess, bool ReuseNodes,
+          template <typename, typename, bool, bool> typename MemoryModel>
+using SurfelMapT = OctreeMapBase<SurfelNode<SurfelType>, OctreeIndicators, LockLess,
+                                 ReuseNodes, MemoryModel, SurfelMapBase>;
 
-using SurfelMap = SurfelMapT<float, false, MemoryModel::POINTER, 1>;
+using SurfelMap = SurfelMapT<float, false, false, OctreePointerMemory>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SURFEL_MAP_H

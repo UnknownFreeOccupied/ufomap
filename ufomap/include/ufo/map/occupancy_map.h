@@ -44,18 +44,18 @@
 
 // UFO
 #include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/octree/memory/pointer.h>
 #include <ufo/map/octree_map_base.h>
 
 namespace ufo::map
 {
-template <class OccupancyType, bool LockLess, MemoryModel NodeMemoryModel,
-          depth_t StaticallyAllocatedDepths>
-using OccupancyMapT =
-    OctreeMapBase<OccupancyNode<OccupancyType>, OccupancyIndicators, LockLess,
-                  NodeMemoryModel, StaticallyAllocatedDepths, OccupancyMapBase>;
+template <class OccupancyType, bool LockLess, bool ReuseNodes,
+          template <typename, typename, bool, bool> typename MemoryModel>
+using OccupancyMapT = OctreeMapBase<OccupancyNode<OccupancyType>, OccupancyIndicators,
+                                    LockLess, ReuseNodes, MemoryModel, OccupancyMapBase>;
 
-using OccupancyMap = OccupancyMapT<float, false, MemoryModel::POINTER, 1>;
-using OccupancyMapSmall = OccupancyMapT<uint8_t, false, MemoryModel::POINTER, 1>;
+using OccupancyMap = OccupancyMapT<float, false, false, OctreePointerMemory>;
+using OccupancyMapSmall = OccupancyMapT<uint8_t, false, false, OctreePointerMemory>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_H

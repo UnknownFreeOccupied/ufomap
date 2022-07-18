@@ -114,6 +114,13 @@ struct Node {
 	}
 
 	/*!
+	 * @brief
+	 *
+	 * @return Code
+	 */
+	operator Code() const { return code_; }
+
+	/*!
 	 * @brief Get the code for the node.
 	 *
 	 * @return The code for the node.
@@ -140,6 +147,11 @@ struct Node {
 
 	constexpr Node(uint32_t block_index, uint8_t child_index, Code code) noexcept
 	    : data_index_{block_index, child_index}, code_(code)
+	{
+	}
+
+	constexpr Node(IndexData data_index, Code code) noexcept
+	    : data_index_(data_index), code_(code)
 	{
 	}
 
@@ -180,8 +192,12 @@ struct Node {
 	Code code_;
 
 	template <class Derived, class DataType, class Indicators, bool LockLess,
-	          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+	          bool ReuseNodes,
+	          template <typename, typename, bool, bool> typename MemoryModel>
 	friend class OctreeBase;
+
+	template <class DataType, class Indicators, bool LockLess, bool ReuseNodes>
+	friend class OctreePointerMemory;
 };
 
 struct NodeBV : public Node {
@@ -201,6 +217,13 @@ struct NodeBV : public Node {
 	{
 		return !(lhs == rhs);
 	}
+
+	/*!
+	 * @brief
+	 *
+	 * @return Code
+	 */
+	operator Code() const { return code_; }
 
 	/*!
 	 * @brief The bounding volume of the node.
@@ -277,6 +300,11 @@ struct NodeBV : public Node {
 	{
 	}
 
+	constexpr NodeBV(IndexData data_index, Code code, geometry::AAEBB const& aaebb) noexcept
+	    : Node(data_index, code), aaebb_(aaebb)
+	{
+	}
+
 	constexpr NodeBV(Node const& node, geometry::AAEBB const& aaebb) noexcept
 	    : Node(node), aaebb_(aaebb)
 	{
@@ -292,8 +320,12 @@ struct NodeBV : public Node {
 	geometry::AAEBB aaebb_;
 
 	template <class Derived, class DataType, class Indicators, bool LockLess,
-	          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+	          bool ReuseNodes,
+	          template <typename, typename, bool, bool> typename MemoryModel>
 	friend class OctreeBase;
+
+	template <class DataType, class Indicators, bool LockLess, bool ReuseNodes>
+	friend class OctreePointerMemory;
 };
 }  // namespace ufo::map
 

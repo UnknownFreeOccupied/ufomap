@@ -45,19 +45,21 @@
 // UFO
 #include <ufo/map/color/color_map_base.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/octree/memory/pointer.h>
 #include <ufo/map/semantic/semantic_map_base.h>
 
 namespace ufo::map
 {
 template <class OccupancyType, class SemanticType, std::size_t SemanticValueWidth,
-          bool LockLess, MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+          bool LockLess, bool ReuseNodes,
+          template <typename, typename, bool, bool> typename MemoryModel>
 using OccupancyMapColorSemanticT = OctreeMapBase<
     OccupancyColorSemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
-    OccupancyIndicators, LockLess, NodeMemoryModel, StaticallyAllocatedDepths,
-    OccupancyMapBase, ColorMapBase, SemanticMapBase>;
+    OccupancyIndicators, LockLess, ReuseNodes, MemoryModel, OccupancyMapBase,
+    ColorMapBase, SemanticMapBase>;
 
 using OccupancyMapColorSemantic =
-    OccupancyMapColorSemanticT<float, uint32_t, 16, false, MemoryModel::POINTER, 1>;
+    OccupancyMapColorSemanticT<float, uint32_t, 16, false, false, OctreePointerMemory>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_SEMANTIC_H

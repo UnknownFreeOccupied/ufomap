@@ -39,28 +39,25 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
-#define UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
+#ifndef UFO_MAP_OCTREE_MEMORY_POINTER_NODE_H
+#define UFO_MAP_OCTREE_MEMORY_POINTER_NODE_H
 
-// UFO
-#include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/octree/memory/pointer.h>
-#include <ufo/map/octree_map_base.h>
-#include <ufo/map/semantic/semantic_map_base.h>
-#include <ufo/map/time/time_map_base.h>
+// STL
+#include <array>
 
 namespace ufo::map
 {
-template <class SemanticType, std::size_t SemanticValueWidth, bool LockLess,
-          bool ReuseNodes,
-          template <typename, typename, bool, bool> typename MemoryModel>
-using OccupancyMapTimeSemanticT =
-    OctreeMapBase<OccupancyTimeSemanticNode<SemanticType, SemanticValueWidth>,
-                  OccupancyIndicators, LockLess, ReuseNodes, MemoryModel,
-                  OccupancyMapBase, TimeMapBase, SemanticMapBase>;
+template <class LeafNode>
+struct OctreePointerInnerNode : LeafNode {
+	using InnerChildrenBlock = std::array<OctreePointerInnerNode, 8>;
+	using LeafChildrenBlock = std::array<LeafNode, 8>;
 
-using OccupancyMapTimeSemantic =
-    OccupancyMapTimeSemanticT<uint32_t, 16, false, false, OctreePointerMemory>;
+	// Pointer to children
+	union {
+		InnerChildrenBlock* inner_children = nullptr;
+		LeafChildrenBlock* leaf_children;
+	};
+};
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_TIME_SEMANTIC_H
+#endif  // UFO_MAP_OCTREE_MEMORY_POINTER_NODE_H
