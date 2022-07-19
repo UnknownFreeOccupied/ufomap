@@ -372,8 +372,7 @@ struct Surfel {
 
 	constexpr math::Vector3<scalar_t> getNormal() const
 	{
-		// TODO: Normalize?
-		return getEigenVectors()[0];
+		return getEigenVectors()[0].normalize();
 	}
 
 	//
@@ -427,14 +426,32 @@ struct Surfel {
 		auto phi = 0 != x_2 ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - (x_2 * x_2)) / x_2)
 		                    : scalar_t(M_PI) / 2;
 
-		return math::Vector3<scalar_t>(
+		std::array<scalar_t, 3> e{
 		    (m[0][0] + m[1][1] + m[2][2] - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
 		    (m[0][0] + m[1][1] + m[2][2] +
 		     2 * std::sqrt(x_1) * std::cos((phi - scalar_t(M_PI)) / 3)) /
 		        3,
 		    (m[0][0] + m[1][1] + m[2][2] +
 		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
-		        3);
+		        3};
+
+		if (e[0] > e[1]) {
+			if (e[1] > e[2]) {
+				return e;
+			} else if (e[0] > e[2]) {
+				return {e[0], e[2], e[1]};
+			} else {
+				return {e[2], e[0], e[1]};
+			}
+		} else if (e[1] > e[2]) {
+			if (e[0] > e[2]) {
+				return {e[1], e[0], e[2]};
+			} else {
+				return {e[1], e[2], e[0]};
+			}
+		} else {
+			return {e[2], e[1], e[0]};
+		}
 	}
 
 	constexpr math::Vector3<scalar_t> getEigenValues(
@@ -455,14 +472,32 @@ struct Surfel {
 		auto phi = 0 != x_2 ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - (x_2 * x_2)) / x_2)
 		                    : scalar_t(M_PI) / 2;
 
-		return math::Vector3<scalar_t>(
+		std::array<scalar_t, 3> e{
 		    (sym_m[0] + sym_m[3] + sym_m[5] - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
 		    (sym_m[0] + sym_m[3] + sym_m[5] +
 		     2 * std::sqrt(x_1) * std::cos((phi - scalar_t(M_PI)) / 3)) /
 		        3,
 		    (sym_m[0] + sym_m[3] + sym_m[5] +
 		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
-		        3);
+		        3};
+
+		if (e[0] > e[1]) {
+			if (e[1] > e[2]) {
+				return e;
+			} else if (e[0] > e[2]) {
+				return {e[0], e[2], e[1]};
+			} else {
+				return {e[2], e[0], e[1]};
+			}
+		} else if (e[1] > e[2]) {
+			if (e[0] > e[2]) {
+				return {e[1], e[0], e[2]};
+			} else {
+				return {e[1], e[2], e[0]};
+			}
+		} else {
+			return {e[2], e[1], e[0]};
+		}
 	}
 
 	//
