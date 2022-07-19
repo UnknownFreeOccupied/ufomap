@@ -60,10 +60,75 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <variant>
+#include <type_traits>
 
 namespace ufo::map
 {
+enum class MapType {
+	OCCUPANCY = 0b1,
+	TIME = 0b10,
+	OCCUPANCY_TIME = 0b11,
+	COLOR = 0b100,
+	OCCUPANCY SEMANTIC = 0b1000,
+	SURFEL = 0b10000,
+};
+
+template <std::size_t MapType, bool ReuseNodes = false, bool LockLess = false>
+class Map : public OctreeMapBase<, std::conditional_t<MapType & 1U, OccupancyIndicators, OctreeIndicators>, ReuseNodes, LockLess>
+{
+};
+
+// template <std::size_t MapType, bool ReuseNodes = false, bool LockLess = false, >
+// class Map
+//     : public
+//       // clang-format off
+// 		std::conditional_t<0b1     == MapType, OccupancyMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b10    == MapType, TimeMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b11    == MapType, OccupancyTimeMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b100   == MapType, ColorMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b101   == MapType, OccupancyColorMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b110   == MapType, TimeColorMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b111   == MapType, OccupancyTimeColorMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b1000  == MapType, SemanticMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b1001  == MapType, OccupancySemanticMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b1010  == MapType, TimeSemanticMap<ReuseNodes, LockLess>,
+// 		std::conditional_t<0b1011  == MapType, OccupancyTimeSemanticMap<ReuseNodes,
+// LockLess>,
+//     std::conditional_t<0b1100  == MapType, ColorSemanticMap<ReuseNodes, LockLess>,
+//     std::conditional_t<0b1101  == MapType, OccupancyColorSemanticMap<ReuseNodes,
+//     LockLess>, std::conditional_t<0b1110  == MapType, TimeColorSemanticMap<ReuseNodes,
+//     LockLess>, std::conditional_t<0b1111  == MapType,
+//     OccupancyTimeColorSemanticMap<ReuseNodes, LockLess>, std::conditional_t<0b10000 ==
+//     MapType, SurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b10001 == MapType,
+//     OccupancySurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b10010 == MapType,
+//     TimeSurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b10011 == MapType,
+//     OccupancyTimeSurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b10100 ==
+//     MapType, ColorSurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b10101 ==
+//     MapType, OccupancyColorSurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b10110
+//     == MapType, TimeColorSurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b10111 ==
+//     MapType, OccupancyTimeColorSurfelMap<ReuseNodes, LockLess>,
+//     std::conditional_t<0b11000 == MapType, SemanticSurfelMap<ReuseNodes, LockLess>,
+//     std::conditional_t<0b11001 == MapType, OccupancySemanticSurfelMap<ReuseNodes,
+//     LockLess>, std::conditional_t<0b11010 == MapType, TimeSemanticSurfelMap<ReuseNodes,
+//     LockLess>, std::conditional_t<0b11011 == MapType,
+//     OccupancyTimeSemanticSurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b11100 ==
+//     MapType, ColorSemanticSurfelMap<ReuseNodes, LockLess>, std::conditional_t<0b11101
+//     == MapType, OccupancyColorSemanticSurfelMap<ReuseNodes, LockLess>,
+//     std::conditional_t<0b11110 == MapType, TimeColorSemanticSurfelMap<ReuseNodes,
+//     LockLess>, std::conditional_t<0b11111 == MapType,
+//     OccupancyTimeColorSemanticSurfelMap<ReuseNodes, LockLess>,
+//     void>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+// // clang-format on
+// {
+// };
+
+template <bool Occupancy = true, bool Time = false, bool Color = false,
+          bool Semantic = false, bool Surfel = false, bool ReuseNodes = false,
+          bool LockLess = false>
+class Map
+{
+};
+
 // using UFOMap =
 //     std::variant<std::monostate, OccupancyMap, OccupancyMapTime, OccupancyMapColor,
 //                  OccupancyMapSemantic, OccupancyMapTimeColor, OccupancyMapTimeSemantic,

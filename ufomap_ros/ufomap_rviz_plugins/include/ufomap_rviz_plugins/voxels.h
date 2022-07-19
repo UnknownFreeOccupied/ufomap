@@ -211,6 +211,8 @@ class Voxels : public Ogre::MovableObject
 	Ogre::MaterialPtr sphere_material_;
 	Ogre::MaterialPtr tile_material_;
 	Ogre::MaterialPtr box_material_;
+	Ogre::MaterialPtr circle_material_;
+	Ogre::MaterialPtr ellipsoid_material_;
 	Ogre::MaterialPtr current_material_;
 	float alpha_;
 

@@ -196,6 +196,8 @@ class OctreeMapBase
 
 	OctreeMapBase& operator=(OctreeMapBase&& rhs) = default;
 
+	// FIXME: Make private?
+
 	//
 	// Initilize root
 	//

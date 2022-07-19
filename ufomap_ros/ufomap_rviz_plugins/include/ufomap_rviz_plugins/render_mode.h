@@ -79,6 +79,8 @@ enum class RenderStyle {
 	SPHERES,
 	TILES,
 	BOXES,
+	CIRCLES,
+	ELLIPSOIDS,
 };
 
 static constexpr auto getStr(VoxelType const& type)
@@ -137,6 +139,10 @@ static constexpr auto getStr(RenderStyle const& style)
 			return "Tiles"sv;
 		case RenderStyle::BOXES:
 			return "Boxes"sv;
+		case RenderStyle::CIRCLES:
+			return "Circles"sv;
+		case RenderStyle::ELLIPSOIDS:
+			return "Ellipsoids"sv;
 		default:
 			return ""sv;
 	}

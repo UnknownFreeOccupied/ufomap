@@ -1,0 +1,37 @@
+material ufomap_rviz_plugins/Ellipsoid
+{
+	technique gp
+	{
+		pass
+		{
+			
+		}
+	}
+
+	technique gp_depth
+	{
+		scheme Depth
+		pass
+		{
+
+		}
+	}
+
+	technique gp_selection_first_pass
+	{
+		scheme Pick
+		pass
+		{
+
+		}
+	}
+
+	technique gp_selection_second_pass
+	{
+		scheme Pick1
+		pass
+		{
+
+		}
+	}
+}

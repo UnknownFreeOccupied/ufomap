@@ -53,6 +53,7 @@
 #include <ufomap_rviz_plugins/performance_display.h>
 #include <ufomap_rviz_plugins/render_data.h>
 #include <ufomap_rviz_plugins/render_display.h>
+#include <ufomap_rviz_plugins/ufomap.h>
 #include <ufomap_rviz_plugins/voxels.h>
 
 // ROS
@@ -72,6 +73,7 @@
 #include <condition_variable>
 #include <memory>
 #include <thread>
+#include <variant>
 
 namespace ufomap_ros::rviz_plugins
 {
@@ -177,8 +179,28 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	}
 
  private:
-	//  Map
-	ufo::map::OccupancyMapTimeColorT<false, ufo::map::MemoryModel::POINTER_REUSE, 1> map_;
+	std::variant<
+	    std::monostate,
+	    UFOMap<ufo::map::OccupancyMap>,
+			UFOMap<ufo::map::TimeMap>,
+			UFOMap<ufo::map::OccupancyMapTime>,
+			UFOMap<ufo::map::ColorMap>,
+			UFOMap<ufo::map::OccupancyMapColor>,
+			UFOMap<ufo::map::TimeMapColor>,
+			UFOMap<
+
+
+	    ufo::map::OccupancyMapTime<false, ufo::map::MemoryModel::POINTER_REUSE, 1>,
+	    ufo::map::OccupancyMapColor<uint8_t, false, ufo::map::MemoryModel::POINTER_REUSE,
+	                                1>,
+	    ufo::map::OccupancyMapSemantic<uint8_t, false, ufo::map::MemoryModel::POINTER_REUSE,
+	                                   1>,
+	    ufo::map::OccupancyMapSurfel<uint8_t, false, ufo::map::MemoryModel::POINTER_REUSE,
+	                                 1>>
+
+	    //  Map
+	    ufo::map::OccupancyMapTimeColorT<false, ufo::map::MemoryModel::POINTER_REUSE, 1>
+	        map_;
 
 	// Flag to tell the other threads to stop
 	std::atomic_bool done_ = false;
@@ -209,6 +231,9 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	//
 	// GUI properties
 	//
+
+	// Map type
+	rviz::Property* map_type_property_;
 
 	// Render
 	rviz::Property* render_category_property_;

@@ -200,6 +200,10 @@ Voxels::Voxels()
 	//     Ogre::MaterialManager::getSingleton().getByName("ufomap_rviz_plugins/Tile");
 	box_material_ =
 	    Ogre::MaterialManager::getSingleton().getByName("ufomap_rviz_plugins/Box");
+	circle_material_ =
+	    Ogre::MaterialManager::getSingleton().getByName("ufomap_rviz_plugins/Circle");
+	ellipsoid_material_ =
+	    Ogre::MaterialManager::getSingleton().getByName("ufomap_rviz_plugins/Ellipsoid");
 
 	point_material_ = Ogre::MaterialPtr(point_material_)->clone(ss.str() + "Point");
 	square_material_ = Ogre::MaterialPtr(square_material_)->clone(ss.str() + "Square");
@@ -208,6 +212,9 @@ Voxels::Voxels()
 	sphere_material_ = Ogre::MaterialPtr(sphere_material_)->clone(ss.str() + "Sphere");
 	// tile_material_ = Ogre::MaterialPtr(tile_material_)->clone(ss.str() + "Tiles");
 	box_material_ = Ogre::MaterialPtr(box_material_)->clone(ss.str() + "Box");
+	circle_material_ = Ogre::MaterialPtr(circle_material_)->clone(ss.str() + "Circle");
+	ellipsoid_material_ =
+	    Ogre::MaterialPtr(circle_material_)->clone(ss.str() + "Ellipsoid");
 
 	point_material_->load();
 	square_material_->load();
@@ -215,6 +222,8 @@ Voxels::Voxels()
 	sphere_material_->load();
 	// tile_material_->load();
 	box_material_->load();
+	circle_material_->load();
+	ellipsoid_material_->load();
 
 	setAlpha(1.0f);
 	setRenderStyle(RenderStyle::BOXES);
@@ -239,6 +248,8 @@ Voxels::~Voxels()
 	removeMaterial(sphere_material_);
 	// removeMaterial(tile_material_);
 	removeMaterial(box_material_);
+	removeMaterial(circle_material_);
+	removeMaterial(ellipsoid_material_);
 }
 
 Ogre::AxisAlignedBox const& Voxels::getBoundingBox() const { return bounding_box_; }
@@ -302,18 +313,31 @@ void Voxels::setRenderStyle(RenderStyle style)
 {
 	render_style_ = style;
 
-	if (RenderStyle::POINTS == style) {
-		current_material_ = Ogre::MaterialPtr(point_material_);
-	} else if (RenderStyle::SQUARES == style) {
-		current_material_ = Ogre::MaterialPtr(square_material_);
-	} else if (RenderStyle::FLAT_SQUARES == style) {
-		current_material_ = Ogre::MaterialPtr(flat_square_material_);
-	} else if (RenderStyle::SPHERES == style) {
-		current_material_ = Ogre::MaterialPtr(sphere_material_);
-	} else if (RenderStyle::TILES == style) {
-		current_material_ = Ogre::MaterialPtr(tile_material_);
-	} else if (RenderStyle::BOXES == style) {
-		current_material_ = Ogre::MaterialPtr(box_material_);
+	switch (style) {
+		case RenderStyle::POINTS:
+			current_material_ = Ogre::MaterialPtr(point_material_);
+			break;
+		case RenderStyle::SQUARES:
+			current_material_ = Ogre::MaterialPtr(square_material_);
+			break;
+		case RenderStyle::FLAT_SQUARES:
+			current_material_ = Ogre::MaterialPtr(flat_square_material_);
+			break;
+		case RenderStyle::SPHERES:
+			current_material_ = Ogre::MaterialPtr(sphere_material_);
+			break;
+		case RenderStyle::TILES:
+			current_material_ = Ogre::MaterialPtr(tile_material_);
+			break;
+		case RenderStyle::BOXES:
+			current_material_ = Ogre::MaterialPtr(box_material_);
+			break;
+		case RenderStyle::CIRCLES:
+			current_material_ = Ogre::MaterialPtr(circle_material_);
+			break;
+		case RenderStyle::ELLIPSOIDS:
+			current_material_ = Ogre::MaterialPtr(ellipsoid_material_);
+			break;
 	}
 
 	current_material_->load();
@@ -417,6 +441,8 @@ void Voxels::setAlpha(float alpha, bool per_voxel_alpha)
 		setAlphaBlending(sphere_material_);
 		// setAlphaBlending(tile_material_);
 		setAlphaBlending(box_material_);
+		setAlphaBlending(circle_material_);
+		setAlphaBlending(ellipsoid_material_);
 	} else {
 		setReplace(point_material_);
 		setReplace(square_material_);
@@ -424,6 +450,8 @@ void Voxels::setAlpha(float alpha, bool per_voxel_alpha)
 		setReplace(sphere_material_);
 		// setReplace(tile_material_);
 		setReplace(box_material_);
+		setReplace(circle_material_);
+		setReplace(ellipsoid_material_);
 	}
 
 	Ogre::Vector4 alpha4(alpha_, alpha_, alpha_, alpha_);

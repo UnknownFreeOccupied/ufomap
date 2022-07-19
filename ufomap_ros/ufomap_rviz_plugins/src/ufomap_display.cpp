@@ -113,6 +113,10 @@ void UFOMapDisplay::onInitialize()
 	// GUI properties
 	//
 
+	// Map type
+	map_type_property_ =
+	    new rviz::Property("Map type", QVariant(), "Map type options", this);
+
 	// Render
 	render_category_property_ =
 	    new rviz::Property("Render", QVariant(), "Render options", this);

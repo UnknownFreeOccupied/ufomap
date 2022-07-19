@@ -1208,8 +1208,7 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	}
 
 	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	                       std::string const& field, char type, uint64_t size) override
 	{
 		if ("semantics" != field) {
 			return false;
@@ -1229,9 +1228,8 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		return true;
 	}
 
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode> const& nodes, bool compress,
-	                        int compression_acceleration_level,
+	virtual void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
+	                        bool compress, int compression_acceleration_level,
 	                        int compression_level) const override
 	{
 		// uint64_t node_size = nodes.size();

@@ -43,6 +43,7 @@
 #define UFO_MAP_SEMANTIC_LABEL_MAPPING_H
 
 // UFO
+#include <ufo/algorithm/algorithm.h>
 #include <ufo/container/range.h>
 #include <ufo/map/color/color.h>
 #include <ufo/map/semantic/semantic.h>
@@ -72,7 +73,7 @@ class LabelMapping
 
 	void add(std::string const& name, container::RangeSet<semantic_label_t> const& labels)
 	{
-		// TODO: Correct?
+		// FIXME: Correct?
 		mapping_[name].ranges.insert(std::begin(labels), std::end(labels));
 	}
 
@@ -89,24 +90,21 @@ class LabelMapping
 
 	void clearLabel()
 	{
-		std::for_each(std::begin(mapping_), std::end(mapping_),
-		              [](auto const& m) { m.ranges.clear(); });
+		for_each(mapping_, [](auto& m) { m.ranges.clear(); });
 	}
 
 	void clearLabel(std::string const& name) { mapping_[name].ranges.clear(); }
 
 	void clearString()
 	{
-		std::for_each(std::begin(mapping_), std::end(mapping_),
-		              [](auto const& m) { m.strings.clear(); });
+		for_each(mapping_, [](auto& m) { m.strings.clear(); });
 	}
 
 	void clearString(std::string const& name) { mapping_[name].strings.clear(); }
 
 	void clearColor()
 	{
-		std::for_each(std::begin(mapping_), std::end(mapping_),
-		              [](auto const& m) { m.color.clear(); });
+		for_each(mapping_, [](auto& m) { m.color.clear(); });
 	}
 
 	void clearColor(std::string const& name) { mapping_[name].color.clear(); }
@@ -123,9 +121,10 @@ class LabelMapping
 
 	void erase(std::string const& name, container::RangeSet<semantic_label_t> labels)
 	{
-		for (auto const& label : labels) {
-			mapping_[name].ranges.erase(label);
-		}
+		for_each(labels, mapping_[name].ranges.erase);
+		// for (auto const& label : labels) {
+		// 	mapping_[name].ranges.erase(label);
+		// }
 	}
 
 	void erase(std::string const& name, std::string const& other_name)
@@ -170,7 +169,7 @@ class LabelMapping
 
 	std::unordered_set<std::string> getStrings(std::string const& name) const
 	{
-		if (auto it = mapping_.find(name); mapping_.end() != it) {
+		if (auto it = mapping_.find(name); std::end(mapping_) != it) {
 			return it->second.strings;
 		}
 		return std::unordered_set<std::string>();
@@ -198,6 +197,8 @@ class LabelMapping
 
 			data.writeData(out_stream);
 		}
+
+		return out_stream;
 	}
 
 	std::istream& readData(std::istream& in_stream)
@@ -279,6 +280,10 @@ class LabelMapping
 
  private:
 	struct Data {
+		container::RangeSet<semantic_label_t> ranges;
+		std::unordered_set<std::string> strings;
+		Color color;
+
 		void clear()
 		{
 			ranges.clear();
@@ -326,10 +331,6 @@ class LabelMapping
 			// Color
 			in_stream.read(reinterpret_cast<char*>(color), sizeof(Color));
 		}
-
-		container::RangeSet<semantic_label_t> ranges;
-		std::unordered_set<std::string> strings;
-		Color color;
 	};
 
 	// Combined mapping
