@@ -341,6 +341,12 @@ struct Surfel {
 		return getEigenVectors()[0].normalize();
 	}
 
+	constexpr scalar_t getPlanarity() const
+	{
+		auto const e = getEigenValues();  // FIXME: Normalized?
+		return scalar_t(2) * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
+	}
+
 	//
 	// Get covariance
 	//
@@ -436,13 +442,13 @@ struct Surfel {
 		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
 		        3};
 
-		if (e[0] < e[1]) {
+		if (e[0] > e[1]) {
 			std::swap(e[0], e[1]);
 		}
-		if (e[0] < e[2]) {
+		if (e[0] > e[2]) {
 			std::swap(e[0], e[2]);
 		}
-		if (e[1] < e[2]) {
+		if (e[1] > e[2]) {
 			std::swap(e[1], e[2]);
 		}
 
@@ -478,13 +484,13 @@ struct Surfel {
 		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
 		        3);
 
-		if (e[0] < e[1]) {
+		if (e[0] > e[1]) {
 			std::swap(e[0], e[1]);
 		}
-		if (e[0] < e[2]) {
+		if (e[0] > e[2]) {
 			std::swap(e[0], e[2]);
 		}
-		if (e[1] < e[2]) {
+		if (e[1] > e[2]) {
 			std::swap(e[1], e[2]);
 		}
 
@@ -557,6 +563,8 @@ struct Surfel {
 	uint32_t num_points_ = 0;
 	math::Vector3<scalar_t> sum_;
 	std::array<scalar_t, 6> sum_squares_ = {0, 0, 0, 0, 0, 0};
+	// FIXME: Save planarity?
+	// FIXME: Save first view position or normal?
 };
 }  // namespace ufo::map
 

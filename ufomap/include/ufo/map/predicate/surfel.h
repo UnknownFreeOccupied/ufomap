@@ -92,6 +92,29 @@ struct NumSurfelPointsInterval {
 	NumSurfelPointsMax max;
 };
 
+template <PredicateCompare PC = PredicateCompare::EQUAL>
+struct SurfelPlanarity {
+	constexpr SurfelPlanarity(double planarity) : planarity(planarity) {}
+
+	double planarity;
+};
+
+using SurfelPlanarityE = SurfelPlanarity<>;
+using SurfelPlanarityLE = SurfelPlanarity<PredicateCompare::LESS_EQUAL>;
+using SurfelPlanarityGE = SurfelPlanarity<PredicateCompare::GREATER_EQUAL>;
+using SurfelPlanarityL = SurfelPlanarity<PredicateCompare::LESS>;
+using SurfelPlanarityG = SurfelPlanarity<PredicateCompare::GREATER>;
+
+using SurfelPlanarityMin = SurfelPlanarityGE;
+using SurfelPlanarityMax = SurfelPlanarityLE;
+
+struct SurfelPlanarityInterval {
+	constexpr SurfelPlanarityInterval(double min, double max) : min(min), max(max) {}
+
+	SurfelPlanarityMin min;
+	SurfelPlanarityMax max;
+};
+
 //
 // Predicate value/return check
 //
@@ -166,6 +189,41 @@ struct PredicateValueCheck<NumSurfelPoints<PC>> {
 template <>
 struct PredicateValueCheck<NumSurfelPointsInterval> {
 	using Pred = NumSurfelPointsInterval;
+
+	template <class Map>
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
+		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
+	}
+};
+
+template <PredicateCompare PC>
+struct PredicateValueCheck<SurfelPlanarity<PC>> {
+	using Pred = SurfelPlanarity<PC>;
+
+	template <class Map>
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		if constexpr (PredicateCompare::EQUAL == PC) {
+			return m.getSurfel(n).getPlanarity() == p.planarity;
+		} else if constexpr (PredicateCompare::LESS_EQUAL == PC) {
+			return m.getSurfel(n).getPlanarity() <= p.planarity;
+		} else if constexpr (PredicateCompare::GREATER_EQUAL == PC) {
+			return m.getSurfel(n).getPlanarity() >= p.planarity;
+		} else if constexpr (PredicateCompare::LESS == PC) {
+			return m.getSurfel(n).getPlanarity() < p.planarity;
+		} else if constexpr (PredicateCompare::GREATER == PC) {
+			return m.getSurfel(n).getPlanarity() > p.planarity;
+		} else {
+			static_assert("Non-supported predicate comparison.");
+		}
+	}
+};
+
+template <>
+struct PredicateValueCheck<SurfelPlanarityInterval> {
+	using Pred = SurfelPlanarityInterval;
 
 	template <class Map>
 	static inline bool apply(Pred const& p, Map const& m, Node const& n)
@@ -251,6 +309,29 @@ struct PredicateInnerCheck<NumSurfelPoints<PC>> {
 template <>
 struct PredicateInnerCheck<NumSurfelPointsInterval> {
 	using Pred = NumSurfelPointsInterval;
+
+	template <class Map>
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
+		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
+	}
+};
+
+template <PredicateCompare PC>
+struct PredicateInnerCheck<SurfelPlanarity<PC>> {
+	using Pred = SurfelPlanarity<PC>;
+
+	template <class Map>
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		return true;
+	}
+};
+
+template <>
+struct PredicateInnerCheck<SurfelPlanarityInterval> {
+	using Pred = SurfelPlanarityInterval;
 
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
