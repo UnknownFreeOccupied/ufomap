@@ -65,33 +65,36 @@
 namespace ufo::map
 {
 enum class MapType {
-	OCCUPANCY = 0b1,
-	TIME = 0b10,
-	COLOR = 0b100,
-	SEMANTIC = 0b1000,
-	SURFEL = 0b10000,
-	SIGNED_DISTANCE = 0b100000,
-	OCCUPANCY_SMALL = 0b1000000,
-	SEMANTIC_TINY = 0b10000000,
-	SEMANTIC_SMALL = 0b100000000,
-	SEMANTIC_BIG = 0b1000000000,
+	OCCUPANCY = 1U,
+	TIME = 1U << 1U,
+	COLOR = 1U << 2U,
+	SEMANTIC = 1U << 3U,
+	SURFEL = 1U << 4U,
+	SIGNED_DISTANCE = 1U << 5U,
+	OCCUPANCY_SMALL = 1U << 6U,
+	SEMANTIC_TINY = 1U << 7U,
+	SEMANTIC_SMALL = 1U << 8U,
+	SEMANTIC_BIG = 1U << 9U,
 	// SEMANTIC_FIXED_4 =
 };
 
 template <std::size_t MapType, bool ReuseNodes = false, bool LockLess = false>
-class Map : public OctreeMapBase<
-                NodeBase<std::conditional_t<MapType & 0b1000, SemanticNode, EmptyMap<4>>,
-                         std::conditional_t<MapType & 0b1, OccupancyNode, EmptyMap<1>>,
-                         std::conditional_t<MapType & 0b10, TimeNode, EmptyMap<2>>,
-                         std::conditional_t<MapType & 0b100, ColorNode, EmptyMap<3>>,
-                         std::conditional_t<MapType & 0b10000, SurfelNode, EmptyMap<5>>>,
-                std::conditional_t<MapType & 0b1, OccupancyIndicators, OctreeIndicators>,
-                ReuseNodes, LockLess,
-                std::conditional_t<MapType & 0b1, OccupancyMapBase, EmptyMap<1>>,
-                std::conditional_t<MapType & 0b10, TimeMapBase, EmptyMap<2>>,
-                std::conditional_t<MapType & 0b100, ColorMapBase, EmptyMap<3>>,
-                std::conditional_t<MapType & 0b1000, SemanticMapBase, EmptyMap<4>>,
-                std::conditional_t<MapType & 0b10000, SurfelMapBase, EmptyMap<5>>>
+    class Map
+    : public OctreeMapBase <
+      NodeBase<
+          std::conditional_t<MapType & 0b1000, SemanticNode, EmptyMap<4>>,
+          std::conditional_t<
+              MapType & 0 std::conditional_t<MapType & 0b1, OccupancyNode, EmptyMap<1>>,
+              std::conditional_t<MapType & 0b10, TimeNode, EmptyMap<2>>,
+              std::conditional_t<MapType & 0b100, ColorNode, EmptyMap<3>>,
+              std::conditional_t<MapType & 0b10000, SurfelNode, EmptyMap<5>>>,
+          std::conditional_t<MapType & 0b1, OccupancyIndicators, OctreeIndicators>,
+          ReuseNodes, LockLess,
+          std::conditional_t<MapType & 0b1, OccupancyMapBase, EmptyMap<1>>,
+          std::conditional_t<MapType & 0b10, TimeMapBase, EmptyMap<2>>,
+          std::conditional_t<MapType & 0b100, ColorMapBase, EmptyMap<3>>,
+          std::conditional_t<MapType & 0b1000, SemanticMapBase, EmptyMap<4>>,
+          std::conditional_t<MapType & 0b10000, SurfelMapBase, EmptyMap<5>>>
 {
 };
 
