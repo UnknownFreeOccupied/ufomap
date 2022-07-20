@@ -283,7 +283,7 @@ struct Surfel {
 				clear();
 				return;
 			default:
-				num_points_ -= 1;
+				--num_points_;
 				sum_ -= point;
 
 				scalar_t const n = num_points_;
