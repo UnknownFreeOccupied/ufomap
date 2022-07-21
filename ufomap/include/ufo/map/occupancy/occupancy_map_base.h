@@ -1286,30 +1286,37 @@ class OccupancyMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               DataIdentifier data_identifier, uint64_t size)
+	               DataIdentifier identifier)
 	{
-		if ("occupancy" != field) {
+		if (!canReadData(identifier)) {
 			return false;
 		}
 
-		if ('U' == type && sizeof(uint8_t) == size) {
-			// Get min/max threshold
-			float min_logit;
-			float max_logit;
-			in_stream.read(reinterpret_cast<char*>(&min_logit), sizeof(min_logit));
-			in_stream.read(reinterpret_cast<char*>(&max_logit), sizeof(max_logit));
+		uint8_t type;
+		in_stream.read(reinterpret_cast<char*>(&type), sizeof(type));
 
-			auto data = std::make_unique<uint8_t[]>(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.get()), nodes.size() * sizeof(uint8_t));
+		// Get min/max threshold
+		float min_logit;
+		float max_logit;
+		in_stream.read(reinterpret_cast<char*>(&min_logit), sizeof(min_logit));
+		in_stream.read(reinterpret_cast<char*>(&max_logit), sizeof(max_logit));
+
+		auto const = nodes.size();
+
+		if (0 == type) {
+			// uint8_t
+
+			auto data = std::make_unique<uint8_t[]>(num_nodes);
+			in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(uint8_t));
 
 			if constexpr (std::is_same_v<logit_t, uint8_t>) {
 				if (getOccupancyClampingThresMinLogit() == min_logit &&
 				    getOccupancyClampingThresMaxLogit() == max_logit) {
-					for (size_t i = 0; i != nodes.size(); ++i) {
+					for (size_t i = 0; num_nodes != i; ++i) {
 						setOccupancyLogit(*nodes[i], data[i]);
 					}
 				} else {
-					for (size_t i = 0; i != nodes.size(); ++i) {
+					for (size_t i = 0; num_nodes != i; ++i) {
 						setOccupancyLogit(*nodes[i],
 						                  math::convertLogit<uint8_t>(
 						                      math::convertLogit(data[i], min_logit, max_logit),
@@ -1318,18 +1325,21 @@ class OccupancyMapBase
 					}
 				}
 			} else {
-				for (size_t i = 0; i != nodes.size(); ++i) {
+				for (size_t i = 0; num_nodes != i; ++i) {
 					setOccupancyLogit(*nodes[i],
 					                  std::clamp(math::convertLogit(data[i], min_logit, max_logit),
 					                             getOccupancyClampingThresMinLogit(),
 					                             getOccupancyClampingThresMaxLogit()));
 				}
 			}
-		} else if ('F' == type && sizeof(float) == size) {
-			auto data = std::make_unique<float[]>(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.get()), nodes.size() * sizeof(float));
 
-			for (size_t i = 0; i != nodes.size(); ++i) {
+		} else {
+			// float
+
+			auto data = std::make_unique<float[]>(num_nodes);
+			in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(float));
+
+			for (size_t i = 0; num_nodes != i; ++i) {
 				if constexpr (std::is_same_v<logit_t, uint8_t>) {
 					setOccupancyLogit(*nodes[i],
 					                  math::convertLogit<uint8_t>(
@@ -1343,8 +1353,6 @@ class OccupancyMapBase
 					                             getOccupancyClampingThresMaxLogit()));
 				}
 			}
-		} else {
-			return false;
 		}
 
 		return true;
@@ -1352,29 +1360,29 @@ class OccupancyMapBase
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			uint64_t const size = (nodes.size() * sizeof(logit_t)) +
-			                      sizeof(occupancy_clamping_thres_min_log_) +
-			                      sizeof(occupancy_clamping_thres_max_log_);
+		constexpr uint8_t type = std::is_same_v<logit_t, uint8_t> ? 0 : 1;
 
-			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+		auto const num_nodes = nodes.size();
 
-			out_stream.write(reinterpret_cast<char const*>(&occupancy_clamping_thres_min_log_),
-			                 sizeof(occupancy_clamping_thres_min_log_));
-			out_stream.write(reinterpret_cast<char const*>(&occupancy_clamping_thres_max_log_),
-			                 sizeof(occupancy_clamping_thres_max_log_));
-		} else {
-			uint64_t const size = nodes.size() * sizeof(logit_t);
-			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
-		}
+		auto const data_size = num_nodes * sizeof(logit_t);
 
-		auto data = std::make_unique<logit_t[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
+		uint64_t const size = data_size + sizeof(type) +
+		                      sizeof(occupancy_clamping_thres_min_log_) +
+		                      sizeof(occupancy_clamping_thres_max_log_);
+
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+		out_stream.write(reinterpret_cast<char const*>(&type), sizeof(type));
+		out_stream.write(reinterpret_cast<char const*>(&occupancy_clamping_thres_min_log_),
+		                 sizeof(occupancy_clamping_thres_min_log_));
+		out_stream.write(reinterpret_cast<char const*>(&occupancy_clamping_thres_max_log_),
+		                 sizeof(occupancy_clamping_thres_max_log_));
+
+		auto data = std::make_unique<logit_t[]>(num_nodes);
+		for (size_t i = 0; num_nodes != i; ++i) {
 			data[i] = getOccupancyLogit(nodes[i]);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(logit_t));
+		out_stream.write(reinterpret_cast<char const*>(data.get()), data_size);
 	}
 
  protected:

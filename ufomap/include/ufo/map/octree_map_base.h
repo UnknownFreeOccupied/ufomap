@@ -216,10 +216,10 @@ class OctreeMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               DataIdentifier data_identifier, uint64_t size)
+	               DataIdentifier identifier)
 	{
 		return (Bases<OctreeMapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes,
-		                                                             data_identifier) ||
+		                                                             identifier) ||
 		        ...);
 	}
 

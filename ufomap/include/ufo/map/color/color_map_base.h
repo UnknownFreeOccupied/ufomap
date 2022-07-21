@@ -312,38 +312,37 @@ class ColorMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               DataIdentifier data_identifier, uint64_t size)
+	               DataIdentifier identifier)
 	{
-		if ("color" != field) {
+		if (!canReadData(identifier)) {
 			return false;
 		}
 
-		if ('U' == type && sizeof(RGBColor) == size) {
-			auto data = std::make_unique<RGBColor[]>(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.get()),
-			               nodes.size() * sizeof(RGBColor));
+		auto const num_nodes = nodes.size();
 
-			for (size_t i = 0; i != nodes.size(); ++i) {
-				setColor(*nodes[i], data[i]);
-			}
-		} else {
-			return false;
+		auto data = std::make_unique<RGBColor[]>(num_nodes);
+		in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(RGBColor));
+
+		for (std::size_t i = 0; num_nodes != i; ++i) {
+			setColor(*nodes[i], data[i]);
 		}
+
 		return true;
 	}
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
-		uint64_t const size = nodes.size() * sizeof(RGBColor);
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(uint64_t));
+		auto const num_nodes = nodes.size();
 
-		auto data = std::make_unique<RGBColor[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
+		uint64_t const size = num_nodes * sizeof(RGBColor);
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+
+		auto data = std::make_unique<RGBColor[]>(num_nodes);
+		for (size_t i = 0; num_nodes != i; ++i) {
 			data[i] = getColor(nodes[i]);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(RGBColor));
+		out_stream.write(reinterpret_cast<char const*>(data.get()), size);
 	}
 };
 }  // namespace ufo::map

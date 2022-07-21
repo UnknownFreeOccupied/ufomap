@@ -342,23 +342,22 @@ class SignedDistanceMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               DataIdentifier data_identifier, uint64_t size)
+	               DataIdentifier identifier)
 	{
-		if ("surfel" != field) {
+		if (!canReadData(identifier)) {
 			return false;
 		}
 
-		if ('U' == type && sizeof(signed_distance_t) == size) {
-			auto data = std::make_unique<signed_distance_t[]>(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.get()),
-			               nodes.size() * sizeof(signed_distance_t));
+		auto const num_nodes = nodes.size();
 
-			for (size_t i = 0; i != nodes.size(); ++i) {
-				setSignedDistance(*nodes[i], reinterpret_cast<signed_distance_t const>(data[i]));
-			}
-		} else {
-			return false;
+		auto data = std::make_unique<signed_distance_t[]>(num_nodes);
+		in_stream.read(reinterpret_cast<char*>(data.get()),
+		               num_nodes * sizeof(signed_distance_t));
+
+		for (size_t i = 0; num_nodes != i; ++i) {
+			setSignedDistance(*nodes[i], data[i]);
 		}
+
 		return true;
 	}
 
@@ -366,16 +365,17 @@ class SignedDistanceMapBase
 	                bool compress, int compression_acceleration_level,
 	                int compression_level) const
 	{
-		uint64_t const size = nodes.size() * sizeof(signed_distance_t);
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+		auto const num_nodes = nodes.size();
+		uint64_t const data_size = num_nodes * sizeof(signed_distance_t);
 
-		auto data = std::make_unique<signed_distance_t[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = reinterpret_cast<signed_distance_t const>(getSignedDistance(nodes[i]));
+		out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(data_size));
+
+		auto data = std::make_unique<signed_distance_t[]>(num_nodes);
+		for (size_t i = 0; num_nodes != i; ++i) {
+			data[i] = getSignedDistance(nodes[i]);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(signed_distance_t));
+		out_stream.write(reinterpret_cast<char const*>(data.get()), data_size);
 	}
 
  protected:

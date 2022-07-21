@@ -1065,7 +1065,7 @@ class SemanticMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               DataIdentifier data_identifier, uint64_t size)
+	               DataIdentifier identifier)
 	{
 		if ("semantics" != field) {
 			return false;
@@ -1073,7 +1073,7 @@ class SemanticMapBase
 
 		if ('U' == type && sizeof(semantic_label_t) == size) {
 			semantic_label_t bits_for_label;
-			in_stream.read(reinterpret_cast<char*>(&bits_for_label), sizeof(semantic_label_t));
+			in_stream.read(reinterpret_cast<char*>(&bits_for_label), sizeof(bits_for_label));
 			for (auto& node : nodes) {
 				node->semantics.readData(in_stream);
 			}
@@ -1120,18 +1120,18 @@ class SemanticMapBase
 		total_size = node_size + mapping_size + propagation_size;
 		total_size += sizeof(SemanticValue);  // For number of bits
 
-		out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
-		out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
+		out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(total_size));
+		out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(total_size));
 
 		// FIXME: Improve
 
 		// FIXME: Write mappings
 
 		// FIXME: Write propagation strategies
-		out_stream.write(reinterpret_cast<char*>(&num), sizeof(uint64_t));
+		out_stream.write(reinterpret_cast<char*>(&num), sizeof(num));
 
 		semantic_value_t bits_for_value = LeafNode::getSemanticValueBits();
-		out_stream.write(reinterpret_cast<char*>(&bits_for_value), sizeof(SemanticValue));
+		out_stream.write(reinterpret_cast<char*>(&bits_for_value), sizeof(bits_for_value));
 
 		for (auto const& node : nodes) {
 			node->semantics.writeData(out_stream);

@@ -75,8 +75,8 @@ class EmptyMap
 
 	constexpr bool canReadData(DataIdentifier identifier) const noexcept { return false; }
 
-	constexpr bool readNodes(std::istream&, std::vector<LeafNode*> const&, DataIdentifier,
-	                         uint64_t) const noexcept
+	constexpr bool readNodes(std::istream&, std::vector<LeafNode*> const&,
+	                         DataIdentifier) const noexcept
 	{
 		return false;
 	}

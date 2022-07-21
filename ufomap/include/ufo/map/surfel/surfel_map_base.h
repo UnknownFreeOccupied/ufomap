@@ -575,9 +575,9 @@ class SurfelMapBase
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               DataIdentifier data_identifier, uint64_t size)
+	               DataIdentifier identifier)
 	{
-		if ("surfel" != field) {
+		if (!canReadData(identifier)) {
 			return false;
 		}
 
@@ -596,16 +596,17 @@ class SurfelMapBase
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
-		uint64_t const size = nodes.size() * sizeof(Surfel);
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+		auto const num_nodes = nodes.size();
+		uint64_t const data_size = num_nodes * sizeof(Surfel);
 
-		auto data = std::make_unique<Surfel[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
+		out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(data_size));
+
+		auto data = std::make_unique<Surfel[]>(num_nodes);
+		for (size_t i = 0; num_nodes != i; ++i) {
 			data[i] = getSurfel(nodes[i]);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(Surfel));
+		out_stream.write(reinterpret_cast<char const*>(data.get()), data_size);
 	}
 
  protected:

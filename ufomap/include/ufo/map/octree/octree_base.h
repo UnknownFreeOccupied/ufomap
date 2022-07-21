@@ -3523,9 +3523,9 @@ class OctreeBase
 	{
 		while (!in_stream.eof()) {
 			DataIdentifier identifier;
-			in_stream.read(reinterpret_cast<char*>(&identifier), sizeof(uint8_t));
+			in_stream.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
 			uint64_t data_size;
-			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(uint64_t));
+			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
 			if (!canReadData(identifier)) {
 				// Skip forward
@@ -3543,12 +3543,12 @@ class OctreeBase
 
 				decompressData(in_stream, data_stream, data_size, compressed_data_size);
 
-				if (!derived().readNodes(data_stream, node, identifier, data_size)) {
+				if (!derived().readNodes(data_stream, node, identifier)) {
 					// Skip forward
 					in_stream.seekg(compressed_data_size, std::istream::cur);
 				}
 			} else {
-				if (!derived().readNodes(in_stream, nodes, identifier, data_size)) {
+				if (!derived().readNodes(in_stream, nodes, identifier)) {
 					// Skip forward
 					in_stream.seekg(data_size, std::istream::cur);
 				}
@@ -3576,12 +3576,12 @@ class OctreeBase
 
 			while (!data_stream.eof()) {
 				DataIdentifier identifier;
-				data_stream.read(reinterpret_cast<char*>(&identifier), sizeof(uint8_t));
+				data_stream.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
 				uint64_t data_size;
-				data_stream.read(reinterpret_cast<char*>(&data_size), sizeof(uint64_t));
+				data_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-				out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(uint8_t));
-				out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64_t));
+				out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
+				out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(data_size));
 				compressData(data_stream, out_stream, data_size, compression_acceleration_level,
 				             compression_level);
 			}
@@ -3608,12 +3608,12 @@ class OctreeBase
 
 			while (!data_stream.eof()) {
 				DataIdentifier identifier;
-				data_stream.read(reinterpret_cast<char*>(&identifier), sizeof(uint8_t));
+				data_stream.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
 				uint64_t data_size;
-				data_stream.read(reinterpret_cast<char*>(&data_size), sizeof(uint64_t));
+				data_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-				out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(uint8_t));
-				out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64_t));
+				out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
+				out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(data_size));
 				compressData(data_stream, out_stream, data_size, compression_acceleration_level,
 				             compression_level);
 			}
