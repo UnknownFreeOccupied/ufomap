@@ -1280,19 +1280,13 @@ class OccupancyMapBase
 	// Input/output (read/write)
 	//
 
-	void addFileInfo(FileInfo& info) const
+	bool canReadData(DataIdentifier identifier) const noexcept
 	{
-		info["fields"].emplace_back("occupancy");
-		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			info["type"].emplace_back("U");
-		} else {
-			info["type"].emplace_back("F");
-		}
-		info["size"].emplace_back(std::to_string(sizeof(logit_t)));
+		return DataIdentifier::OCCUPANCY == identifier;
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size)
+	               DataIdentifier data_identifier, uint64_t size)
 	{
 		if ("occupancy" != field) {
 			return false;

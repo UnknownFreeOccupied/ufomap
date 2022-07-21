@@ -48,7 +48,6 @@
 
 namespace ufo::map
 {
-enum class MemoryModel { POINTER, POINTER_REUSE, INDEX, INDEX_REUSE };
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
 enum class PropagationCriteria { MIN, MAX, MEAN };
 

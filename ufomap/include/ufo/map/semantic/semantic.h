@@ -50,6 +50,7 @@ namespace ufo::map
 using semantic_label_t = uint64_t;
 using semantic_value_t = uint64_t;
 
+// template <typename LabelType = semantic_label_t, typename ValueType = semantic_value_t>
 struct SemanticPair {
 	semantic_label_t label = 0;
 	semantic_value_t value = 0;

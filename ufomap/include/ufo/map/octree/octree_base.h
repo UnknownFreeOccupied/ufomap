@@ -78,8 +78,7 @@ namespace ufo::map
 {
 // Utilizing Curiously recurring template pattern (CRTP)
 template <class Derived, class DataType, class Indicators = OctreeIndicators,
-          bool LockLess = false, MemoryModel NodeMemoryModel = MemoryModel::POINTER,
-          depth_t StaticallyAllocatedDepths = 1>
+          bool ReuseNodes = false, bool LockLess = false>
 class OctreeBase
 {
  private:
@@ -95,10 +94,7 @@ class OctreeBase
 
  public:
 	using LeafNode = OctreeLeafNode<DataType, Indicators>;
-	using InnerNode = std::conditional_t<MemoryModel::POINTER == NodeMemoryModel ||
-	                                         MemoryModel::POINTER_REUSE == NodeMemoryModel,
-	                                     OctreePointerInnerNode<LeafNode>,
-	                                     OctreeIndexInnerNode<LeafNode>>;
+	using InnerNode = OctreeInnerNode<LeafNode>;
 
  private:
 	using LeafNodeBlock = typename InnerNode::LeafChildrenBlock;
@@ -118,15 +114,10 @@ class OctreeBase
 
 	void reserve(std::size_t num_leaf_nodes, std::size_t num_inner_nodes)
 	{
-		if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+		if constexpr (ReuseNodes) {
 			// TODO: Implement
 			// free_inner_blocks_
 			// free_leaf_blocks_
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel ||
-		                     MemoryModel::INDEX_REUSE == NodeMemoryModel) {
-			inner_node_blocks_.reserve(num_inner_nodes / 8);
-			leaf_node_blocks_.reserve(num_leaf_nodes / 8);
-			// FIXME: Do something about free_leaf_block_indices_ and free_inner_block_indices_?
 		}
 	}
 
@@ -450,7 +441,7 @@ class OctreeBase
 	 *
 	 * @return Memory usage of the octree.
 	 */
-	[[nodiscard]] virtual std::size_t memoryUsage() const noexcept
+	[[nodiscard]] std::size_t memoryUsage() const noexcept
 	{
 		return (numInnerNodes() * memoryInnerNode()) +
 		       (numInnerLeafNodes() * memoryInnerLeafNode()) +
@@ -502,7 +493,7 @@ class OctreeBase
 	 *
 	 * @return Memory usage of the octree.
 	 */
-	[[nodiscard]] virtual std::size_t memoryUsageAllocated() const noexcept
+	[[nodiscard]] std::size_t memoryUsageAllocated() const noexcept
 	{
 		return (numInnerNodesAllocated() * memoryInnerNode()) +
 		       (numInnerLeafNodesAllocated() * memoryInnerLeafNode()) +
@@ -2021,32 +2012,6 @@ class OctreeBase
 	// Input/output (read/write)
 	//
 
-	[[nodiscard]] bool canMerge(std::filesystem::path const& filename) const
-	{
-		std::ifstream file;
-		file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		file.imbue(std::locale());
-		file.open(filename, std::ios_base::in | std::ios_base::binary);
-
-		return canMerge(file);
-	}
-
-	[[nodiscard]] bool canMerge(std::istream& in_stream) const
-	{
-		auto pos = in_stream.tellg();
-		FileInfo header = readHeader(in_stream);
-		in_stream.seekg(pos);
-
-		double res;
-		depth_t depth_levels;
-		std::istringstream(header.at("resolution").at(0)) >> res;
-		uint32_t tmp;
-		std::istringstream(header.at("depth_levels").at(0)) >> tmp;
-		depth_levels = tmp;
-
-		return resolution() == res && depthLevels() == depth_levels;
-	}
-
 	void read(std::filesystem::path const& filename, bool propagate = true)
 	{
 		std::ifstream file;
@@ -2059,49 +2024,18 @@ class OctreeBase
 
 	void read(std::istream& in_stream, bool propagate = true)
 	{
-		if (!correctFileType(in_stream)) {
-			throw std::runtime_error("Trying to read non-UFOMap file");
-		}
-
-		FileInfo header = readHeader(in_stream);
-
+		FileHeader header = readHeader(in_stream);
 		readData(in_stream, header, propagate);
 	}
 
-	void readData(std::istream& in_stream, FileInfo const& header, bool propagate = true)
+	void readData(std::istream& in_stream, FileHeader const& header, bool propagate = true)
 	{
-		double res;
-		depth_t depth_levels;
-
-		std::istringstream(header.at("resolution").at(0)) >> res;
-		uint32_t tmp;
-		std::istringstream(header.at("depth_levels").at(0)) >> tmp;
-		depth_levels = tmp;
-
-		if (resolution() != res || depthLevels() != depth_levels) {
-			clear(res, depth_levels);
+		if (resolution() != header.resolution || depthLevels() != header.depth_levels) {
+			clear(header.resolution, header.depth_levels);
 		}
 
-		uint8_t compressed;
-		in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
-		uint64_t uncompressed_data_size;
-		in_stream.read(reinterpret_cast<char*>(&uncompressed_data_size),
-		               sizeof(uncompressed_data_size));
-
-		if (UINT8_MAX == compressed) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
-
-			decompressData(in_stream, data, uncompressed_data_size);
-
-			std::vector<LeafNode*> nodes = getNodes(data);
-			readNodes(data, header, nodes);
-		} else {
-			std::vector<LeafNode*> nodes = getNodes(in_stream);
-			readNodes(in_stream, header, nodes);
-		}
+		std::vector<LeafNode*> nodes = getNodes(in_stream);
+		readNodes(in_stream, nodes, header.compressed);
 
 		if (propagate) {
 			updateModifiedNodes();
@@ -2144,7 +2078,12 @@ class OctreeBase
 	           bool compress = false, int compression_acceleration_level = 1,
 	           int compression_level = 0) const
 	{
-		writeHeader(out_stream, getFileInfo());
+		FileOptions options;
+		options.compressed = compress;
+		options.resolution = resolution();
+		options.depth_levels = depthLevels();
+
+		writeHeader(out_stream, options);
 		writeData(out_stream, std::forward<Predicates>(predicates), min_depth, compress,
 		          compression_acceleration_level, compression_level);
 	}
@@ -2166,7 +2105,12 @@ class OctreeBase
 	                            int compression_acceleration_level = 1,
 	                            int compression_level = 0)
 	{
-		writeHeader(out_stream, getFileInfo());
+		FileOptions options;
+		options.compressed = compress;
+		options.resolution = resolution();
+		options.depth_levels = depthLevels();
+
+		writeHeader(out_stream, options);
 		writeAndUpdateModifiedData(out_stream, compress, compression_acceleration_level,
 		                           compression_level);
 	}
@@ -2633,24 +2577,12 @@ class OctreeBase
 
 	constexpr LeafNode const& getLeafNode(Node node) const
 	{
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel ||
-		              MemoryModel::POINTER_REUSE == NodeMemoryModel) {
-			return *static_cast<LeafNode*>(node.data());
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel ||
-		                     MemoryModel::INDEX_REUSE == NodeMemoryModel) {
-			// TODO: return leaf_nodes_[node.dataIndex()];
-		}
+		return *static_cast<LeafNode*>(node.data());
 	}
 
 	constexpr LeafNode& getLeafNode(Node node)
 	{
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel ||
-		              MemoryModel::POINTER_REUSE == NodeMemoryModel) {
-			return *static_cast<LeafNode*>(node.data());
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel ||
-		                     MemoryModel::INDEX_REUSE == NodeMemoryModel) {
-			// TODO: return leaf_nodes_[node.dataIndex()];
-		}
+		return *static_cast<LeafNode*>(node.data());
 	}
 
 	LeafNode const& getLeafNode(Code code) const
@@ -2679,24 +2611,12 @@ class OctreeBase
 
 	constexpr InnerNode const& getInnerNode(Node node) const
 	{
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel ||
-		              MemoryModel::POINTER_REUSE == NodeMemoryModel) {
-			return *static_cast<InnerNode*>(node.data());
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel ||
-		                     MemoryModel::INDEX_REUSE == NodeMemoryModel) {
-			// TODO: return inner_nodes_[node.dataIndex()];
-		}
+		return *static_cast<InnerNode*>(node.data());
 	}
 
 	constexpr InnerNode& getInnerNode(Node& node)
 	{
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel ||
-		              MemoryModel::POINTER_REUSE == NodeMemoryModel) {
-			return *static_cast<InnerNode*>(node.data());
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel ||
-		                     MemoryModel::INDEX_REUSE == NodeMemoryModel) {
-			// TODO: return inner_nodes_[node.dataIndex()];
-		}
+		return *static_cast<InnerNode*>(node.data());
 	}
 
 	InnerNode const& getInnerNode(Code code) const
@@ -2905,22 +2825,6 @@ class OctreeBase
 					num_allocated_inner_nodes_ += 1;
 				}
 			}
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel) {
-			if (std::numeric_limits<uint32_t>::max() == node.children_index) {
-				if constexpr (!LockLess) {
-					// TODO: Implement
-
-					node.children_index = leaf_node_blocks_.size();
-					leaf_node_blocks_.push_back(LeafNodeBlock());
-
-					// TODO: Implement
-				} else {
-					node.children_index = leaf_node_blocks_.size();
-					leaf_node_blocks_.push_back(LeafNodeBlock());  // FIXME: Improve
-				}
-			}
-		} else if constexpr (MemoryModel::INDEX_REUSE == NodeMemoryModel) {
-			// TODO: Implement
 		}
 
 		num_leaf_nodes_ += 8;
@@ -2979,8 +2883,6 @@ class OctreeBase
 					num_allocated_inner_nodes_ += 1;
 				}
 			}
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel) {
-			// TODO: Implement
 		}
 
 		num_inner_leaf_nodes_ += 7;
@@ -3106,8 +3008,6 @@ class OctreeBase
 			}
 
 			node.inner_children = nullptr;
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel) {
-			// TODO: Implement
 		}
 	}
 
@@ -3171,8 +3071,6 @@ class OctreeBase
 			}
 
 			node.inner_children = nullptr;
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel) {
-			// TODO: Implement
 		}
 	}
 
@@ -3532,15 +3430,6 @@ class OctreeBase
 	// Input/output (read/write)
 	//
 
-	FileInfo getFileInfo() const
-	{
-		FileInfo info;
-		info["resolution"].push_back(std::to_string(resolution()));
-		info["depth_levels"].push_back(std::to_string(static_cast<uint32_t>(depthLevels())));
-		derived().addFileInfo(info);
-		return info;
-	}
-
 	std::vector<LeafNode*> getNodes(std::istream& in_stream)
 	{
 		auto [indicators, size] = getIndicators(in_stream);
@@ -3629,26 +3518,40 @@ class OctreeBase
 		return indicators;
 	}
 
-	void readNodes(std::istream& in_stream, FileInfo const& header,
-	               std::vector<LeafNode*> const& nodes)
+	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               bool compressed)
 	{
-		size_t num_fields = header.at("fields").size();
-		if (header.at("size").size() != num_fields ||
-		    header.at("type").size() != num_fields) {
-			return;
-		}
-
-		for (size_t i = 0; i != header.at("fields").size(); ++i) {
-			std::string field = header.at("fields")[i];
-			uint64_t size = static_cast<uint64_t>(std::stoi(header.at("size")[i]));
-			char type = header.at("type")[i][0];
-
+		while (!in_stream.eof()) {
+			DataIdentifier identifier;
+			in_stream.read(reinterpret_cast<char*>(&identifier), sizeof(uint8_t));
 			uint64_t data_size;
-			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
+			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(uint64_t));
 
-			if (!derived().readNodes(in_stream, nodes, field, type, size)) {
+			if (!canReadData(identifier)) {
 				// Skip forward
 				in_stream.seekg(data_size, std::istream::cur);
+				continue;
+			}
+
+			if (compressed) {
+				std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
+				                              std::ios_base::binary);
+				data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+				data_stream.imbue(std::locale());
+
+				uint64_t compressed_data_size = 0;
+
+				decompressData(in_stream, data_stream, data_size, compressed_data_size);
+
+				if (!derived().readNodes(data_stream, node, identifier, data_size)) {
+					// Skip forward
+					in_stream.seekg(compressed_data_size, std::istream::cur);
+				}
+			} else {
+				if (!derived().readNodes(in_stream, nodes, identifier, data_size)) {
+					// Skip forward
+					in_stream.seekg(data_size, std::istream::cur);
+				}
 			}
 		}
 	}
@@ -3658,91 +3561,65 @@ class OctreeBase
 	               bool compress, int compression_acceleration_level,
 	               int compression_level) const
 	{
-		uint8_t compressed = compress ? UINT8_MAX : 0U;
-		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
-
-		auto size_pos = out_stream.tellp();
-		uint64_t uncompressed_data_size = 0;
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		auto data_pos = out_stream.tellp();
-
 		auto [indicators, nodes] =
 		    data(predicate::Leaf(min_depth) && std::forward<Predicates>(predicates));
 
+		writeIndicators(out_stream, indicators);
+
 		if (compress) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
+			std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
+			                              std::ios_base::binary);
+			data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data_stream.imbue(std::locale());
 
-			writeIndicators(data, indicators);
-			derived().writeNodes(data, nodes);
+			derived().writeNodes(data_stream, nodes);
 
-			uncompressed_data_size = data.tellp();
+			while (!data_stream.eof()) {
+				DataIdentifier identifier;
+				data_stream.read(reinterpret_cast<char*>(&identifier), sizeof(uint8_t));
+				uint64_t data_size;
+				data_stream.read(reinterpret_cast<char*>(&data_size), sizeof(uint64_t));
 
-			compressData(data, out_stream, uncompressed_data_size,
-			             compression_acceleration_level, compression_level);
+				out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(uint8_t));
+				out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64_t));
+				compressData(data_stream, out_stream, data_size, compression_acceleration_level,
+				             compression_level);
+			}
 		} else {
-			writeIndicators(out_stream, indicators);
 			derived().writeNodes(out_stream, nodes);
-
-			uncompressed_data_size = out_stream.tellp() - data_pos;
 		}
-
-		auto end_pos = out_stream.tellp();
-
-		out_stream.seekp(size_pos);
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		out_stream.seekp(end_pos);
 	}
 
 	void writeAndUpdateModifiedData(std::ostream& out_stream, bool compress,
 	                                int compression_acceleration_level,
 	                                int compression_level)
 	{
-		uint8_t compressed = compress ? UINT8_MAX : 0U;
-		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
-
-		auto size_pos = out_stream.tellp();
-		uint64_t uncompressed_data_size = 0;
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		auto data_pos = out_stream.tellp();
-
 		auto [indicators, nodes] = modifiedData();
 
+		writeIndicators(out_stream, indicators);
+
 		if (compress) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
+			std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
+			                              std::ios_base::binary);
+			data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data_stream.imbue(std::locale());
 
-			writeIndicators(data, indicators);
-			derived().writeNodes(data, nodes);
+			derived().writeNodes(data_stream, nodes);
 
-			uncompressed_data_size = data.tellp();
+			while (!data_stream.eof()) {
+				DataIdentifier identifier;
+				data_stream.read(reinterpret_cast<char*>(&identifier), sizeof(uint8_t));
+				uint64_t data_size;
+				data_stream.read(reinterpret_cast<char*>(&data_size), sizeof(uint64_t));
 
-			compressData(data, out_stream, uncompressed_data_size,
-			             compression_acceleration_level, compression_level);
+				out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(uint8_t));
+				out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64_t));
+				compressData(data_stream, out_stream, data_size, compression_acceleration_level,
+				             compression_level);
+			}
 		} else {
-			writeIndicators(out_stream, indicators);
 			derived().writeNodes(out_stream, nodes);
-
-			uncompressed_data_size = out_stream.tellp() - data_pos;
 		}
-
-		auto end_pos = out_stream.tellp();
-
-		out_stream.seekp(size_pos);
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		out_stream.seekp(end_pos);
 	}
 
 	template <class Predicates>
@@ -3959,12 +3836,8 @@ class OctreeBase
 	// The maximum coordinate value the octree can store
 	Key::key_t max_value_;
 
-	// FIXME: Statically allocated nodes of the octree. These are nodes that always exist,
-	// they correspond to the highest StaticallyAllocatedDepths depths of the octree, and
-	// therefore contain the root node. They are ordered based on their code, making it is
-	// possible to skip depths when looking for a specific node.
-	std::array<InnerNode, (math::ipow(8, StaticallyAllocatedDepths) - 1) / 7>
-	    statically_allocated_nodes_;
+	// Root of the octree
+	InnerNode root_;
 
 	// Stores the size of a node at a given depth, where the depth is the index
 	std::array<double, maxDepthLevels()> node_size_;
@@ -3981,47 +3854,16 @@ class OctreeBase
 	std::array<std::atomic_flag, maxDepthLevels() + 1> children_locks_;
 
 	//
-	// Only used when NodeMemoryModel is either MemoryModel::INDEX or
-	// MemoryModel::INDEX_REUSE
+	// Only used when ReuseNodes
 	//
 
-	std::conditional_t<MemoryModel::INDEX == NodeMemoryModel ||
-	                       MemoryModel::INDEX_REUSE == NodeMemoryModel,
-	                   std::vector<InnerNodeBlock>, std::array<bool, 0>>
-	    inner_node_blocks_;
-	std::conditional_t<MemoryModel::INDEX == NodeMemoryModel ||
-	                       MemoryModel::INDEX_REUSE == NodeMemoryModel,
-	                   std::vector<LeafNodeBlock>, std::array<bool, 0>>
-	    leaf_node_blocks_;
-
-	//
-	// Only used when NodeMemoryModel is MemoryModel::POINTER_REUSE
-	//
-
-	std::conditional_t<MemoryModel::POINTER_REUSE == NodeMemoryModel,
+	std::conditional_t<ReuseNodes,
 	                   std::stack<InnerNodeBlock*, std::vector<InnerNodeBlock*>>,
 	                   std::array<bool, 0>>
 	    free_inner_blocks_;
-	std::conditional_t<MemoryModel::POINTER_REUSE == NodeMemoryModel,
-	                   std::stack<LeafNodeBlock*, std::vector<LeafNodeBlock*>>,
+	std::conditional_t<ReuseNodes, std::stack<LeafNodeBlock*, std::vector<LeafNodeBlock*>>,
 	                   std::array<bool, 0>>
 	    free_leaf_blocks_;
-
-	//
-	// Only used when NodeMemoryModel is MemoryModel::INDEX_REUSE
-	//
-
-	std::conditional_t<MemoryModel::INDEX_REUSE == NodeMemoryModel,
-	                   std::stack<uint32_t, std::vector<uint32_t>>, std::array<bool, 0>>
-	    free_leaf_block_indices_;
-	std::conditional_t<MemoryModel::INDEX_REUSE == NodeMemoryModel,
-	                   std::stack<uint32_t, std::vector<uint32_t>>, std::array<bool, 0>>
-	    free_inner_block_indices_;
-
-	//
-	// Only used when NodeMemoryModel is either MemoryModel::POINTER_REUSE or
-	// MemoryModel::INDEX_REUSE
-	//
 
 	std::atomic_flag free_inner_block_lock_ = ATOMIC_FLAG_INIT;
 	std::atomic_flag free_leaf_block_lock_ = ATOMIC_FLAG_INIT;
@@ -4031,19 +3873,16 @@ class OctreeBase
 	//
 
 	// Current number of inner nodes
-	std::atomic_size_t num_inner_nodes_ =
-	    (math::ipow(8, StaticallyAllocatedDepths - 1) - 1) / 7;
+	std::atomic_size_t num_inner_nodes_ = 0;
 	// Current number of inner leaf nodes
-	std::atomic_size_t num_inner_leaf_nodes_ = math::ipow(8, StaticallyAllocatedDepths - 1);
+	std::atomic_size_t num_inner_leaf_nodes_ = 1;
 	// Current number of leaf nodes
 	std::atomic_size_t num_leaf_nodes_ = 0;
 
 	// Current number of allocated inner nodes
-	std::atomic_size_t num_allocated_inner_nodes_ =
-	    (math::ipow(8, StaticallyAllocatedDepths - 1) - 1) / 7;
+	std::atomic_size_t num_allocated_inner_nodes_ = 0;
 	// Current number of allocated inner leaf nodes
-	std::atomic_size_t num_allocated_inner_leaf_nodes_ =
-	    math::ipow(8, StaticallyAllocatedDepths - 1);
+	std::atomic_size_t num_allocated_inner_leaf_nodes_ = 1;
 	// Current number of allocated leaf nodes
 	std::atomic_size_t num_allocated_leaf_nodes_ = 0;
 };

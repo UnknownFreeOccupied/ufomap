@@ -50,9 +50,9 @@ namespace ufo::map
 struct ColorNode {
 	RGBColor color;
 
-	constexpr bool operator==(ColorNode const& rhs) const { return color == rhs.color; }
+	constexpr bool operator==(ColorNode rhs) const noexcept { return color == rhs.color; }
 
-	constexpr bool operator!=(ColorNode const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(ColorNode rhs) const noexcept { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 

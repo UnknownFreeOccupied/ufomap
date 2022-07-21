@@ -39,11 +39,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEMANTIC_CONTAINER_H
-#define UFO_MAP_SEMANTIC_CONTAINER_H
+#ifndef UFO_MAP_SEMANTICS_H
+#define UFO_MAP_SEMANTICS_H
 
 // UFO
 #include <ufo/container/range.h>
+#include <ufo/container/range_map.h>
+#include <ufo/container/range_set.h>
 
 // STL
 #include <algorithm>
@@ -62,110 +64,80 @@ namespace ufo::map
 {
 /*!
  * Associative ordered container using a data-coherent implementation.
- * Elements of the container are stored using a single unsigned type
+ * LabelValuePairs of the container are stored using a single unsigned type
  * where the most significant bits represent the key and the least significant the value.
  * The number of bits allocated for the key and value is custom for each
  * container instance, e.g., if DataType = uint16_t and ValueWidth = 1
  * the key will be 15 bits and the value 1 bit.
  */
 template <typename DataType, std::size_t ValueWidth, std::size_t FixedSize = 0>
-class SemanticContainer
+class Semantics
 {
  private:
-	static_assert(std::is_unsigned_v<DataType>,
-	              "SemanticContainer require unsigned data type.");
+	static_assert(std::is_unsigned_v<DataType>, "Semantics require unsigned data type.");
 
 	static constexpr std::size_t LabelWidth =
 	    std::numeric_limits<DataType>::digits - ValueWidth;
 	static constexpr DataType LabelMask =
 	    (std::numeric_limits<DataType>::max() >> ValueWidth) << ValueWidth;
-	static constexpr DataType ValueMask =
-	    (std::numeric_limits<DataType>::max() << LabelWidth) >> LabelWidth;
+	static constexpr DataType ValueMask = ~LabelMask;
 
 	static constexpr std::size_t FixedSizeC = std::min(FixedSize, LabelMask >> ValueWidth);
 
  public:
 	// Tags
-	using key_type = DataType;
-	using mapped_type = DataType;
+	using label_type = DataType;
+	using value_type = DataType;
 
-	struct Element {
+	[[nodiscard]] static constexpr std::size_t getLabelBits() noexcept
+	{
+		return LabelWidth;
+	}
+
+	[[nodiscard]] static constexpr std::size_t getValueBits() noexcept
+	{
+		return ValueWidth;
+	}
+
+	[[nodiscard]] static constexpr bool isFixedSize() noexcept { return 0 != FixedSize; }
+
+	//
+	// Label value pair
+	//
+
+	struct LabelValuePair {
 	 public:
-		constexpr Element() = default;
+		constexpr LabelValuePair() = default;
 
-		constexpr Element(key_type key, mapped_type value)
+		constexpr LabelValuePair(label_type key, value_type value)
 		    : data_((key << ValueWidth) | (value & ValueMask))
 		{
 		}
 
-		[[nodiscard]] constexpr key_type getKey() const noexcept
+		[[nodiscard]] constexpr label_type getLabel() const noexcept
 		{
 			return data_ >> ValueWidth;
 		}
 
-		[[nodiscard]] constexpr mapped_type getValue() const noexcept
+		[[nodiscard]] constexpr value_type getValue() const noexcept
 		{
 			return data_ & ValueMask;
 		}
 
-		constexpr void setValue(mapped_type value) noexcept
+		constexpr void setValue(value_type value) noexcept
 		{
 			data_ = (data_ & LabelMask) | (value & ValueMask);
 		}
 
-		constexpr bool operator==(Element const &rhs) const noexcept
-		{
-			return rhs.data_ == data_;
-		}
-
-		constexpr bool operator!=(Element const &rhs) const noexcept
-		{
-			return rhs.data_ != data_;
-		}
-
-		constexpr bool operator<(Element const &rhs) const noexcept
-		{
-			return data_ < rhs.data_;
-		}
-
-		constexpr bool operator<=(Element const &rhs) const noexcept
-		{
-			return data_ <= rhs.data_;
-		}
-
-		constexpr bool operator>(Element const &rhs) const noexcept { return rhs < *this; }
-
-		constexpr bool operator>=(Element const &rhs) const noexcept { return rhs <= *this; }
-
-		friend std::ostream &operator<<(std::ostream &os, Element element)
-		{
-			// Note: '+' to apply arithmetic promotion.
-			os << +element.getKey() << ": " << +element.getValue();
-			return os;
-		}
-
-	 private:
-		constexpr void setKey(key_type key) noexcept
-		{
-			data_ = (key << ValueWidth) | (data_ & ValueMask);
-		}
-
-		constexpr void setKeyValue(key_type key, mapped_type value) noexcept
-		{
-			data_ = (key << ValueWidth) | (value & ValueMask);
-		}
-
-		constexpr void setData(DataType data) noexcept { data_ = data; }
-
-		constexpr void increaseValue(mapped_type inc) noexcept
+		constexpr void increaseValue(value_type inc) noexcept
 		{
 			// FIXME: Look at
 			data_ =
 			    (data_ & LabelMask) |
-			    std::min(ValueMask, static_cast<mapped_type>(getValue() + (inc & ValueMask)));
+			    std::min(ValueMask, static_cast<value_type>(getValue() + (inc & ValueMask)));
 		}
 
-		constexpr void decreaseValue(mapped_type dec) noexcept
+		constexpr void decreaseValue(value_type dec) noexcept
 		{
 			// FIXME: Look at
 			auto cur = getValue();
@@ -173,13 +145,59 @@ class SemanticContainer
 			data_ = (data_ & LabelMask) | (cur - dec);
 		}
 
+		constexpr bool operator==(LabelValuePair rhs) const noexcept
+		{
+			return rhs.data_ == data_;
+		}
+
+		constexpr bool operator!=(LabelValuePair rhs) const noexcept
+		{
+			return rhs.data_ != data_;
+		}
+
+		constexpr bool operator<(LabelValuePair rhs) const noexcept
+		{
+			return data_ < rhs.data_;
+		}
+
+		constexpr bool operator<=(LabelValuePair rhs) const noexcept
+		{
+			return data_ <= rhs.data_;
+		}
+
+		constexpr bool operator>(LabelValuePair rhs) const noexcept { return rhs < *this; }
+
+		constexpr bool operator>=(LabelValuePair rhs) const noexcept { return rhs <= *this; }
+
+		friend std::ostream &operator<<(std::ostream &os, LabelValuePair element)
+		{
+			// Note: '+' to apply arithmetic promotion.
+			os << +element.getLabel() << ": " << +element.getValue();
+			return os;
+		}
+
+	 private:
+		constexpr void setLabel(label_type label) noexcept
+		{
+			data_ = (label << ValueWidth) | (data_ & ValueMask);
+		}
+
+		constexpr void setLabelValue(label_type label, value_type value) noexcept
+		{
+			data_ = (label << ValueWidth) | (value & ValueMask);
+		}
+
+		constexpr void setData(DataType data) noexcept { data_ = data; }
+
+		constexpr DataType getData() const noexcept { return data_; }
+
 	 private:
 		DataType data_ = 0;
-		friend class SemanticContainer;
+		friend class Semantics;
 	};
 
 	// Tags
-	using value_type = Element;
+	using value_type = LabelValuePair;
 	using size_type = DataType;
 	using difference_type = std::ptrdiff_t;
 	using reference = value_type &;
@@ -187,31 +205,34 @@ class SemanticContainer
 	// using pointer = typename std::allocator_traits<Allocator>::pointer;
 	// using const_pointer = typename
 	// std::allocator_traits<Allocator>::const_pointer;
-	using iterator = Element *;
-	using const_iterator = Element const *;
+	using iterator = LabelValuePair *;
+	using const_iterator = LabelValuePair const *;
 	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+	//
 	// Constructors
-	constexpr SemanticContainer() = default;
+	//
+
+	constexpr Semantics() = default;
 
 	template <class InputIt>
-	SemanticContainer(InputIt first, InputIt last)
+	Semantics(InputIt first, InputIt last)
 	{
 		insert(first, last);
 	}
 
-	SemanticContainer(SemanticContainer const &other) { *this = other; }
+	Semantics(Semantics const &other) { *this = other; }
 
-	SemanticContainer(SemanticContainer &&other) noexcept = default;
+	Semantics(Semantics &&other) noexcept = default;
 
-	SemanticContainer(std::initializer_list<value_type> init) { insert(init); }
+	Semantics(std::initializer_list<value_type> init) { insert(init); }
 
-	// Destructor
-	~SemanticContainer() { clear(); }
+	//
+	// Assignment operator
+	//
 
-	// operator=
-	SemanticContainer &operator=(SemanticContainer const &rhs)
+	Semantics &operator=(Semantics const &rhs)
 	{
 		if (rhs.empty()) {
 			clear();
@@ -222,21 +243,24 @@ class SemanticContainer
 		return *this;
 	}
 
-	SemanticContainer &operator=(SemanticContainer &&rhs) noexcept = default;
+	Semantics &operator=(Semantics &&rhs) noexcept = default;
 
-	SemanticContainer &operator=(std::initializer_list<value_type> ilist)
+	Semantics &operator=(std::initializer_list<value_type> ilist)
 	{
 		insert(ilist);
 		return *this;
 	}
 
+	//
 	// Iterators
+	//
+
 	iterator begin() noexcept
 	{
 		if constexpr (FixedSizeC) {
 			return std::next(std::begin(data_));
 		} else {
-			return empty() ? nullptr : std::next(data_);
+			return empty() ? nullptr : std::next(data_.get());
 		}
 	}
 
@@ -245,7 +269,7 @@ class SemanticContainer
 		if constexpr (FixedSizeC) {
 			return std::next(std::begin(data_));
 		} else {
-			return empty() ? nullptr : std::next(data_);
+			return empty() ? nullptr : std::next(data_.get());
 		}
 	}
 
@@ -257,7 +281,7 @@ class SemanticContainer
 			return std::next(std::begin(data_), size() + 1);
 		} else {
 			auto const s = allocSize();
-			return 0 == s ? nullptr : std::next(data_, s);
+			return 0 == s ? nullptr : std::next(data_.get(), s);
 		}
 	}
 
@@ -267,22 +291,24 @@ class SemanticContainer
 			return std::next(std::begin(data_), size() + 1);
 		} else {
 			auto const s = allocSize();
-			return 0 == s ? nullptr : std::next(data_, s);
+			return 0 == s ? nullptr : std::next(data_.get(), s);
 		}
 	}
 
 	const_iterator cend() const noexcept { return end(); }
 
+	//
 	// Capacity
-	// [[nodiscard]]
+	//
+
 	[[nodiscard]] bool empty() const noexcept { return 0 == size(); }
 
 	[[nodiscard]] size_type size() const noexcept
 	{
 		if constexpr (FixedSizeC) {
-			return data_[0].getKey();
+			return data_[0].getData();
 		} else {
-			return data_ ? data_[0].getKey() : 0;
+			return data_ ? data_[0].getData() : 0;
 		}
 	}
 
@@ -291,7 +317,7 @@ class SemanticContainer
 		if constexpr (FixedSizeC) {
 			return FixedSizeC + 1;
 		} else {
-			return empty() ? 0 : data_[0].getKey() + 1;
+			return empty() ? 0 : data_[0].getData() + 1;
 		}
 	}
 
@@ -304,16 +330,16 @@ class SemanticContainer
 		}
 	}
 
+	//
 	// Modifiers
+	//
+
 	void clear() noexcept
 	{
 		if constexpr (FixedSizeC) {
 			data_[0].setData(0);
 		} else {
-			if (nullptr != data_) {
-				free(data_);
-				data_ = nullptr;
-			}
+			data_.reset();
 		}
 	}
 
@@ -326,7 +352,7 @@ class SemanticContainer
 
 	std::pair<iterator, bool> insert(value_type const &value)
 	{
-		return insert_impl<InsertType::NORMAL>(value.getKey(), value.getValue());
+		return insert_impl<InsertType::NORMAL>(value.getLabel(), value.getValue());
 	}
 
 	iterator insert(const_iterator hint, value_type const &value)
@@ -348,57 +374,57 @@ class SemanticContainer
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> emplace(Args &&... args)
+	std::pair<iterator, bool> emplace(Args &&...args)
 	{
 		return insert_impl(std::forward<Args>(args)...);
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(key_type const &k, Args &&... args)
+	std::pair<iterator, bool> try_emplace(label_type const &k, Args &&...args)
 	{
 		return insert(value_type(k, std::forward<Args>(args)...));
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(key_type &&k, Args &&... args)
+	std::pair<iterator, bool> try_emplace(label_type &&k, Args &&...args)
 	{
 		return insert(value_type(std::move(k), std::forward<Args>(args)...));
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(const_iterator hint, key_type const &k,
-	                                      Args &&... args)
+	std::pair<iterator, bool> try_emplace(const_iterator hint, label_type const &k,
+	                                      Args &&...args)
 	{
 		return insert(hint, value_type(k, std::forward<Args>(args)...));
 	}
 
 	template <class... Args>
-	std::pair<iterator, bool> try_emplace(const_iterator hint, key_type &&k,
-	                                      Args &&... args)
+	std::pair<iterator, bool> try_emplace(const_iterator hint, label_type &&k,
+	                                      Args &&...args)
 	{
 		return insert(hint, value_type(std::move(k), std::forward<Args>(args)...));
 	}
 
 	template <class M>
-	std::pair<iterator, bool> insert_or_assign(key_type const &k, M &&obj)
+	std::pair<iterator, bool> insert_or_assign(label_type const &k, M &&obj)
 	{
 		return insert_impl<InsertType::ASSIGN>(k, std::forward<M>(obj));
 	}
 
 	template <class M>
-	std::pair<iterator, bool> insert_or_assign(key_type &&k, M &&obj)
+	std::pair<iterator, bool> insert_or_assign(label_type &&k, M &&obj)
 	{
 		return insert_impl<InsertType::ASSIGN>(std::move(k), std::forward<M>(obj));
 	}
 
 	template <class M>
-	iterator insert_or_assign(const_iterator hint, key_type const &k, M &&obj)
+	iterator insert_or_assign(const_iterator hint, label_type const &k, M &&obj)
 	{
 		return insert_impl<InsertType::ASSIGN>(hint, k, std::forward<M>(obj)).first;
 	}
 
 	template <class M>
-	iterator insert_or_assign(const_iterator hint, key_type &&k, M &&obj)
+	iterator insert_or_assign(const_iterator hint, label_type &&k, M &&obj)
 	{
 		return insert_impl<InsertType::ASSIGN>(hint, std::move(k), std::forward<M>(obj))
 		    .first;
@@ -406,30 +432,30 @@ class SemanticContainer
 
 	/*
 	 * insert_or_replace_max
-	 * If key_type k is not present in the map it is inserted with value obj.
-	 * If key_type k is present then its value is update acording to
+	 * If label_type k is not present in the map it is inserted with value obj.
+	 * If label_type k is present then its value is update acording to
 	 * 	max(current_value, obj).
 	 */
 	template <class M>
-	std::pair<iterator, bool> insert_or_replace_max(key_type const &k, M &&obj)
+	std::pair<iterator, bool> insert_or_replace_max(label_type const &k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(k, std::forward<M>(obj));
 	}
 
 	template <class M>
-	std::pair<iterator, bool> insert_or_replace_max(key_type &&k, M &&obj)
+	std::pair<iterator, bool> insert_or_replace_max(label_type &&k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(std::move(k), std::forward<M>(obj));
 	}
 
 	template <class M>
-	iterator insert_or_replace_max(const_iterator hint, key_type const &k, M &&obj)
+	iterator insert_or_replace_max(const_iterator hint, label_type const &k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(hint, k, std::forward<M>(obj)).first;
 	}
 
 	template <class M>
-	iterator insert_or_replace_max(const_iterator hint, key_type &&k, M &&obj)
+	iterator insert_or_replace_max(const_iterator hint, label_type &&k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(hint, std::move(k), std::forward<M>(obj)).first;
 	}
@@ -438,16 +464,16 @@ class SemanticContainer
 	 * Assign value to Keys present in the given Range.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(Range<T> const &range, mapped_type value)
+	void assign_values(container::Range<T> const &range, value_type value)
 	{
-		assign_values(RangeSet<T>(range), value);
+		assign_values(container::RangeSet<T>(range), value);
 	}
 
 	/*
 	 * Assign value to Keys present in each Range of the RangeSet.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(RangeSet<T> const &rangeSet, mapped_type value)
+	void assign_values(container::RangeSet<T> const &rangeSet, value_type value)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -462,16 +488,16 @@ class SemanticContainer
 	 * Increase the value by inc for all Keys present in Range
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(Range<T> const &range, mapped_type inc)
+	void increase_values(container::Range<T> const &range, value_type inc)
 	{
-		increase_values(RangeSet<T>(range), inc);
+		increase_values(container::RangeSet<T>(range), inc);
 	}
 
 	/*
 	 * Increase the value by inc for all Keys in each Range of the RangeSet
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(RangeSet<T> const &rangeSet, mapped_type inc)
+	void increase_values(container::RangeSet<T> const &rangeSet, value_type inc)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -486,16 +512,16 @@ class SemanticContainer
 	 * Decrease the value by dec for all Keys present in Range
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(Range<T> const &range, mapped_type dec)
+	void decrease_values(container::Range<T> const &range, value_type dec)
 	{
-		decrease_values(RangeSet<T>(range), dec);
+		decrease_values(container::RangeSet<T>(range), dec);
 	}
 
 	/*
 	 * Decrease the value by dec for all Keys in each Range of the RangeSet
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(RangeSet<T> const &rangeSet, mapped_type dec)
+	void decrease_values(container::RangeSet<T> const &rangeSet, value_type dec)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -509,8 +535,8 @@ class SemanticContainer
 	/*
 	 * Increase or set the value of key
 	 */
-	std::pair<iterator, bool> increase_value(key_type key, mapped_type inc,
-	                                         mapped_type init_value)
+	std::pair<iterator, bool> increase_value(label_type key, value_type inc,
+	                                         value_type init_value)
 	{
 		auto [it, inserted] = try_emplace(key, init_value);
 		if (!inserted) {
@@ -522,8 +548,8 @@ class SemanticContainer
 	/*
 	 * Increase or set the value of key
 	 */
-	iterator increase_value(const_iterator hint, key_type key, mapped_type inc,
-	                        mapped_type init_value)
+	iterator increase_value(const_iterator hint, label_type key, value_type inc,
+	                        value_type init_value)
 	{
 		auto [it, inserted] = try_emplace(hint, key, init_value);
 		if (!inserted) {
@@ -535,8 +561,8 @@ class SemanticContainer
 	/*
 	 * Decrease or set the value of key
 	 */
-	std::pair<iterator, bool> decrease_value(key_type key, mapped_type dec,
-	                                         mapped_type init_value)
+	std::pair<iterator, bool> decrease_value(label_type key, value_type dec,
+	                                         value_type init_value)
 	{
 		auto [it, inserted] = try_emplace(key, init_value);
 		if (!inserted) {
@@ -548,8 +574,8 @@ class SemanticContainer
 	/*
 	 * Decrease or set the value of key
 	 */
-	iterator decrease_value(const_iterator hint, key_type key, mapped_type dec,
-	                        mapped_type init_value)
+	iterator decrease_value(const_iterator hint, label_type key, value_type dec,
+	                        value_type init_value)
 	{
 		auto [it, inserted] = try_emplace(hint, key, init_value).first;
 		if (!inserted) {
@@ -585,7 +611,7 @@ class SemanticContainer
 		return it;
 	}
 
-	size_type erase(key_type key)
+	size_type erase(label_type key)
 	{
 		if (iterator it = find(key); end() != it) {
 			erase(it);
@@ -595,27 +621,27 @@ class SemanticContainer
 	}
 
 	/*
-	 * Erases all Elements of range which fulfills the pairwise comparison
-	 * comp(Element.value, value)
+	 * Erases all LabelValuePairs of range which fulfills the pairwise comparison
+	 * comp(LabelValuePair.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(Range<T> const &range, mapped_type value, Compare comp)
+	size_type erase(container::Range<T> const &range, value_type value, Compare comp)
 	{
-		return erase(RangeSet<T>(range), value, comp);
+		return erase(container::RangeSet<T>(range), value, comp);
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(Range<T> const &range)
+	size_type erase(container::Range<T> const &range)
 	{
-		return erase(RangeSet<T>(range));
+		return erase(container::RangeSet<T>(range));
 	}
 
 	/*
-	 * Erases all Elements of rangeSet which fulfills the pairwise comparison
-	 * comp(Element.value, value)
+	 * Erases all LabelValuePairs of rangeSet which fulfills the pairwise comparison
+	 * comp(LabelValuePair.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(RangeSet<T> const &rangeSet, mapped_type value, Compare comp)
+	size_type erase(container::RangeSet<T> const &rangeSet, value_type value, Compare comp)
 	{
 		size_type old_size = size();
 		for (auto const &range : rangeSet) {
@@ -636,7 +662,7 @@ class SemanticContainer
 	}
 
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(RangeSet<T> const &rangeSet)
+	size_type erase(container::RangeSet<T> const &rangeSet)
 	{
 		size_type old_size = size();
 		for (auto const &range : rangeSet) {
@@ -647,10 +673,10 @@ class SemanticContainer
 		return old_size - size();
 	}
 
-	void swap(SemanticContainer &other) noexcept { std::swap(data_, other.data_); }
+	void swap(Semantics &other) noexcept { std::swap(data_, other.data_); }
 
 	// Lookup
-	[[nodiscard]] mapped_type at(key_type key) const
+	[[nodiscard]] value_type at(label_type key) const
 	{
 		if (auto it = find(key); end() != it) {
 			return it->getValue();
@@ -658,73 +684,74 @@ class SemanticContainer
 		throw std::out_of_range("Cannot find key " + std::to_string(key));
 	}
 
-	[[nodiscard]] mapped_type getValue(key_type key) const
+	[[nodiscard]] value_type getValue(label_type key) const
 	{
 		auto it = find(key);
 		return end() != it ? it->getValue() : 0;
 	}
 
-	[[nodiscard]] size_type count(key_type key) const { return contains(key) ? 1 : 0; }
+	[[nodiscard]] size_type count(label_type key) const { return contains(key) ? 1 : 0; }
 
-	[[nodiscard]] iterator find(key_type key)
+	[[nodiscard]] iterator find(label_type key)
 	{
 		auto it = lower_bound(key);
-		return end() != it && it->getKey() == key ? it : end();
+		return end() != it && it->getLabel() == key ? it : end();
 	}
 
-	[[nodiscard]] const_iterator find(key_type key) const
+	[[nodiscard]] const_iterator find(label_type key) const
 	{
 		auto it = lower_bound(key);
-		return end() != it && it->getKey() == key ? it : end();
+		return end() != it && it->getLabel() == key ? it : end();
 	}
 
-	[[nodiscard]] bool contains(key_type key) const { return end() != find(key); }
+	[[nodiscard]] bool contains(label_type key) const { return end() != find(key); }
 
-	[[nodiscard]] std::pair<iterator, iterator> equal_range(key_type key)
+	[[nodiscard]] std::pair<iterator, iterator> equal_range(label_type key)
 	{
 		return equal_range(begin(), end(), key);
 	}
 
-	[[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(key_type key) const
+	[[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(
+	    label_type key) const
 	{
 		return equal_range(begin(), end(), key);
 	}
 
-	[[nodiscard]] iterator lower_bound(key_type key)
+	[[nodiscard]] iterator lower_bound(label_type key)
 	{
 		return lower_bound(begin(), end(), key);
 	}
 
-	[[nodiscard]] const_iterator lower_bound(key_type key) const
+	[[nodiscard]] const_iterator lower_bound(label_type key) const
 	{
 		return lower_bound(begin(), end(), key);
 	}
 
-	[[nodiscard]] iterator upper_bound(key_type key)
+	[[nodiscard]] iterator upper_bound(label_type key)
 	{
 		return upper_bound(begin(), end(), key);
 	}
 
-	[[nodiscard]] const_iterator upper_bound(key_type key) const
+	[[nodiscard]] const_iterator upper_bound(label_type key) const
 	{
 		return upper_bound(begin(), end(), key);
 	}
 
-	Element *getData()
+	LabelValuePair *getData()
 	{
 		if constexpr (FixedSizeC) {
 			return std::next(data_.data(), 1);
 		} else {
-			return std::next(data_, 1);
+			return std::next(data_.get(), 1);
 		}
 	}
 
-	Element const *getData() const
+	LabelValuePair const *getData() const
 	{
 		if constexpr (FixedSizeC) {
 			return std::next(data_.data(), 1);
 		} else {
-			return std::next(data_, 1);
+			return std::next(data_.get(), 1);
 		}
 	}
 
@@ -733,7 +760,7 @@ class SemanticContainer
 	 * I.e., the container does not have to contain the full range.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(Range<T> const &range) const
+	[[nodiscard]] bool containsAny(container::Range<T> const &range) const
 	{
 		return containsAny({range});
 	}
@@ -743,7 +770,7 @@ class SemanticContainer
 	 * binary comparison comp.  I.e., the container does not have to contain the full range.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(Range<T> const &range, mapped_type value,
+	[[nodiscard]] bool containsAny(container::Range<T> const &range, value_type value,
 	                               Compare comp) const
 	{
 		return containsAny({range}, value, comp);
@@ -754,7 +781,7 @@ class SemanticContainer
 	 * I.e., the container does not have to contain the full range.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(RangeSet<T> const &rangeSet) const
+	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
 		if (rangeSet.size() == size_type(0)) {
@@ -763,14 +790,14 @@ class SemanticContainer
 
 		if (size() < rangeSet.size()) {
 			for (auto const &element : *this) {
-				if (rangeSet.contains(element.getKey())) {
+				if (rangeSet.contains(element.getLabel())) {
 					return true;
 				}
 			}
 		} else {
 			for (auto const &range : rangeSet) {
 				const_iterator lower = lower_bound(range.lower());
-				if (lower != end() && lower->getKey() <= range.upper()) {
+				if (lower != end() && lower->getLabel() <= range.upper()) {
 					return true;
 				}
 			}
@@ -784,7 +811,7 @@ class SemanticContainer
 	 * the full range.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(RangeSet<T> const &rangeSet, mapped_type value,
+	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet, value_type value,
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
@@ -794,7 +821,7 @@ class SemanticContainer
 
 		if (size() < rangeSet.size()) {
 			for (auto const &element : *this) {
-				if (rangeSet.contains(element.getKey()) && comp(element.getValue(), value)) {
+				if (rangeSet.contains(element.getLabel()) && comp(element.getValue(), value)) {
 					return true;
 				}
 			}
@@ -816,7 +843,7 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(Range<T> const &range) const
+	[[nodiscard]] bool containsNone(container::Range<T> const &range) const
 	{
 		return containsNone({range});
 	}
@@ -825,7 +852,7 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(Range<T> const &range, mapped_type value,
+	[[nodiscard]] bool containsNone(container::Range<T> const &range, value_type value,
 	                                Compare comp) const
 	{
 		return !containsAny({range}, value, comp);
@@ -835,7 +862,7 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(RangeSet<T> const &rangeSet) const
+	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet) const
 	{
 		return !containsAny(rangeSet);
 	}
@@ -844,18 +871,18 @@ class SemanticContainer
 	 * Negated containsAny
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(RangeSet<T> const &rangeSet, mapped_type value,
-	                                Compare comp) const
+	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet,
+	                                value_type value, Compare comp) const
 	{
 		return !containsAny(rangeSet, value, comp);
 	}
 
 	/*
-	 * True if container contains all Keys of the range and that comp(Element.value, value)
-	 * is true for all such elements.
+	 * True if container contains all Keys of the range and that comp(LabelValuePair.value,
+	 * value) is true for all such elements.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(Range<T> const &range, mapped_type value,
+	[[nodiscard]] bool containsAll(container::Range<T> const &range, value_type value,
 	                               Compare comp) const
 	{
 		return containsAll({range}, value, comp);
@@ -865,17 +892,17 @@ class SemanticContainer
 	 * True if container contains all Keys of the range
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(Range<T> const &range) const
+	[[nodiscard]] bool containsAll(container::Range<T> const &range) const
 	{
 		return containsAll({range});
 	}
 
 	/*
 	 * True if container contains all Keys of each range in the set and that
-	 * comp(Element.value, value) is true for all such elements.
+	 * comp(LabelValuePair.value, value) is true for all such elements.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(RangeSet<T> const &rangeSet, mapped_type value,
+	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet, value_type value,
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
@@ -885,7 +912,7 @@ class SemanticContainer
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::size_type checked_elems = 0;
+		typename container::RangeSet<uint32_t>::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elements are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -914,7 +941,7 @@ class SemanticContainer
 	 * True if container contains all Keys of each Range in the set
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(RangeSet<T> const &rangeSet) const
+	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet) const
 	{
 		// map contains empty set of ranges
 		if (rangeSet.size() == size_type(0)) {
@@ -923,7 +950,7 @@ class SemanticContainer
 		if (size() < rangeSet.size()) {
 			return false;
 		}
-		typename RangeSet<uint32_t>::size_type checked_elems = 0;
+		typename container::RangeSet<uint32_t>::size_type checked_elems = 0;
 		for (auto const &range : rangeSet) {
 			// Is it possible that all range elemnts are in the map?
 			checked_elems += (range.upper() - range.lower()) + 1;
@@ -948,7 +975,8 @@ class SemanticContainer
 	 * Return (end(), end()) if none present.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] std::pair<iterator, iterator> limits(Range<T> const &range, Compare comp)
+	[[nodiscard]] std::pair<iterator, iterator> limits(container::Range<T> const &range,
+	                                                   Compare comp)
 	{
 		return limits({range}, comp);
 	}
@@ -958,8 +986,8 @@ class SemanticContainer
 	 * Return (end(), end()) if none present.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] std::pair<iterator, iterator> limits(RangeSet<T> const &rangeSet,
-	                                                   Compare comp)
+	[[nodiscard]] std::pair<iterator, iterator> limits(
+	    container::RangeSet<T> const &rangeSet, Compare comp)
 	{
 		if (rangeSet.size() == 0 || size() == 0) {
 			return {end(), end()};
@@ -987,7 +1015,7 @@ class SemanticContainer
 		size_type num = size();
 		out_stream.write(reinterpret_cast<char const *>(&num), sizeof(size_type));
 		return out_stream.write(reinterpret_cast<char const *>(getData()),
-		                        sizeof(Element) * num);
+		                        sizeof(LabelValuePair) * num);
 	}
 
 	std::istream &readData(std::istream &in_stream)
@@ -999,14 +1027,15 @@ class SemanticContainer
 			return in_stream;
 		}
 		resize(num);
-		return in_stream.read(reinterpret_cast<char *>(getData()), sizeof(Element) * num);
+		return in_stream.read(reinterpret_cast<char *>(getData()),
+		                      sizeof(LabelValuePair) * num);
 	}
 
-	friend std::ostream &operator<<(std::ostream &os, SemanticContainer const &map)
+	friend std::ostream &operator<<(std::ostream &os, Semantics const &map)
 	{
 		if (!map.empty()) {
 			std::copy(std::begin(map), std::prev(std::end(map)),
-			          std::ostream_iterator<Element>(os, "; "));
+			          std::ostream_iterator<LabelValuePair>(os, "; "));
 			os << *std::prev(std::end(map));
 		}
 		return os;
@@ -1016,16 +1045,16 @@ class SemanticContainer
 	enum class InsertType { NORMAL, ASSIGN, MAX };
 
 	template <InsertType T = InsertType::NORMAL>
-	std::pair<iterator, bool> insert_impl(key_type key, mapped_type value)
+	std::pair<iterator, bool> insert_impl(label_type key, value_type value)
 	{
 		if (empty()) {
 			resize(1);
-			data_[1].setKeyValue(key, value);
+			data_[1].setLabelValue(key, value);
 			return {begin(), true};
 		}
 
 		auto it = lower_bound(key);
-		if (end() != it && it->getKey() == key) {
+		if (end() != it && it->getLabel() == key) {
 			// Label already exists
 			if constexpr (InsertType::NORMAL == T) {
 				// Do nothing
@@ -1046,29 +1075,30 @@ class SemanticContainer
 
 			std::move_backward(it, std::prev(end(), 1), end());
 
-			data_[index + 1].setKeyValue(key, value);
+			data_[index + 1].setLabelValue(key, value);
 
 			return {it, true};
 		}
 	}
 
 	template <InsertType T = InsertType::NORMAL>
-	std::pair<iterator, bool> insert_impl(const_iterator hint, key_type key,
-	                                      mapped_type value)
+	std::pair<iterator, bool> insert_impl(const_iterator hint, label_type key,
+	                                      value_type value)
 	{
 		if (empty()) {
 			resize(1);
-			data_[1].setKeyValue(key, value);
+			data_[1].setLabelValue(key, value);
 			return {begin(), true};
 		}
 
-		auto first = cbegin() != hint && std::prev(hint, 1)->getKey() < key ? hint : cbegin();
-		auto last = cend() != hint && hint->getKey() >= key ? hint : cend();
+		auto first =
+		    cbegin() != hint && std::prev(hint, 1)->getLabel() < key ? hint : cbegin();
+		auto last = cend() != hint && hint->getLabel() >= key ? hint : cend();
 		hint = lower_bound(first, last, key);
 
 		auto index = std::distance(cbegin(), hint);
 
-		if (cend() != hint && hint->getKey() == key) {
+		if (cend() != hint && hint->getLabel() == key) {
 			auto it = std::next(begin(), index);
 			// Label already exists
 			if constexpr (InsertType::NORMAL == T) {
@@ -1088,7 +1118,7 @@ class SemanticContainer
 
 			std::move_backward(it, std::prev(end(), 1), end());
 
-			data_[index + 1].setKeyValue(key, value);
+			data_[index + 1].setLabelValue(key, value);
 
 			return {it, true};
 		}
@@ -1103,7 +1133,7 @@ class SemanticContainer
 		// Erase duplicate keys, saving the highest value for each key
 		auto r_last = std::unique(
 		    std::rbegin(vec), std::rend(vec),
-		    [](auto const &v1, auto const &v2) { return v1.getKey() == v2.getKey(); });
+		    [](auto const &v1, auto const &v2) { return v1.getLabel() == v2.getLabel(); });
 		vec.erase(std::begin(vec), r_last.base());
 
 		if (empty()) {
@@ -1113,38 +1143,38 @@ class SemanticContainer
 			// Normal insert
 			auto hint = begin();
 			for (auto const &elem : vec) {
-				hint = insert<InsertT>(hint, elem.getKey(), elem.getValue()).first;
+				hint = insert<InsertT>(hint, elem.getLabel(), elem.getValue()).first;
 			}
 		}
 	}
 
-	static iterator lower_bound(iterator first, iterator last, key_type key)
+	static iterator lower_bound(iterator first, iterator last, label_type key)
 	{
-		return std::lower_bound(first, last, Element(key, 0));
+		return std::lower_bound(first, last, LabelValuePair(key, 0));
 	}
 
 	static const_iterator lower_bound(const_iterator first, const_iterator last,
-	                                  key_type key)
+	                                  label_type key)
 	{
-		return std::lower_bound(first, last, Element(key, 0));
+		return std::lower_bound(first, last, LabelValuePair(key, 0));
 	}
 
-	static iterator upper_bound(iterator first, iterator last, key_type key)
+	static iterator upper_bound(iterator first, iterator last, label_type key)
 	{
-		return std::upper_bound(first, last, Element(key, ValueMask));
+		return std::upper_bound(first, last, LabelValuePair(key, ValueMask));
 	}
 
 	static const_iterator upper_bound(const_iterator first, const_iterator last,
-	                                  key_type key)
+	                                  label_type key)
 	{
-		return std::upper_bound(first, last, Element(key, ValueMask));
+		return std::upper_bound(first, last, LabelValuePair(key, ValueMask));
 	}
 
 	static std::pair<iterator, iterator> equal_range(iterator first, iterator last,
-	                                                 key_type key)
+	                                                 label_type key)
 	{
 		auto it = lower_bound(first, last, key);
-		if (last == it || it->getKey() != key) {
+		if (last == it || it->getLabel() != key) {
 			return {it, it};
 		} else {
 			return {it, std::next(it)};
@@ -1153,10 +1183,10 @@ class SemanticContainer
 
 	static std::pair<const_iterator, const_iterator> equal_range(const_iterator first,
 	                                                             const_iterator last,
-	                                                             key_type key)
+	                                                             label_type key)
 	{
 		auto it = lower_bound(first, last, key);
-		if (last == it || it->getKey() != key) {
+		if (last == it || it->getLabel() != key) {
 			return {it, it};
 		} else {
 			return {it, std::next(it)};
@@ -1170,47 +1200,52 @@ class SemanticContainer
 				throw std::length_error("Maximum fixed size");
 			}
 		} else {
-			Element *ptr_new =
-			    static_cast<Element *>(realloc(data_, (new_size + 1) * sizeof(Element)));
+			LabelValuePair *ptr_cur = data_.release();
+
+			LabelValuePair *ptr_new = static_cast<LabelValuePair *>(
+			    realloc(ptr_cur, (new_size + 1) * sizeof(LabelValuePair)));
 
 			if (!ptr_new) {
+				data_.reset(ptr_cur);
 				throw std::bad_alloc();
 			}
 
-			data_ = ptr_new;
+			data_.reset(ptr_new);
 		}
 
-		data_[0].setKey(new_size);  // Special
+		data_[0].setData(new_size);  // Special
 	}
 
  private:
-	std::conditional_t<FixedSizeC, std::array<DataType, FixedSizeC + 1>, Element *> data_{};
+	std::conditional_t<FixedSizeC, std::array<DataType, FixedSizeC + 1>,
+	                   std::unique_ptr<LabelValuePair[]>>
+	    data_{};
 };
 
 template <typename DataType, std::size_t ValueWidth>
-bool operator==(SemanticContainer<DataType, ValueWidth> const &lhs,
-                SemanticContainer<DataType, ValueWidth> const &rhs)
+bool operator==(Semantics<DataType, ValueWidth> const &lhs,
+                Semantics<DataType, ValueWidth> const &rhs)
 {
 	return std::equal(std::begin(lhs), std::end(lhs), std::begin(rhs), std::end(rhs));
 }
 
 template <typename DataType, std::size_t ValueWidth>
-bool operator!=(SemanticContainer<DataType, ValueWidth> const &lhs,
-                SemanticContainer<DataType, ValueWidth> const &rhs)
+bool operator!=(Semantics<DataType, ValueWidth> const &lhs,
+                Semantics<DataType, ValueWidth> const &rhs)
 {
 	return !(lhs == rhs);
 }
 
 template <typename DataType, std::size_t ValueWidth>
-void swap(SemanticContainer<DataType, ValueWidth> &lhs,
-          SemanticContainer<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
+void swap(Semantics<DataType, ValueWidth> &lhs,
+          Semantics<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }
 
 template <typename DataType, std::size_t ValueWidth, class Pred>
-typename SemanticContainer<DataType, ValueWidth>::size_type erase_if(
-    SemanticContainer<DataType, ValueWidth> &c, Pred pred)
+typename Semantics<DataType, ValueWidth>::size_type erase_if(
+    Semantics<DataType, ValueWidth> &c, Pred pred)
 {
 	auto old_size = c.size();
 	for (auto it = std::begin(c), last = std::end(c); it != last;) {
@@ -1225,4 +1260,4 @@ typename SemanticContainer<DataType, ValueWidth>::size_type erase_if(
 
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_SEMANTIC_CONTAINER_H
+#endif  // UFO_MAP_SEMANTICS_H

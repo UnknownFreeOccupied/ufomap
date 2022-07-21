@@ -76,8 +76,8 @@ struct OctreeLeafNode : Data, Indicators {
 };
 
 template <class LeafNode>
-struct OctreePointerInnerNode : LeafNode {
-	using InnerChildrenBlock = std::array<OctreePointerInnerNode, 8>;
+struct OctreeInnerNode : LeafNode {
+	using InnerChildrenBlock = std::array<OctreeInnerNode, 8>;
 	using LeafChildrenBlock = std::array<LeafNode, 8>;
 
 	// Pointer to children
@@ -85,15 +85,6 @@ struct OctreePointerInnerNode : LeafNode {
 		InnerChildrenBlock* inner_children = nullptr;
 		LeafChildrenBlock* leaf_children;
 	};
-};
-
-template <class LeafNode>
-struct OctreeIndexInnerNode : LeafNode {
-	using InnerChildrenBlock = std::array<OctreeIndexInnerNode, 8>;
-	using LeafChildrenBlock = std::array<LeafNode, 8>;
-
-	// Index to children
-	uint32_t children_index = std::numeric_limits<uint32_t>::max();
 };
 }  // namespace ufo::map
 

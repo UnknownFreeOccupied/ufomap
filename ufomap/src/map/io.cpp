@@ -54,24 +54,24 @@
 
 namespace ufo::map
 {
-bool correctFileType(std::filesystem::path const& filename)
+bool isUFOMapFile(std::filesystem::path const& filename)
 {
 	std::ifstream file;
 	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 	file.imbue(std::locale());
 	file.open(filename, std::ios_base::in | std::ios_base::binary);
 
-	return correctFileType(file);
+	return isUFOMapFile(file);
 }
 
-bool correctFileType(std::istream& in_stream)
+bool isUFOMapFile(std::istream& in_stream)
 {
 	std::string line;
 	std::getline(in_stream, line);
 	return 0 == line.compare(0, FILE_HEADER.length(), FILE_HEADER);
 }
 
-FileInfo readHeader(std::filesystem::path const& filename)
+FileHeader readHeader(std::filesystem::path const& filename)
 {
 	std::ifstream file;
 	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -81,60 +81,42 @@ FileInfo readHeader(std::filesystem::path const& filename)
 	return readHeader(file);
 }
 
-FileInfo readHeader(std::istream& in_stream)
+FileHeader readHeader(std::istream& in_stream)
 {
-	FileInfo file_info;
-
-	std::string token;
-	bool header_read = false;
-	while (in_stream.good() && !header_read) {
-		in_stream >> token;
-		if ("data" == token) {
-			header_read = true;
-			// Skip forward to the end of line
-			std::string temp;
-			std::getline(in_stream, temp);
-		} else if (0 == token.compare(0, 1, "#")) {
-			// Comment line, skip forward to the end of line
-			std::string temp;
-			std::getline(in_stream, temp);
-		} else {
-			// First char is whitespace
-			in_stream.seekg(1, in_stream.cur);
-
-			std::string line;
-			std::getline(in_stream, line);
-			std::stringstream ss(line);
-			while (std::getline(ss, line, ' ')) {
-				if (std::string::npos == line.find_first_not_of(' ')) {
-					continue;
-				}
-				file_info[token].push_back(line);
-			}
-		}
+	if (!isUFOMapFile(in_stream)) {
+		throw std::runtime_error("Trying to read non-UFOMap file");
 	}
 
-	if (!header_read) {
-		throw std::runtime_error("Could not read header");
-	}
+	FileHeader header;
+	in_stream.read(reinterpret_cast<char*>(&header.major), sizeof(uint8_t));
+	in_stream.read(reinterpret_cast<char*>(&header.minor), sizeof(uint8_t));
+	in_stream.read(reinterpret_cast<char*>(&header.path), sizeof(uint8_t));
 
-	return file_info;
+	uint8_t compressed;
+	in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(uint8_t));
+	header.compressed = compressed & 1U;
+
+	in_stream.read(reinterpret_cast<char*>(&header.resolution), sizeof(double));
+	in_stream.read(reinterpret_cast<char*>(&header.depth_levels), sizeof(depth_t));
+
+	return header;
 }
 
-void writeHeader(std::ostream& out_stream, FileInfo const& header)
+void writeHeader(std::ostream& out_stream, FileOptions const& options)
 {
-	out_stream << FILE_HEADER;
-	out_stream << "\n# (feel free to add / change comments, but leave the first line as "
-	              "it is!)\n#\n";
-	out_stream << "version " << FILE_VERSION << '\n';
-	for (auto const& [key, value] : header) {
-		out_stream << key;
-		for (auto const& s : value) {
-			out_stream << ' ' << s;
-		}
-		out_stream << '\n';
-	}
-	out_stream << "data\n";
+	out_stream << FileHeader::FILE_HEADER;
+	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_MAJOR),
+	                 sizeof(uint8_t));
+	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_MINOR),
+	                 sizeof(uint8_t));
+	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_PATCH),
+	                 sizeof(uint8_t));
+
+	uint8_t compressed = options.compressed ? 1U : 0U;
+	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(uint8_t));
+
+	in_stream.write(reinterpret_cast<char const*>(&options.resolution), sizeof(double));
+	in_stream.write(reinterpret_cast<char const*>(&options.depth_levels), sizeof(depth_t));
 }
 
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
@@ -196,6 +178,38 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 		int const decompressed_size =
 		    LZ4_decompress_safe(compressed_data.get(), regen_buffer.get() + cur,
 		                        compressed_data_size, uncompressed_data_size - cur);
+		cur += decompressed_size;
+
+		// Check if decompression successful
+		if (0 > decompressed_size) {
+			return false;
+		}
+	}
+
+	// Write decompressed data to output stream
+	out_stream.write(regen_buffer.get(), uncompressed_data_size);
+
+	return !in_stream.fail();
+}
+
+bool decompressData(std::istream& in_stream, std::ostream& out_stream,
+                    uint64_t uncompressed_data_size, uint64_t& compressed_data_size)
+{
+	auto regen_buffer = std::make_unique<char[]>(uncompressed_data_size);
+	size_t cur = 0;
+	while (in_stream.good() && cur < uncompressed_data_size) {
+		// Get size of compressed data
+		int32_t cur_compressed_data_size;
+		in_stream.read(reinterpret_cast<char*>(&cur_compressed_data_size), sizeof(int32_t));
+
+		compressed_data_size += cur_compressed_data_size;
+
+		// Decompress data
+		auto compressed_data = std::make_unique<char[]>(cur_compressed_data_size);
+		in_stream.read(compressed_data.get(), cur_compressed_data_size);
+		int const decompressed_size =
+		    LZ4_decompress_safe(compressed_data.get(), regen_buffer.get() + cur,
+		                        cur_compressed_data_size, uncompressed_data_size - cur);
 		cur += decompressed_size;
 
 		// Check if decompression successful

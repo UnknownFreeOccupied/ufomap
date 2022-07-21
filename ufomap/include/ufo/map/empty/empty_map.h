@@ -73,10 +73,10 @@ class EmptyMap
 	// Input/ouput (read/write)
 	//
 
-	constexpr void addFileInfo(FileInfo&) const noexcept {}
+	constexpr bool canReadData(DataIdentifier identifier) const noexcept { return false; }
 
-	constexpr bool readNodes(std::istream&, std::vector<LeafNode*> const&,
-	                         std::string const&, char, uint64_t) const noexcept
+	constexpr bool readNodes(std::istream&, std::vector<LeafNode*> const&, DataIdentifier,
+	                         uint64_t) const noexcept
 	{
 		return false;
 	}

@@ -50,12 +50,12 @@ namespace ufo::map
 struct TimeNode {
 	time_step_t time_step;
 
-	constexpr bool operator==(TimeNode const& rhs) const
+	constexpr bool operator==(TimeNode rhs) const noexcept
 	{
 		return time_step == rhs.time_step;
 	}
 
-	constexpr bool operator!=(TimeNode const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(TimeNode rhs) const noexcept { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 

@@ -569,15 +569,13 @@ class SurfelMapBase
 	// Input/output (read/write)
 	//
 
-	void addFileInfo(FileInfo& info) const
+	bool canReadData(DataIdentifier identifier) const noexcept
 	{
-		info["fields"].emplace_back("surfel");
-		info["type"].emplace_back("U");
-		info["size"].emplace_back(std::to_string(sizeof(Surfel)));
+		return DataIdentifier::SURFEL == identifier;
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size)
+	               DataIdentifier data_identifier, uint64_t size)
 	{
 		if ("surfel" != field) {
 			return false;

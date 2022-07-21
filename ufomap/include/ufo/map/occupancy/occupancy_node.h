@@ -43,125 +43,37 @@
 #define UFO_MAP_OCCUPANCY_NODE_H
 
 // UFO
-#include <ufo/map/color/color_node.h>
-#include <ufo/map/octree/octree_node.h>
-#include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/types.h>
 
 // STL
 #include <cstdint>
-#include <iostream>
-#include <type_traits>
 
 namespace ufo::map
 {
-template <typename OccupancyType>
+template <typename OccupancyType = float>
 struct OccupancyNode {
 	OccupancyType occupancy;
 
-	constexpr bool operator==(OccupancyNode const& rhs) const
+	constexpr bool operator==(OccupancyNode rhs) const noexcept
 	{
 		return rhs.occupancy == occupancy;
 	}
 
-	constexpr bool operator!=(OccupancyNode const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(OccupancyNode rhs) const noexcept { return !(*this == rhs); }
 };
+
+using OccupancyNodeSmall = OccupancyNode<std::uint8_t>;
 
 struct OccupancyTimeNode {
 	time_step_t occupancy : 8;
 	time_step_t time_step : 24;
 
-	constexpr bool operator==(OccupancyTimeNode const& rhs) const
+	constexpr bool operator==(OccupancyTimeNode rhs) const noexcept
 	{
 		return rhs.occupancy == occupancy && rhs.time_step == time_step;
 	}
 
-	constexpr bool operator!=(OccupancyTimeNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <typename OccupancyType>
-struct OccupancyColorNode : OccupancyNode<OccupancyType>, ColorNode {
-	constexpr bool operator==(OccupancyColorNode const& rhs) const
-	{
-		return OccupancyNode<OccupancyType>::operator==(rhs) && ColorNode::operator==(rhs);
-	}
-
-	constexpr bool operator!=(OccupancyColorNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
-struct OccupancySemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                               OccupancyNode<OccupancyType> {
-	constexpr bool operator==(OccupancySemanticNode const& rhs) const
-	{
-		return OccupancyNode<OccupancyType>::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
-	}
-
-	constexpr bool operator!=(OccupancySemanticNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-struct OccupancyTimeColorNode : OccupancyTimeNode, ColorNode {
-	constexpr bool operator==(OccupancyTimeColorNode const& rhs) const
-	{
-		return OccupancyTimeNode::operator==(rhs) && ColorNode::operator==(rhs);
-	}
-
-	constexpr bool operator!=(OccupancyTimeColorNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <typename SemanticType, size_t SemanticValueWidth>
-struct OccupancyTimeSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                   OccupancyTimeNode {
-	constexpr bool operator==(OccupancyTimeSemanticNode const& rhs) const
-	{
-		return OccupancyTimeNode::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
-	}
-
-	constexpr bool operator!=(OccupancyTimeSemanticNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <typename OccupancyType, typename SemanticType, size_t SemanticValueWidth>
-struct OccupancyColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                    OccupancyColorNode<OccupancyType> {
-	constexpr bool operator==(OccupancyColorSemanticNode const& rhs) const
-	{
-		return OccupancyColorNode<OccupancyType>::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
-	}
-
-	constexpr bool operator!=(OccupancyColorSemanticNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <typename SemanticType, size_t SemanticValueWidth>
-struct OccupancyTimeColorSemanticNode : SemanticNode<SemanticType, SemanticValueWidth>,
-                                        OccupancyTimeColorNode {
-	constexpr bool operator==(OccupancyTimeColorSemanticNode const& rhs) const
-	{
-		return OccupancyTimeColorNode::operator==(rhs) &&
-		       SemanticNode<SemanticType, SemanticValueWidth>::operator==(rhs);
-	}
-
-	constexpr bool operator!=(OccupancyTimeColorSemanticNode const& rhs) const
+	constexpr bool operator!=(OccupancyTimeNode rhs) const noexcept
 	{
 		return !(*this == rhs);
 	}

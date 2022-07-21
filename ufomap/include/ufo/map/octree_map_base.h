@@ -57,33 +57,25 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Node, class Indicators, bool LockLess, MemoryModel NodeMemoryModel,
-          depth_t StaticallyAllocatedDepths,
+template <class Node, class Indicators, bool ReuseNodes, bool LockLess,
           template <typename, typename, typename> typename... Bases>
 class OctreeMapBase
-    : public OctreeBase<OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                                      StaticallyAllocatedDepths, Bases...>,
-                        Node, Indicators, LockLess, NodeMemoryModel,
-                        StaticallyAllocatedDepths>,
-      public Bases<
-          OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                        StaticallyAllocatedDepths, Bases...>,
-          typename OctreeBase<OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                                            StaticallyAllocatedDepths, Bases...>,
-                              Node, Indicators, LockLess, NodeMemoryModel,
-                              StaticallyAllocatedDepths>::LeafNode,
-          typename OctreeBase<OctreeMapBase<Node, Indicators, LockLess, NodeMemoryModel,
-                                            StaticallyAllocatedDepths, Bases...>,
-                              Node, Indicators, LockLess, NodeMemoryModel,
-                              StaticallyAllocatedDepths>::InnerNode>...
+    : public OctreeBase<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
+                        Node, Indicators, ReuseNodes, LockLess>,
+      public Bases<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
+                   typename OctreeBase<
+                       OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
+                       Node, Indicators, ReuseNodes, LockLess>::LeafNode,
+                   typename OctreeBase<
+                       OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
+                       Node, Indicators, ReuseNodes, LockLess>::InnerNode>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMapBase, Node, Indicators, LockLess, NodeMemoryModel,
-	                          StaticallyAllocatedDepths>;
+	using Octree = OctreeBase<OctreeMapBase, Node, Indicators, ReuseNodes, LockLess>;
 	using LeafNode = typename Octree::LeafNode;
 	using InnerNode = typename Octree::InnerNode;
 
@@ -136,11 +128,10 @@ class OctreeMapBase
 		Octree::read(io_stream);
 	}
 
-	template <class Node2, class Indicators2, bool LockLess2, MemoryModel NodeMemoryModel2,
-	          depth_t StaticallyAllocatedDepths2,
+	template <class Node2, class Indicators2, bool ReuseNodes2, bool LockLess2,
 	          template <typename, typename, typename> typename... Bases2>
-	OctreeMapBase(OctreeMapBase<Node2, Indicators2, LockLess2, NodeMemoryModel2,
-	                            StaticallyAllocatedDepths2, Bases2...> const& other)
+	OctreeMapBase(OctreeMapBase<Node2, Indicators2, bool ReuseNodes2, LockLess2,
+	                            Bases2...> const& other)
 	    : Octree(other.resolution(), other.depthLevels(), other.automaticPruning())
 	{
 		initRoot();
@@ -174,12 +165,10 @@ class OctreeMapBase
 		return *this;
 	}
 
-	template <class Node2, class Indicators2, bool LockLess2, MemoryModel NodeMemoryModel2,
-	          depth_t StaticallyAllocatedDepths2,
+	template <class Node2, class Indicators2, bool ReuseNodes2, bool LockLess2,
 	          template <typename, typename, typename> typename... Bases2>
 	OctreeMapBase& operator=(
-	    OctreeMapBase<Node2, Indicators2, LockLess2, NodeMemoryModel2,
-	                  StaticallyAllocatedDepths2, Bases2...> const& rhs)
+	    OctreeMapBase<Node2, Indicators2, ReuseNodes2, LockLess2, Bases2...> const& rhs)
 	{
 		initRoot();
 
@@ -221,16 +210,16 @@ class OctreeMapBase
 	// Input/output (read/write)
 	//
 
-	void addFileInfo(FileInfo& info) const
+	bool canReadData(DataIdentifier identifier) const noexcept
 	{
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::addFileInfo(info), ...);
+		return (Bases<OctreeMapBase, LeafNode, InnerNode>::canReadData(identifier) || ...);
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size)
+	               DataIdentifier data_identifier, uint64_t size)
 	{
-		return (Bases<OctreeMapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes, field,
-		                                                             type, size) ||
+		return (Bases<OctreeMapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes,
+		                                                             data_identifier) ||
 		        ...);
 	}
 
