@@ -43,8 +43,11 @@
 #define UFO_MAP_INTEGRATION_H
 
 // UFO
+#include <ufo/geometry/minimum_distance.h>
 #include <ufo/map/code/code.h>
+#include <ufo/map/code/code_unordered_map.h>
 #include <ufo/map/code/code_unordered_set.h>
+#include <ufo/map/integration/grid.h>
 #include <ufo/map/integration/integration_point.h>
 #include <ufo/map/integration/integration_point_cloud.h>
 #include <ufo/map/key.h>
@@ -55,6 +58,7 @@
 
 // STL
 #include <algorithm>
+#include <queue>
 
 namespace ufo::map
 {
@@ -224,11 +228,267 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
                              Point3 const sensor_origin, bool const only_valid = false,
                              depth_t const& depth = 0)
 {
-	// TODO: Implement
+	static constexpr depth_t GRID_DEPTH = 6;  // FIXME: What should this be?
+
+	CodeUnorderedMap<Grid<GRID_DEPTH>> grids;
+
+	Key const origin = map.toKey(sensor_origin, depth);
 
 	Misses misses;
-	std::sort(std::begin(misses), std::end(misses));
+
+	Code prev;
+	for (auto const& p : cloud) {
+		if (only_valid && !p.valid()) {
+			continue;
+		}
+
+		Code cur = p.code.toDepth(std::max(p.code.depth(), depth));
+		if (cur == prev) {
+			continue;
+		}
+		prev = cur;
+
+		Code prev_at_depth;
+		Grid<GRID_DEPTH>* prev_grid = nullptr;
+		for (auto const key : computeRay(Key(origin, cur.depth()), cur)) {
+			Code const code = map.toCode(key);
+			Code const cur_at_depth = code.toDepth(GRID_DEPTH + depth);
+
+			if (cur_at_depth != prev_at_depth) {
+				prev_at_depth = cur_at_depth;
+				prev_grid = &grids[cur_at_depth];
+			}
+
+			auto const index = prev_grid->index(key);
+			if (!prev_grid->test(index)) {
+				prev_grid->set(index);
+				misses.push_back(code);
+			}
+		}
+	}
+
+	// std::sort(std::begin(misses), std::end(misses));
 	return misses;
+
+	// CodeUnorderedMap<CodeUnorderedSet> clouds;
+	// std::priority_queue<std::pair<double, Code>, std::vector<std::pair<double, Code>>> q;
+	// for (std::size_t i = 0; cloud.size() != i;) {
+	// 	Code code_at_depth = cloud[i].code.toDepth(GRID_DEPTH + depth);
+
+	// 	auto& c = clouds[code_at_depth];
+	// 	if (c.empty()) {
+	// 		q.emplace(geometry::squaredDistance(sensor_origin, map.toCoord(code_at_depth)),
+	// 		          code_at_depth);
+	// 	}
+
+	// 	Code prev = cloud[i].code.toDepth(depth);
+	// 	c.insert(prev);
+
+	// 	std::size_t j = i + 1;
+	// 	for (;
+	// 	     cloud.size() != j && cloud[j].code.toDepth(GRID_DEPTH + depth) ==
+	// code_at_depth;
+	// 	     ++j) {
+	// 		Code cur = cloud[j].code.toDepth(depth);
+	// 		if (prev != cur) {
+	// 			c.insert(cur);
+	// 			prev = cur;
+	// 		}
+	// 	}
+
+	// 	i = j;
+	// }
+
+	// Grid<GRID_DEPTH> grid;
+
+	// Misses misses;
+
+	// Key origin = map.toKey(sensor_origin, depth);
+
+	// std::vector<Code> outside;
+	// while (!q.empty()) {
+	// 	grid.clear();
+
+	// 	auto [_, code_at_depth] = q.top();
+	// 	q.pop();
+
+	// 	for (Code goal : clouds[code_at_depth]) {
+	// 		if (grid.test(goal)) {
+	// 			// Already set
+	// 			// continue;
+	// 		}
+
+	// 		// Do it backwards
+	// 		auto const keys = computeRay(goal, origin);
+
+	// 		for (Key const k : keys) {
+	// 			Code const c = map.toCode(k);
+	// 			Code const c_at_depth = c.toDepth(GRID_DEPTH + depth);
+
+	// 			if (code_at_depth == c_at_depth) {
+	// 				// Inside
+	// 				auto const grid_index = grid.index(k);
+
+	// 				if (grid.test(grid_index)) {
+	// 					// Already set
+	// 					// break;
+	// 				} else {
+	// 					grid.set(grid_index);
+	// 					// FIXME: Move?
+	// 					misses.push_back(c);
+	// 				}
+	// 			} else {
+	// 				// Outside
+	// 				outside.push_back(c);
+	// 				break;
+	// 			}
+	// 		}
+	// 	}
+
+	// 	// Add outside
+	// 	std::sort(std::begin(outside), std::end(outside));
+	// 	for (std::size_t i = 0; outside.size() != i;) {
+	// 		Code const code_at_depth = outside[i].toDepth(GRID_DEPTH + depth);
+
+	// 		auto& c = clouds[code_at_depth];
+	// 		if (c.empty()) {
+	// 			q.emplace(geometry::squaredDistance(sensor_origin, map.toCoord(code_at_depth)),
+	// 			          code_at_depth);
+	// 		}
+
+	// 		c.insert(outside[i]);
+
+	// 		std::size_t j = i + 1;
+	// 		for (;
+	// 		     outside.size() != j && outside[j].toDepth(GRID_DEPTH + depth) ==
+	// code_at_depth;
+	// 		     ++j) {
+	// 			if (outside[j - 1] != outside[j]) {
+	// 				c.insert(outside[j]);
+	// 			}
+	// 		}
+
+	// 		i = j;
+	// 	}
+
+	// 	// FIXME: Add to misses here?
+
+	// 	outside.clear();
+	// }
+
+	// std::sort(std::begin(misses), std::end(misses));
+	// return misses;
+
+	// static constexpr depth_t GRID_DEPTH = 4;
+
+	// CodeUnorderedMap<CodeUnorderedSet> clouds;
+	// std::priority_queue<std::pair<double, Code>, std::vector<std::pair<double, Code>>> q;
+	// for (std::size_t i = 0; cloud.size() != i;) {
+	// 	Code code_at_depth = cloud[i].code.toDepth(GRID_DEPTH + depth);
+
+	// 	auto& c = clouds[code_at_depth];
+	// 	if (c.empty()) {
+	// 		q.emplace(geometry::squaredDistance(sensor_origin, map.toCoord(code_at_depth)),
+	// 		          code_at_depth);
+	// 	}
+
+	// 	Code prev = cloud[i].code.toDepth(depth);
+	// 	c.insert(prev);
+
+	// 	std::size_t j = i + 1;
+	// 	for (;
+	// 	     cloud.size() != j && cloud[j].code.toDepth(GRID_DEPTH + depth) ==
+	// code_at_depth;
+	// 	     ++j) {
+	// 		Code cur = cloud[j].code.toDepth(depth);
+	// 		if (prev != cur) {
+	// 			c.insert(cur);
+	// 			prev = cur;
+	// 		}
+	// 	}
+
+	// 	i = j;
+	// }
+
+	// Grid<GRID_DEPTH> grid;
+
+	// Misses misses;
+
+	// Key origin = map.toKey(sensor_origin, depth);
+
+	// std::vector<Code> outside;
+	// while (!q.empty()) {
+	// 	grid.clear();
+
+	// 	auto [_, code_at_depth] = q.top();
+	// 	q.pop();
+
+	// 	for (Code goal : clouds[code_at_depth]) {
+	// 		if (grid.test(goal)) {
+	// 			// Already set
+	// 			// continue;
+	// 		}
+
+	// 		// Do it backwards
+	// 		auto const keys = computeRay(goal, origin);
+
+	// 		for (Key const k : keys) {
+	// 			Code const c = map.toCode(k);
+	// 			Code const c_at_depth = c.toDepth(GRID_DEPTH + depth);
+
+	// 			if (code_at_depth == c_at_depth) {
+	// 				// Inside
+	// 				auto const grid_index = grid.index(k);
+
+	// 				if (grid.test(grid_index)) {
+	// 					// Already set
+	// 					// break;
+	// 				} else {
+	// 					grid.set(grid_index);
+	// 					// FIXME: Move?
+	// 					misses.push_back(c);
+	// 				}
+	// 			} else {
+	// 				// Outside
+	// 				outside.push_back(c);
+	// 				break;
+	// 			}
+	// 		}
+	// 	}
+
+	// 	// Add outside
+	// 	std::sort(std::begin(outside), std::end(outside));
+	// 	for (std::size_t i = 0; outside.size() != i;) {
+	// 		Code const code_at_depth = outside[i].toDepth(GRID_DEPTH + depth);
+
+	// 		auto& c = clouds[code_at_depth];
+	// 		if (c.empty()) {
+	// 			q.emplace(geometry::squaredDistance(sensor_origin, map.toCoord(code_at_depth)),
+	// 			          code_at_depth);
+	// 		}
+
+	// 		c.insert(outside[i]);
+
+	// 		std::size_t j = i + 1;
+	// 		for (;
+	// 		     outside.size() != j && outside[j].toDepth(GRID_DEPTH + depth) ==
+	// code_at_depth;
+	// 		     ++j) {
+	// 			if (outside[j - 1] != outside[j]) {
+	// 				c.insert(outside[j]);
+	// 			}
+	// 		}
+
+	// 		i = j;
+	// 	}
+
+	// 	// FIXME: Add to misses here?
+
+	// 	outside.clear();
+	// }
+
+	// std::sort(std::begin(misses), std::end(misses));
+	// return misses;
 }
 }  // namespace ufo::map
 
