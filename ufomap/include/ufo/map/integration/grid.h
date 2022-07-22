@@ -44,6 +44,7 @@
 
 // UFO
 #include <ufo/map/key.h>
+#include <ufo/math/util.h>
 
 // STL
 #include <bitset>
@@ -55,7 +56,7 @@ template <depth_t Depth>
 class Grid
 {
  private:
-	static constexpr std::size_t NumIndices = ipow(8, Depth);
+	static constexpr std::size_t NumIndices = math::ipow(8, Depth);
 
 	static constexpr Key::key_t Mask =
 	    ~((std::numeric_limits<Key::key_t>::max() >> Depth) << Depth);
