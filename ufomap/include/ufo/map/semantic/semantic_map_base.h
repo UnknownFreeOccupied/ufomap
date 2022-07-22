@@ -118,7 +118,7 @@ class SemanticMapBase
 
 	static constexpr semantic_container_type const& getSemantics(Node node) noexcept
 	{
-		return getSemantics(Derived::getLeafNode(node));
+		return getSemantics(derived().getLeafNode(node));
 	}
 
 	semantic_container_type const& getSemantics(Code code) const noexcept
@@ -128,7 +128,7 @@ class SemanticMapBase
 
 	semantic_container_type const& getSemantics(Key key) const noexcept
 	{
-		return getSemantics(Derived::toCode(key));
+		return getSemantics(derived().toCode(key));
 	}
 
 	semantic_container_type const& getSemantics(Point3 coord,
@@ -150,7 +150,7 @@ class SemanticMapBase
 	static std::optional<semantic_value_type> getSemanticValue(Node node,
 	                                                           semantic_label_type label)
 	{
-		return getSemanticValue(Derived::getLeafNode(node), label);
+		return getSemanticValue(derived().getLeafNode(node), label);
 	}
 
 	std::optional<semantic_value_type> getSemanticValue(Code code,
@@ -162,7 +162,7 @@ class SemanticMapBase
 	std::optional<semantic_value_type> getSemanticValue(Key key,
 	                                                    semantic_label_type label) const
 	{
-		return getSemanticValue(Derived::toCode(key), label);
+		return getSemanticValue(derived().toCode(key), label);
 	}
 
 	std::optional<semantic_value_type> getSemanticValue(Point3 coord,
@@ -185,7 +185,7 @@ class SemanticMapBase
 
 	SemanticPair getMinSemanticValue(Node node) const noexcept
 	{
-		return getMinSemanticValue(Derived::getLeafNode(node));
+		return getMinSemanticValue(derived().getLeafNode(node));
 	}
 
 	SemanticPair getMinSemanticValue(Code code) const noexcept
@@ -195,7 +195,7 @@ class SemanticMapBase
 
 	SemanticPair getMinSemanticValue(Key key) const noexcept
 	{
-		return getMinSemanticValue(Derived::toCode(key));
+		return getMinSemanticValue(derived().toCode(key));
 	}
 
 	SemanticPair getMinSemanticValue(Point3 coord, depth_t depth = 0) const noexcept
@@ -211,7 +211,7 @@ class SemanticMapBase
 
 	SemanticPair getMaxSemanticValue(Node node) const noexcept
 	{
-		return getMaxSemanticValue(Derived::getLeafNode(node));
+		return getMaxSemanticValue(derived().getLeafNode(node));
 	}
 
 	SemanticPair getMaxSemanticValue(Code code) const noexcept
@@ -221,7 +221,7 @@ class SemanticMapBase
 
 	SemanticPair getMaxSemanticValue(Key key) const noexcept
 	{
-		return getMaxSemanticValue(Derived::toCode(key));
+		return getMaxSemanticValue(derived().toCode(key));
 	}
 
 	SemanticPair getMaxSemanticValue(Point3 coord, depth_t depth = 0) const noexcept
@@ -300,24 +300,24 @@ class SemanticMapBase
 	void insertSemantics(Key key, semantic_label_t label, semantic_value_t value,
 	                     bool propagate = true)
 	{
-		insertSemantics(Derived::toCode(key), label, value, propagate);
+		insertSemantics(derived().toCode(key), label, value, propagate);
 	}
 
 	void insertSemantics(Key key, SemanticPair semantic, bool propagate = true)
 	{
-		insertSemantics(Derived::toCode(key), semantic, propagate);
+		insertSemantics(derived().toCode(key), semantic, propagate);
 	}
 
 	template <class InputIt>
 	void insertSemantics(Key key, InputIt first, InputIt last, bool propagate = true)
 	{
-		insertSemantics(Derived::toCode(key), first, last, propagate);
+		insertSemantics(derived().toCode(key), first, last, propagate);
 	}
 
 	void insertSemantics(Key key, std::initializer_list<SemanticPair> ilist,
 	                     bool propagate = true)
 	{
-		insertSemantics(Derived::toCode(key), ilist, propagate);
+		insertSemantics(derived().toCode(key), ilist, propagate);
 	}
 
 	void insertSemantics(Point3 coord, semantic_label_t label, semantic_value_t value,
@@ -410,12 +410,12 @@ class SemanticMapBase
 	void insertOrAssignSemantics(Key key, semantic_label_t label, semantic_value_t value,
 	                             bool propagate = true)
 	{
-		insertOrAssignSemantics(Derived::toCode(key), label, value, propagate);
+		insertOrAssignSemantics(derived().toCode(key), label, value, propagate);
 	}
 
 	void insertOrAssignSemantics(Key key, SemanticPair semantic, bool propagate = true)
 	{
-		insertOrAssignSemantics(Derived::toCode(key), semantic, propagate);
+		insertOrAssignSemantics(derived().toCode(key), semantic, propagate);
 	}
 
 	void insertOrAssignSemantics(Point3 coord, semantic_label_t label,
@@ -462,7 +462,7 @@ class SemanticMapBase
 
 	void increaseSemantics(Key key, semantic_value_t inc, bool propagate = true)
 	{
-		increaseSemantics(Derived::toCode(key), inc, propagate);
+		increaseSemantics(derived().toCode(key), inc, propagate);
 	}
 
 	void increaseSemantics(Point3 coord, semantic_value_t inc, depth_t depth = 0,
@@ -503,7 +503,7 @@ class SemanticMapBase
 	void increaseSemantics(Key key, semantic_label_t label, semantic_value_t inc,
 	                       semantic_value_t init_value = 0, bool propagate = true)
 	{
-		increaseSemantics(Derived::toCode(key), label, inc, init_value, propagate);
+		increaseSemantics(derived().toCode(key), label, inc, init_value, propagate);
 	}
 
 	void increaseSemantics(Point3 coord, semantic_label_t label, semantic_value_t inc,
@@ -539,7 +539,7 @@ class SemanticMapBase
 
 	void decreaseSemantics(Key key, semantic_value_t dec, bool propagate = true)
 	{
-		decreaseSemantics(Derived::toCode(key), dec, propagate);
+		decreaseSemantics(derived().toCode(key), dec, propagate);
 	}
 
 	void decreaseSemantics(Point3 coord, semantic_value_t dec, depth_t depth = 0,
@@ -580,7 +580,7 @@ class SemanticMapBase
 	void decreaseSemantics(Key key, semantic_label_t label, semantic_value_t dec,
 	                       semantic_value_t init_value = 0, bool propagate = true)
 	{
-		decreaseSemantics(Derived::toCode(key), label, dec, init_value, propagate);
+		decreaseSemantics(derived().toCode(key), label, dec, init_value, propagate);
 	}
 
 	void decreaseSemantics(Point3 coord, semantic_label_t label, semantic_value_t dec,
@@ -633,7 +633,7 @@ class SemanticMapBase
 	void changeSemanticLabel(Key key, semantic_label_t old_label,
 	                         semantic_label_t new_label, bool propagate = true)
 	{
-		changeSemanticLabel(Derived::toCode(key), old_label, new_label, propagate);
+		changeSemanticLabel(derived().toCode(key), old_label, new_label, propagate);
 	}
 
 	void changeSemanticLabel(Point3 coord, semantic_label_t old_label,
@@ -675,7 +675,7 @@ class SemanticMapBase
 
 	void deleteSemanticLabel(Key key, semantic_label_t label, bool propagate = true)
 	{
-		deleteSemanticLabel(Derived::toCode(key), label, propagate);
+		deleteSemanticLabel(derived().toCode(key), label, propagate);
 	}
 
 	void deleteSemanticLabel(Point3 coord, semantic_label_t label, depth_t depth = 0,
@@ -713,7 +713,7 @@ class SemanticMapBase
 
 	void clearSemantics(Key key, bool propagate = true)
 	{
-		clearSemantics(Derived::toCode(key), propagate);
+		clearSemantics(derived().toCode(key), propagate);
 	}
 
 	void clearSemantics(Point3 coord, depth_t depth = 0, bool propagate = true)
@@ -754,7 +754,7 @@ class SemanticMapBase
 	template <class Pred>
 	void eraseSemanticsIf(Key key, Pred pred, bool propagate = true)
 	{
-		eraseSemanticsIf(Derived::toCode(key), pred, propagate);
+		eraseSemanticsIf(derived().toCode(key), pred, propagate);
 	}
 
 	template <class Pred>
@@ -1021,7 +1021,7 @@ class SemanticMapBase
 
 		std::array<typename semantics_t::size_type, 8> sizes;
 		for (size_t i = 0; i != sizes.size(); ++i) {
-			sizes[i] = Derived::getChild(node, depth - 1, i).semantics.size();
+			sizes[i] = derived().getChild(node, depth - 1, i).semantics.size();
 		}
 
 		size_t total_size = std::reduce(sizes.cbegin(), sizes.cend());
@@ -1037,7 +1037,7 @@ class SemanticMapBase
 		auto it_beg = semantics.begin();
 		for (size_t i = 0; i != sizes.size(); ++i) {
 			if (0 != sizes[i]) {
-				auto const& child_sem = Derived::getChild(node, depth - 1, i).semantics;
+				auto const& child_sem = derived().getChild(node, depth - 1, i).semantics;
 				auto it_end = std::copy(child_sem.cbegin(), child_sem.cend(), it_beg);
 				std::inplace_merge(semantics.begin(), it_beg, it_end);
 				it_beg = std::move(it_end);
