@@ -46,9 +46,9 @@ namespace ufo::map
 {
 template <std::size_t Num>
 struct EmptyNode {
-	constexpr bool operator==(EmptyNode const& rhs) const { return true; }
+	static constexpr bool operator==(EmptyNode) noexcept { return true; }
 
-	constexpr bool operator!=(EmptyNode const& rhs) const { return false; }
+	static constexpr bool operator!=(EmptyNode) noexcept { return false; }
 };
 }  // namespace ufo::map
 

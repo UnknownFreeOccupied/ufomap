@@ -46,9 +46,7 @@
 #include <ufo/map/types.h>
 
 // STL
-#include <cstdint>
 #include <iostream>
-#include <string>
 #include <vector>
 
 namespace ufo::map
@@ -61,27 +59,29 @@ class EmptyMap
 	// Initilize root
 	//
 
-	constexpr void initRoot() const noexcept {}
+	static constexpr void initRoot() noexcept {}
 
 	//
 	// Update node
 	//
 
-	constexpr void updateNode(InnerNode&, depth_t) const noexcept {}
+	static constexpr void updateNode(InnerNode&, depth_t) noexcept {}
 
 	//
 	// Input/ouput (read/write)
 	//
 
-	constexpr bool canReadData(DataIdentifier identifier) const noexcept { return false; }
+	static constexpr bool canReadData(DataIdentifier identifier) noexcept { return false; }
 
-	constexpr bool readNodes(std::istream&, std::vector<LeafNode*> const&,
-	                         DataIdentifier) const noexcept
+	static constexpr bool readNodes(std::istream&, std::vector<LeafNode*> const&,
+	                                DataIdentifier) noexcept
 	{
 		return false;
 	}
 
-	constexpr void writeNodes(std::ostream&, std::vector<LeafNode> const&) const noexcept {}
+	static constexpr void writeNodes(std::ostream&, std::vector<LeafNode> const&) noexcept
+	{
+	}
 };
 }  // namespace ufo::map
 
