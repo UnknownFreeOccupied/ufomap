@@ -48,65 +48,10 @@
 
 // STL
 #include <array>
-#include <bitset>
 #include <limits>
 
 namespace ufo::map
 {
-// template <depth_t Depth>
-// class Grid
-// {
-//  private:
-// 	static constexpr std::size_t NumIndices = math::ipow(8, Depth);
-
-// 	static constexpr Key::key_t Mask =
-// 	    ~((std::numeric_limits<Key::key_t>::max() >> Depth) << Depth);
-
-//  public:
-// 	using reference = typename std::bitset<NumIndices>::reference;
-
-//  public:
-// 	constexpr bool operator[](std::size_t const index) const { return indices_[index]; }
-
-// 	constexpr bool operator[](Key const key) const { return indices_[index(key)]; }
-
-// 	reference operator[](std::size_t const index) { return indices_[index]; }
-
-// 	reference operator[](Key const key) { return indices_[index(key)]; }
-
-// 	bool test(std::size_t const index) const { return indices_.test(index); }
-
-// 	bool test(Key const key) const { return indices_.test(index(key)); }
-
-// 	void set(std::size_t const index) { indices_.set(index); }
-
-// 	void set(Key const key) { indices_.set(index(key)); }
-
-// 	void reset(std::size_t const index) { indices_.reset(index); }
-
-// 	void reset(Key const key) { indices_.reset(index(key)); }
-
-// 	void clear() { indices_.reset(); }
-
-// 	constexpr std::size_t size() const noexcept { return NumIndices; }
-
-// 	static constexpr std::size_t index(Key const key)
-// 	{
-// 		depth_t const depth = key.depth();
-// 		return ((key.x() >> depth) & Mask) | (((key.y() >> depth) & Mask) << Depth) |
-// 		       (((key.z() >> depth) & Mask) << (2 * Depth));
-// 	}
-
-// 	static constexpr Key key(std::size_t const index, depth_t const depth)
-// 	{
-// 		return Key((index & Mask) << depth, ((index >> Depth) & Mask) << depth,
-// 		           ((index >> (2 * Depth)) & Mask) << depth, depth);
-// 	}
-
-//  private:
-// 	std::bitset<NumIndices> indices_;
-// };
-
 template <depth_t Depth>
 class Grid
 {
@@ -120,27 +65,25 @@ class Grid
 	using reference = typename std::array<bool, NumIndices>::reference;
 
  public:
-	Grid() { clear(); }
-
 	constexpr bool operator[](std::size_t const index) const { return indices_[index]; }
 
 	constexpr bool operator[](Key const key) const { return indices_[index(key)]; }
 
-	reference operator[](std::size_t const index) { return indices_[index]; }
+	constexpr reference operator[](std::size_t const index) { return indices_[index]; }
 
-	reference operator[](Key const key) { return indices_[index(key)]; }
+	constexpr reference operator[](Key const key) { return indices_[index(key)]; }
 
-	bool test(std::size_t const index) const { return indices_[index]; }
+	constexpr bool test(std::size_t const index) const { return indices_[index]; }
 
-	bool test(Key const key) const { return test(index(key)); }
+	constexpr bool test(Key const key) const { return test(index(key)); }
 
-	void set(std::size_t const index) { indices_[index] = true; }
+	constexpr void set(std::size_t const index) { indices_[index] = true; }
 
-	void set(Key const key) { set(index(key)); }
+	constexpr void set(Key const key) { set(index(key)); }
 
-	void reset(std::size_t const index) { indices_[index] = false; }
+	constexpr void reset(std::size_t const index) { indices_[index] = false; }
 
-	void reset(Key const key) { reset(index(key)); }
+	constexpr void reset(Key const key) { reset(index(key)); }
 
 	void clear() { indices_.fill(false); }
 
@@ -160,7 +103,7 @@ class Grid
 	}
 
  private:
-	std::array<bool, NumIndices> indices_;
+	std::array<bool, NumIndices> indices_ = {};
 };
 }  // namespace ufo::map
 
