@@ -46,7 +46,6 @@
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/map/code/code_unordered_map.h>
 #include <ufo/map/predicate/surfel.h>
-// #include <ufo/map/types.h>
 
 // STL
 #include <cstdint>
@@ -569,17 +568,15 @@ class SurfelMapBase
 	// Input/output (read/write)
 	//
 
-	void addFileInfo(FileInfo& info) const
+	bool canReadData(DataIdentifier identifier) const noexcept
 	{
-		info["fields"].emplace_back("surfel");
-		info["type"].emplace_back("U");
-		info["size"].emplace_back(std::to_string(sizeof(Surfel)));
+		return DataIdentifier::SURFEL == identifier;
 	}
 
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size)
+	               DataIdentifier identifier)
 	{
-		if ("surfel" != field) {
+		if (!canReadData(identifier)) {
 			return false;
 		}
 
@@ -598,16 +595,17 @@ class SurfelMapBase
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
-		uint64_t const size = nodes.size() * sizeof(Surfel);
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+		auto const num_nodes = nodes.size();
+		uint64_t const data_size = num_nodes * sizeof(Surfel);
 
-		auto data = std::make_unique<Surfel[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
+		out_stream.write(reinterpret_cast<char const*>(&data_size), sizeof(data_size));
+
+		auto data = std::make_unique<Surfel[]>(num_nodes);
+		for (size_t i = 0; num_nodes != i; ++i) {
 			data[i] = getSurfel(nodes[i]);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(Surfel));
+		out_stream.write(reinterpret_cast<char const*>(data.get()), data_size);
 	}
 
  protected:
