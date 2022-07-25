@@ -39,68 +39,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_IO_H
-#define UFO_MAP_IO_H
+#ifndef UFO_MAP_PREDICATE_COLOR_H
+#define UFO_MAP_PREDICATE_COLOR_H
 
-// UFO
-#include <ufo/map/types.h>
-
-// STL
-#include <filesystem>
-#include <iostream>
-#include <map>
-#include <string>
-#include <string_view>
-
-namespace ufo::map
+namespace ufo::map::predicate
 {
-// Data identifiers
-enum struct DataIdentifier : std::uint8_t {
-	OCCUPANCY,
-	TIME,
-	COLOR,
-	SEMANTIC,
-	SURFEL,
-	SIGNED_DISTANCE,
-};
 
-// File options
-struct FileOptions {
-	bool compressed;
-	double resolution;
-	depth_t depth_levels;
-};
+}
 
-// File header
-struct FileHeader : FileOptions {
-	static constexpr std::string_view FILE_HEADER = "# UFOMap file";
-	static constexpr uint8_t CURRENT_MAJOR = 1;
-	static constexpr uint8_t CURRENT_MINOR = 0;
-	static constexpr uint8_t CURRENT_PATCH = 0;
-
-	uint8_t major;
-	uint8_t minor;
-	uint8_t patch;
-};
-
-bool isUFOMapFile(std::filesystem::path const& filename);
-
-bool isUFOMapFile(std::istream& in_stream);
-
-FileHeader readHeader(std::filesystem::path const& filename);
-
-FileHeader readHeader(std::istream& in_stream);
-
-void writeHeader(std::ostream& out_stream, FileOptions const& options);
-
-bool compressData(std::istream& in_stream, std::ostream& out_stream,
-                  uint64_t uncompressed_data_size, int acceleration_level = 1,
-                  int compression_level = 0);
-
-bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint64_t uncompressed_data_size);
-
-bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint64_t uncompressed_data_size, uint64_t& compressed_data_size);
-}  // namespace ufo::map
-#endif  // UFO_MAP_IO_H
+#endif  // UFO_MAP_PREDICATE_COLOR_H

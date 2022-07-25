@@ -58,19 +58,6 @@
 #include <ufo/map/time/time_map_base.h>
 #include <ufo/map/time/time_node.h>
 
-//////////////////////////////////////////////
-#include <ufo/map/occupancy_map.h>
-#include <ufo/map/occupancy_map_color.h>
-// #include <ufo/map/occupancy_map_color_semantic.h>
-// #include <ufo/map/occupancy_map_semantic.h>
-#include <ufo/map/occupancy_map_time.h>
-#include <ufo/map/occupancy_map_time_color.h>
-// #include <ufo/map/occupancy_map_time_color_semantic.h>
-// #include <ufo/map/occupancy_map_time_semantic.h>
-#include <ufo/map/integrator/integrator.h>
-#include <ufo/map/point_cloud.h>
-#include <ufo/map/types.h>
-
 // STL
 #include <cstdint>
 #include <filesystem>

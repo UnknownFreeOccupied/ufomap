@@ -68,7 +68,7 @@ bool isUFOMapFile(std::istream& in_stream)
 {
 	std::string line;
 	std::getline(in_stream, line);
-	return 0 == line.compare(0, FILE_HEADER.length(), FILE_HEADER);
+	return 0 == line.compare(0, FileHeader::FILE_HEADER.length(), FileHeader::FILE_HEADER);
 }
 
 FileHeader readHeader(std::filesystem::path const& filename)
@@ -88,16 +88,17 @@ FileHeader readHeader(std::istream& in_stream)
 	}
 
 	FileHeader header;
-	in_stream.read(reinterpret_cast<char*>(&header.major), sizeof(uint8_t));
-	in_stream.read(reinterpret_cast<char*>(&header.minor), sizeof(uint8_t));
-	in_stream.read(reinterpret_cast<char*>(&header.path), sizeof(uint8_t));
+	in_stream.read(reinterpret_cast<char*>(&header.major), sizeof(header.major));
+	in_stream.read(reinterpret_cast<char*>(&header.minor), sizeof(header.minor));
+	in_stream.read(reinterpret_cast<char*>(&header.patch), sizeof(header.patch));
 
 	uint8_t compressed;
-	in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(uint8_t));
+	in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
 	header.compressed = compressed & 1U;
 
-	in_stream.read(reinterpret_cast<char*>(&header.resolution), sizeof(double));
-	in_stream.read(reinterpret_cast<char*>(&header.depth_levels), sizeof(depth_t));
+	in_stream.read(reinterpret_cast<char*>(&header.resolution), sizeof(header.resolution));
+	in_stream.read(reinterpret_cast<char*>(&header.depth_levels),
+	               sizeof(header.depth_levels));
 
 	return header;
 }
@@ -106,17 +107,19 @@ void writeHeader(std::ostream& out_stream, FileOptions const& options)
 {
 	out_stream << FileHeader::FILE_HEADER;
 	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_MAJOR),
-	                 sizeof(uint8_t));
+	                 sizeof(FileHeader::CURRENT_MAJOR));
 	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_MINOR),
-	                 sizeof(uint8_t));
+	                 sizeof(FileHeader::CURRENT_MINOR));
 	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_PATCH),
-	                 sizeof(uint8_t));
+	                 sizeof(FileHeader::CURRENT_PATCH));
 
 	uint8_t compressed = options.compressed ? 1U : 0U;
-	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(uint8_t));
+	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(compressed));
 
-	in_stream.write(reinterpret_cast<char const*>(&options.resolution), sizeof(double));
-	in_stream.write(reinterpret_cast<char const*>(&options.depth_levels), sizeof(depth_t));
+	out_stream.write(reinterpret_cast<char const*>(&options.resolution),
+	                 sizeof(options.resolution));
+	out_stream.write(reinterpret_cast<char const*>(&options.depth_levels),
+	                 sizeof(options.depth_levels));
 }
 
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
@@ -146,7 +149,8 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
 		// Check if compression successful
 		if (0 <= compressed_data_size) {
 			// Write amount of data to output stream
-			out_stream.write(reinterpret_cast<char*>(&compressed_data_size), sizeof(int32_t));
+			out_stream.write(reinterpret_cast<char*>(&compressed_data_size),
+			                 sizeof(compressed_data_size));
 			// Write compressed data to output stream
 			out_stream.write(compressed_data.get(), compressed_data_size);
 		} else {
@@ -170,7 +174,8 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 	while (in_stream.good() && cur < uncompressed_data_size) {
 		// Get size of compressed data
 		int32_t compressed_data_size;
-		in_stream.read(reinterpret_cast<char*>(&compressed_data_size), sizeof(int32_t));
+		in_stream.read(reinterpret_cast<char*>(&compressed_data_size),
+		               sizeof(compressed_data_size));
 
 		// Decompress data
 		auto compressed_data = std::make_unique<char[]>(compressed_data_size);
@@ -200,7 +205,8 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 	while (in_stream.good() && cur < uncompressed_data_size) {
 		// Get size of compressed data
 		int32_t cur_compressed_data_size;
-		in_stream.read(reinterpret_cast<char*>(&cur_compressed_data_size), sizeof(int32_t));
+		in_stream.read(reinterpret_cast<char*>(&cur_compressed_data_size),
+		               sizeof(cur_compressed_data_size));
 
 		compressed_data_size += cur_compressed_data_size;
 

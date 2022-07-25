@@ -130,8 +130,8 @@ class OctreeMapBase
 
 	template <class Node2, class Indicators2, bool ReuseNodes2, bool LockLess2,
 	          template <typename, typename, typename> typename... Bases2>
-	OctreeMapBase(OctreeMapBase<Node2, Indicators2, bool ReuseNodes2, LockLess2,
-	                            Bases2...> const& other)
+	OctreeMapBase(
+	    OctreeMapBase<Node2, Indicators2, ReuseNodes2, LockLess2, Bases2...> const& other)
 	    : Octree(other.resolution(), other.depthLevels(), other.automaticPruning())
 	{
 		initRoot();
@@ -185,8 +185,7 @@ class OctreeMapBase
 
 	OctreeMapBase& operator=(OctreeMapBase&& rhs) = default;
 
-	// FIXME: Make private?
-
+ protected:
 	//
 	// Initilize root
 	//
@@ -204,6 +203,20 @@ class OctreeMapBase
 	void updateNode(InnerNode& node, depth_t depth)
 	{
 		(Bases<OctreeMapBase, LeafNode, InnerNode>::updateNode(node, depth), ...);
+	}
+
+	//
+	// Update node indicators
+	//
+
+	void updateNodeIndicators(LeafNode& node)
+	{
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::updateNodeIndicators(node), ...);
+	}
+
+	void updateNodeIndicators(InnerNode& node, depth_t depth)
+	{
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::updateNodeIndicators(node, depth), ...);
 	}
 
 	//

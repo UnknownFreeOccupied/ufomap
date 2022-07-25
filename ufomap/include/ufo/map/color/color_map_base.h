@@ -45,6 +45,7 @@
 // UFO
 #include <ufo/map/color/color_node.h>
 #include <ufo/map/octree/octree_base.h>
+#include <ufo/map/predicate/color.h>
 
 // STL
 #include <type_traits>

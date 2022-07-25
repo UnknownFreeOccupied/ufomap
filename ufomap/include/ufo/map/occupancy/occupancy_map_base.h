@@ -1301,7 +1301,7 @@ class OccupancyMapBase
 		in_stream.read(reinterpret_cast<char*>(&min_logit), sizeof(min_logit));
 		in_stream.read(reinterpret_cast<char*>(&max_logit), sizeof(max_logit));
 
-		auto const = nodes.size();
+		auto const num_nodes = nodes.size();
 
 		if (0 == type) {
 			// uint8_t

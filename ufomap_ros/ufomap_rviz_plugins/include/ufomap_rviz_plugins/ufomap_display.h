@@ -45,8 +45,7 @@
 // UFO
 #include <ufo/geometry/frustum.h>
 #include <ufo/map/code/code.h>
-#include <ufo/map/occupancy_map_time_color.h>
-#include <ufo/map/occupancy_map_time_color_semantic.h>
+#include <ufo/map/ufomap.h>
 #include <ufomap_msgs/UFOMapStamped.h>
 #include <ufomap_rviz_plugins/data.h>
 #include <ufomap_rviz_plugins/filter_display.h>
@@ -179,28 +178,23 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	}
 
  private:
-	std::variant<
-	    std::monostate,
-	    UFOMap<ufo::map::OccupancyMap>,
-			UFOMap<ufo::map::TimeMap>,
-			UFOMap<ufo::map::OccupancyMapTime>,
-			UFOMap<ufo::map::ColorMap>,
-			UFOMap<ufo::map::OccupancyMapColor>,
-			UFOMap<ufo::map::TimeMapColor>,
-			UFOMap<
+	std::variant < std::monostate, UFOMap<ufo::map::OccupancyMap>,
+	    UFOMap<ufo::map::TimeMap>, UFOMap<ufo::map::OccupancyMapTime>,
+	    UFOMap<ufo::map::ColorMap>, UFOMap<ufo::map::OccupancyMapColor>,
+	    UFOMap<ufo::map::TimeMapColor>,
+	    UFOMap<
 
+	        ufo::map::OccupancyMapTime<false, ufo::map::MemoryModel::POINTER_REUSE, 1>,
+	        ufo::map::OccupancyMapColor<uint8_t, false,
+	                                    ufo::map::MemoryModel::POINTER_REUSE, 1>,
+	        ufo::map::OccupancyMapSemantic<uint8_t, false,
+	                                       ufo::map::MemoryModel::POINTER_REUSE, 1>,
+	        ufo::map::OccupancyMapSurfel<uint8_t, false,
+	                                     ufo::map::MemoryModel::POINTER_REUSE, 1>>
 
-	    ufo::map::OccupancyMapTime<false, ufo::map::MemoryModel::POINTER_REUSE, 1>,
-	    ufo::map::OccupancyMapColor<uint8_t, false, ufo::map::MemoryModel::POINTER_REUSE,
-	                                1>,
-	    ufo::map::OccupancyMapSemantic<uint8_t, false, ufo::map::MemoryModel::POINTER_REUSE,
-	                                   1>,
-	    ufo::map::OccupancyMapSurfel<uint8_t, false, ufo::map::MemoryModel::POINTER_REUSE,
-	                                 1>>
-
-	    //  Map
-	    ufo::map::OccupancyMapTimeColorT<false, ufo::map::MemoryModel::POINTER_REUSE, 1>
-	        map_;
+	        //  Map
+	        ufo::map::OccupancyMapTimeColorT<false, ufo::map::MemoryModel::POINTER_REUSE, 1>
+	            map_;
 
 	// Flag to tell the other threads to stop
 	std::atomic_bool done_ = false;

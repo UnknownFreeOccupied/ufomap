@@ -54,7 +54,7 @@
 #include <ufo/map/octree/query.h>
 #include <ufo/map/point.h>
 #include <ufo/map/predicate/octree.h>
-#include <ufo/map/predicate/predicates.h>
+#include <ufo/map/predicate/satisfies.h>
 #include <ufo/map/predicate/spatial.h>
 #include <ufo/map/types.h>
 #include <ufo/math/util.h>
@@ -86,9 +86,6 @@ class OctreeBase
 	static constexpr depth_t MIN_DEPTH_LEVELS = 2;
 	// Maximum number of depth levels
 	static constexpr depth_t MAX_DEPTH_LEVELS = 21;
-
-	static_assert(0 < StaticallyAllocatedDepths &&
-	              StaticallyAllocatedDepths <= MAX_DEPTH_LEVELS);
 
 	friend Derived;
 
@@ -278,11 +275,7 @@ class OctreeBase
 	 *
 	 * @return The minimum depth levels an octree can have.
 	 */
-	[[nodiscard]] static constexpr depth_t minDepthLevels()
-	{
-		return std::min(MIN_DEPTH_LEVELS,
-		                static_cast<depth_t>(StaticallyAllocatedDepths + depth_t(1)));
-	}
+	[[nodiscard]] static constexpr depth_t minDepthLevels() { return MIN_DEPTH_LEVELS; }
 
 	/*!
 	 * @brief The maximum depth levels an octree can have.
@@ -2149,7 +2142,7 @@ class OctreeBase
 	OctreeBase(OctreeBase&& other)
 	    : depth_levels_(std::move(other.depth_levels_)),
 	      max_value_(std::move(other.max_value_)),
-	      statically_allocated_nodes_(std::move(other.statically_allocated_nodes_)),
+	      root_(std::move(other.root_)),
 	      node_size_(std::move(other.node_size_)),
 	      node_size_factor_(std::move(other.node_size_factor_)),
 	      automatic_pruning_enabled_(std::move(other.automatic_pruning_enabled_)),
@@ -2194,7 +2187,7 @@ class OctreeBase
 
 		depth_levels_ = std::move(rhs.depth_levels_);
 		max_value_ = std::move(rhs.max_value_);
-		statically_allocated_nodes_ = std::move(rhs.statically_allocated_nodes_);
+		root_ = std::move(rhs.root_);
 		node_size_ = std::move(rhs.node_size_);
 		node_size_factor_ = std::move(rhs.node_size_factor_);
 		automatic_pruning_enabled_ = std::move(rhs.automatic_pruning_enabled_);
@@ -2232,29 +2225,7 @@ class OctreeBase
 		for (auto& a_l : children_locks_) {
 			a_l.clear();
 		}
-
-		// Code code(0, StaticallyAllocatedDepths);
-
-		// TODO: Init statically_allocated_nodes_
-		// for (size_t i = 0; i < math::ipow(8, StaticallyAllocatedDepths - 1); ++i) {
-		// 	statically_allocated_nodes_[i].children = &statically_allocated_nodes_[i + 1];
-		// }
-
-		// initRecurs(code);
 	}
-
-	// void initRecurs(Code code)
-	// {
-	// 	if (1 == code.depth()) {
-	// 		return;
-	// 	}
-
-	// 	printf("Code: %5llu, Depth: %u\n", code.code(), +code.depth());
-
-	// 	for (size_t i = 0; 8 != i; ++i) {
-	// 		initRecurs(code.child(i));
-	// 	}
-	// }
 
 	//
 	// Set resolution and depth levels
@@ -2564,12 +2535,9 @@ class OctreeBase
 	// Get root
 	//
 
-	constexpr InnerNode const& getRoot() const noexcept
-	{
-		return statically_allocated_nodes_[0];
-	}
+	constexpr InnerNode const& getRoot() const noexcept { return root_; }
 
-	constexpr InnerNode& getRoot() noexcept { return statically_allocated_nodes_[0]; }
+	constexpr InnerNode& getRoot() noexcept { return root_; }
 
 	//
 	// Get node
@@ -2789,15 +2757,7 @@ class OctreeBase
 			}
 		}
 
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (!node.leaf_children) {
-				// Allocate children
-				node.leaf_children = new LeafNodeBlock();
-				num_allocated_leaf_nodes_ += 8;
-				num_allocated_inner_leaf_nodes_ -= 1;
-				num_allocated_inner_nodes_ += 1;
-			}
-		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+		if constexpr (ReuseNodes) {
 			if constexpr (!LockLess) {
 				if (lockIfNonEmptyLeaves()) {
 					// Take existing children
@@ -2825,6 +2785,14 @@ class OctreeBase
 					num_allocated_inner_nodes_ += 1;
 				}
 			}
+		} else {
+			if (!node.leaf_children) {
+				// Allocate children
+				node.leaf_children = new LeafNodeBlock();
+				num_allocated_leaf_nodes_ += 8;
+				num_allocated_inner_leaf_nodes_ -= 1;
+				num_allocated_inner_nodes_ += 1;
+			}
 		}
 
 		num_leaf_nodes_ += 8;
@@ -2834,6 +2802,7 @@ class OctreeBase
 		getLeafChildren(node).fill(static_cast<LeafNode&>(node));
 
 		setIsLeaf(node, false);
+
 		if constexpr (!LockLess) {
 			unlockChildren(0);
 		}
@@ -2847,15 +2816,7 @@ class OctreeBase
 			}
 		}
 
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (!node.inner_children) {
-				// Allocate children
-				node.inner_children = new InnerNodeBlock();
-				// Get 8 new and 1 is made into a inner node
-				num_allocated_inner_leaf_nodes_ += 7;
-				num_allocated_inner_nodes_ += 1;
-			}
-		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+		if constexpr (ReuseNodes) {
 			if constexpr (!LockLess) {
 				if (lockIfNonEmptyInner()) {
 					// Take existing children
@@ -2882,6 +2843,14 @@ class OctreeBase
 					num_allocated_inner_leaf_nodes_ += 7;
 					num_allocated_inner_nodes_ += 1;
 				}
+			}
+		} else {
+			if (!node.inner_children) {
+				// Allocate children
+				node.inner_children = new InnerNodeBlock();
+				// Get 8 new and 1 is made into a inner node
+				num_allocated_inner_leaf_nodes_ += 7;
+				num_allocated_inner_nodes_ += 1;
 			}
 		}
 
@@ -2926,17 +2895,7 @@ class OctreeBase
 			return;
 		}
 
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (!manual_pruning && !automaticPruning()) {
-				return;
-			}
-
-			delete &getLeafChildren(node);
-			num_allocated_leaf_nodes_ -= 8;
-			num_allocated_inner_leaf_nodes_ += 1;
-			num_allocated_inner_nodes_ -= 1;
-			node.leaf_children = nullptr;
-		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+		if constexpr (ReuseNodes) {
 			if (!manual_pruning && !automaticPruning()) {
 				if constexpr (!LockLess) {
 					lockLeaves();
@@ -2953,8 +2912,17 @@ class OctreeBase
 			}
 
 			node.leaf_children = nullptr;
-		} else if constexpr (MemoryModel::INDEX == NodeMemoryModel) {
-			// TODO: Implement
+
+		} else {
+			if (!manual_pruning && !automaticPruning()) {
+				return;
+			}
+
+			delete &getLeafChildren(node);
+			num_allocated_leaf_nodes_ -= 8;
+			num_allocated_inner_leaf_nodes_ += 1;
+			num_allocated_inner_nodes_ -= 1;
+			node.leaf_children = nullptr;
 		}
 	}
 
@@ -2981,17 +2949,7 @@ class OctreeBase
 			return;
 		}
 
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (!manual_pruning && !automaticPruning()) {
-				return;
-			}
-
-			delete &getInnerChildren(node);
-			// Remove 8 and 1 inner node is made into a inner leaf node
-			num_allocated_inner_leaf_nodes_ -= 7;
-			num_allocated_inner_nodes_ -= 1;
-			node.inner_children = nullptr;
-		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+		if constexpr (ReuseNodes) {
 			if (!manual_pruning && !automaticPruning()) {
 				if constexpr (!LockLess) {
 					lockInner();
@@ -3007,6 +2965,17 @@ class OctreeBase
 				num_allocated_inner_nodes_ -= 1;
 			}
 
+			node.inner_children = nullptr;
+
+		} else {
+			if (!manual_pruning && !automaticPruning()) {
+				return;
+			}
+
+			delete &getInnerChildren(node);
+			// Remove 8 and 1 inner node is made into a inner leaf node
+			num_allocated_inner_leaf_nodes_ -= 7;
+			num_allocated_inner_nodes_ -= 1;
 			node.inner_children = nullptr;
 		}
 	}
@@ -3044,17 +3013,7 @@ class OctreeBase
 			return;
 		}
 
-		if constexpr (MemoryModel::POINTER == NodeMemoryModel) {
-			if (!manual_pruning && !automaticPruning()) {
-				return;
-			}
-
-			delete &getInnerChildren(node);
-			// Remove 8 and 1 inner node is made into a inner leaf node
-			num_allocated_inner_leaf_nodes_ -= 7;
-			num_allocated_inner_nodes_ -= 1;
-			node.inner_children = nullptr;
-		} else if constexpr (MemoryModel::POINTER_REUSE == NodeMemoryModel) {
+		if constexpr (ReuseNodes) {
 			if (!manual_pruning && !automaticPruning()) {
 				if constexpr (!LockLess) {
 					lockInner();
@@ -3070,6 +3029,16 @@ class OctreeBase
 				num_allocated_inner_nodes_ -= 1;
 			}
 
+			node.inner_children = nullptr;
+		} else {
+			if (!manual_pruning && !automaticPruning()) {
+				return;
+			}
+
+			delete &getInnerChildren(node);
+			// Remove 8 and 1 inner node is made into a inner leaf node
+			num_allocated_inner_leaf_nodes_ -= 7;
+			num_allocated_inner_nodes_ -= 1;
 			node.inner_children = nullptr;
 		}
 	}
@@ -3527,7 +3496,7 @@ class OctreeBase
 			uint64_t data_size;
 			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if (!canReadData(identifier)) {
+			if (!derived().canReadData(identifier)) {
 				// Skip forward
 				in_stream.seekg(data_size, std::istream::cur);
 				continue;
@@ -3543,7 +3512,7 @@ class OctreeBase
 
 				decompressData(in_stream, data_stream, data_size, compressed_data_size);
 
-				if (!derived().readNodes(data_stream, node, identifier)) {
+				if (!derived().readNodes(data_stream, nodes, identifier)) {
 					// Skip forward
 					in_stream.seekg(compressed_data_size, std::istream::cur);
 				}
