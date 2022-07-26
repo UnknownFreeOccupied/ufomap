@@ -46,6 +46,9 @@
 #include <ufo/map/predicate/time.h>
 #include <ufo/map/types.h>
 
+// STL
+#include <deque>
+
 namespace ufo::map
 {
 template <class Derived, class LeafNode, class InnerNode>
@@ -85,14 +88,14 @@ class TimeMapBase
 	void setTimeStep(Node node, time_step_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
+		    node, [this, time_step](LeafNode& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 
 	void setTimeStep(Code code, time_step_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
+		    code, [this, time_step](LeafNode& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 
@@ -119,7 +122,7 @@ class TimeMapBase
 	                 bool propagate = true)
 	{
 		derived().apply(
-		    policy, node, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
+		    policy, node, [this, time_step](LeafNode& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 
@@ -129,7 +132,7 @@ class TimeMapBase
 	                 bool propagate = true)
 	{
 		derived().apply(
-		    policy, code, [this, time_step](auto&& node) { setTimeStep(node, time_step); },
+		    policy, code, [this, time_step](LeafNode& node) { setTimeStep(node, time_step); },
 		    propagate);
 	}
 
@@ -291,14 +294,17 @@ class TimeMapBase
 	constexpr time_step_t averageChildTimeStep(InnerNode const& node, depth_t depth) const
 	{
 		time_step_t sum =
-		    1 == depth ? std::accumulate(
-		                     std::begin(derived().getLeafChildren(node)),
-		                     std::end(derived().getLeafChildren(node)), time_step_t(0),
-		                     [](auto cur, auto&& child) { return cur + getTimeStep(child); })
-		               : std::accumulate(
-		                     std::begin(derived().getInnerChildren(node)),
-		                     std::end(derived().getInnerChildren(node)), time_step_t(0),
-		                     [](auto cur, auto&& child) { return cur + getTimeStep(child); });
+		    1 == depth
+		        ? std::accumulate(std::begin(derived().getLeafChildren(node)),
+		                          std::end(derived().getLeafChildren(node)), time_step_t(0),
+		                          [](auto cur, LeafNode const& child) {
+			                          return cur + getTimeStep(child);
+		                          })
+		        : std::accumulate(std::begin(derived().getInnerChildren(node)),
+		                          std::end(derived().getInnerChildren(node)), time_step_t(0),
+		                          [](auto cur, LeafNode const& child) {
+			                          return cur + getTimeStep(child);
+		                          });
 
 		return sum / time_step_t(8);
 	}
@@ -336,6 +342,20 @@ class TimeMapBase
 	}
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	{
+		uint64_t const size = nodes.size() * sizeof(uint32_t);
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+
+		auto data = std::make_unique<uint32_t[]>(nodes.size());
+		for (size_t i = 0; i != nodes.size(); ++i) {
+			data[i] = getTimeStep(nodes[i]);
+		}
+
+		out_stream.write(reinterpret_cast<char const*>(data.get()),
+		                 nodes.size() * sizeof(uint32_t));
+	}
+
+	void writeNodes(std::ostream& out_stream, std::deque<LeafNode> const& nodes) const
 	{
 		uint64_t const size = nodes.size() * sizeof(uint32_t);
 		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));

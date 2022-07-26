@@ -45,6 +45,9 @@
 // UFO
 #include <ufo/map/octree/octree_base.h>
 
+// STL
+#include <deque>
+
 namespace ufo::map
 {
 // NOTE: Remove this when it is possible to friend varidic number of classes
@@ -233,6 +236,11 @@ class OctreeMapBase
 	}
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	{
+		(Bases<OctreeMapBase, LeafNode, InnerNode>::writeNodes(out_stream, nodes), ...);
+	}
+
+	void writeNodes(std::ostream& out_stream, std::deque<LeafNode> const& nodes) const
 	{
 		(Bases<OctreeMapBase, LeafNode, InnerNode>::writeNodes(out_stream, nodes), ...);
 	}

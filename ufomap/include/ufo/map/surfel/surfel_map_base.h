@@ -52,6 +52,7 @@
 #include <functional>
 #include <type_traits>
 #include <utility>
+#include <deque>
 
 namespace ufo::map
 {
@@ -596,6 +597,20 @@ class SurfelMapBase
 	}
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	{
+		uint64_t const size = nodes.size() * sizeof(Surfel);
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+
+		auto data = std::make_unique<Surfel[]>(nodes.size());
+		for (size_t i = 0; i != nodes.size(); ++i) {
+			data[i] = getSurfel(nodes[i]);
+		}
+
+		out_stream.write(reinterpret_cast<char const*>(data.get()),
+		                 nodes.size() * sizeof(Surfel));
+	}
+
+	void writeNodes(std::ostream& out_stream, std::deque<LeafNode> const& nodes) const
 	{
 		uint64_t const size = nodes.size() * sizeof(Surfel);
 		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));

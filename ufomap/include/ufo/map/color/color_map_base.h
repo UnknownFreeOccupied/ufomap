@@ -48,6 +48,7 @@
 
 // STL
 #include <type_traits>
+#include <deque>
 
 namespace ufo::map
 {
@@ -335,6 +336,20 @@ class ColorMapBase
 	}
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	{
+		uint64_t const size = nodes.size() * sizeof(RGBColor);
+		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(uint64_t));
+
+		auto data = std::make_unique<RGBColor[]>(nodes.size());
+		for (size_t i = 0; i != nodes.size(); ++i) {
+			data[i] = getColor(nodes[i]);
+		}
+
+		out_stream.write(reinterpret_cast<char const*>(data.get()),
+		                 nodes.size() * sizeof(RGBColor));
+	}
+
+	void writeNodes(std::ostream& out_stream, std::deque<LeafNode> const& nodes) const
 	{
 		uint64_t const size = nodes.size() * sizeof(RGBColor);
 		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(uint64_t));

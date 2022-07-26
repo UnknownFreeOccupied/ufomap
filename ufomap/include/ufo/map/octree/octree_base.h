@@ -64,6 +64,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <deque>
 #include <execution>
 #include <fstream>
 #include <iostream>
@@ -3296,14 +3297,10 @@ class OctreeBase
 	static bool isNodeCollapsible(InnerNode const& node, depth_t depth) noexcept
 	{
 		return 1 == depth ? all_of(getLeafChildren(node),
-		                           [node = static_cast<LeafNode const&>(node)](auto&& child) {
-			                           return node == child;
-		                           })
-		                  : all_of(getInnerChildren(node),
-		                           [node = static_cast<LeafNode const&>(node)](auto&& child) {
-			                           return isLeaf(child) &&
-			                                  node == static_cast<LeafNode const&>(child);
-		                           });
+		                           [node](LeafNode const& child) { return node == child; })
+		                  : all_of(getInnerChildren(node), [node](LeafNode const& child) {
+			                    return isLeaf(child) && node == child;
+		                    });
 	}
 
 	//
@@ -3477,12 +3474,7 @@ class OctreeBase
 	// NOTE: Only call with nodes that have children
 	bool pruneNode(InnerNode& node, depth_t depth)
 	{
-		if (isNodeCollapsible(node, depth)) {
-			deleteChildren(node, depth);
-			return true;
-		} else {
-			return false;
-		}
+		return isNodeCollapsible(node, depth) ? deleteChildren(node, depth), true : false;
 	}
 
 	bool pruneRecurs(InnerNode& node, depth_t depth)
@@ -3616,7 +3608,7 @@ class OctreeBase
 
 			createInnerChildren(node, depth);
 
-			for (size_t i = 0; i != 8; ++i) {
+			for (std::size_t i = 0; i != 8; ++i) {
 				if ((child_valid_return >> i) & 1U) {
 					nodes.push_back(&getInnerChild(node, i));
 				} else if ((child_valid_inner >> i) & 1U) {
@@ -3704,6 +3696,7 @@ class OctreeBase
 	                                int compression_acceleration_level,
 	                                int compression_level)
 	{
+		const auto t1 = std::chrono::high_resolution_clock::now();
 		uint8_t compressed = compress ? UINT8_MAX : 0U;
 		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
 
@@ -3716,6 +3709,9 @@ class OctreeBase
 
 		auto [indicators, nodes] = modifiedData();
 
+		auto t2 = std::chrono::high_resolution_clock::now();
+		auto t3 = std::chrono::high_resolution_clock::now();
+		auto t4 = std::chrono::high_resolution_clock::now();
 		if (compress) {
 			std::stringstream data(std::ios_base::in | std::ios_base::out |
 			                       std::ios_base::binary);
@@ -3730,8 +3726,11 @@ class OctreeBase
 			compressData(data, out_stream, uncompressed_data_size,
 			             compression_acceleration_level, compression_level);
 		} else {
+			t2 = std::chrono::high_resolution_clock::now();
 			writeIndicators(out_stream, indicators);
+			t3 = std::chrono::high_resolution_clock::now();
 			derived().writeNodes(out_stream, nodes);
+			t4 = std::chrono::high_resolution_clock::now();
 
 			uncompressed_data_size = out_stream.tellp() - data_pos;
 		}
@@ -3743,6 +3742,14 @@ class OctreeBase
 		                 sizeof(uncompressed_data_size));
 
 		out_stream.seekp(end_pos);
+
+		const std::chrono::duration<double, std::milli> ms_1 = t2 - t1;
+		const std::chrono::duration<double, std::milli> ms_2 = t3 - t2;
+		const std::chrono::duration<double, std::milli> ms_3 = t4 - t3;
+		std::cout << "Get data         " << ms_1.count() << " ms\n";
+		std::cout << "Write indicators " << ms_2.count() << " ms\n";
+		std::cout << "Write data       " << ms_3.count() << " ms\n";
+		std::cout << "Number of nodes  " << nodes.size() << '\n';
 	}
 
 	template <class Predicates>
@@ -3843,8 +3850,8 @@ class OctreeBase
 
 	std::pair<std::vector<uint8_t>, std::vector<LeafNode>> modifiedData()
 	{
-		std::vector<uint8_t> indicators;
-		std::vector<LeafNode> nodes;
+		std::vector<uint8_t> indicators;  // TODO: deque vs vector
+		std::vector<LeafNode> nodes;      // TODO: deque vs vector
 
 		InnerNode& root = getRoot();
 
@@ -3870,76 +3877,63 @@ class OctreeBase
 
 		setModified(root, false);
 
-		return {indicators, nodes};
+		return {std::move(indicators), std::move(nodes)};  // FIXME: Check if RVO
 	}
 
 	void modifiedDataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode>& nodes,
 	                        InnerNode& node, depth_t depth)
 	{
-		uint8_t child_valid_return = 0;
+		auto const valid_return_index = indicators.size();
+		indicators.push_back(0);
+
 		if (1 == depth) {
 			for (std::size_t i = 0; 8 != i; ++i) {
-				if (isModified(getLeafChild(node, i))) {
-					child_valid_return |= 1U << i;
-				}
-			}
+				LeafNode& child = getLeafChild(node, i);
+				if (isModified(child)) {
+					indicators[valid_return_index] |= 1U << i;
 
-			indicators.push_back(child_valid_return);
-
-			if (0 == child_valid_return) {
-				return;
-			}
-
-			for (std::size_t i = 0; 8 != i; ++i) {
-				if ((child_valid_return >> i) & 1U) {
-					auto& child = getLeafChild(node, i);
 					nodes.push_back(child);
 					derived().updateNodeIndicators(child);
-					setModified(child, false);
 				}
 			}
-		} else {
-			auto cur_indicators_size = indicators.size();
-			auto cur_nodes_size = nodes.size();
 
-			uint8_t child_valid_inner = 0;
-			for (size_t i = 0; 8 != i; ++i) {
-				auto& child = getInnerChild(node, i);
+			for (LeafNode& child : getLeafChildren(node)) {
+				setModified(child, false);
+			}
+		} else {
+			auto const valid_inner_index = indicators.size();
+			indicators.push_back(0);
+
+			auto const cur_indicators_size = indicators.size();
+			auto const cur_nodes_size = nodes.size();
+
+			for (std::size_t i = 0; 8 != i; ++i) {
+				InnerNode& child = getInnerChild(node, i);
 				if (isModified(child)) {
 					if (isLeaf(child)) {
-						child_valid_return |= 1U << i;
+						indicators[valid_return_index] |= 1U << i;
+
+						nodes.push_back(child);
+						derived().updateNodeIndicators(child);
 					} else {
-						child_valid_inner |= 1U << i;
+						indicators[valid_inner_index] |= 1U << i;
+
+						modifiedDataRecurs(indicators, nodes, child, depth - 1);
+						derived().updateNode(child, depth - 1);
+						derived().updateNodeIndicators(child, depth - 1);
+						pruneNode(child, depth - 1);
 					}
 				}
 			}
-			indicators.push_back(child_valid_return);
-			indicators.push_back(child_valid_inner);
 
-			if (0 == child_valid_return && 0 == child_valid_inner) {
-				return;
-			}
-
-			for (size_t i = 0; 8 != i; ++i) {
-				if ((child_valid_return >> i) & 1U) {
-					auto& child = getInnerChild(node, i);
-					nodes.push_back(child);
-					derived().updateNodeIndicators(child);
-					setModified(child, false);
-				} else if ((child_valid_inner >> i) & 1U) {
-					auto& child = getInnerChild(node, i);
-					modifiedDataRecurs(indicators, nodes, child, depth - 1);
-					derived().updateNode(child, depth - 1);
-					derived().updateNodeIndicators(child, depth - 1);
-					pruneNode(child, depth - 1);
-					setModified(child, false);
-				}
+			for (InnerNode& child : getInnerChildren(node)) {
+				setModified(child, false);
 			}
 
 			if (nodes.size() == cur_nodes_size) {
-				indicators.resize(cur_indicators_size + 2);
-				indicators.back() = 0U;
-				*std::prev(std::end(indicators), 2) = 0U;
+				indicators.resize(cur_indicators_size);
+				indicators[valid_return_index] = 0;
+				indicators[valid_inner_index] = 0;
 			}
 		}
 	}

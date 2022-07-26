@@ -46,6 +46,7 @@
 #include <ufomap_msgs/UFOMap.h>
 
 // STL
+#include <chrono>
 #include <sstream>
 #include <type_traits>
 
@@ -91,9 +92,8 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, Predicates const& predicates,
 	          compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.reserve(data.tellp());
-	std::copy(std::istreambuf_iterator<char>(data), std::istreambuf_iterator<char>(),
-	          std::back_inserter(msg.data));
+	msg.data.resize(data.tellp());
+	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
 
 	return msg;
 }
@@ -111,9 +111,8 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, unsigned int depth = 0,
 	map.write(data, depth, compress, compression_acceleration_level, compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.reserve(data.tellp());
-	std::copy(std::istreambuf_iterator<char>(data), std::istreambuf_iterator<char>(),
-	          std::back_inserter(msg.data));
+	msg.data.resize(data.tellp());
+	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
 
 	return msg;
 }
@@ -131,9 +130,8 @@ ufomap_msgs::UFOMap ufoToMsgUpdateModified(Map& map, bool compress = false,
 	                           compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.reserve(data.tellp());
-	std::copy(std::istreambuf_iterator<char>(data), std::istreambuf_iterator<char>(),
-	          std::back_inserter(msg.data));
+	msg.data.resize(data.tellp());
+	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
 
 	return msg;
 }
