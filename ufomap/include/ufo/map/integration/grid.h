@@ -44,9 +44,10 @@
 
 // UFO
 #include <ufo/map/key.h>
+#include <ufo/math/util.h>
 
 // STL
-#include <bitset>
+#include <array>
 #include <limits>
 
 namespace ufo::map
@@ -55,34 +56,38 @@ template <depth_t Depth>
 class Grid
 {
  private:
-	static constexpr std::size_t NumIndices = ipow(8, Depth);
+	static constexpr std::size_t NumIndices = math::ipow(8, Depth);
 
 	static constexpr Key::key_t Mask =
 	    ~((std::numeric_limits<Key::key_t>::max() >> Depth) << Depth);
 
  public:
-	using reference = typename std::bitset<NumIndices>::reference;
+	using reference = typename std::array<bool, NumIndices>::reference;
 
  public:
 	constexpr bool operator[](std::size_t const index) const { return indices_[index]; }
 
 	constexpr bool operator[](Key const key) const { return indices_[index(key)]; }
 
-	reference operator[](std::size_t const index) { return indices_[index]; }
+	constexpr reference operator[](std::size_t const index) { return indices_[index]; }
 
-	reference operator[](Key const key) { return indices_[index(key)]; }
+	constexpr reference operator[](Key const key) { return indices_[index(key)]; }
 
-	bool test(std::size_t const index) const { return indices_.test(index); }
+	constexpr bool test(std::size_t const index) const { return indices_[index]; }
 
-	bool test(Key const key) const { return indices_.test(index(key)); }
+	constexpr bool test(Key const key) const { return test(index(key)); }
 
-	void set(Key const key) { indices_.set(index(key)); }
+	constexpr void set(std::size_t const index) { indices_[index] = true; }
 
-	void reset(Key const key) { indices_.reset(index(key)); }
+	constexpr void set(Key const key) { set(index(key)); }
 
-	void clear() { indices_.reset(); }
+	constexpr void reset(std::size_t const index) { indices_[index] = false; }
 
-	constexpr std::size_t size() const noexcept { return NumIndices; }
+	constexpr void reset(Key const key) { reset(index(key)); }
+
+	void clear() { indices_.fill(false); }
+
+	constexpr std::size_t size() const noexcept { return indices_.size(); }
 
 	static constexpr std::size_t index(Key const key)
 	{
@@ -98,7 +103,7 @@ class Grid
 	}
 
  private:
-	std::bitset<NumIndices> indices_;
+	std::array<bool, NumIndices> indices_ = {};
 };
 }  // namespace ufo::map
 

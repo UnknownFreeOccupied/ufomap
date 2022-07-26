@@ -220,9 +220,10 @@ class Integrator
 		        : toIntegrationCloud(map, cloud, sensor_origin, max_range_, hit_depth_);
 
 		// Ray cast to get free space
-		Misses misses = isDiscretize()
-		                    ? getMissesDiscrete(map, ic, sensor_origin, false, getMissDepth())
-		                    : getMisses(map, ic, sensor_origin, false, getMissDepth());
+		Misses misses =
+		    isDiscretize()
+		        ? getMissesDiscreteFast(map, ic, sensor_origin, false, getMissDepth())
+		        : getMisses(map, ic, sensor_origin, false, getMissDepth());
 
 		// Integrate into the map
 		integrateMisses(map, misses);

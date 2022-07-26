@@ -43,8 +43,11 @@
 #define UFO_MAP_INTEGRATION_H
 
 // UFO
+#include <ufo/geometry/minimum_distance.h>
 #include <ufo/map/code/code.h>
+#include <ufo/map/code/code_unordered_map.h>
 #include <ufo/map/code/code_unordered_set.h>
+#include <ufo/map/integration/grid.h>
 #include <ufo/map/integration/integration_point.h>
 #include <ufo/map/integration/integration_point_cloud.h>
 #include <ufo/map/key.h>
@@ -55,6 +58,7 @@
 
 // STL
 #include <algorithm>
+#include <queue>
 
 namespace ufo::map
 {
@@ -99,7 +103,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 	IntegrationCloud<P> i_cloud;
 	i_cloud.reserve(cloud.size());
 	Code prev_code;
-	for (auto&& p : temp) {
+	for (auto const& p : temp) {
 		if (prev_code == p.code) {
 			i_cloud.back().points.emplace_back(p.point);
 		} else {
@@ -178,14 +182,13 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
 			if (only_valid && !point.valid) {
 				continue;
 			}
-			for (auto&& e : computeRaySimple(sensor_origin, point, step_size)) {
+			for (auto const& e : computeRaySimple(sensor_origin, point, step_size)) {
 				indices.insert(map.toCode(e, depth));
 			}
 		}
 	}
 
 	Misses misses(std::cbegin(indices), std::cend(indices));
-	std::sort(std::begin(misses), std::end(misses));
 	return misses;
 }
 
@@ -215,7 +218,6 @@ Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
 	}
 
 	Misses misses(std::cbegin(indices), std::cend(indices));
-	std::sort(std::begin(misses), std::end(misses));
 	return misses;
 }
 
@@ -224,10 +226,47 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
                              Point3 const sensor_origin, bool const only_valid = false,
                              depth_t const& depth = 0)
 {
-	// TODO: Implement
+	static constexpr depth_t GRID_DEPTH = 6;  // FIXME: What should this be?
+
+	CodeUnorderedMap<Grid<GRID_DEPTH>> grids;
+
+	// NOTE: For parallel create all grids here first
+
+	Key const origin = map.toKey(sensor_origin, depth);
 
 	Misses misses;
-	std::sort(std::begin(misses), std::end(misses));
+
+	Code prev;
+	for (auto const& p : cloud) {
+		if (only_valid && !p.valid()) {
+			continue;
+		}
+
+		Code const cur = p.code.toDepth(std::max(p.code.depth(), depth));
+		if (cur == prev) {
+			continue;
+		}
+		prev = cur;
+
+		Code prev_at_depth;
+		Grid<GRID_DEPTH>* prev_grid = nullptr;
+		for (auto const key : computeRay(Key(origin, cur.depth()), cur)) {
+			Code const code = map.toCode(key);
+			Code const cur_at_depth = code.toDepth(GRID_DEPTH + depth);
+
+			if (cur_at_depth != prev_at_depth) {
+				prev_at_depth = cur_at_depth;
+				prev_grid = &grids[cur_at_depth];
+			}
+
+			auto const index = prev_grid->index(key);
+			if (!prev_grid->test(index)) {
+				prev_grid->set(index);
+				misses.push_back(code);
+			}
+		}
+	}
+
 	return misses;
 }
 }  // namespace ufo::map
