@@ -87,11 +87,64 @@ bool isUFOMapFile(std::filesystem::path const& filename);
 
 bool isUFOMapFile(std::istream& in_stream);
 
+template <class InputIt>
+bool isUFOMapFile(InputIt& in_buffer)
+{
+	std::string line;
+	// TODO: Implement std::getline(in_stream, line);
+	return 0 == line.compare(0, FileHeader::FILE_HEADER.length(), FileHeader::FILE_HEADER);
+}
+
 FileHeader readHeader(std::filesystem::path const& filename);
 
 FileHeader readHeader(std::istream& in_stream);
 
+template <class InputIt>
+FileHeader readHeader(InputIt& in_buffer)
+{
+	if (!isUFOMapFile(in_buffer)) {
+		throw std::runtime_error("Trying to read non-UFOMap file");
+	}
+
+	FileHeader header;
+	in_stream.read(reinterpret_cast<char*>(&header.major), sizeof(header.major));
+	in_stream.read(reinterpret_cast<char*>(&header.minor), sizeof(header.minor));
+	in_stream.read(reinterpret_cast<char*>(&header.patch), sizeof(header.patch));
+
+	uint8_t compressed;
+	in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
+	header.compressed = compressed & 1U;
+
+	in_stream.read(reinterpret_cast<char*>(&header.resolution), sizeof(header.resolution));
+	in_stream.read(reinterpret_cast<char*>(&header.depth_levels),
+	               sizeof(header.depth_levels));
+
+	return header;
+}
+
 void writeHeader(std::ostream& out_stream, FileOptions const& options);
+
+template <class OutputIt>
+void writeHeader(OutputIt& out_buffer, FileOptions const& options)
+{
+	// TODO: Implement
+
+	out_stream << FileHeader::FILE_HEADER;
+	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_MAJOR),
+	                 sizeof(FileHeader::CURRENT_MAJOR));
+	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_MINOR),
+	                 sizeof(FileHeader::CURRENT_MINOR));
+	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_PATCH),
+	                 sizeof(FileHeader::CURRENT_PATCH));
+
+	uint8_t compressed = options.compressed ? 1U : 0U;
+	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(compressed));
+
+	out_stream.write(reinterpret_cast<char const*>(&options.resolution),
+	                 sizeof(options.resolution));
+	out_stream.write(reinterpret_cast<char const*>(&options.depth_levels),
+	                 sizeof(options.depth_levels));
+}
 
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
                   uint64_t uncompressed_data_size, int acceleration_level = 1,

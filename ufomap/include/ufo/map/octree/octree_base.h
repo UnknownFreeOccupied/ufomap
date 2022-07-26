@@ -2021,6 +2021,12 @@ class OctreeBase
 		readData(in_stream, header, propagate);
 	}
 
+	void read(std::vector<char> const& in_buffer, bool propagate = true)
+	{
+		FileHeader header = readHeader(in_buffer);
+		readData(in_buffer, header, propagate);
+	}
+
 	void readData(std::istream& in_stream, FileHeader const& header, bool propagate = true)
 	{
 		if (resolution() != header.resolution || depthLevels() != header.depth_levels) {
@@ -2029,6 +2035,21 @@ class OctreeBase
 
 		std::vector<LeafNode*> nodes = getNodes(in_stream);
 		readNodes(in_stream, nodes, header.compressed);
+
+		if (propagate) {
+			updateModifiedNodes();
+		}
+	}
+
+	void readData(std::vector<char> const& in_buffer, FileHeader const& header,
+	              bool propagate = true)
+	{
+		if (resolution() != header.resolution || depthLevels() != header.depth_levels) {
+			clear(header.resolution, header.depth_levels);
+		}
+
+		std::vector<LeafNode*> nodes = getNodes(in_buffer);
+		readNodes(in_buffer, nodes, header.compressed);
 
 		if (propagate) {
 			updateModifiedNodes();
@@ -2047,6 +2068,13 @@ class OctreeBase
 	           int compression_acceleration_level = 1, int compression_level = 0) const
 	{
 		write(out_stream, predicate::TRUE(), min_depth, compress,
+		      compression_acceleration_level, compression_level);
+	}
+
+	void write(std::vector<char>& out_buffer, depth_t min_depth = 0, bool compress = false,
+	           int compression_acceleration_level = 1, int compression_level = 0) const
+	{
+		write(out_buffer, predicate::TRUE(), min_depth, compress,
 		      compression_acceleration_level, compression_level);
 	}
 
@@ -2080,6 +2108,23 @@ class OctreeBase
 		writeData(out_stream, std::forward<Predicates>(predicates), min_depth, compress,
 		          compression_acceleration_level, compression_level);
 	}
+
+	template <class Predicates,
+	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
+	void write(std::vector<char>& out_buffer, Predicates&& predicates,
+	           depth_t min_depth = 0, bool compress = false,
+	           int compression_acceleration_level = 1, int compression_level = 0) const
+	{
+		FileOptions options;
+		options.compressed = compress;
+		options.resolution = resolution();
+		options.depth_levels = depthLevels();
+
+		writeHeader(out_buffer, options);
+		writeData(out_buffer, std::forward<Predicates>(predicates), min_depth, compress,
+		          compression_acceleration_level, compression_level);
+	}
+
 	void writeAndUpdateModified(std::filesystem::path const& filename,
 	                            bool compress = false,
 	                            int compression_acceleration_level = 1,
@@ -2105,6 +2150,20 @@ class OctreeBase
 
 		writeHeader(out_stream, options);
 		writeAndUpdateModifiedData(out_stream, compress, compression_acceleration_level,
+		                           compression_level);
+	}
+
+	void writeAndUpdateModified(std::vecotr<char>& out_buffer, bool compress = false,
+	                            int compression_acceleration_level = 1,
+	                            int compression_level = 0)
+	{
+		FileOptions options;
+		options.compressed = compress;
+		options.resolution = resolution();
+		options.depth_levels = depthLevels();
+
+		writeHeader(out_buffer, options);
+		writeAndUpdateModifiedData(out_buffer, compress, compression_acceleration_level,
 		                           compression_level);
 	}
 
