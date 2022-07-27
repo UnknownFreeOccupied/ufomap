@@ -136,6 +136,25 @@ ufomap_msgs::UFOMap ufoToMsgUpdateModified(Map& map, bool compress = false,
 	return msg;
 }
 
+template <class Map>
+ufomap_msgs::UFOMap ufoToMsgClearModified(Map& map, bool compress = false,
+                                          int compression_acceleration_level = 1,
+                                          int compression_level = 0)
+{
+	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+	data.imbue(std::locale());
+
+	map.writeAndClearModified(data, compress, compression_acceleration_level,
+	                          compression_level);
+
+	ufomap_msgs::UFOMap msg;
+	msg.data.resize(data.tellp());
+	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
+
+	return msg;
+}
+
 }  // namespace ufomap_msgs
 
 #endif  // UFOMAP_ROS_MSGS_CONVERSIONS_H

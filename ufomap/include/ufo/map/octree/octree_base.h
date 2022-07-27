@@ -2149,6 +2149,7 @@ class OctreeBase
 		writeData(out_stream, std::forward<Predicates>(predicates), min_depth, compress,
 		          compression_acceleration_level, compression_level);
 	}
+
 	void writeAndUpdateModified(std::filesystem::path const& filename,
 	                            bool compress = false,
 	                            int compression_acceleration_level = 1,
@@ -2168,8 +2169,30 @@ class OctreeBase
 	                            int compression_level = 0)
 	{
 		writeHeader(out_stream, getFileInfo());
-		writeAndUpdateModifiedData(out_stream, compress, compression_acceleration_level,
-		                           compression_level);
+		writeAndUpdateModifiedData<true>(out_stream, compress, compression_acceleration_level,
+		                                 compression_level);
+	}
+
+	void writeAndClearModified(std::filesystem::path const& filename, bool compress = false,
+	                           int compression_acceleration_level = 1,
+	                           int compression_level = 0)
+	{
+		std::ofstream file;
+		file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+		file.imbue(std::locale());
+		file.open(filename, std::ios_base::out | std::ios_base::binary);
+
+		writeAndClearModified(file, compress, compression_acceleration_level,
+		                      compression_level);
+	}
+
+	void writeAndClearModified(std::ostream& out_stream, bool compress = false,
+	                           int compression_acceleration_level = 1,
+	                           int compression_level = 0)
+	{
+		writeHeader(out_stream, getFileInfo());
+		writeAndUpdateModifiedData<false>(out_stream, compress,
+		                                  compression_acceleration_level, compression_level);
 	}
 
  protected:
@@ -3692,6 +3715,7 @@ class OctreeBase
 		out_stream.seekp(end_pos);
 	}
 
+	template <bool UpdateNodes>
 	void writeAndUpdateModifiedData(std::ostream& out_stream, bool compress,
 	                                int compression_acceleration_level,
 	                                int compression_level)
@@ -3707,7 +3731,7 @@ class OctreeBase
 
 		auto data_pos = out_stream.tellp();
 
-		auto [indicators, nodes] = modifiedData();
+		auto [indicators, nodes] = modifiedData<UpdateNodes>();
 
 		auto t2 = std::chrono::high_resolution_clock::now();
 		auto t3 = std::chrono::high_resolution_clock::now();
@@ -3848,6 +3872,7 @@ class OctreeBase
 		}
 	}
 
+	template <bool UpdateNodes>
 	std::pair<std::vector<uint8_t>, std::vector<LeafNode>> modifiedData()
 	{
 		std::vector<uint8_t> indicators;  // TODO: deque vs vector
@@ -3863,12 +3888,16 @@ class OctreeBase
 
 		if (valid_return) {
 			nodes.push_back(root);
-			derived().updateNodeIndicators(root);
+			if constexpr (UpdateNodes) {
+				derived().updateNodeIndicators(root);
+			}
 		} else if (valid_inner) {
-			modifiedDataRecurs(indicators, nodes, root, depthLevels());
-			derived().updateNode(root, depthLevels());
-			derived().updateNodeIndicators(root, depthLevels());
-			pruneNode(root, depthLevels());
+			modifiedDataRecurs<UpdateNodes>(indicators, nodes, root, depthLevels());
+			if constexpr (UpdateNodes) {
+				derived().updateNode(root, depthLevels());
+				derived().updateNodeIndicators(root, depthLevels());
+				pruneNode(root, depthLevels());
+			}
 			if (nodes.empty()) {
 				//  Nothing was added
 				indicators.clear();
@@ -3880,6 +3909,7 @@ class OctreeBase
 		return {std::move(indicators), std::move(nodes)};  // FIXME: Check if RVO
 	}
 
+	template <bool UpdateNodes>
 	void modifiedDataRecurs(std::vector<uint8_t>& indicators, std::vector<LeafNode>& nodes,
 	                        InnerNode& node, depth_t depth)
 	{
@@ -3893,7 +3923,9 @@ class OctreeBase
 					indicators[valid_return_index] |= 1U << i;
 
 					nodes.push_back(child);
-					derived().updateNodeIndicators(child);
+					if constexpr (UpdateNodes) {
+						derived().updateNodeIndicators(child);
+					}
 				}
 			}
 
@@ -3914,14 +3946,19 @@ class OctreeBase
 						indicators[valid_return_index] |= 1U << i;
 
 						nodes.push_back(child);
-						derived().updateNodeIndicators(child);
+						if constexpr (UpdateNodes) {
+							derived().updateNodeIndicators(child);
+						}
 					} else {
 						indicators[valid_inner_index] |= 1U << i;
 
-						modifiedDataRecurs(indicators, nodes, child, depth - 1);
-						derived().updateNode(child, depth - 1);
-						derived().updateNodeIndicators(child, depth - 1);
-						pruneNode(child, depth - 1);
+						modifiedDataRecurs<UpdateNodes>(indicators, nodes, child, depth - 1);
+
+						if constexpr (UpdateNodes) {
+							derived().updateNode(child, depth - 1);
+							derived().updateNodeIndicators(child, depth - 1);
+							pruneNode(child, depth - 1);
+						}
 					}
 				}
 			}
