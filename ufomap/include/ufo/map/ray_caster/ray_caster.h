@@ -64,6 +64,44 @@ KeyRay computeRay(Key origin, Key goal)
 
 	int size = 1U << origin.depth();
 
+	Vector3f o(origin.x(), origin.y(), origin.z());
+	Vector3f g(goal.x(), goal.y(), goal.z());
+
+	Vector3f dir = g - o;
+	double distance = dir.norm();
+	dir /= distance;
+
+	Vector3i step(sgn(dir.x) * size, sgn(dir.y) * size, sgn(dir.z) * size);
+
+	dir.abs();
+
+	static constexpr auto max = std::numeric_limits<float>::max();
+	Vector3f t_delta(step.x ? size / dir.x : max, step.y ? size / dir.y : max,
+	                 step.z ? size / dir.z : max);
+
+	Vector3f t_max = t_delta / 2.0;
+
+	KeyRay ray;
+	ray.reserve(1.5f * Vector3f::abs(g - o).norm() / size);
+	ray.push_back(origin);
+	while (origin != goal && t_max.min() <= distance) {
+		auto advance_dim = t_max.minElementIndex();
+		origin[advance_dim] += step[advance_dim];
+		t_max[advance_dim] += t_delta[advance_dim];
+		ray.push_back(origin);
+	}
+	// printf("%lu == %lu\n", std::size_t(Vector3f::abs(g - o).norm() / size), ray.size());
+	return ray;
+}
+
+void computeRay(KeyRay& ray, Key origin, Key goal)
+{
+	assert(origin.depth() == goal.depth());
+
+	using namespace ufo::math;
+
+	int size = 1U << origin.depth();
+
 	Vector3d o(origin.x(), origin.y(), origin.z());
 	Vector3d g(goal.x(), goal.y(), goal.z());
 
@@ -81,8 +119,7 @@ KeyRay computeRay(Key origin, Key goal)
 
 	Vector3d t_max = t_delta / 2.0;
 
-	KeyRay ray;
-	ray.reserve(Vector3d::abs(g - o).norm());
+	ray.reserve(ray.size() + (1.5f * Vector3d::abs(g - o).norm() / size));
 	ray.push_back(origin);
 	while (origin != goal && t_max.min() <= distance) {
 		auto advance_dim = t_max.minElementIndex();
@@ -90,7 +127,6 @@ KeyRay computeRay(Key origin, Key goal)
 		t_max[advance_dim] += t_delta[advance_dim];
 		ray.push_back(origin);
 	}
-	return ray;
 }
 
 KeyRay computeRaySimple(Key origin, Key goal, double step_size_factor = 1.0)

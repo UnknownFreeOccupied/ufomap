@@ -83,7 +83,8 @@ class Integrator
 	template <class Map, class P>
 	void integrateHits(Map& map, IntegrationCloud<P> const& cloud) const
 	{
-		auto prob = map.toOccupancyChangeLogit(occupancy_prob_hit_);
+		auto prob = map.toOccupancyChangeLogit(
+		    occupancy_prob_hit_);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
 
 		// TODO: Something with semantics
 
@@ -161,16 +162,15 @@ class Integrator
 	{
 		auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss_);
 
-		std::for_each(std::cbegin(misses), std::cend(misses),
-		              [&map, prob, time_step = time_step_](auto code) {
-			              auto node = map.createNode(code);
+		for_each(misses, [&map, prob, time_step = time_step_](auto code) {
+			auto node = map.createNode(code);
 
-			              map.decreaseOccupancyLogit(node, prob, false);
+			map.decreaseOccupancyLogit(node, prob, false);
 
-			              if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				              map.setTimeStep(node, time_step, false);
-			              }
-		              });
+			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+				map.setTimeStep(node, time_step, false);
+			}
+		});
 	}
 
 	//

@@ -43,6 +43,7 @@
 #define UFO_MAP_INTEGRATION_H
 
 // UFO
+#include <ufo/algorithm/algorithm.h>
 #include <ufo/geometry/minimum_distance.h>
 #include <ufo/map/code/code.h>
 #include <ufo/map/code/code_unordered_map.h>
@@ -81,34 +82,90 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        TransformFunction trans_f, ValidFunction valid_f,
                                        DepthFunction depth_f)
 {
-	if (cloud.empty()) {
-		return IntegrationCloud<P>();
-	}
+	constexpr static std::size_t mode = 0;
 
-	IntegrationCloudSmall<P> temp;
-	temp.reserve(cloud.size());
-
-	// Get the corresponding code for each points
-	std::transform(std::cbegin(cloud), std::cend(cloud), std::back_inserter(temp),
-	               [&map, trans_f, valid_f, depth_f](auto const& p) {
-		               auto tp = trans_f(p);
-		               auto code = map.toCode(tp, depth_f(p));
-		               return IntegrationPointSmall<P>(code, tp, valid_f(p));
-	               });
-
-	// Sort
-	std::sort(std::begin(temp), std::end(temp));
-
-	// Boundle together points with same code and remove duplicates
 	IntegrationCloud<P> i_cloud;
-	i_cloud.reserve(cloud.size());
-	Code prev_code;
-	for (auto const& p : temp) {
-		if (prev_code == p.code) {
-			i_cloud.back().points.emplace_back(p.point);
-		} else {
-			prev_code = p.code;
-			i_cloud.emplace_back(p.code, p.point, p.valid());
+
+	if constexpr (0 == mode) {
+		IntegrationCloudSmall<P> temp;
+		temp.reserve(cloud.size());
+
+		// Get the corresponding code for each points
+		std::transform(std::cbegin(cloud), std::cend(cloud), std::back_inserter(temp),
+		               [&map, trans_f, valid_f, depth_f](P point) {
+			               auto depth = depth_f(point);
+			               auto valid = valid_f(point);
+			               point = trans_f(point);
+			               return IntegrationPointSmall<P>(map.toCode(point, depth), point,
+			                                               valid);
+		               });
+
+		// Sort
+		std::sort(std::begin(temp), std::end(temp));
+
+		// Boundle together points with same code and remove duplicates
+		i_cloud.reserve(cloud.size());
+		Code prev_code;
+		for (auto const& p : temp) {
+			if (prev_code == p.code) {
+				i_cloud.back().points.push_back(p.point);
+			} else {
+				prev_code = p.code;
+				i_cloud.emplace_back(p.code, p.point, p.valid());
+			}
+		}
+	} else if constexpr (1 == mode) {
+		CodeUnorderedMap<std::vector<ValidPoint<P>>> temp;
+
+		// Get the corresponding code for each points
+		for (P point : cloud) {
+			auto depth = depth_f(point);
+			auto valid = valid_f(point);
+			point = trans_f(point);
+			temp[map.toCode(point, depth)].emplace_back(point, valid);
+		}
+
+		// Boundle together points with same code and remove duplicates
+		i_cloud.reserve(temp.size());
+		for (auto& [code, p] : temp) {
+			i_cloud.emplace_back(code).points.swap(p);
+		}
+
+		// Sort
+		std::sort(std::begin(i_cloud), std::end(i_cloud));
+	} else if constexpr (2 == mode) {
+		// CodeUnorderedMap<IntegrationCloudSmall<P>> temp;
+		auto cmp = [](auto const& a, auto const& b) { return a.code() < b.code(); };
+		std::map<Code, IntegrationCloudSmall<P>, decltype(cmp)> temp(cmp);
+
+		// Get the corresponding code for each points
+		Code prev_code;
+		IntegrationCloudSmall<P>* prev;
+		for (P point : cloud) {
+			auto depth = depth_f(point);
+			auto valid = valid_f(point);
+			point = trans_f(point);
+			auto code = map.toCode(point, depth);
+			if (code.toDepth(4) != prev_code) {
+				prev_code = code.toDepth(4);
+				prev = &temp[prev_code];
+			}
+			prev->emplace_back(code, point, valid);
+		}
+
+		// Boundle together points with same code and remove duplicates
+		i_cloud.reserve(temp.size());
+		for (auto& [_, temp_3] : temp) {
+			std::sort(std::begin(temp_3), std::end(temp_3));
+			Code prev_code;
+			for (auto const& p : temp_3) {
+				if (prev_code == p.code) {
+					i_cloud.back().points.push_back(p.point);
+				} else {
+					prev_code = p.code;
+					i_cloud.emplace_back(p.code, p.point, p.valid());
+				}
+			}
 		}
 	}
 
@@ -188,8 +245,7 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
 		}
 	}
 
-	Misses misses(std::cbegin(indices), std::cend(indices));
-	return misses;
+	return Misses(std::cbegin(indices), std::cend(indices));
 }
 
 template <class Map, class P>
@@ -217,52 +273,100 @@ Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
 		}
 	}
 
-	Misses misses(std::cbegin(indices), std::cend(indices));
-	return misses;
+	return Misses(std::cbegin(indices), std::cend(indices));
 }
 
 template <class Map, class P>
 Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
                              Point3 const sensor_origin, bool const only_valid = false,
-                             depth_t const& depth = 0)
+                             depth_t depth = 0)
 {
+	Misses misses;
+
 	static constexpr depth_t GRID_DEPTH = 6;  // FIXME: What should this be?
+
+	// NOTE: Assuming all points have same depth
+	if (!cloud.empty()) {
+		depth = std::max(cloud.front().code.depth(), depth);
+	}
+
+	std::vector<Key> keys;
+	Code prev;
+	for (auto const& p : cloud) {
+		Code const cur = p.code.toDepth(depth);
+		if (cur == prev || (only_valid && !p.valid())) {
+			continue;
+		}
+		keys.push_back(map.toKey(cur));
+		prev = cur;
+	}
 
 	CodeUnorderedMap<Grid<GRID_DEPTH>> grids;
 
 	// NOTE: For parallel create all grids here first
+	// Key const parallel_origin = map.toKey(sensor_origin, GRID_DEPTH + depth);
+	// for (auto const& p : codes) {
+	// 	Code const cur = p.code.toDepth(GRID_DEPTH + depth);
+	// 	if (cur == prev || (only_valid && !p.valid())) {
+	// 		continue;
+	// 	}
+
+	// 	prev = cur;
+
+	// 	for (auto const key : computeRay(parallel_origin, cur)) {
+	// 		grids.try_emplace(map.toCode(key));
+	// 	}
+	// }
 
 	Key const origin = map.toKey(sensor_origin, depth);
 
-	Misses misses;
-
-	Code prev;
-	for (auto const& p : cloud) {
-		if (only_valid && !p.valid()) {
-			continue;
-		}
-
-		Code const cur = p.code.toDepth(std::max(p.code.depth(), depth));
-		if (cur == prev) {
-			continue;
-		}
-		prev = cur;
-
-		Code prev_at_depth;
-		Grid<GRID_DEPTH>* prev_grid = nullptr;
-		for (auto const key : computeRay(Key(origin, cur.depth()), cur)) {
+	KeyRay ray;
+	Code prev_at_depth;
+	Grid<GRID_DEPTH>* grid = nullptr;
+	for (Key const key : keys) {
+		computeRay(ray, origin, key);
+		for (auto const key : ray) {
 			Code const code = map.toCode(key);
 			Code const cur_at_depth = code.toDepth(GRID_DEPTH + depth);
 
 			if (cur_at_depth != prev_at_depth) {
 				prev_at_depth = cur_at_depth;
-				prev_grid = &grids[cur_at_depth];
+				grid = &grids[cur_at_depth];
 			}
 
-			auto const index = prev_grid->index(key);
-			if (!prev_grid->test(index)) {
-				prev_grid->set(index);
-				misses.push_back(code);
+			grid->set(code);
+		}
+		ray.clear();
+	}
+
+	for (auto const& [code, grid] : grids) {
+		auto const c = code.code();
+
+		std::size_t i = 0;
+		for (auto it = std::cbegin(grid); it != std::cend(grid); ++it, i += 64) {
+			if (0 != *it) {
+				if (*it == std::numeric_limits<uint64_t>::max()) {
+					if (0 == i % 512 &&
+					    std::all_of(std::next(it), std::next(it, 8), [](uint64_t a) {
+						    return std::numeric_limits<uint64_t>::max() == a;
+					    })) {
+						misses.emplace_back(c | (i << 3 * depth), depth + 3);
+						std::advance(it, 7);
+						i += (512 - 64);
+					} else {
+						misses.emplace_back(c | (i << 3 * depth), depth + 2);
+					}
+				} else {
+					// FIXME: Can be improved. Step 8 steps at a time
+					for (std::size_t j = 0; 64 != j; ++j) {
+						if (0 == j % 8 && (*it >> j) & 0xFF == 0xFF) {
+							misses.emplace_back(c | ((i + j) << 3 * depth), depth + 1);
+							j += 7;
+						} else if (*it & (uint64_t(1) << j)) {
+							misses.emplace_back(c | ((i + j) << 3 * depth), depth);
+						}
+					}
+				}
 			}
 		}
 	}

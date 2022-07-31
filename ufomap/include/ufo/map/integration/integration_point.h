@@ -73,17 +73,32 @@ struct IntegrationPointSmall {
 
 	[[nodiscard]] bool valid() const { return point.valid; }
 
-	bool operator==(IntegrationPointSmall const& rhs) const { return code == rhs.code; }
+	bool operator==(IntegrationPointSmall const& rhs) const
+	{
+		return code.code() == rhs.code.code();
+	}
 
 	bool operator!=(IntegrationPointSmall const& rhs) const { return !(*this == rhs); }
 
-	bool operator<(IntegrationPointSmall const& rhs) const { return code < rhs.code; }
+	bool operator<(IntegrationPointSmall const& rhs) const
+	{
+		return code.code() < rhs.code.code();
+	}
 
-	bool operator<=(IntegrationPointSmall const& rhs) const { return code <= rhs.code; }
+	bool operator<=(IntegrationPointSmall const& rhs) const
+	{
+		return code.code() <= rhs.code.code();
+	}
 
-	bool operator>(IntegrationPointSmall const& rhs) const { return code > rhs.code; }
+	bool operator>(IntegrationPointSmall const& rhs) const
+	{
+		return code.code() > rhs.code.code();
+	}
 
-	bool operator>=(IntegrationPointSmall const& rhs) const { return code >= rhs.code; }
+	bool operator>=(IntegrationPointSmall const& rhs) const
+	{
+		return code.code() >= rhs.code.code();
+	}
 };
 
 /*!
@@ -94,6 +109,8 @@ template <class P>
 struct IntegrationPoint {
 	Code code;
 	std::vector<ValidPoint<P>> points;
+
+	IntegrationPoint() = default;
 
 	IntegrationPoint(Code const code) : code(code) {}
 
@@ -113,17 +130,32 @@ struct IntegrationPoint {
 		                   [](auto const& p) { return p.valid; });
 	}
 
-	bool operator==(IntegrationPoint const& rhs) const { return code == rhs.code; }
+	bool operator==(IntegrationPoint const& rhs) const
+	{
+		return code.code() == rhs.code.code();
+	}
 
 	bool operator!=(IntegrationPoint const& rhs) const { return !(*this == rhs); }
 
-	bool operator<(IntegrationPoint const& rhs) const { return code < rhs.code; }
+	bool operator<(IntegrationPoint const& rhs) const
+	{
+		return code.code() < rhs.code.code();
+	}
 
-	bool operator<=(IntegrationPoint const& rhs) const { return code <= rhs.code; }
+	bool operator<=(IntegrationPoint const& rhs) const
+	{
+		return code.code() <= rhs.code.code();
+	}
 
-	bool operator>(IntegrationPoint const& rhs) const { return code > rhs.code; }
+	bool operator>(IntegrationPoint const& rhs) const
+	{
+		return code.code() > rhs.code.code();
+	}
 
-	bool operator>=(IntegrationPoint const& rhs) const { return code >= rhs.code; }
+	bool operator>=(IntegrationPoint const& rhs) const
+	{
+		return code.code() >= rhs.code.code();
+	}
 };
 }  // namespace ufo::map
 

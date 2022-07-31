@@ -43,7 +43,7 @@
 #define UFO_MAP_INTEGRATOR_GRID_H
 
 // UFO
-#include <ufo/map/key.h>
+#include <ufo/map/code/code.h>
 #include <ufo/math/util.h>
 
 // STL
@@ -58,52 +58,100 @@ class Grid
  private:
 	static constexpr std::size_t NumIndices = math::ipow(8, Depth);
 
-	static constexpr Key::key_t Mask =
-	    ~((std::numeric_limits<Key::key_t>::max() >> Depth) << Depth);
+	static constexpr Code::code_t Mask =
+	    ~((std::numeric_limits<Code::code_t>::max() >> 3 * Depth) << 3 * Depth);
+
+	using DataType = std::array<uint64_t, NumIndices / 64>;
+	using iterator = typename DataType::iterator;
+	using const_iterator = typename DataType::const_iterator;
+	using reverse_iterator = typename DataType::reverse_iterator;
+	using const_reverse_iterator = typename DataType::const_reverse_iterator;
+
+	// using DataType = std::bitset<NumIndices>;
 
  public:
-	using reference = typename std::array<bool, NumIndices>::reference;
+	using value_type = typename DataType::value_type;
+	using reference = typename DataType::reference;
 
  public:
-	constexpr bool operator[](std::size_t const index) const { return indices_[index]; }
+	constexpr iterator begin() { return std::begin(indices_); }
 
-	constexpr bool operator[](Key const key) const { return indices_[index(key)]; }
+	constexpr const_iterator begin() const { return std::begin(indices_); }
+
+	constexpr const_iterator cbegin() const { return begin(); }
+
+	constexpr iterator end() { return std::end(indices_); }
+
+	constexpr const_iterator end() const { return std::end(indices_); }
+
+	constexpr const_iterator cend() const { return end(); }
+
+	constexpr reverse_iterator rbegin() { return std::rbegin(indices_); }
+
+	constexpr const_reverse_iterator rbegin() const { return std::rbegin(indices_); }
+
+	constexpr const_reverse_iterator crbegin() const { return rbegin(); }
+
+	constexpr reverse_iterator rend() { return std::rend(indices_); }
+
+	constexpr const_reverse_iterator rend() const { return std::rend(indices_); }
+
+	constexpr const_reverse_iterator crend() const { return rend(); }
+
+	constexpr value_type operator[](std::size_t const index) const
+	{
+		return indices_[index];
+	}
+
+	constexpr value_type operator[](Code const code) const { return indices_[index(code)]; }
 
 	constexpr reference operator[](std::size_t const index) { return indices_[index]; }
 
-	constexpr reference operator[](Key const key) { return indices_[index(key)]; }
+	constexpr reference operator[](Code const code) { return indices_[index(code)]; }
 
-	constexpr bool test(std::size_t const index) const { return indices_[index]; }
-
-	constexpr bool test(Key const key) const { return test(index(key)); }
-
-	constexpr void set(std::size_t const index) { indices_[index] = true; }
-
-	constexpr void set(Key const key) { set(index(key)); }
-
-	constexpr void reset(std::size_t const index) { indices_[index] = false; }
-
-	constexpr void reset(Key const key) { reset(index(key)); }
-
-	void clear() { indices_.fill(false); }
-
-	constexpr std::size_t size() const noexcept { return indices_.size(); }
-
-	static constexpr std::size_t index(Key const key)
+	constexpr bool test(std::size_t const index) const
 	{
-		depth_t const depth = key.depth();
-		return ((key.x() >> depth) & Mask) | (((key.y() >> depth) & Mask) << Depth) |
-		       (((key.z() >> depth) & Mask) << (2 * Depth));
+		return indices_[index >> 6] & value_type(1) << (index & 0x3F);
 	}
 
-	static constexpr Key key(std::size_t const index, depth_t const depth)
+	constexpr bool test(Code const code) const { return test(index(code)); }
+
+	constexpr void set(std::size_t const index)
 	{
-		return Key((index & Mask) << depth, ((index >> Depth) & Mask) << depth,
-		           ((index >> (2 * Depth)) & Mask) << depth, depth);
+		indices_[index >> 6] |= value_type(1) << (index & 0x3F);
+	}
+
+	constexpr void set(Code const code) { set(index(code)); }
+
+	constexpr void reset(std::size_t const index)
+	{
+		indices_[index >> 6] &= value_type(0) << (index & 0x3F);
+	}
+
+	constexpr void reset(Code const code) { reset(index(code)); }
+
+	void clear() { indices_.fill(0); }
+
+	constexpr std::size_t size() const noexcept { return indices_.size() * 64; }
+
+	static constexpr std::size_t index(Code const code)
+	{
+		return (code.code() >> 3 * code.depth()) & Mask;
+	}
+
+	static constexpr Code code(std::size_t const index, depth_t const depth)
+	{
+		return Code(index << 3 * depth, depth);
+	}
+
+	static constexpr Code code(Code::code_t prefix, std::size_t const index,
+	                           depth_t const depth)
+	{
+		return Code(prefix | (index << 3 * depth), depth);
 	}
 
  private:
-	std::array<bool, NumIndices> indices_ = {};
+	DataType indices_ = {};
 };
 }  // namespace ufo::map
 
