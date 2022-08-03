@@ -43,6 +43,7 @@
 #define UFO_MAP_IO_H
 
 // UFO
+#include <ufo/map/types.h>
 
 // STL
 #include <filesystem>
@@ -50,26 +51,48 @@
 #include <map>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace ufo::map
 {
+// Data identifiers
+enum struct DataIdentifier : std::uint8_t {
+	NO_DATA,
+	OCCUPANCY,
+	TIME,
+	COLOR,
+	SEMANTIC,
+	SURFEL,
+	SIGNED_DISTANCE,
+};
+
+// File options
+struct FileOptions {
+	bool compressed;
+	double resolution;
+	depth_t depth_levels;
+};
+
 // File header
-static constexpr std::string_view FILE_HEADER = "# UFOMap file";
-// File version
-static constexpr std::string_view FILE_VERSION = "1.1.0";
+struct FileHeader : FileOptions {
+	static constexpr std::string_view FILE_HEADER = "# UFOMap file";
+	static constexpr uint8_t CURRENT_MAJOR = 1;
+	static constexpr uint8_t CURRENT_MINOR = 0;
+	static constexpr uint8_t CURRENT_PATCH = 0;
 
-using FileInfo = std::map<std::string, std::vector<std::string>>;
+	uint8_t major;
+	uint8_t minor;
+	uint8_t patch;
+};
 
-bool correctFileType(std::filesystem::path const& filename);
+bool isUFOMapFile(std::filesystem::path const& filename);
 
-bool correctFileType(std::istream& in_stream);
+bool isUFOMapFile(std::istream& in_stream);
 
-FileInfo readHeader(std::filesystem::path const& filename);
+FileHeader readHeader(std::filesystem::path const& filename);
 
-FileInfo readHeader(std::istream& in_stream);
+FileHeader readHeader(std::istream& in_stream);
 
-void writeHeader(std::ostream& out_stream, FileInfo const& info);
+void writeHeader(std::ostream& out_stream, FileOptions const& options);
 
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
                   uint64_t uncompressed_data_size, int acceleration_level = 1,
@@ -77,5 +100,8 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
                     uint64_t uncompressed_data_size);
+
+bool decompressData(std::istream& in_stream, std::ostream& out_stream,
+                    uint64_t uncompressed_data_size, uint64_t& compressed_data_size);
 }  // namespace ufo::map
 #endif  // UFO_MAP_IO_H

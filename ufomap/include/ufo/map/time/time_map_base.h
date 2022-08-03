@@ -313,60 +313,38 @@ class TimeMapBase
 	// Input/output (read/write)
 	//
 
-	void addFileInfo(FileInfo& info) const
+	static constexpr DataIdentifier getDataIdentifier() noexcept
 	{
-		info["fields"].emplace_back("time_step");
-		info["type"].emplace_back("U");
-		info["size"].emplace_back(std::to_string(sizeof(uint32_t)));
+		return DataIdentifier::TIME;
 	}
 
-	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size)
+	static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
-		if ("time_step" != field) {
-			return false;
-		}
+		return getDataIdentifier() == identifier;
+	}
 
-		if ('U' == type && sizeof(uint32_t) == size) {
-			auto data = std::make_unique<uint32_t[]>(nodes.size());
-			in_stream.read(reinterpret_cast<char*>(data.get()),
-			               nodes.size() * sizeof(uint32_t));
+	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
+	{
+		auto const num_nodes = nodes.size();
 
-			for (size_t i = 0; i != nodes.size(); ++i) {
-				setTimeStep(*nodes[i], data[i]);
-			}
-		} else {
-			return false;
+		auto data = std::make_unique<time_step_t[]>(nodes.size());
+		in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(time_step_t));
+
+		for (size_t i = 0; num_nodes != i; ++i) {
+			setTimeStep(*nodes[i], data[i]);
 		}
-		return true;
 	}
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
-		uint64_t const size = nodes.size() * sizeof(uint32_t);
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
-
-		auto data = std::make_unique<uint32_t[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
+		auto num_nodes = nodes.size();
+		auto data = std::make_unique<time_step_t[]>(num_nodes);
+		for (size_t i = 0; num_nodes != i; ++i) {
 			data[i] = getTimeStep(nodes[i]);
 		}
 
 		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(uint32_t));
-	}
-
-	void writeNodes(std::ostream& out_stream, std::deque<LeafNode> const& nodes) const
-	{
-		uint64_t const size = nodes.size() * sizeof(uint32_t);
-		out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
-
-		auto data = std::make_unique<uint32_t[]>(nodes.size());
-		for (size_t i = 0; i != nodes.size(); ++i) {
-			data[i] = getTimeStep(nodes[i]);
-		}
-
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 nodes.size() * sizeof(uint32_t));
+		                 num_nodes * sizeof(time_step_t));
 	}
 
  protected:

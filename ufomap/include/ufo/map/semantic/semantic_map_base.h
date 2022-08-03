@@ -1200,46 +1200,58 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 	// Input/output (read/write)
 	//
 
-	virtual void addFileInfo(FileInfo& info) const override
+	bool canReadData(DataIdentifier identifier) const noexcept
 	{
-		info["fields"].emplace_back("semantics");
-		info["type"].emplace_back("U");
-		info["size"].emplace_back(std::to_string(sizeof(semantic_label_t)));
+		return DataIdentifier::SEMANTIC == identifier;
 	}
 
-	virtual bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	                       std::string const& field, char type, uint64_t size,
-	                       uint64_t num) override
+	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               DataIdentifier identifier)
 	{
-		if ("semantics" != field) {
+		if (!canReadData(identifier)) {
 			return false;
 		}
-		// TODO: Make parallel
 
-		if ('U' == type && sizeof(semantic_label_t) == size) {
-			semantic_label_t bits_for_label;
-			in_stream.read(reinterpret_cast<char*>(&bits_for_label), sizeof(semantic_label_t));
-			for (auto& node : nodes) {
-				node->semantics.readData(in_stream);
-			}
-		} else {
-			// TODO: Error
-			return false;
+		// TODO: Implement
+
+		// if ('U' == type && sizeof(semantic_label_t) == size) {
+		semantic_label_t bits_for_label;
+		in_stream.read(reinterpret_cast<char*>(&bits_for_label), sizeof(bits_for_label));
+		for (auto& node : nodes) {
+			node->semantics.readData(in_stream);
 		}
-		return true;
-	}
-
-	virtual void writeNodes(std::ostream& out_stream,
-	                        std::vector<LeafNode> const& nodes, bool compress,
-	                        int compression_acceleration_level,
-	                        int compression_level) const override
-	{
-		// uint64_t node_size = nodes.size();
-		// for (auto const& node : nodes) {
-		// 	node_size += node->semantics.size();
+		// } else {
+		// 	return false;
 		// }
-		// // node_size += 1;  // For number of bits
-		// node_size *= sizeof(SemanticType);
+
+				return true;
+	}
+
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
+	                bool compress, int compression_acceleration_level,
+	                int compression_level) const
+	{
+		// TODO: Implement
+
+		// std::vector<uint64_t> has_semantics((nodes.size() + 64 - 1) / 64);
+		// uint64_t semantics_size = 0;
+		// std::size_t index = 0;
+		// std::size_t element = 0;
+		// for (auto const& node : nodes) {
+		// 	if (!getSemantics(node).empty()) {
+		// 		has_semantics[index] |= 1U << element;
+		// 		semantics_size += getSemantics(node).size();
+		// 	}
+		// 	if (63 == element) {
+		// 		++index;
+		// 		element = 0;
+		// 	} else {
+		// 		++element;
+		// 	}
+		// }
+		// semantics_size *= sizeof(SemanticType);
+
+		// constexpr uint8_t value_bits = getSemanticValueBits();
 
 		// uint64_t mapping_size = 0;
 		// for (auto const& mapping : label_mapping_) {
@@ -1254,18 +1266,18 @@ class SemanticMapBase : virtual public OctreeBase<Derived, DataType, Indicators>
 		// total_size = node_size + mapping_size + propagation_size;
 		// total_size += sizeof(SemanticValue);  // For number of bits
 
-		// out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
-		// out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(uint64_t));
+		// out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(total_size));
+		// out_stream.write(reinterpret_cast<char*>(&total_size), sizeof(total_size));
 
 		// // FIXME: Improve
 
 		// // FIXME: Write mappings
 
 		// // FIXME: Write propagation strategies
-		// out_stream.write(reinterpret_cast<char*>(&num), sizeof(uint64_t));
+		// out_stream.write(reinterpret_cast<char*>(&num), sizeof(num));
 
 		// semantic_value_t bits_for_value = LeafNode::getSemanticValueBits();
-		// out_stream.write(reinterpret_cast<char*>(&bits_for_value), sizeof(SemanticValue));
+		// out_stream.write(reinterpret_cast<char*>(&bits_for_value), sizeof(bits_for_value));
 
 		// for (auto const& node : nodes) {
 		// 	node->semantics.writeData(out_stream);

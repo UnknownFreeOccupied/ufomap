@@ -199,6 +199,7 @@ class OctreeMapBase
 
 	OctreeMapBase& operator=(OctreeMapBase&& rhs) = default;
 
+ protected:
 	//
 	// Initilize root
 	//
@@ -222,27 +223,108 @@ class OctreeMapBase
 	// Input/output (read/write)
 	//
 
-	void addFileInfo(FileInfo& info) const
+	static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::addFileInfo(info), ...);
+		return (Bases<OctreeMapBase, LeafNode, InnerNode>::canReadData(identifier) || ...);
 	}
 
+	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	               bool const compressed)
+	{
+		auto cur_pos = in_stream.tellg();
+		in_stream.seekg(0, std::ios_base::end);
+		auto end_pos = in_stream.tellg();
+		in_stream.seekg(cur_pos);
+		while (in_stream.tellg() != end_pos && in_stream.good()) {
+			DataIdentifier identifier;
+			in_stream.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
+			uint64_t data_size;
+			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
+
+			if (!(readNodes<Bases<OctreeMapBase, LeafNode, InnerNode>>(
+			          in_stream, nodes, identifier, data_size, compressed) ||
+			      ...)) {
+				// Skip forward
+				in_stream.seekg(data_size, std::istream::cur);
+			}
+		}
+	}
+
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
+	                bool const compress, int const compression_acceleration_level,
+	                int const compression_level) const
+	{
+		(writeNodes<Bases<OctreeMapBase, LeafNode, InnerNode>>(
+		     out_stream, nodes, compress, compression_acceleration_level, compression_level),
+		 ...);
+	}
+
+ private:
+	//
+	// Input/output (read/write)
+	//
+
+	template <class Base>
 	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               std::string const& field, char type, uint64_t size)
+	               DataIdentifier const identifier, uint64_t const data_size,
+	               bool const compressed)
 	{
-		return (Bases<OctreeMapBase, LeafNode, InnerNode>::readNodes(in_stream, nodes, field,
-		                                                             type, size) ||
-		        ...);
+		if (!Base::canReadData(identifier)) {
+			return false;
+		}
+
+		if (compressed) {
+			std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
+			                              std::ios_base::binary);
+			data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data_stream.imbue(std::locale());
+
+			uint64_t compressed_data_size = 0;
+
+			decompressData(in_stream, data_stream, data_size, compressed_data_size);
+
+			Base::readNodes(data_stream, nodes);
+		} else {
+			Base::readNodes(in_stream, nodes);
+		}
+
+		return true;
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	template <class Base>
+	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
+	                bool const compress, int const compression_acceleration_level,
+	                int const compression_level) const
 	{
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::writeNodes(out_stream, nodes), ...);
-	}
+		constexpr DataIdentifier identifier = Base::getDataIdentifier();
+		if constexpr (DataIdentifier::NO_DATA != identifier) {
+			out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
 
-	void writeNodes(std::ostream& out_stream, std::deque<LeafNode> const& nodes) const
-	{
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::writeNodes(out_stream, nodes), ...);
+			if (compress) {
+				std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
+				                              std::ios_base::binary);
+				data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+				data_stream.imbue(std::locale());
+
+				Base::writeNodes(data_stream, nodes);
+
+				uint64_t size = data_stream.tellp();
+				out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+				compressData(data_stream, out_stream, size, compression_acceleration_level,
+				             compression_level);
+			} else {
+				uint64_t size;
+				auto size_pos = out_stream.tellp();
+				out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+
+				Base::writeNodes(out_stream, nodes);
+
+				size = out_stream.tellp() - size_pos - sizeof(size);
+				out_stream.seekp(size_pos);
+				out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+				out_stream.seekp(0, std::ios_base::end);
+			}
+		}
 	}
 };
 }  // namespace ufo::map

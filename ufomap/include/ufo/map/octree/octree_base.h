@@ -2022,32 +2022,6 @@ class OctreeBase
 	// Input/output (read/write)
 	//
 
-	[[nodiscard]] bool canMerge(std::filesystem::path const& filename) const
-	{
-		std::ifstream file;
-		file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		file.imbue(std::locale());
-		file.open(filename, std::ios_base::in | std::ios_base::binary);
-
-		return canMerge(file);
-	}
-
-	[[nodiscard]] bool canMerge(std::istream& in_stream) const
-	{
-		auto pos = in_stream.tellg();
-		FileInfo header = readHeader(in_stream);
-		in_stream.seekg(pos);
-
-		double res;
-		depth_t depth_levels;
-		std::istringstream(header.at("resolution").at(0)) >> res;
-		uint32_t tmp;
-		std::istringstream(header.at("depth_levels").at(0)) >> tmp;
-		depth_levels = tmp;
-
-		return resolution() == res && depthLevels() == depth_levels;
-	}
-
 	void read(std::filesystem::path const& filename, bool propagate = true)
 	{
 		std::ifstream file;
@@ -2060,49 +2034,16 @@ class OctreeBase
 
 	void read(std::istream& in_stream, bool propagate = true)
 	{
-		if (!correctFileType(in_stream)) {
-			throw std::runtime_error("Trying to read non-UFOMap file");
-		}
-
-		FileInfo header = readHeader(in_stream);
-
-		readData(in_stream, header, propagate);
+		readData(in_stream, readHeader(in_stream), propagate);
 	}
 
-	void readData(std::istream& in_stream, FileInfo const& header, bool propagate = true)
+	void readData(std::istream& in_stream, FileHeader const& header, bool propagate = true)
 	{
-		double res;
-		depth_t depth_levels;
-
-		std::istringstream(header.at("resolution").at(0)) >> res;
-		uint32_t tmp;
-		std::istringstream(header.at("depth_levels").at(0)) >> tmp;
-		depth_levels = tmp;
-
-		if (resolution() != res || depthLevels() != depth_levels) {
-			clear(res, depth_levels);
+		if (resolution() != header.resolution || depthLevels() != header.depth_levels) {
+			clear(header.resolution, header.depth_levels);
 		}
 
-		uint8_t compressed;
-		in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
-		uint64_t uncompressed_data_size;
-		in_stream.read(reinterpret_cast<char*>(&uncompressed_data_size),
-		               sizeof(uncompressed_data_size));
-
-		if (UINT8_MAX == compressed) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
-
-			decompressData(in_stream, data, uncompressed_data_size);
-
-			std::vector<LeafNode*> nodes = getNodes(data);
-			readNodes(data, header, nodes);
-		} else {
-			std::vector<LeafNode*> nodes = getNodes(in_stream);
-			readNodes(in_stream, header, nodes);
-		}
+		derived().readNodes(in_stream, getNodes(in_stream), header.compressed);
 
 		if (propagate) {
 			updateModifiedNodes();
@@ -2145,7 +2086,7 @@ class OctreeBase
 	           bool compress = false, int compression_acceleration_level = 1,
 	           int compression_level = 0) const
 	{
-		writeHeader(out_stream, getFileInfo());
+		writeHeader(out_stream, getFileOptions(compress));
 		writeData(out_stream, std::forward<Predicates>(predicates), min_depth, compress,
 		          compression_acceleration_level, compression_level);
 	}
@@ -2168,7 +2109,7 @@ class OctreeBase
 	                            int compression_acceleration_level = 1,
 	                            int compression_level = 0)
 	{
-		writeHeader(out_stream, getFileInfo());
+		writeHeader(out_stream, getFileOptions(compress));
 		writeAndUpdateModifiedData<true>(out_stream, compress, compression_acceleration_level,
 		                                 compression_level);
 	}
@@ -2190,7 +2131,7 @@ class OctreeBase
 	                           int compression_acceleration_level = 1,
 	                           int compression_level = 0)
 	{
-		writeHeader(out_stream, getFileInfo());
+		writeHeader(out_stream, getFileOptions(compress));
 		writeAndUpdateModifiedData<false>(out_stream, compress,
 		                                  compression_acceleration_level, compression_level);
 	}
@@ -2312,29 +2253,7 @@ class OctreeBase
 		for (auto& a_l : children_locks_) {
 			a_l.clear();
 		}
-
-		// Code code(0, StaticallyAllocatedDepths);
-
-		// TODO: Init statically_allocated_nodes_
-		// for (size_t i = 0; i < math::ipow(8, StaticallyAllocatedDepths - 1); ++i) {
-		// 	statically_allocated_nodes_[i].children = &statically_allocated_nodes_[i + 1];
-		// }
-
-		// initRecurs(code);
 	}
-
-	// void initRecurs(Code code)
-	// {
-	// 	if (1 == code.depth()) {
-	// 		return;
-	// 	}
-
-	// 	printf("Code: %5llu, Depth: %u\n", code.code(), +code.depth());
-
-	// 	for (size_t i = 0; 8 != i; ++i) {
-	// 		initRecurs(code.child(i));
-	// 	}
-	// }
 
 	//
 	// Set resolution and depth levels
@@ -3547,13 +3466,13 @@ class OctreeBase
 	// Input/output (read/write)
 	//
 
-	FileInfo getFileInfo() const
+	FileOptions getFileOptions(bool const compress) const
 	{
-		FileInfo info;
-		info["resolution"].push_back(std::to_string(resolution()));
-		info["depth_levels"].push_back(std::to_string(static_cast<uint32_t>(depthLevels())));
-		derived().addFileInfo(info);
-		return info;
+		FileOptions options;
+		options.compressed = compress;
+		options.resolution = resolution();
+		options.depth_levels = depthLevels();
+		return options;
 	}
 
 	std::vector<LeafNode*> getNodes(std::istream& in_stream)
@@ -3631,7 +3550,7 @@ class OctreeBase
 
 			createInnerChildren(node, depth);
 
-			for (std::size_t i = 0; i != 8; ++i) {
+			for (std::size_t i = 0; 8 != i; ++i) {
 				if ((child_valid_return >> i) & 1U) {
 					nodes.push_back(&getInnerChild(node, i));
 				} else if ((child_valid_inner >> i) & 1U) {
@@ -3644,75 +3563,18 @@ class OctreeBase
 		return indicators;
 	}
 
-	void readNodes(std::istream& in_stream, FileInfo const& header,
-	               std::vector<LeafNode*> const& nodes)
-	{
-		size_t num_fields = header.at("fields").size();
-		if (header.at("size").size() != num_fields ||
-		    header.at("type").size() != num_fields) {
-			return;
-		}
-
-		for (size_t i = 0; i != header.at("fields").size(); ++i) {
-			std::string field = header.at("fields")[i];
-			uint64_t size = static_cast<uint64_t>(std::stoi(header.at("size")[i]));
-			char type = header.at("type")[i][0];
-
-			uint64_t data_size;
-			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
-
-			if (!derived().readNodes(in_stream, nodes, field, type, size)) {
-				// Skip forward
-				in_stream.seekg(data_size, std::istream::cur);
-			}
-		}
-	}
-
 	template <class Predicates>
 	void writeData(std::ostream& out_stream, Predicates&& predicates, depth_t min_depth,
-	               bool compress, int compression_acceleration_level,
-	               int compression_level) const
+	               bool const compress, int const compression_acceleration_level,
+	               int const compression_level) const
 	{
-		uint8_t compressed = compress ? UINT8_MAX : 0U;
-		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
-
-		auto size_pos = out_stream.tellp();
-		uint64_t uncompressed_data_size = 0;
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		auto data_pos = out_stream.tellp();
-
 		auto [indicators, nodes] =
 		    data(predicate::Leaf(min_depth) && std::forward<Predicates>(predicates));
 
-		if (compress) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
+		writeIndicators(out_stream, indicators);
 
-			writeIndicators(data, indicators);
-			derived().writeNodes(data, nodes);
-
-			uncompressed_data_size = data.tellp();
-
-			compressData(data, out_stream, uncompressed_data_size,
-			             compression_acceleration_level, compression_level);
-		} else {
-			writeIndicators(out_stream, indicators);
-			derived().writeNodes(out_stream, nodes);
-
-			uncompressed_data_size = out_stream.tellp() - data_pos;
-		}
-
-		auto end_pos = out_stream.tellp();
-
-		out_stream.seekp(size_pos);
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		out_stream.seekp(end_pos);
+		derived().writeNodes(out_stream, nodes, compress, compression_acceleration_level,
+		                     compression_level);
 	}
 
 	template <bool UpdateNodes>
@@ -3720,60 +3582,12 @@ class OctreeBase
 	                                int compression_acceleration_level,
 	                                int compression_level)
 	{
-		const auto t1 = std::chrono::high_resolution_clock::now();
-		uint8_t compressed = compress ? UINT8_MAX : 0U;
-		out_stream.write(reinterpret_cast<char*>(&compressed), sizeof(compressed));
-
-		auto size_pos = out_stream.tellp();
-		uint64_t uncompressed_data_size = 0;
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		auto data_pos = out_stream.tellp();
-
 		auto [indicators, nodes] = modifiedData<UpdateNodes>();
 
-		auto t2 = std::chrono::high_resolution_clock::now();
-		auto t3 = std::chrono::high_resolution_clock::now();
-		auto t4 = std::chrono::high_resolution_clock::now();
-		if (compress) {
-			std::stringstream data(std::ios_base::in | std::ios_base::out |
-			                       std::ios_base::binary);
-			data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data.imbue(std::locale());
+		writeIndicators(out_stream, indicators);
 
-			writeIndicators(data, indicators);
-			derived().writeNodes(data, nodes);
-
-			uncompressed_data_size = data.tellp();
-
-			compressData(data, out_stream, uncompressed_data_size,
-			             compression_acceleration_level, compression_level);
-		} else {
-			t2 = std::chrono::high_resolution_clock::now();
-			writeIndicators(out_stream, indicators);
-			t3 = std::chrono::high_resolution_clock::now();
-			derived().writeNodes(out_stream, nodes);
-			t4 = std::chrono::high_resolution_clock::now();
-
-			uncompressed_data_size = out_stream.tellp() - data_pos;
-		}
-
-		auto end_pos = out_stream.tellp();
-
-		out_stream.seekp(size_pos);
-		out_stream.write(reinterpret_cast<char*>(&uncompressed_data_size),
-		                 sizeof(uncompressed_data_size));
-
-		out_stream.seekp(end_pos);
-
-		const std::chrono::duration<double, std::milli> ms_1 = t2 - t1;
-		const std::chrono::duration<double, std::milli> ms_2 = t3 - t2;
-		const std::chrono::duration<double, std::milli> ms_3 = t4 - t3;
-		std::cout << "Get data         " << ms_1.count() << " ms\n";
-		std::cout << "Write indicators " << ms_2.count() << " ms\n";
-		std::cout << "Write data       " << ms_3.count() << " ms\n";
-		std::cout << "Number of nodes  " << nodes.size() << '\n';
+		derived().writeNodes(out_stream, nodes, compress, compression_acceleration_level,
+		                     compression_level);
 	}
 
 	template <class Predicates>
