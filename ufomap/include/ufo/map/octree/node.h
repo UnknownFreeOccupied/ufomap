@@ -53,12 +53,6 @@
 
 namespace ufo::map
 {
-
-struct IndexData {
-	uint32_t block_index_;
-	uint8_t child_index_;
-};
-
 /*!
  * @brief A wrapper around a UFOMap inner/leaf node.
  *
@@ -138,11 +132,6 @@ struct Node {
  protected:
 	constexpr Node(void* data, Code code) noexcept : data_(data), code_(code) {}
 
-	constexpr Node(uint32_t block_index, uint8_t child_index, Code code) noexcept
-	    : data_index_{block_index, child_index}, code_(code)
-	{
-	}
-
 	/*!
 	 * @brief Get the corresponding data.
 	 *
@@ -161,26 +150,14 @@ struct Node {
 	 */
 	constexpr void const* data() const noexcept { return data_; }
 
-	/*!
-	 * @brief Get the index to the corresponding data.
-	 *
-	 * @note Use the octree that generated the node to read the data.
-	 *
-	 * @return The index to the corresponding data.
-	 */
-	constexpr IndexData dataIndex() const noexcept { return data_index_; }
-
  protected:
-	union {
-		// Pointer to the actual node
-		void* data_ = nullptr;
-		IndexData data_index_;
-	};
+	// Pointer to the actual node
+	void* data_ = nullptr;
 	// The code for the node
 	Code code_;
 
-	template <class Derived, class DataType, class Indicators, bool LockLess,
-	          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+	template <class Derived, class DataType, class Indicators, bool ReuseNodes,
+	          bool LockLess>
 	friend class OctreeBase;
 };
 
@@ -271,12 +248,6 @@ struct NodeBV : public Node {
 	{
 	}
 
-	constexpr NodeBV(uint32_t block_index, uint8_t child_index, Code code,
-	                 geometry::AAEBB const& aaebb) noexcept
-	    : Node(block_index, child_index, code), aaebb_(aaebb)
-	{
-	}
-
 	constexpr NodeBV(Node const& node, geometry::AAEBB const& aaebb) noexcept
 	    : Node(node), aaebb_(aaebb)
 	{
@@ -291,8 +262,8 @@ struct NodeBV : public Node {
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
 
-	template <class Derived, class DataType, class Indicators, bool LockLess,
-	          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+	template <class Derived, class DataType, class Indicators, bool ReuseNodes,
+	          bool LockLess>
 	friend class OctreeBase;
 };
 }  // namespace ufo::map

@@ -49,13 +49,11 @@
 
 namespace ufo::map
 {
-template <class SurfelType, bool LockLess, MemoryModel NodeMemoryModel,
-          depth_t StaticallyAllocatedDepths>
-using SurfelMapT =
-    OctreeMapBase<SurfelNode<SurfelType>, OctreeIndicators, LockLess, NodeMemoryModel,
-                  StaticallyAllocatedDepths, SurfelMapBase>;
+template <class SurfelType, bool ReuseNodes, bool LockLess>
+using SurfelMapT = OctreeMapBase<SurfelNode<SurfelType>, OctreeIndicators, ReuseNodes,
+                                 LockLess, SurfelMapBase>;
 
-using SurfelMap = SurfelMapT<float, false, MemoryModel::POINTER, 1>;
+using SurfelMap = SurfelMapT<float, false, false>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SURFEL_MAP_H

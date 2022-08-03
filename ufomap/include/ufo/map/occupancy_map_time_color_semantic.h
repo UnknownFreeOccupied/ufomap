@@ -51,16 +51,15 @@
 
 namespace ufo::map
 {
-template <class SemanticType, std::size_t SemanticValueWidth, bool LockLess,
-          MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+template <class SemanticType, std::size_t SemanticValueWidth, bool ReuseNodes,
+          bool LockLess>
 using OccupancyMapTimeColorSemanticT =
     OctreeMapBase<OccupancyTimeColorSemanticNode<SemanticType, SemanticValueWidth>,
-                  OccupancyIndicators, LockLess, NodeMemoryModel,
-                  StaticallyAllocatedDepths, OccupancyMapBase, TimeMapBase, ColorMapBase,
-                  SemanticMapBase>;
+                  OccupancyIndicators, ReuseNodes, LockLess, OccupancyMapBase,
+                  TimeMapBase, ColorMapBase, SemanticMapBase>;
 
 using OccupancyMapTimeColorSemantic =
-    OccupancyMapTimeColorSemanticT<uint32_t, 16, false, MemoryModel::POINTER, 1>;
+    OccupancyMapTimeColorSemanticT<uint32_t, 16, false, false>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_TIME_COLOR_SEMANTIC_H

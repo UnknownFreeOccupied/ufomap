@@ -48,16 +48,13 @@
 
 namespace ufo::map
 {
-template <class OccupancyType, bool LockLess, MemoryModel NodeMemoryModel,
-          depth_t StaticallyAllocatedDepths>
+template <class OccupancyType, bool ReuseNodes, bool LockLess>
 using OccupancyMapColorT =
-    OctreeMapBase<OccupancyColorNode<OccupancyType>, OccupancyIndicators, LockLess,
-                  NodeMemoryModel, StaticallyAllocatedDepths, OccupancyMapBase,
-                  ColorMapBase>;
+    OctreeMapBase<OccupancyColorNode<OccupancyType>, OccupancyIndicators, ReuseNodes,
+                  LockLess, OccupancyMapBase, ColorMapBase>;
 
-using OccupancyMapColor = OccupancyMapColorT<float, false, MemoryModel::POINTER, 1>;
-using OccupancyMapColorSmall =
-    OccupancyMapColorT<uint8_t, false, MemoryModel::POINTER, 1>;
+using OccupancyMapColor = OccupancyMapColorT<float, false, false>;
+using OccupancyMapColorSmall = OccupancyMapColorT<uint8_t, false, false>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_H

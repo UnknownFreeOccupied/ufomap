@@ -52,14 +52,13 @@
 namespace ufo::map
 {
 template <class OccupancyType, class SemanticType, std::size_t SemanticValueWidth,
-          bool LockLess, MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+          bool ReuseNodes, bool LockLess>
 using OccupancyMapSemanticT =
     OctreeMapBase<OccupancySemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
-                  OccupancyIndicators, LockLess, NodeMemoryModel,
-                  StaticallyAllocatedDepths, OccupancyMapBase, SemanticMapBase>;
+                  OccupancyIndicators, ReuseNodes, LockLess, OccupancyMapBase,
+                  SemanticMapBase>;
 
-using OccupancyMapSemantic =
-    OccupancyMapSemanticT<float, uint32_t, 16, false, MemoryModel::POINTER, 1>;
+using OccupancyMapSemantic = OccupancyMapSemanticT<float, uint32_t, 16, false, false>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_SEMANTIC_H

@@ -49,12 +49,12 @@
 
 namespace ufo::map
 {
-template <bool LockLess, MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+template <bool ReuseNodes, bool LockLess>
 using OccupancyMapTimeT =
-    OctreeMapBase<OccupancyTimeNode, OccupancyIndicators, LockLess, NodeMemoryModel,
-                  StaticallyAllocatedDepths, OccupancyMapBase, TimeMapBase>;
+    OctreeMapBase<OccupancyTimeNode, OccupancyIndicators, ReuseNodes, LockLess,
+                  OccupancyMapBase, TimeMapBase>;
 
-using OccupancyMapTime = OccupancyMapTimeT<false, MemoryModel::POINTER, 1>;
+using OccupancyMapTime = OccupancyMapTimeT<false, false>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_TIME_H

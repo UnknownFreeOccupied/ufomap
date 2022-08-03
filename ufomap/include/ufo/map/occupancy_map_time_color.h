@@ -50,12 +50,12 @@
 
 namespace ufo::map
 {
-template <bool LockLess, MemoryModel NodeMemoryModel, depth_t StaticallyAllocatedDepths>
+template <bool ReuseNodes, bool LockLess>
 using OccupancyMapTimeColorT =
-    OctreeMapBase<OccupancyTimeColorNode, OccupancyIndicators, LockLess, NodeMemoryModel,
-                  StaticallyAllocatedDepths, OccupancyMapBase, TimeMapBase, ColorMapBase>;
+    OctreeMapBase<OccupancyTimeColorNode, OccupancyIndicators, ReuseNodes, LockLess,
+                  OccupancyMapBase, TimeMapBase, ColorMapBase>;
 
-using OccupancyMapTimeColor = OccupancyMapTimeColorT<false, MemoryModel::POINTER, 1>;
+using OccupancyMapTimeColor = OccupancyMapTimeColorT<false, false>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_MAP_TIME_COLOR_H
