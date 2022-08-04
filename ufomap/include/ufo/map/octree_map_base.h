@@ -286,33 +286,35 @@ class OctreeMapBase
 	                int const compression_level) const
 	{
 		constexpr DataIdentifier identifier = Base::getDataIdentifier();
-		if constexpr (DataIdentifier::NO_DATA != identifier) {
-			out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
+		if constexpr (DataIdentifier::NO_DATA == identifier) {
+			return;
+		}
 
-			if (compress) {
-				std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
-				                              std::ios_base::binary);
-				data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-				data_stream.imbue(std::locale());
+		out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
 
-				Base::writeNodes(data_stream, nodes);
+		if (compress) {
+			std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
+			                              std::ios_base::binary);
+			data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			data_stream.imbue(std::locale());
 
-				uint64_t size = data_stream.tellp();
-				out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
-				compressData(data_stream, out_stream, size, compression_acceleration_level,
-				             compression_level);
-			} else {
-				uint64_t size;
-				auto size_pos = out_stream.tellp();
-				out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			Base::writeNodes(data_stream, nodes);
 
-				Base::writeNodes(out_stream, nodes);
+			uint64_t size = data_stream.tellp();
+			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			compressData(data_stream, out_stream, size, compression_acceleration_level,
+			             compression_level);
+		} else {
+			uint64_t size;
+			auto size_pos = out_stream.tellp();
+			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
 
-				size = out_stream.tellp() - size_pos - sizeof(size);
-				out_stream.seekp(size_pos);
-				out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
-				out_stream.seekp(0, std::ios_base::end);
-			}
+			Base::writeNodes(out_stream, nodes);
+
+			size = out_stream.tellp() - size_pos - sizeof(size);
+			out_stream.seekp(size_pos);
+			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			out_stream.seekp(0, std::ios_base::end);
 		}
 	}
 };

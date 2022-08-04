@@ -55,7 +55,7 @@
 
 namespace ufo::map
 {
-template <typename OccupancyType>
+template <typename OccupancyType = float>
 struct OccupancyNode {
 	OccupancyType occupancy;
 
@@ -66,6 +66,8 @@ struct OccupancyNode {
 
 	constexpr bool operator!=(OccupancyNode const& rhs) const { return !(*this == rhs); }
 };
+
+using OccupancyNodeSmall = OccupancyNode<uint8_t>;
 
 struct OccupancyTimeNode {
 	time_step_t occupancy : 8;

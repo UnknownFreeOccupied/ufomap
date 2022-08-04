@@ -2567,10 +2567,12 @@ class OctreeBase
 	{
 		LeafNode const* node = &getRoot();
 		depth_t depth = depthLevels();
-		while (code.depth() != depth || isParent(node)) {
+		while (code.depth() != depth && isParent(*node)) {
 			--depth;
-			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
-			                  : &getInnerChild(node, code.indexAtDepth(depth));
+			node = 0 == depth ? &getLeafChild(static_cast<InnerNode const&>(*node),
+			                                  code.indexAtDepth(depth))
+			                  : &getInnerChild(static_cast<InnerNode const&>(*node),
+			                                   code.indexAtDepth(depth));
 		}
 		return *node;
 	}
@@ -2579,10 +2581,12 @@ class OctreeBase
 	{
 		LeafNode* node = &getRoot();
 		depth_t depth = depthLevels();
-		while (code.depth() != depth || isParent(node)) {
+		while (code.depth() != depth && isParent(*node)) {
 			--depth;
-			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
-			                  : &getInnerChild(node, code.indexAtDepth(depth));
+			node = 0 == depth ? &getLeafChild(static_cast<InnerNode const&>(*node),
+			                                  code.indexAtDepth(depth))
+			                  : &getInnerChild(static_cast<InnerNode const&>(*node),
+			                                   code.indexAtDepth(depth));
 		}
 		return *node;
 	}
@@ -2613,10 +2617,12 @@ class OctreeBase
 	{
 		LeafNode const* node = &getRoot();
 		depth_t depth = depthLevels();
-		while (code.depth() != depth || isParent(node)) {
+		while (code.depth() != depth && isParent(*node)) {
 			--depth;
-			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
-			                  : &getInnerChild(node, code.indexAtDepth(depth));
+			node = 0 == depth ? &getLeafChild(static_cast<InnerNode const&>(*node),
+			                                  code.indexAtDepth(depth))
+			                  : &getInnerChild(static_cast<InnerNode const&>(*node),
+			                                   code.indexAtDepth(depth));
 		}
 		return {*node, depth};
 	}
@@ -2625,10 +2631,12 @@ class OctreeBase
 	{
 		LeafNode* node = &getRoot();
 		depth_t depth = depthLevels();
-		while (code.depth() != depth || isParent(node)) {
+		while (code.depth() != depth && isParent(*node)) {
 			--depth;
-			node = 0 == depth ? &getLeafChild(node, code.indexAtDepth(depth))
-			                  : &getInnerChild(node, code.indexAtDepth(depth));
+			node = 0 == depth ? &getLeafChild(static_cast<InnerNode const&>(*node),
+			                                  code.indexAtDepth(depth))
+			                  : &getInnerChild(static_cast<InnerNode const&>(*node),
+			                                   code.indexAtDepth(depth));
 		}
 		return {*node, depth};
 	}

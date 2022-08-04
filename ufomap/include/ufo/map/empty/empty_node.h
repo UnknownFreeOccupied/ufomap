@@ -39,22 +39,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_TIME_H
-#define UFO_MAP_OCCUPANCY_MAP_TIME_H
-
-// UFO
-#include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/octree_map_base.h>
-#include <ufo/map/time/time_map_base.h>
+#ifndef UFO_MAP_EMPTY_NODE_H
+#define UFO_MAP_EMPTY_NODE_H
 
 namespace ufo::map
 {
-template <bool ReuseNodes, bool LockLess>
-using OccupancyMapTimeT =
-    OctreeMapBase<OccupancyTimeNode, OccupancyIndicators, ReuseNodes, LockLess,
-                  OccupancyMapBase, TimeMapBase>;
+template <std::size_t Num>
+struct EmptyNode {
+	constexpr bool operator==(EmptyNode) const noexcept { return true; }
 
-using OccupancyMapTime = OccupancyMapTimeT<false, false>;
+	constexpr bool operator!=(EmptyNode) const noexcept { return false; }
+};
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_TIME_H
+#endif  // UFO_MAP_EMPTY_NODE_H

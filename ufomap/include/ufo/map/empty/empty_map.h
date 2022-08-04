@@ -39,25 +39,56 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_COLOR_SEMANTIC_H
-#define UFO_MAP_OCCUPANCY_MAP_COLOR_SEMANTIC_H
+#ifndef UFO_MAP_EMPTY_MAP_H
+#define UFO_MAP_EMPTY_MAP_H
 
 // UFO
-#include <ufo/map/color/color_map_base.h>
-#include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/semantic/semantic_map_base.h>
+#include <ufo/map/types.h>
+
+// STL
+#include <iostream>
+#include <vector>
 
 namespace ufo::map
 {
-template <class OccupancyType, class SemanticType, std::size_t SemanticValueWidth,
-          bool ReuseNodes, bool LockLess>
-using OccupancyMapColorSemanticT = OctreeMapBase<
-    OccupancyColorSemanticNode<OccupancyType, SemanticType, SemanticValueWidth>,
-    OccupancyIndicators, ReuseNodes, LockLess, OccupancyMapBase, ColorMapBase,
-    SemanticMapBase>;
+template <std::size_t Num, class Derived, class LeafNode, class InnerNode>
+class EmptyMap
+{
+ protected:
+	//
+	// Initilize root
+	//
 
-using OccupancyMapColorSemantic =
-    OccupancyMapColorSemanticT<float, uint32_t, 16, false, false>;
+	static constexpr void initRoot() noexcept {}
+
+	//
+	// Update node
+	//
+
+	static constexpr void updateNode(InnerNode&, depth_t) noexcept {}
+
+	//
+	// Input/ouput (read/write)
+	//
+
+	static constexpr DataIdentifier getDataIdentifier() noexcept
+	{
+		return DataIdentifier::NO_DATA;
+	}
+
+	static constexpr bool canReadData(DataIdentifier identifier) noexcept
+	{
+		return getDataIdentifier() == identifier;
+	}
+
+	static constexpr void readNodes(std::istream&, std::vector<LeafNode*> const&) noexcept
+	{
+	}
+
+	static constexpr void writeNodes(std::ostream&, std::vector<LeafNode> const&) noexcept
+	{
+	}
+};
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_COLOR_SEMANTIC_H
+#endif  // UFO_MAP_EMPTY_MAP_H

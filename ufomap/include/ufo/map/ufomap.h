@@ -43,299 +43,256 @@
 #define UFO_MAP_UFO_MAP_H
 
 // UFO
+#include <ufo/map/color/color_map_base.h>
+#include <ufo/map/color/color_node.h>
+#include <ufo/map/empty/empty_map.h>
+#include <ufo/map/empty/empty_node.h>
 #include <ufo/map/io.h>
-#include <ufo/map/occupancy_map.h>
-#include <ufo/map/occupancy_map_color.h>
-// #include <ufo/map/occupancy_map_color_semantic.h>
-// #include <ufo/map/occupancy_map_semantic.h>
-#include <ufo/map/occupancy_map_time.h>
-#include <ufo/map/occupancy_map_time_color.h>
-// #include <ufo/map/occupancy_map_time_color_semantic.h>
-// #include <ufo/map/occupancy_map_time_semantic.h>
-#include <ufo/map/integrator/integrator.h>
-#include <ufo/map/point_cloud.h>
-#include <ufo/map/types.h>
+#include <ufo/map/node_base.h>
+#include <ufo/map/occupancy/occupancy_indicators.h>
+#include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/occupancy/occupancy_node.h>
+#include <ufo/map/octree_map_base.h>
+#include <ufo/map/semantic/semantic_map_base.h>
+#include <ufo/map/semantic/semantic_node.h>
+#include <ufo/map/signed_distance/signed_distance_map_base.h>
+#include <ufo/map/signed_distance/signed_distance_node.h>
+#include <ufo/map/surfel/surfel_map_base.h>
+#include <ufo/map/surfel/surfel_node.h>
+#include <ufo/map/time/time_map_base.h>
+#include <ufo/map/time/time_node.h>
 
 // STL
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <variant>
+#include <type_traits>
 
 namespace ufo::map
 {
-// using UFOMap =
-//     std::variant<std::monostate, OccupancyMap, OccupancyMapTime, OccupancyMapColor,
-//                  OccupancyMapSemantic, OccupancyMapTimeColor, OccupancyMapTimeSemantic,
-//                  OccupancyMapColorSemantic, OccupancyMapTimeColorSemantic,
-//                  OccupancyMapSmall, OccupancyMapColorSmall, OccupancyMapSemanticSmall,
-//                  OccupancyMapColorSemanticSmall>;
-// using UFOMap =
-//     std::variant<std::monostate, OccupancyMap, OccupancyMapTimeMin, OccupancyMapColor,
-//                  OccupancyMapSemantic, OccupancyMapSmall, OccupancyMapColorSmall,
-//                  OccupancyMapSemanticSmall, OccupancyMapTimeMax>;
-using UFOMap =
-    std::variant<std::monostate, OccupancyMap, OccupancyMapTime, OccupancyMapColor,
-                 OccupancyMapTimeColor, OccupancyMapSmall, OccupancyMapColorSmall>;
+enum MapType : std::uint64_t {
+	OCCUPANCY = 1U,
+	TIME = 1U << 1U,
+	COLOR = 1U << 2U,
+	SURFEL = 1U << 3U,
+	SIGNED_DISTANCE = 1U << 4U,
+	OCCUPANCY_SMALL = 1U << 5U,
+};
 
-// using UFOMap = std::variant<
-//     std::monostate, OccupancyMap, OccupancyMapTime, OccupancyMapColor,
-//     OccupancyMapSemantic64, OccupancyMapSemantic32, OccupancyMapSemantic16,
-//     OccupancyMapSemantic8, OccupancyMapTimeColor, OccupancyMapTimeSemantic64,
-//     OccupancyMapTimeSemantic32, OccupancyMapTimeSemantic16, OccupancyMapTimeSemantic8,
-//     OccupancyMapColorSemantic64, OccupancyMapColorSemantic32,
-//     OccupancyMapColorSemantic16, OccupancyMapColorSemantic8,
-//     OccupancyMapTimeColorSemantic64, OccupancyMapTimeColorSemantic32,
-//     OccupancyMapTimeColorSemantic16, OccupancyMapTimeColorSemantic8, OccupancyMap,
-//     OccupancyMapTimeSmall, OccupancyMapColorSmall, OccupancyMapSemantic64Small,
-//     OccupancyMapSemantic32Small, OccupancyMapSemantic16Small,
-//     OccupancyMapSemantic8Small, OccupancyMapColorSemantic64Small,
-//     OccupancyMapColorSemantic32Small, OccupancyMapColorSemantic16Small,
-//     OccupancyMapColorSemantic8Small>;
+template <bool C, std::size_t Num, class Node>
+using conditional_node_t = std::conditional_t<C, Node, EmptyNode<Num>>;
 
-template <template <typename...> class Base>
-constexpr bool isMapBase(UFOMap const& map)
+template <bool C, std::size_t Num, template <typename...> typename MapBase>
+struct conditional_map_base {
+	template <typename... ts>
+	using type = MapBase<ts...>;
+};
+
+template <std::size_t Num, template <typename...> typename MapBase>
+struct conditional_map_base<false, Num, MapBase> {
+	template <typename... Ts>
+	using type = EmptyMap<Num, Ts...>;
+};
+
+template <std::uint64_t MapType, bool ReuseNodes = false, bool LockLess = false>
+class Map
+    : public OctreeMapBase<
+          NodeBase<conditional_node_t<MapType & OCCUPANCY, 1, OccupancyNode<float>>,
+                   conditional_node_t<MapType & OCCUPANCY_SMALL, 2, OccupancyNodeSmall>,
+                   conditional_node_t<MapType & TIME, 3, TimeNode>,
+                   conditional_node_t<MapType & COLOR, 4, ColorNode>,
+                   conditional_node_t<MapType & SURFEL, 5, SurfelNode<float>>,
+                   conditional_node_t<MapType & SIGNED_DISTANCE, 6,
+                                      SignedDistanceNode<float>>>,
+          std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
+                             OctreeIndicators>,
+          ReuseNodes, LockLess,
+          conditional_map_base<MapType&(OCCUPANCY | OCCUPANCY_SMALL), 1,
+                               OccupancyMapBase>::template type,
+          conditional_map_base<MapType & TIME, 2, TimeMapBase>::template type,
+          conditional_map_base<MapType & COLOR, 3, ColorMapBase>::template type,
+          conditional_map_base<MapType & SURFEL, 5, SurfelMapBase>::template type,
+          conditional_map_base<MapType & SIGNED_DISTANCE, 6,
+                               SignedDistanceMapBase>::template type>
 {
-	return std::visit(
-	    [&](auto const& arg) -> bool {
-		    using T = std::decay_t<decltype(arg)>;
-		    return ufo::map::is_base_of_template_v<Base, T>;
-	    },
-	    map);
-}
+ private:
+	// static_assert(!(MapType & OCCUPANCY && MapType & OCCUPANCY_SMALL));
 
-inline bool canMergeMap(std::istream& in_stream_1, std::istream& in_stream_2)
-{
-	auto pos = in_stream_1.tellg();
-	FileInfo header_1 = readHeader(in_stream_1);
-	in_stream_1.seekg(pos);
-	pos = in_stream_2.tellg();
-	FileInfo header_2 = readHeader(in_stream_2);
-	in_stream_2.seekg(pos);
+	using Base = OctreeMapBase<
+	    NodeBase<
+	        conditional_node_t<MapType & OCCUPANCY, 1, OccupancyNode<float>>,
+	        conditional_node_t<MapType & OCCUPANCY_SMALL, 2, OccupancyNodeSmall>,
+	        conditional_node_t<MapType & TIME, 3, TimeNode>,
+	        conditional_node_t<MapType & COLOR, 4, ColorNode>,
+	        conditional_node_t<MapType & SURFEL, 5, SurfelNode<float>>,
+	        conditional_node_t<MapType & SIGNED_DISTANCE, 6, SignedDistanceNode<float>>>,
+	    std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
+	                       OctreeIndicators>,
+	    ReuseNodes, LockLess,
+	    conditional_map_base<MapType&(OCCUPANCY | OCCUPANCY_SMALL), 1,
+	                         OccupancyMapBase>::template type,
+	    conditional_map_base<MapType & TIME, 2, TimeMapBase>::template type,
+	    conditional_map_base<MapType & COLOR, 3, ColorMapBase>::template type,
+	    conditional_map_base<MapType & SURFEL, 5, SurfelMapBase>::template type,
+	    conditional_map_base<MapType & SIGNED_DISTANCE, 6,
+	                         SignedDistanceMapBase>::template type>;
 
-	// TODO: Implement better
-	return header_1.at("resolution").at(0) == header_2.at("resolution").at(0) &&
-	       header_1.at("depth_levels").at(0) == header_2.at("depth_levels").at(0);
-}
+ public:
+	//
+	// Constructors
+	//
 
-inline bool canMergeMap(std::filesystem::path const& filename_1,
-                        std::filesystem::path const& filename_2)
-{
-	std::ifstream file_1;
-	file_1.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file_1.open(filename_1, std::ios_base::in | std::ios_base::binary);
-
-	std::ifstream file_2;
-	file_2.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file_2.open(filename_2, std::ios_base::in | std::ios_base::binary);
-
-	return canMergeMap(file_1, file_2);
-}
-
-inline bool canMergeMap(UFOMap const& map, std::istream& in_stream)
-{
-	return std::visit(
-	    [&](auto const& arg) -> bool {
-		    using T = std::decay_t<decltype(arg)>;
-		    if constexpr (!std::is_same_v<std::monostate, T>) {
-			    return arg.canMerge(in_stream);
-		    }
-		    return false;
-	    },
-	    map);
-}
-
-inline bool canMergeMap(UFOMap const& map, std::filesystem::path const& filename)
-{
-	std::ifstream file;
-	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file.open(filename, std::ios_base::in | std::ios_base::binary);
-
-	return canMergeMap(map, file);
-}
-
-constexpr std::string_view mapType(UFOMap const& map)
-{
-	return std::visit(
-	    [](auto const& arg) -> std::string_view {
-		    using T = std::decay_t<decltype(arg)>;
-		    if constexpr (!std::is_same_v<std::monostate, T>) {
-			    return T::mapType();
-		    }
-		    return "";
-	    },
-	    map);
-}
-
-inline bool isSameMapType(std::istream& in_stream_1, std::istream& in_stream_2)
-{
-	auto pos = in_stream_1.tellg();
-	FileInfo header_1 = readHeader(in_stream_1);
-	in_stream_1.seekg(pos);
-	pos = in_stream_2.tellg();
-	FileInfo header_2 = readHeader(in_stream_2);
-	in_stream_2.seekg(pos);
-
-	return header_1.at("map_type").at(0) == header_2.at("map_type").at(0);
-}
-
-inline bool isSameMapType(std::filesystem::path const& filename_1,
-                          std::filesystem::path const& filename_2)
-{
-	std::ifstream file_1;
-	file_1.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file_1.open(filename_1, std::ios_base::in | std::ios_base::binary);
-
-	std::ifstream file_2;
-	file_2.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file_2.open(filename_2, std::ios_base::in | std::ios_base::binary);
-
-	return isSameMapType(file_1, file_2);
-}
-
-inline bool isSameMapType(UFOMap const& map, std::istream& in_stream)
-{
-	auto pos = in_stream.tellg();
-	FileInfo header = readHeader(in_stream);
-	in_stream.seekg(pos);
-
-	return mapType(map) == header.at("map_type").at(0);
-}
-
-inline bool isSameMapType(UFOMap const& map, std::filesystem::path const& filename)
-{
-	std::ifstream file;
-	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file.open(filename, std::ios_base::in | std::ios_base::binary);
-
-	return isSameMapType(map, file);
-}
-
-template <size_t I, class... Args>
-inline UFOMap createMap(size_t index, Args&&... args)
-{
-	if constexpr (I < std::variant_size_v<UFOMap>) {
-		if (I == index) {
-			using Map = std::variant_alternative_t<I, UFOMap>;
-			if constexpr (!std::is_same_v<std::monostate, Map>) {
-				return Map(std::forward<Args>(args)...);
-			}
-		} else {
-			return createMap<I + 1>(index, std::forward<Args>(args)...);
-		}
-	}
-	return std::monostate();
-}
-
-template <class... Args>
-inline UFOMap createMap(size_t index, Args&&... args)
-{
-	return createMap<0>(index, std::forward<Args>(args)...);
-}
-
-template <size_t I, class... Args>
-inline UFOMap createMap(std::istream& in_stream, std::string const& map_type,
-                        Args&&... args)
-{
-	if constexpr (I < std::variant_size_v<UFOMap>) {
-		using Map = std::variant_alternative_t<I, UFOMap>;
-		if constexpr (!std::is_same_v<std::monostate, Map>) {
-			return map_type == Map::mapType()
-			           ? Map(in_stream, std::forward<Args>(args)...)
-			           : createMap<I + 1>(in_stream, map_type, std::forward<Args>(args)...);
-		} else {
-			return createMap<I + 1>(in_stream, map_type, std::forward<Args>(args)...);
-		}
-	}
-	return std::monostate();
-}
-
-template <class... Args>
-inline UFOMap createMap(std::istream& in_stream, Args&&... args)
-{
-	auto pos = in_stream.tellg();
-	FileInfo header = readHeader(in_stream);
-	in_stream.seekg(pos);
-
-	return createMap<0>(in_stream, header.at("map_type").at(0),
-	                    std::forward<Args>(args)...);
-}
-
-template <class... Args>
-inline UFOMap createMap(std::filesystem::path const& filename, Args&&... args)
-{
-	std::ifstream file;
-	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file.open(filename, std::ios_base::in | std::ios_base::binary);
-
-	return createMap(file, std::forward<Args>(args)...);
-}
-
-inline void mergeMap(UFOMap& map, std::istream& in_stream)
-{
-	if (!canMergeMap(map, in_stream)) {
-		throw std::invalid_argument("Cannot merge map.");
+	Map(double resolution = 0.1, depth_t depth_levels = 16, bool automatic_pruning = true)
+	    : Base(resolution, depth_levels, automatic_pruning)
+	{
 	}
 
-	return std::visit(
-	    [&](auto& arg) {
-		    using T = std::decay_t<decltype(arg)>;
-		    if constexpr (!std::is_same_v<std::monostate, T>) {
-			    arg.read(in_stream);
-		    } else {
-			    throw std::invalid_argument("Cannot merge map with monostate.");
-		    }
-	    },
-	    map);
-}
-
-inline void mergeMap(UFOMap& map, std::filesystem::path const& filename)
-{
-	std::ifstream file;
-	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-	file.open(filename, std::ios_base::in | std::ios_base::binary);
-
-	mergeMap(map, file);
-}
-
-// If map is of same type as stream map, then insert data into it. Otherwise, create new
-// map.
-template <class... Args>
-inline void createOrMergeMap(UFOMap& map, std::istream& in_stream,
-                             bool force_same_map_type, Args&&... args)
-{
-	if (!canMergeMap(map, in_stream)) {
-		map = createMap(in_stream, std::forward<Args>(args)...);
-		return;
+	Map(std::filesystem::path const& filename, bool automatic_pruning = true)
+	    : Base(filename, automatic_pruning)
+	{
 	}
 
-	if (force_same_map_type && !isSameMapType(map, in_stream)) {
-		map = createMap(in_stream, std::forward<Args>(args)...);
-		return;
+	Map(std::istream& in_stream, bool automatic_pruning = true)
+	    : Base(in_stream, automatic_pruning)
+	{
 	}
 
-	mergeMap(map, in_stream);
-}
+	// FIXME: Why cannot this be default?
+	Map(Base const& other) : Base(other) {}
 
-template <class... Args>
-inline void createOrMergeMap(UFOMap& map, std::filesystem::path const& filename,
-                             bool force_same_map_type, Args&&... args)
-{
-	std::ifstream file;
-	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+	template <std::uint64_t MapType2, bool ReuseNodes2, bool LockLess2>
+	Map(Map<MapType2, ReuseNodes2, LockLess2> const& other) : Base(other)
+	{
+	}
 
-	file.open(filename, std::ios_base::in | std::ios_base::binary);
+	Map(Map&& other) = default;
 
-	createOrMergeMap(map, file, force_same_map_type, std::forward<Args>(args)...);
-}
+	//
+	// Operator assignment
+	//
+
+	Map& operator=(Map const& rhs) = default;
+
+	// template <std::uint64_t MapType2, bool ReuseNodes2, bool LockLess2>
+	// Map& operator=(Map<MapType2, ReuseNodes2, LockLess2> const& rhs) = default;
+
+	Map& operator=(Map&& rhs) = default;
+};
+
+// template <std::uint64_t MapType, class SemanticType = uint32_t,
+//           size_t SemanticValueWidth = 16, std::size_t SemanticFixedSize = 0,
+//           bool ReuseNodes = false, bool LockLess = false>
+// class SemanticMap
+//     : public OctreeMapBase<
+//           NodeBase<SemanticNode<SemanticType, SemanticValueWidth, SemanticFixedSize>,
+//                    std::conditional_t<MapType & OCCUPANCY, OccupancyNode,
+//                    EmptyNode<4>>, std::conditional_t<
+//                        MapType & OCCUPANCY_SMALL,
+//                        std::conditional_t<MapType & TIME, OccupancyTimeNode,
+//                                           OccupancyNodeSmall>,
+//                        std::conditional_t<MapType & TIME, TimeNode, EmptyNode<5>>>,
+//                    std::conditional_t<MapType & COLOR, ColorNode, EmptyNode<6>>,
+//                    std::conditional_t<MapType & SURFEL, SurfelNode, EmptyNode<7>>,
+//                    std::conditional_t<MapType & SIGNED_DISTANCE, SignedDistanceNode,
+//                                       EmptyNode<8>>>,
+//           std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL),
+//           OccupancyIndicators,
+//                              OctreeIndicators>,
+//           ReuseNodes, LockLess,
+//           std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyMapBase,
+//                              EmptyMap<0>>,
+//           std::conditional_t<MapType & TIME, TimeMapBase, EmptyMap<1>>,
+//           std::conditional_t<MapType & COLOR, ColorMapBase, EmptyMap<2>>,
+//           SemanticMapBase, std::conditional_t<MapType & SURFEL, SurfelMapBase,
+//           EmptyMap<3>>, std::conditional_t<MapType & SIGNED_DISTANCE,
+//           SignedDistanceMapBase,
+//                              EmptyMap<4>>>
+// {
+//  private:
+// 	static_assert(0 != MapType);
+// 	static_assert(!(MapType & OCCUPANCY && MapType & OCCUPANCY_SMALL));
+// 	static_assert(!(MapType & SEMANTIC &&));
+
+// 	using Base = OctreeMapBase<
+// 	    NodeBase<
+// 	        SemanticNode<SemanticType, SemanticValueWidth, SemanticFixedSize>,
+// 	        std::conditional_t<MapType & OCCUPANCY, OccupancyNode, EmptyNode<4>>,
+// 	        std::conditional_t<
+// 	            MapType & OCCUPANCY_SMALL,
+// 	            std::conditional_t<MapType & TIME, OccupancyTimeNode, OccupancyNodeSmall>,
+// 	            std::conditional_t<MapType & TIME, TimeNode, EmptyNode<5>>>,
+// 	        std::conditional_t<MapType & COLOR, ColorNode, EmptyNode<6>>,
+// 	        std::conditional_t<MapType & SURFEL, SurfelNode, EmptyNode<7>>,
+// 	        std::conditional_t<MapType & SIGNED_DISTANCE, SignedDistanceNode,
+// 	                           EmptyNode<8>>>,
+// 	    std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
+// 	                       OctreeIndicators>,
+// 	    ReuseNodes, LockLess,
+// 	    std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyMapBase,
+// 	                       EmptyMap<0>>,
+// 	    std::conditional_t<MapType & TIME, TimeMapBase, EmptyMap<1>>,
+// 	    std::conditional_t<MapType & COLOR, ColorMapBase, EmptyMap<2>>, SemanticMapBase,
+// 	    std::conditional_t<MapType & SURFEL, SurfelMapBase, EmptyMap<3>>,
+// 	    std::conditional_t<MapType & SIGNED_DISTANCE, SignedDistanceMapBase,
+// EmptyMap<4>>>;
+
+//  public:
+// 	//
+// 	// Constructors
+// 	//
+
+// 	Map(double resolution = 0.1, depth_t depth_levels = 16, bool automatic_pruning = true)
+// 	    : Base(resolution, depth_levels, automatic_pruning)
+// 	{
+// 	}
+
+// 	Map(std::filesystem::path const& filename, bool automatic_pruning = true)
+// 	    : Base(filename, automatic_pruning)
+// 	{
+// 	}
+
+// 	Map(std::istream& in_stream, bool automatic_pruning = true)
+// 	    : Base(in_stream, automatic_pruning)
+// 	{
+// 	}
+
+// 	Map(Base const& other) = default;
+
+// 	template <std::uint64_t MapType2, class SemanticType2, size_t SemanticValueWidth2,
+// 	          std::size_t SemanticFixedSize2, bool ReuseNodes2, bool LockLess2>
+// 	Map(Map<MapType2, SemanticType2, SemanticValueWidth2, SemanticFixedSize2, ReuseNodes2,
+// 	        LockLess2> const& other)
+// 	    : Base(other)
+// 	{
+// 	}
+
+// 	Map(Map&& other) = default;
+
+// 	//
+// 	// Operator assignment
+// 	//
+
+// 	Map& operator=(Map const& rhs) = default;
+
+// 	template <std::uint64_t MapType2, class SemanticType2, size_t SemanticValueWidth2,
+// 	          std::size_t SemanticFixedSize2, bool ReuseNodes2, bool LockLess2>
+// 	Map& operator=(Map<MapType2, SemanticType2, SemanticValueWidth2, SemanticFixedSize2,
+// 	                   ReuseNodes2, LockLess2> const& rhs) = default;
+
+// 	Map& operator=(Map&& rhs) = default;
+// };
+
+// using OccupancyMap = Map<OCCUPANCY>;
+// using OccupancyMapSmall = Map<OCCUPANCY_SMALL>;
+
+// using TimeMap = Map<TIME>;
+
+// using ColorMap = Map<COLOR>;
+
+// using SurfelMap = Map<SURFEL>;
+
+// using SignedDistanceMap = Map<SIGNED_DISTANCE>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_UFO_MAP_H
