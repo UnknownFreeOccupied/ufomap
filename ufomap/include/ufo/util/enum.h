@@ -39,36 +39,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_NODE_H
-#define UFO_MAP_OCCUPANCY_NODE_H
-
-// UFO
-#include <ufo/map/color/color_node.h>
-#include <ufo/map/octree/octree_node.h>
-#include <ufo/map/semantic/semantic_node.h>
-#include <ufo/map/types.h>
+#ifndef UFO_UTIL_ENUM_H
+#define UFO_UTIL_ENUM_H
 
 // STL
-#include <array>
-#include <cstdint>
-#include <iostream>
 #include <type_traits>
 
-namespace ufo::map
+namespace ufo::util
 {
-template <typename OccupancyType = float, std::size_t Num = 1>
-struct OccupancyNode {
-	using occupancy_t = OccupancyType;
+template <typename Enumeration>
+constexpr typename std::underlying_type<Enumeration>::type enumToValue(
+    Enumeration const value)
 
-	std::conditional_t<1 == Num, occupancy_t, std::array<occupancy_t, Num>> occupancy;
+{
+	return static_cast<typename std::underlying_type<Enumeration>::type>(value);
+}
 
-	constexpr bool operator==(OccupancyNode rhs) const
-	{
-		return occupancy == rhs.occupancy;
-	}
+}  // namespace ufo::util
 
-	constexpr bool operator!=(OccupancyNode rhs) const { return !(*this == rhs); }
-};
-}  // namespace ufo::map
-
-#endif  // UFO_MAP_OCCUPANCY_NODE_H
+#endif  // UFO_UTIL_ENUM_H

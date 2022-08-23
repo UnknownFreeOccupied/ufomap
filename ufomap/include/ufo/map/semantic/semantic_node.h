@@ -43,27 +43,24 @@
 #define UFO_MAP_SEMANTIC_NODE_H
 
 // UFO
-#include <ufo/container/flat_map.h>
+#include <ufo/map/semantic/semantics.h>
 
 namespace ufo::map
 {
-template <typename SemanticType, size_t SemanticValueWidth>
+template <std::size_t NumLabelBits, std::size_t NumValueBits>
 struct SemanticNode {
-	container::FlatMap<SemanticType, SemanticValueWidth> semantics;
+	using semantic_container_type = Semantics<NumLabelBits, NumValueBits>;
+	using semantic_label_type = typename semantic_container_type::label_type;
+	using Semantic_value_type = typename semantic_container_type::value_type;
+
+	semantic_container_type semantics;
 
 	constexpr bool operator==(SemanticNode const& rhs) const
 	{
-		return rhs.semantics == semantics;
+		return semantics == rhs.semantics;
 	}
 
 	constexpr bool operator!=(SemanticNode const& rhs) const { return !(*this == rhs); }
-
-	static constexpr size_t getSemanticLabelBits()
-	{
-		return std::numeric_limits<SemanticType>::digits - getSemanticValueBits();
-	}
-
-	static constexpr size_t getSemanticValueBits() { return SemanticValueWidth; }
 };
 }  // namespace ufo::map
 

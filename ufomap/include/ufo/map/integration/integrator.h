@@ -61,7 +61,6 @@
 
 // STL
 #include <algorithm>
-#include <execution>
 #include <future>
 #include <thread>
 #include <type_traits>
@@ -83,8 +82,12 @@ class Integrator
 	template <class Map, class P>
 	void integrateHits(Map& map, IntegrationCloud<P> const& cloud) const
 	{
+		// Get current state
+		auto const occupancy_prob_hit = getOccupancyProbHit();
+		auto const time_step = getTimeStep();
+
 		auto prob = map.toOccupancyChangeLogit(
-		    occupancy_prob_hit_);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
+		    occupancy_prob_hit);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
 
 		// TODO: Something with semantics
 
@@ -110,7 +113,7 @@ class Integrator
 
 			// Update time step
 			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				map.setTimeStep(node, time_step_, false);
+				map.setTimeStep(node, time_step, false);
 			}
 
 			// Update color
@@ -160,9 +163,13 @@ class Integrator
 	template <class Map>
 	void integrateMisses(Map& map, Misses const& misses) const
 	{
-		auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss_);
+		// Get current state
+		auto const occupancy_prob_miss = getOccupancyProbMiss();
+		auto const time_step = getTimeStep();
 
-		for_each(misses, [&map, prob, time_step = time_step_](auto code) {
+		auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss);
+
+		for_each(misses, [&map, prob, time_step](auto code) {
 			auto node = map.createNode(code);
 
 			map.decreaseOccupancyLogit(node, prob, false);
@@ -188,8 +195,11 @@ class Integrator
 	void insertPointCloud(Map& map, PointCloudT<P> const& cloud,
 	                      bool const propagate = true) const
 	{
+		// Get current state
+		auto const hit_depth = getHitDepth();
+
 		// Create integration cloud
-		auto ic = toIntegrationCloud(map, cloud, hit_depth_);
+		auto ic = toIntegrationCloud(map, cloud, hit_depth);
 
 		// Integrate into the map
 		integrateHits(map, ic);
@@ -213,17 +223,22 @@ class Integrator
 	void insertPointCloud(Map& map, PointCloudT<P> const& cloud, Point3 const sensor_origin,
 	                      bool const propagate = true) const
 	{
+		// Get current state
+		auto const hit_depth = getHitDepth();
+		auto const miss_depth = getMissDepth();
+		auto const max_range = getMaxRange();
+		auto const is_discrete = isDiscretize();
+
 		// Create integration cloud
 		IntegrationCloud<P> ic =
 		    0 > max_range_
-		        ? toIntegrationCloud(map, cloud, hit_depth_)
-		        : toIntegrationCloud(map, cloud, sensor_origin, max_range_, hit_depth_);
+		        ? toIntegrationCloud(map, cloud, hit_depth)
+		        : toIntegrationCloud(map, cloud, sensor_origin, max_range, hit_depth);
 
 		// Ray cast to get free space
-		Misses misses =
-		    isDiscretize()
-		        ? getMissesDiscreteFast(map, ic, sensor_origin, false, getMissDepth())
-		        : getMisses(map, ic, sensor_origin, false, getMissDepth());
+		Misses misses = is_discrete
+		                    ? getMissesDiscreteFast(map, ic, sensor_origin, false, miss_depth)
+		                    : getMisses(map, ic, sensor_origin, false, miss_depth);
 
 		// Integrate into the map
 		integrateMisses(map, misses);

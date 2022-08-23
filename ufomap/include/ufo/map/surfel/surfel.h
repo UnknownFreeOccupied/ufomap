@@ -54,6 +54,9 @@ namespace ufo::map
 template <typename T = float,
           typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 struct Surfel {
+	template <typename T2>
+	friend class Surfel<T2>;
+
 	using scalar_t = T;
 
 	constexpr Surfel() = default;
@@ -95,9 +98,28 @@ struct Surfel {
 
 	constexpr Surfel(Surfel const& other) = default;
 
+	template <typename T2>
+	constexpr Surfel(Surfel<T2> const& other)
+	    : num_points_(other.num_points_),
+	      sum_(other.sum_),
+	      sum_squares_{other.sum_squares_[0], other.sum_squares_[1], other.sum_squares_[2],
+	                   other.sum_squares_[3], other.sum_squares_[4], other.sum_squares_[5]}
+	{
+	}
+
 	constexpr Surfel(Surfel&& other) = default;
 
 	constexpr Surfel& operator=(Surfel const& rhs) = default;
+
+	template <typename T2>
+	constexpr Surfel& operator=(Surfel<T2> const& rhs)
+	{
+		num_points_ = rhs.num_points_;
+		sum_ = other.sum_;
+		for (std::size_t i = 0; sum_squares_.size() != i; ++i) {
+			sum_squares_[i] = rhs.sum_squares_[i];
+		}
+	}
 
 	constexpr Surfel& operator=(Surfel&& rhs) = default;
 

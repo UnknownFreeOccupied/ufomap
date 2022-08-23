@@ -126,10 +126,9 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 			    timing_.start("Integrate");
 			    ufo::map::PointCloudColor cloud;
 			    ufomap_ros::rosToUfo(*msg, cloud);
-			    cloud.transform(std::execution::par_unseq, transform);
 
-			    integrator_.insertPointCloud(std::execution::par_unseq, map,
-			                                 transform.translation(), cloud, true, false);
+			    cloud.transform(transform);
+			    integrator_.insertPointCloud(map, transform.translation(), cloud, true, false);
 			    timing_.stop("Integrate");
 
 			    // TODO: Clear robot

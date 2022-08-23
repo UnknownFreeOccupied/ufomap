@@ -45,14 +45,19 @@
 // UFO
 #include <ufo/map/color/color.h>
 
+// STL
+#include <array>
+#include <type_traits>
+
 namespace ufo::map
 {
+template <std::size_t Num = 1>
 struct ColorNode {
-	RGBColor color;
+	std::conditional_t<1 == Num, RGBColor, std::array<RGBColor, Num>> color;
 
-	constexpr bool operator==(ColorNode const& rhs) const { return color == rhs.color; }
+	constexpr bool operator==(ColorNode rhs) const { return color == rhs.color; }
 
-	constexpr bool operator!=(ColorNode const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(ColorNode rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 

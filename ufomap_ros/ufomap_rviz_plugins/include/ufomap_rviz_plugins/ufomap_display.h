@@ -101,26 +101,24 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	void generateObjectsImpl(std::vector<ufo::map::Code> const& codes,
 	                         ufo::map::depth_t min_depth)
 	{
-		std::for_each(
-		    std::execution::par, std::begin(codes), std::end(codes), [&](auto code) {
-			    auto pred = ufo::map::predicate::Leaf(min_depth) &&
-			                ufo::map::predicate::ContainOccupancyState<State>() &&
-			                ufo::map::predicate::CodePrefix(code);
+		std::for_each(std::begin(codes), std::end(codes), [&](auto code) {
+			auto pred = ufo::map::predicate::Leaf(min_depth) &&
+			            ufo::map::predicate::ContainOccupancyState<State>() &&
+			            ufo::map::predicate::CodePrefix(code);
 
-			    RenderData render_data;
-			    render_data.manager_ = context_->getSceneManager();
-			    render_data.position_ = Ogre::Vector3(0, 0, 0);  // FIXME: What should this be?
-			    render_data.orientation_ =
-			        Ogre::Quaternion(1, 0, 0, 0);  // FIXME: What should this be?
+			RenderData render_data;
+			render_data.manager_ = context_->getSceneManager();
+			render_data.position_ = Ogre::Vector3(0, 0, 0);  // FIXME: What should this be?
+			render_data.orientation_ =
+			    Ogre::Quaternion(1, 0, 0, 0);  // FIXME: What should this be?
 
-			    for (auto const& node : map_.queryBV(pred)) {
-				    fillData(render_data.transformed_voxels_[node.depth()], map_, node);
-			    }
+			for (auto const& node : map_.queryBV(pred)) {
+				fillData(render_data.transformed_voxels_[node.depth()], map_, node);
+			}
 
-			    std::scoped_lock object_lock(object_mutex_);
-			    queued_objects_[stateToIndex(State)].insert_or_assign(code,
-			                                                          std::move(render_data));
-		    });
+			std::scoped_lock object_lock(object_mutex_);
+			queued_objects_[stateToIndex(State)].insert_or_assign(code, std::move(render_data));
+		});
 	}
 
 	template <class Map>
@@ -177,8 +175,8 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 
  private:
 	//  Map
-	ufo::map::Map<ufo::map::MapType::OCCUPANCY_SMALL | ufo::map::MapType::TIME |
-	              ufo::map::MapType::COLOR>
+	ufo::map::UFOMap<ufo::map::MapType::OCCUPANCY_SMALL | ufo::map::MapType::TIME |
+	                 ufo::map::MapType::COLOR>
 	    map_;
 
 	// Flag to tell the other threads to stop

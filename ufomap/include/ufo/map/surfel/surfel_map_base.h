@@ -46,6 +46,7 @@
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/map/code/code_unordered_map.h>
 #include <ufo/map/predicate/surfel.h>
+#include <ufo/util/enum.h>
 
 // STL
 #include <cstdint>
@@ -443,7 +444,8 @@ class SurfelMapBase
 	// Set surfel
 	//
 
-	static constexpr void setSurfel(LeafNode& node, Surfel const& surfel) noexcept
+	template <typename T>
+	static constexpr void setSurfel(LeafNode& node, Surfel<T> const& surfel) noexcept
 	{
 		node.surfel = surfel;
 	}
@@ -581,19 +583,40 @@ class SurfelMapBase
 
 	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
 	{
-		// FIXME: Check size of surfel?
+		uint8_t type;
+		in_stream.read(reinterpret_cast<char*>(&type), sizeof(type));
+		DataType dt = getDataType(type);
 
-		auto data = std::make_unique<Surfel[]>(nodes.size());
-		in_stream.read(reinterpret_cast<char*>(data.get()), nodes.size() * sizeof(Surfel));
+		auto const num_nodes = nodes.size();
 
-		for (size_t i = 0; i != nodes.size(); ++i) {
-			setSurfel(*nodes[i], data[i]);
+		switch (dt) {
+			case DataType::FLOAT32: {
+				auto data = std::make_unique<Surfel<float>[]>(nodes.size());
+				in_stream.read(reinterpret_cast<char*>(data.get()),
+				               nodes.size() * sizeof(Surfel<float>));
+				for (size_t i = 0; num_nodes != i; ++i) {
+					setSurfel(*nodes[i], data[i]);
+				}
+			} break;
+			case DataType::FLOAT64: {
+				auto data = std::make_unique<Surfel<double>[]>(nodes.size());
+				in_stream.read(reinterpret_cast<char*>(data.get()),
+				               nodes.size() * sizeof(Surfel<double>));
+				for (size_t i = 0; num_nodes != i; ++i) {
+					setSurfel(*nodes[i], data[i]);
+				}
+			} break;
+			default:
+				// TODO: Throw
 		}
 	}
 
 	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
 	{
-		auto num_nodes = nodes.size();
+		uint8_t type = util::enumToValue(getDataType<typename Surfel::scalar_t>());
+		out_stream.write(reinterpret_cast<char const*>(&type), sizeof(type));
+
+		auto const num_nodes = nodes.size();
 		auto data = std::make_unique<Surfel[]>(num_nodes);
 		for (size_t i = 0; num_nodes != i; ++i) {
 			data[i] = getSurfel(nodes[i]);

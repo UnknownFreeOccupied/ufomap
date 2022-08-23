@@ -85,6 +85,21 @@ decltype(argument_helper<ArgNum>(&F::operator())) argument_helper(F);
  */
 template <typename F, std::size_t ArgNum>
 using argument = decltype(argument_helper<ArgNum>(std::declval<F>()));
+
+//
+// Is pair
+//
+
+template <class>
+struct is_pair : std::false_type {
+};
+
+template <class T, class U>
+struct is_pair<std::pair<T, U>> : std::true_type {
+};
+
+template <class T>
+inline constexpr bool is_pair_v = is_pair<T>::value;
 }  // namespace ufo::util
 
 #endif  // UFO_UTIL_TYPE_TRAITS

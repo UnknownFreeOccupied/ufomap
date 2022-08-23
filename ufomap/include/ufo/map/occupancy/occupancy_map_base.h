@@ -56,11 +56,10 @@
 
 // STL
 #include <cstdint>
-#include <deque>
-#include <execution>
 #include <numeric>
 #include <sstream>
 #include <type_traits>
+#include <vector>
 
 namespace ufo::map
 {
@@ -600,40 +599,6 @@ class OccupancyMapBase
 		setOccupancy(derived().toCode(x, y, z, depth), occupancy, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancy(ExecutionPolicy policy, Node& node, float occupancy,
-	                  bool propagate = true)
-	{
-		logit_t logit = toOccupancyLogit(occupancy);
-		setOccupancyLogit(policy, node, logit, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancy(ExecutionPolicy policy, Code code, float occupancy,
-	                  bool propagate = true)
-	{
-		logit_t logit = toOccupancyLogit(occupancy);
-		setOccupancyLogit(policy, code, logit, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancy(ExecutionPolicy policy, Point3 coord, float occupancy,
-	                  bool propagate = true, depth_t depth = 0)
-	{
-		setOccupancy(policy, derived().toCode(coord, depth), occupancy, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancy(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                  float occupancy, bool propagate = true, depth_t depth = 0)
-	{
-		setOccupancy(policy, derived().toCode(x, y, z, depth), occupancy, propagate);
-	}
-
 	//
 	// Set occupancy logit
 	//
@@ -669,48 +634,74 @@ class OccupancyMapBase
 		setOccupancyLogit(derived().toCode(x, y, z, depth), logit, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Node& node, logit_t logit,
-	                       bool propagate = true)
+	//
+	// Increase occupancy logit
+	//
+
+	void increaseOccupancyLogit(Node& node, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    policy, node, [this, logit](LeafNode& node) { setOccupancyLogit(node, logit); },
+		    node, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
 		    propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Code code, logit_t logit,
-	                       bool propagate = true)
+	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    policy, code, [this, logit](LeafNode& node) { setOccupancyLogit(node, logit); },
+		    code, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
 		    propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Key key, logit_t logit,
-	                       bool propagate = true)
+	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
 	{
-		setOccupancyLogit(policy, Derived::toCode(key), logit, propagate);
+		increaseOccupancyLogit(Derived::toCode(key), inc, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, Point3 coord, logit_t logit,
-	                       bool propagate = true, depth_t depth = 0)
+	void increaseOccupancyLogit(Point3 coord, logit_t inc, bool propagate = true,
+	                            depth_t depth = 0)
 	{
-		setOccupancyLogit(policy, derived().toCode(coord, depth), logit, propagate);
+		increaseOccupancyLogit(derived().toCode(coord, depth), inc, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                       logit_t logit, bool propagate = true, depth_t depth = 0)
+	void increaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t inc,
+	                            bool propagate = true, depth_t depth = 0)
 	{
-		setOccupancyLogit(policy, derived().toCode(x, y, z, depth), logit, propagate);
+		increaseOccupancyLogit(derived().toCode(x, y, z, depth), inc, propagate);
+	}
+
+	//
+	// Decrease occupancy logit
+	//
+
+	void decreaseOccupancyLogit(Node& node, logit_t dec, bool propagate = true)
+	{
+		derived().apply(
+		    node, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
+		    propagate);
+	}
+
+	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
+	{
+		derived().apply(
+		    code, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
+		    propagate);
+	}
+
+	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
+	{
+		decreaseOccupancyLogit(Derived::toCode(key), dec, propagate);
+	}
+
+	void decreaseOccupancyLogit(Point3 coord, logit_t dec, bool propagate = true,
+	                            depth_t depth = 0)
+	{
+		decreaseOccupancyLogit(derived().toCode(coord, depth), dec, propagate);
+	}
+
+	void decreaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t dec,
+	                            bool propagate = true, depth_t depth = 0)
+	{
+		decreaseOccupancyLogit(derived().toCode(x, y, z, depth), dec, propagate);
 	}
 
 	//
@@ -722,85 +713,14 @@ class OccupancyMapBase
 		increaseOccupancyLogit(node, toOccupancyChangeLogit(inc), propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancy(ExecutionPolicy policy, Node& node, float inc,
-	                       bool propagate = true)
-	{
-		increaseOccupancyLogit(policy, node, toOccupancyChangeLogit(inc), propagate);
-	}
-
-	void increaseOccupancyLogit(Node& node, logit_t inc, bool propagate = true)
-	{
-		derived().apply(
-		    node, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Node& node, logit_t inc,
-	                            bool propagate = true)
-	{
-		derived().apply(
-		    policy, node, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
-		    propagate);
-	}
-
 	void increaseOccupancy(Code code, float inc, bool propagate = true)
 	{
 		increaseOccupancyLogit(code, toOccupancyChangeLogit(inc), propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancy(ExecutionPolicy policy, Code code, float inc,
-	                       bool propagate = true)
-	{
-		increaseOccupancyLogit(policy, code, toOccupancyChangeLogit(inc), propagate);
-	}
-
-	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
-	{
-		derived().apply(
-		    code, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Code code, logit_t inc,
-	                            bool propagate = true)
-	{
-		derived().apply(
-		    policy, code, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
-		    propagate);
-	}
-
 	void increaseOccupancy(Key key, float inc, bool propagate = true)
 	{
 		increaseOccupancy(Derived::toCode(key), inc, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancy(ExecutionPolicy policy, Key key, float inc,
-	                       bool propagate = true)
-	{
-		increaseOccupancy(policy, Derived::toCode(key), inc, propagate);
-	}
-
-	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
-	{
-		increaseOccupancyLogit(Derived::toCode(key), inc, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Key key, logit_t inc,
-	                            bool propagate = true)
-	{
-		increaseOccupancyLogit(policy, Derived::toCode(key), inc, propagate);
 	}
 
 	void increaseOccupancy(Point3 coord, float inc, bool propagate = true,
@@ -809,54 +729,10 @@ class OccupancyMapBase
 		increaseOccupancy(derived().toCode(coord, depth), inc, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancy(ExecutionPolicy policy, Point3 coord, float inc,
-	                       bool propagate = true, depth_t depth = 0)
-	{
-		increaseOccupancy(policy, derived().toCode(coord, depth), inc, propagate);
-	}
-
-	void increaseOccupancyLogit(Point3 coord, logit_t inc, bool propagate = true,
-	                            depth_t depth = 0)
-	{
-		increaseOccupancyLogit(derived().toCode(coord, depth), inc, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, logit_t inc,
-	                            bool propagate = true, depth_t depth = 0)
-	{
-		increaseOccupancyLogit(policy, derived().toCode(coord, depth), inc, propagate);
-	}
-
 	void increaseOccupancy(coord_t x, coord_t y, coord_t z, float inc,
 	                       bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancy(derived().toCode(x, y, z, depth), inc, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancy(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                       float inc, bool propagate = true, depth_t depth = 0)
-	{
-		increaseOccupancy(policy, derived().toCode(x, y, z, depth), inc, propagate);
-	}
-
-	void increaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t inc,
-	                            bool propagate = true, depth_t depth = 0)
-	{
-		increaseOccupancyLogit(derived().toCode(x, y, z, depth), inc, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void increaseOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                            logit_t inc, bool propagate = true, depth_t depth = 0)
-	{
-		increaseOccupancyLogit(policy, derived().toCode(x, y, z, depth), inc, propagate);
 	}
 
 	//
@@ -868,85 +744,14 @@ class OccupancyMapBase
 		decreaseOccupancyLogit(node, toOccupancyChangeLogit(dec), propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancy(ExecutionPolicy policy, Node& node, float dec,
-	                       bool propagate = true)
-	{
-		decreaseOccupancyLogit(policy, node, toOccupancyChangeLogit(dec), propagate);
-	}
-
-	void decreaseOccupancyLogit(Node& node, logit_t dec, bool propagate = true)
-	{
-		derived().apply(
-		    node, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Node& node, logit_t dec,
-	                            bool propagate = true)
-	{
-		derived().apply(
-		    policy, node, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
-		    propagate);
-	}
-
 	void decreaseOccupancy(Code code, float dec, bool propagate = true)
 	{
 		decreaseOccupancyLogit(code, toOccupancyChangeLogit(dec), propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancy(ExecutionPolicy policy, Code code, float dec,
-	                       bool propagate = true)
-	{
-		decreaseOccupancyLogit(policy, code, toOccupancyChangeLogit(dec), propagate);
-	}
-
-	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
-	{
-		derived().apply(
-		    code, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Code code, logit_t dec,
-	                            bool propagate = true)
-	{
-		derived().apply(
-		    policy, code, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
-		    propagate);
-	}
-
 	void decreaseOccupancy(Key key, float dec, bool propagate = true)
 	{
 		decreaseOccupancy(Derived::toCode(key), dec, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancy(ExecutionPolicy policy, Key key, float dec,
-	                       bool propagate = true)
-	{
-		decreaseOccupancy(policy, Derived::toCode(key), dec, propagate);
-	}
-
-	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
-	{
-		decreaseOccupancyLogit(Derived::toCode(key), dec, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Key key, logit_t dec,
-	                            bool propagate = true)
-	{
-		decreaseOccupancyLogit(policy, Derived::toCode(key), dec, propagate);
 	}
 
 	void decreaseOccupancy(Point3 coord, float dec, bool propagate = true,
@@ -955,54 +760,10 @@ class OccupancyMapBase
 		decreaseOccupancy(derived().toCode(coord, depth), dec, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancy(ExecutionPolicy policy, Point3 coord, float dec,
-	                       bool propagate = true, depth_t depth = 0)
-	{
-		decreaseOccupancy(policy, derived().toCode(coord, depth), dec, propagate);
-	}
-
-	void decreaseOccupancyLogit(Point3 coord, logit_t dec, bool propagate = true,
-	                            depth_t depth = 0)
-	{
-		decreaseOccupancyLogit(derived().toCode(coord, depth), dec, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, Point3 coord, logit_t dec,
-	                            bool propagate = true, depth_t depth = 0)
-	{
-		decreaseOccupancyLogit(policy, derived().toCode(coord, depth), dec, propagate);
-	}
-
 	void decreaseOccupancy(coord_t x, coord_t y, coord_t z, float dec,
 	                       bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancy(derived().toCode(x, y, z, depth), dec, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancy(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                       float dec, bool propagate = true, depth_t depth = 0)
-	{
-		decreaseOccupancy(policy, derived().toCode(x, y, z, depth), dec, propagate);
-	}
-
-	void decreaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t dec,
-	                            bool propagate = true, depth_t depth = 0)
-	{
-		decreaseOccupancyLogit(derived().toCode(x, y, z, depth), dec, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void decreaseOccupancyLogit(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                            logit_t dec, bool propagate = true, depth_t depth = 0)
-	{
-		decreaseOccupancyLogit(policy, derived().toCode(x, y, z, depth), dec, propagate);
 	}
 
  protected:

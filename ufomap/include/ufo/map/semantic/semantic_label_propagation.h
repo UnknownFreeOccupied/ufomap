@@ -57,7 +57,7 @@
 
 namespace ufo::map
 {
-class LabelPropagation
+class SemanticLabelPropagation
 {
  public:
 	void add(semantic_label_t label, PropagationCriteria prop_criteria)
@@ -65,21 +65,10 @@ class LabelPropagation
 		propagation_.insert_or_assign(label, prop_criteria);
 	}
 
-	//
-	// De(serialize)
-	//
-
-	std::ostream &writeData(std::ostream &out_stream) const
-	{
-		return propagation_.writeData(out_stream);
-	}
-
-	std::istream &readData(std::istream &in_stream)
-	{
-		return propagation_.readData(out_stream);
-	}
+	constexpr PropagationCriteria defaultProp() const noexcept { return default_; }
 
  private:
+	PropagationCriteria default_;
 	container::RangeMap<semantic_label_t, PropagationCriteria> propagation_;
 };
 }  // namespace ufo::map

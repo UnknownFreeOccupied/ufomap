@@ -120,50 +120,6 @@ class ColorMapBase
 		setColor(derived().toCode(x, y, z, depth), color, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void setColor(ExecutionPolicy policy, Node& node, RGBColor color,
-	                        bool propagate = true)
-	{
-		derived().apply(
-		    policy, node, [this, color](LeafNode& node) { setColor(node, color); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void setColor(ExecutionPolicy policy, Code code, RGBColor color,
-	                        bool propagate = true)
-	{
-		derived().apply(
-		    policy, code, [this, color](LeafNode& node) { setColor(node, color); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void setColor(ExecutionPolicy policy, Key key, RGBColor color,
-	                        bool propagate = true)
-	{
-		setColor(policy, Derived::toCode(key), color, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void setColor(ExecutionPolicy policy, Point3 coord, RGBColor color,
-	                        bool propagate = true, depth_t depth = 0)
-	{
-		setColor(policy, derived().toCode(coord, depth), color, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void setColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                        RGBColor color, bool propagate = true, depth_t depth = 0)
-	{
-		setColor(policy, derived().toCode(x, y, z, depth), color, propagate);
-	}
-
 	//
 	// Clear color
 	//
@@ -194,45 +150,6 @@ class ColorMapBase
 	                          depth_t depth = 0)
 	{
 		clearColor(derived().toCode(x, y, z, depth), propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void clearColor(ExecutionPolicy policy, Node& node, bool propagate = true)
-	{
-		derived().apply(
-		    policy, node, [this](LeafNode& node) { clearColor(node); }, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void clearColor(ExecutionPolicy policy, Code code, bool propagate = true)
-	{
-		derived().apply(
-		    policy, code, [this](LeafNode& node) { clearColor(node); }, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void clearColor(ExecutionPolicy policy, Key key, bool propagate = true)
-	{
-		clearColor(policy, Derived::toCode(key), propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void clearColor(ExecutionPolicy policy, Point3 coord, bool propagate = true,
-	                          depth_t depth = 0)
-	{
-		clearColor(policy, derived().toCode(coord, depth), propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void clearColor(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                          bool propagate = true, depth_t depth = 0)
-	{
-		clearColor(policy, derived().toCode(x, y, z, depth), propagate);
 	}
 
  protected:

@@ -410,11 +410,10 @@ void UFOMapFromGazebo::createMap(ufo::map::OccupancyMapColor& map,
 		}
 	}
 
-	std::for_each(
-	    std::execution::par, std::begin(points), std::end(points), [&](auto const& point) {
-		    map.setOccupancyLogit(point.X(), point.Y(), point.Z(),
-		                          map.getOccupancyClampingThresMaxLogit(), false, depth);
-	    });
+	std::for_each(std::begin(points), std::end(points), [&](auto const& point) {
+		map.setOccupancyLogit(point.X(), point.Y(), point.Z(),
+		                      map.getOccupancyClampingThresMaxLogit(), false, depth);
+	});
 
 	// std::vector<float> x_indices((max.x() - min.x()) / step);
 	// std::generate(begin(x_indices), end(x_indices), [n = min.x(), step]() mutable {

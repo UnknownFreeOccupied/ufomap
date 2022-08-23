@@ -57,7 +57,7 @@
 
 namespace ufo::map
 {
-class LabelMapping
+class SemanticLabelMapping
 {
  public:
 	void add(std::string const& name, semantic_label_t label)
@@ -265,7 +265,7 @@ class LabelMapping
 
 	constexpr uint64_t getSerializedSize() const { return serialized_size_; }
 
-	friend std::ostream& operator<<(std::ostream& os, LabelMapping const& mapping)
+	friend std::ostream& operator<<(std::ostream& os, SemanticLabelMapping const& mapping)
 	{
 		for (auto const& [str, data] : mapping.mapping_) {
 			os << str << ': ' << data.ranges << '\n';

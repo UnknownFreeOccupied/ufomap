@@ -39,8 +39,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_ITERATOR_OCTREE_H
-#define UFO_MAP_ITERATOR_OCTREE_H
+#ifndef UFO_MAP_OCTREE_ITERATOR_H
+#define UFO_MAP_OCTREE_ITERATOR_H
 
 // UFO
 #include <ufo/geometry/bounding_volume.h>
@@ -600,4 +600,4 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_ITERATOR_OCTREE_H
+#endif  // UFO_MAP_OCTREE_ITERATOR_H

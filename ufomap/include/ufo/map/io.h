@@ -65,6 +65,55 @@ enum struct DataIdentifier : std::uint8_t {
 	SIGNED_DISTANCE,
 };
 
+enum struct DataType : std::uint8_t {
+	UINT8,
+	UINT16,
+	UINT32,
+	UINT64,
+	INT8,
+	INT16,
+	INT32,
+	INT64,
+	FLOAT32,
+	FLOAT64
+};
+
+template <typename T>
+constexpr inline DataType getDataType()
+{
+	if constexpr (std::is_same_v<uint8_t, T>) {
+		return DataType::UINT8;
+	} else if constexpr (std::is_same_v<uint8_t, T>) {
+		return DataType::UINT8;
+	} else if constexpr (std::is_same_v<uint16_t, T>) {
+		return DataType::UINT16;
+	} else if constexpr (std::is_same_v<uint32_t, T>) {
+		return DataType::UINT32;
+	} else if constexpr (std::is_same_v<uint64_t, T>) {
+		return DataType::UINT64;
+	} else if constexpr (std::is_same_v<int8_t, T>) {
+		return DataType::INT8;
+	} else if constexpr (std::is_same_v<int16_t, T>) {
+		return DataType::INT16;
+	} else if constexpr (std::is_same_v<int32_t, T>) {
+		return DataType::INT32;
+	} else if constexpr (std::is_same_v<int64_t, T>) {
+		return DataType::INT64;
+	} else if constexpr (std::is_same_v<float, T>) {
+		return DataType::FLOAT32;
+	} else if constexpr (std::is_same_v<double, T>) {
+		return DataType::FLOAT64;
+	} else {
+		// TODO: Throw
+	}
+}
+
+template <typename T>
+constexpr inline DataType getDataType(T)
+{
+	return getDataType<T>();
+}
+
 // File options
 struct FileOptions {
 	bool compressed;

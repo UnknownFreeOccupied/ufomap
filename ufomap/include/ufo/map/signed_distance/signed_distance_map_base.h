@@ -125,54 +125,6 @@ class SignedDistanceMapBase
 		setSignedDistance(derived().toCode(x, y, z, depth), time_step, propagate);
 	}
 
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setSignedDistance(ExecutionPolicy policy, Node node, signed_distance_t time_step,
-	                       bool propagate = true)
-	{
-		derived().apply(
-		    policy, node,
-		    [this, time_step](auto&& node) { setSignedDistance(node, time_step); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setSignedDistance(ExecutionPolicy policy, Code code, signed_distance_t time_step,
-	                       bool propagate = true)
-	{
-		derived().apply(
-		    policy, code,
-		    [this, time_step](auto&& node) { setSignedDistance(node, time_step); },
-		    propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setSignedDistance(ExecutionPolicy policy, Key key, signed_distance_t time_step,
-	                       bool propagate = true)
-	{
-		setSignedDistance(policy, Derived::toCode(key), time_step, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setSignedDistance(ExecutionPolicy policy, Point3 coord,
-	                       signed_distance_t time_step, bool propagate = true,
-	                       depth_t depth = 0)
-	{
-		setSignedDistance(policy, derived().toCode(coord, depth), time_step, propagate);
-	}
-
-	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
-	                                     std::decay_t<ExecutionPolicy>>>>
-	void setSignedDistance(ExecutionPolicy policy, coord_t x, coord_t y, coord_t z,
-	                       signed_distance_t time_step, bool propagate = true,
-	                       depth_t depth = 0)
-	{
-		setSignedDistance(policy, derived().toCode(x, y, z, depth), time_step, propagate);
-	}
-
 	//
 	// Propagation criteria
 	//

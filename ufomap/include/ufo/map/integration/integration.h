@@ -85,12 +85,13 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 	constexpr static std::size_t mode = 0;
 
 	IntegrationCloud<P> i_cloud;
+	auto const cloud_size = cloud.size();
 
 	if constexpr (0 == mode) {
 		IntegrationCloudSmall<P> temp;
-		temp.reserve(cloud.size());
+		temp.reserve(cloud_size);
 
-		// Get the corresponding code for each points
+		// Get the corresponding code for each point
 		std::transform(std::cbegin(cloud), std::cend(cloud), std::back_inserter(temp),
 		               [&map, trans_f, valid_f, depth_f](P point) {
 			               auto depth = depth_f(point);
@@ -104,7 +105,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 		std::sort(std::begin(temp), std::end(temp));
 
 		// Boundle together points with same code and remove duplicates
-		i_cloud.reserve(cloud.size());
+		i_cloud.reserve(cloud_size);
 		Code prev_code;
 		for (auto const& p : temp) {
 			if (prev_code == p.code) {
@@ -115,9 +116,59 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 			}
 		}
 	} else if constexpr (1 == mode) {
+		i_cloud.reserve(cloud_size);
+
+		// Get the corresponding code for each point
+		for (std::size_t i = 0; cloud_size != i; ++i) {
+			auto const depth = depth_f(cloud[i]);
+			auto const valid = valid_f(cloud[i]);
+			auto const point = trans_f(cloud[i]);
+			auto const code = map.toCode(point, depth);
+			if (0 != i && i_cloud.back().code.code() == code.code()) {
+				i_cloud.back().points.emplace_back(point, valid);
+			} else {
+				i_cloud.emplace_back(code, point, valid);
+			}
+		}
+
+		// Sort
+		std::sort(std::begin(i_cloud), std::end(i_cloud));
+
+		// Boundle together points with same code and remove duplicates
+		auto first = std::begin(i_cloud);
+		auto last = std::end(i_cloud);
+		if (first == last) {
+			return i_cloud;
+		}
+
+		auto new_last = first;
+		do {
+			auto new_first = std::next(first);
+			auto total_size = first->points.size();
+			while (new_first == first) {
+				total_size += new_first->points.size();
+				std::advance(new_first, 1);
+			}
+			first->points.reserve(total_size);
+			for (auto it = std::next(first); it != new_first; std::advance(it, 1)) {
+				for (auto e : it->points) {
+					first->points.push_back(e);
+				}
+			}
+
+			if (first != new_last) {
+				*new_last = std::move(*first);
+			}
+
+			first = new_first;
+			std::advance(new_last, 1);
+		} while (first != last);
+
+		i_cloud.erase(new_last, std::end(i_cloud));
+	} else if constexpr (2 == mode) {
 		CodeUnorderedMap<std::vector<ValidPoint<P>>> temp;
 
-		// Get the corresponding code for each points
+		// Get the corresponding code for each point
 		for (P point : cloud) {
 			auto depth = depth_f(point);
 			auto valid = valid_f(point);
@@ -133,12 +184,12 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 
 		// Sort
 		std::sort(std::begin(i_cloud), std::end(i_cloud));
-	} else if constexpr (2 == mode) {
+	} else if constexpr (3 == mode) {
 		// CodeUnorderedMap<IntegrationCloudSmall<P>> temp;
 		auto cmp = [](auto const& a, auto const& b) { return a.code() < b.code(); };
 		std::map<Code, IntegrationCloudSmall<P>, decltype(cmp)> temp(cmp);
 
-		// Get the corresponding code for each points
+		// Get the corresponding code for each point
 		Code prev_code;
 		IntegrationCloudSmall<P>* prev;
 		for (P point : cloud) {

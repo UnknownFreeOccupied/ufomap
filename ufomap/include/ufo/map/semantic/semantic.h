@@ -42,6 +42,11 @@
 #ifndef UFO_MAP_SEMANTIC_H
 #define UFO_MAP_SEMANTIC_H
 
+// UFO
+#include <ufo/container/range.h>
+#include <ufo/container/range_map.h>
+#include <ufo/container/range_set.h>
+
 // STL
 #include <cstdint>
 
@@ -50,6 +55,15 @@ namespace ufo::map
 using semantic_label_t = uint64_t;
 using semantic_value_t = uint64_t;
 
+using semantic_label_range_t = container::Range<semantic_label_t>;
+using semantic_value_range_t = container::Range<semantic_value_t>;
+
+using semantic_label_range_set_t = container::RangeSet<semantic_label_t>;
+using semantic_value_range_set_t = container::RangeSet<semantic_value_t>;
+
+using semantic_range_map_t = container::RangeMap<semantic_label_t, semantic_value_t>;
+
+// template <typename LabelType = semantic_label_t, typename ValueType = semantic_value_t>
 struct SemanticPair {
 	semantic_label_t label = 0;
 	semantic_value_t value = 0;

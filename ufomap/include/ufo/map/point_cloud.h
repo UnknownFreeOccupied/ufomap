@@ -48,7 +48,6 @@
 
 // STL
 #include <algorithm>
-#include <execution>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -82,38 +81,10 @@ void applyTransform(InputIt first, InputIt last, math::Pose6<T> const& transform
 	    });
 }
 
-template <class ExecutionPolicy, class ForwardIt, typename T,
-          typename =
-              std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-void applyTransform(ExecutionPolicy&& policy, ForwardIt first, ForwardIt last,
-                    math::Pose6<T> const& transform)
-{
-	std::for_each(
-	    std::forward<ExecutionPolicy>(policy), first, last,
-	    [t = transform.translation, r = transform.rotation.getRotMatrix()](auto& p) {
-		    auto const x = p.x;
-		    auto const y = p.y;
-		    auto const z = p.z;
-		    p.x = r[0] * x + r[1] * y + r[2] * z + t.x;
-		    p.y = r[3] * x + r[4] * y + r[5] * z + t.y;
-		    p.z = r[6] * x + r[7] * y + r[8] * z + t.z;
-	    });
-}
-
 template <class P, typename T>
 void applyTransform(PointCloudT<P>& cloud, math::Pose6<T> const& transform)
 {
 	applyTransform(std::begin(cloud), std::end(cloud), transform);
-}
-
-template <class ExecutionPolicy, class P, typename T,
-          typename =
-              std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-void applyTransform(ExecutionPolicy&& policy, PointCloudT<P>& cloud,
-                    math::Pose6<T> const& transform)
-{
-	applyTransform(std::forward<ExecutionPolicy>(policy), std::begin(cloud),
-	               std::end(cloud), transform);
 }
 
 template <class ForwardIt>
@@ -125,30 +96,10 @@ void removeNaN(ForwardIt first, ForwardIt last)
 	erase(it, last);
 }
 
-template <class ExecutionPolicy, class ForwardIt,
-          typename =
-              std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-void removeNaN(ExecutionPolicy&& policy, ForwardIt first, ForwardIt last)
-{
-	auto it = std::remove_if(
-	    std::forward<ExecutionPolicy>(policy), first, last, [](auto const& point) {
-		    return std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z);
-	    });
-	erase(it, last);
-}
-
 template <class P>
 void removeNaN(PointCloudT<P>& cloud)
 {
 	removeNaN(std::begin(cloud), std::end(cloud));
-}
-
-template <class ExecutionPolicy, class P,
-          typename =
-              std::enable_if_t<std::is_execution_policy_v<std::decay_t<ExecutionPolicy>>>>
-void removeNaN(ExecutionPolicy&& policy, PointCloudT<P>& cloud)
-{
-	removeNaN(std::forward<ExecutionPolicy>(policy), std::begin(cloud), std::end(cloud));
 }
 }  // namespace ufo::map
 

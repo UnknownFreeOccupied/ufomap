@@ -45,17 +45,21 @@
 // UFO
 #include <ufo/map/types.h>
 
+// STL
+#include <array>
+#include <type_traits>
+
 namespace ufo::map
 {
+template <typename TimeType = float, std::size_t Num = 1>
 struct TimeNode {
-	time_step_t time_step;
+	using time_t = TimeType;
 
-	constexpr bool operator==(TimeNode const& rhs) const
-	{
-		return time_step == rhs.time_step;
-	}
+	std::conditional_t<1 == Num, time_t, std::array<time_t, Num>> time;
 
-	constexpr bool operator!=(TimeNode const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator==(TimeNode rhs) const { return time == rhs.time; }
+
+	constexpr bool operator!=(TimeNode rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 
