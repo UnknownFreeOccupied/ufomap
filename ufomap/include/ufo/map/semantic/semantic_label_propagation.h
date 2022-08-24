@@ -99,8 +99,7 @@ class SemanticLabelPropagation
 		return default_prop_criteria_;
 	}
 
-	[[nodiscard]] semantic_label_range_set_t const& getPropCriteria(
-	    semantic_label_t label) const
+	[[nodiscard]] PropagationCriteria getPropCriteria(semantic_label_t label) const
 	{
 		auto it = prop_criteria_.find(label);
 		return prop_criteria_.end() == it ? getDefaultPropCriteria() : it->second;

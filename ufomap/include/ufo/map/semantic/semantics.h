@@ -424,7 +424,7 @@ class Semantics
 	template <class InputIt>
 	void setCombine(InputIt first, InputIt last, SemanticLabelPropagation const &prop)
 	{
-		switch (prop.getDefault()) {
+		switch (prop.getDefaultPropCriteria()) {
 			case PropagationCriteria::MAX:
 				setCombine<InputIt, true>(first, last, prop);
 				return;
@@ -1144,7 +1144,7 @@ class Semantics
 			it_beg = it_end;
 		}
 
-		if (!prop.empty() || PropagationCriteria::MEAN == prop.getDefault()) {
+		if (!prop.empty() || PropagationCriteria::MEAN == prop.getDefaultPropCriteria()) {
 			for (auto it = begin(), it_end = end(); it != it_end;) {
 				auto it_2 = std::find_if_not(
 				    std::next(it), it_end,

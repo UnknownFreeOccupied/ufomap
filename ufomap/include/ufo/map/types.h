@@ -68,7 +68,6 @@ using is_base_of_template = typename is_base_of_template_impl<Base, Derived>::ty
 
 template <template <typename...> class Base, typename Derived>
 inline constexpr bool is_base_of_template_v = is_base_of_template<Base, Derived>::value;
-
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TYPES_H
