@@ -395,22 +395,32 @@ struct NearestNode {
 	{
 	}
 
-	friend constexpr bool operator<(NearestNode const& a, NearestNode const b)
+	friend constexpr bool operator==(NearestNode const& a, NearestNode const& b)
+	{
+		return a.node == b.node;
+	}
+
+	friend constexpr bool operator!=(NearestNode const& a, NearestNode const& b)
+	{
+		return !(a == b);
+	}
+
+	friend constexpr bool operator<(NearestNode const& a, NearestNode const& b)
 	{
 		return a.squared_distance < b.squared_distance;
 	}
 
-	friend constexpr bool operator<=(NearestNode const& a, NearestNode const b)
+	friend constexpr bool operator<=(NearestNode const& a, NearestNode const& b)
 	{
 		return a.squared_distance <= b.squared_distance;
 	}
 
-	friend constexpr bool operator>(NearestNode const& a, NearestNode const b)
+	friend constexpr bool operator>(NearestNode const& a, NearestNode const& b)
 	{
 		return a.squared_distance > b.squared_distance;
 	}
 
-	friend constexpr bool operator>=(NearestNode const& a, NearestNode const b)
+	friend constexpr bool operator>=(NearestNode const& a, NearestNode const& b)
 	{
 		return a.squared_distance >= b.squared_distance;
 	}
@@ -454,12 +464,12 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 		init(root);
 	}
 
-	NearestIterator(Tree const* tree, NodeBV const& root, SquaredDistance const& sq_dist,
-	                Predicates const& predicates, float epsilon)
-	    : Base(tree), predicates_(predicates), sq_dist_(sq_dist), epsilon_(epsilon)
-	{
-		init(root);
-	}
+	// NearestIterator(Tree const* tree, NodeBV const& root, SquaredDistance const& sq_dist,
+	//                 Predicates const& predicates, float epsilon)
+	//     : Base(tree), predicates_(predicates), sq_dist_(sq_dist), epsilon_(epsilon)
+	// {
+	// 	init(root);
+	// }
 
 	NearestIterator& next() override
 	{
