@@ -1321,18 +1321,6 @@ class OctreeBase
 		    endQueryNearest());
 	}
 
-	template <class SquaredDistance, class Predicates,
-	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
-	                           bool> = true>
-	Query<const_query_nearest_iterator> queryNearest(SquaredDistance&& sq_dist,
-	                                                 Predicates&& predicates) const
-	{
-		return Query<const_query_nearest_iterator>(
-		    beginQueryNearest(std::forward<SquaredDistance>(sq_dist),
-		                      std::forward<Predicates>(predicates)),
-		    endQueryNearest());
-	}
-
 	template <class Predicates, class OutputIt>
 	OutputIt query(Predicates&& predicates, OutputIt d_first) const
 	{
@@ -1374,17 +1362,6 @@ class OctreeBase
 		    endQueryNearest(geometry, std::forward<Predicates>(predicates)), d_first);
 	}
 
-	template <class SquaredDistance, class Predicates, class OutputIt,
-	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
-	                           bool> = true>
-	OutputIt queryNearest(SquaredDistance&& sq_dist, Predicates&& predicates,
-	                      OutputIt d_first, double epsilon = 0.0) const
-	{
-		return std::copy(
-		    beginQueryNearest(sq_dist, std::forward<Predicates>(predicates), epsilon),
-		    endQueryNearest(sq_dist, std::forward<Predicates>(predicates)), d_first);
-	}
-
 	template <
 	    class Geometry, class Predicates, class OutputIt,
 	    std::enable_if_t<not std::is_invocable_r_v<double, Geometry, NodeBV>, bool> = true>
@@ -1393,21 +1370,6 @@ class OctreeBase
 	{
 		size_t count = 0;
 		for (auto it = beginQueryNearest(std::forward<Geometry>(geometry),
-		                                 std::forward<Predicates>(predicates), epsilon);
-		     count < k && it != endQueryNearest(); ++it, ++count) {
-			*d_first++ = *it;
-		}
-		return d_first;
-	}
-
-	template <class SquaredDistance, class Predicates, class OutputIt,
-	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
-	                           bool> = true>
-	OutputIt queryNearestK(size_t k, SquaredDistance&& sq_dist, Predicates&& predicates,
-	                       OutputIt d_first, double epsilon = 0.0) const
-	{
-		size_t count = 0;
-		for (auto it = beginQueryNearest(std::forward<SquaredDistance>(sq_dist),
 		                                 std::forward<Predicates>(predicates), epsilon);
 		     count < k && it != endQueryNearest(); ++it, ++count) {
 			*d_first++ = *it;
@@ -1462,18 +1424,6 @@ class OctreeBase
 		return const_query_nearest_iterator(
 		    new NearestIterator(&derived(), getRootNodeBV(), std::forward<Geometry>(geometry),
 		                        std::forward<Predicates>(predicates), epsilon));
-	}
-
-	template <class SquaredDistance, class Predicates,
-	          std::enable_if_t<std::is_invocable_r_v<double, SquaredDistance, NodeBV>,
-	                           bool> = true>
-	const_query_nearest_iterator beginQueryNearest(SquaredDistance&& sq_dist,
-	                                               Predicates&& predicates,
-	                                               double epsilon = 0.0) const
-	{
-		return const_query_nearest_iterator(new NearestIterator(
-		    &derived(), getRootNodeBV(), std::forward<SquaredDistance>(sq_dist),
-		    std::forward<Predicates>(predicates), epsilon));
 	}
 
 	const_query_nearest_iterator endQueryNearest() const
