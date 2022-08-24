@@ -1140,24 +1140,33 @@ class Semantics
 			}
 
 			auto it_end = std::next(it_beg, sizes[i]);
-			std::inplace_merge(begin(), it_beg, it_end);
+			std::inplace_merge(begin(), it_beg, it_end, [](auto const &a, auto const &b) {
+				if constexpr (IsPair) {
+					return a.getLabel() < b.getLabel();
+				} else {
+					return a < b;
+				}
+			});
 			it_beg = it_end;
 		}
 
 		if (!prop.empty() || PropagationCriteria::MEAN == prop.getDefaultPropCriteria()) {
-			for (auto it = begin(), it_end = end(); it != it_end;) {
-				auto it_2 = std::find_if_not(
-				    std::next(it), it_end,
-				    [l = it->getLabel()](auto const v) { return l == v.getLabel(); });
+			for (auto it_first = begin(), it_end = end(); it_first != it_end;) {
+				auto it_last = std::find_if_not(
+				    std::next(it_first), it_end,
+				    [l = it_first->getLabel()](auto const v) { return l == v.getLabel(); });
+
+				auto value =
+				    getValue(it_first, it_last, prop.getPropCriteria(it_first->getLabel()));
 
 				if constexpr (Max) {
 					// FIXME: Improve
-					std::prev(it_2)->setValue(prop.getValue(it, it_2));
+					std::prev(it_last)->setValue(value);
 				} else {
-					it->setValue(prop.getValue(it, it_2));
+					it_first->setValue(value);
 				}
 
-				it = it_2;
+				it_first = it_last;
 			}
 		}
 
@@ -1177,6 +1186,32 @@ class Semantics
 			if (end() != new_end) {
 				resize(std::distance(begin(), new_end));
 			}
+		}
+	}
+
+	template <class InputIt>
+	value_type getValue(InputIt first, InputIt last, PropagationCriteria prop_criteria)
+	{
+		switch (prop_criteria) {
+			case PropagationCriteria::MAX:
+				value_type max = std::numeric_limits<value_type>::lowest();
+				for (; first != last; std::advance(first, 1)) {
+					max = std::max(max, first->getValue());
+				}
+				return max;
+			case PropagationCriteria::MIN:
+				value_type min = std::numeric_limits<value_type>::max();
+				for (; first != last; std::advance(first, 1)) {
+					min = std::min(min, first->getValue());
+				}
+				return min;
+			case PropagationCriteria::MEAN:
+				double total = 0;
+				double num_elem = std::distance(first, last);
+				for (; first != last; std::advance(first, 1)) {
+					total += first->getValue();
+				}
+				return total / num_elem;
 		}
 	}
 
