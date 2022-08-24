@@ -60,16 +60,55 @@ namespace ufo::map
 class SemanticLabelPropagation
 {
  public:
-	void add(semantic_label_t label, PropagationCriteria prop_criteria)
+	void setDefault(PropagationCriteria prop_criteria)
 	{
-		propagation_.insert_or_assign(label, prop_criteria);
+		default_prop_criteria_ = prop_criteria;
 	}
 
-	constexpr PropagationCriteria defaultProp() const noexcept { return default_; }
+	void set(semantic_label_range_t label_range, PropagationCriteria prop_criteria)
+	{
+		prop_criteria_.insert_or_assign(label_range, prop_criteria);
+	}
+
+	template <class InputIt>
+	void set(InputIt first, InputIt last, PropagationCriteria prop_criteria)
+	{
+		while (first != last) {
+			set(*first, prop_criteria);
+			std::advance(first, 1);
+		}
+	}
+
+	void erase(semantic_label_range_t label_range) { prop_criteria_.erase(label_range); }
+
+	template <class InputIt>
+	void erase(InputIt first, InputIt last)
+	{
+		while (first != last) {
+			erase(*first);
+			std::advance(first, 1);
+		}
+	}
+
+	void clear() { prop_criteria_.clear(); }
+
+	[[nodiscard]] bool empty() const { return prop_criteria_.empty(); }
+
+	[[nodiscard]] constexpr PropagationCriteria getDefaultPropCriteria() const noexcept
+	{
+		return default_prop_criteria_;
+	}
+
+	[[nodiscard]] semantic_label_range_set_t const& getPropCriteria(
+	    semantic_label_t label) const
+	{
+		auto it = prop_criteria_.find(label);
+		return prop_criteria_.end() == it ? getDefaultPropCriteria() : it->second;
+	}
 
  private:
-	PropagationCriteria default_;
-	container::RangeMap<semantic_label_t, PropagationCriteria> propagation_;
+	PropagationCriteria default_prop_criteria_;
+	container::RangeMap<semantic_label_t, PropagationCriteria> prop_criteria_;
 };
 }  // namespace ufo::map
 
