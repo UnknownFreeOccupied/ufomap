@@ -941,74 +941,71 @@ class SemanticMapBase
 	// Update node
 	//
 
+	void updateNode(LeafNode& node) {}
+
 	template <class T>
 	void updateNode(LeafNode& node, T const& children)
 	{
 		// Get size
-		std::array<std::size_t, Derived::maxNumChildrenInnerNode()> sizes;
-		std::size_t total_size;
-		if (1 == depth) {
-			for (std::size_t i = 0; sizes.size() != i; ++i) {
-				sizes[i] = getSemantics(derived().getLeafChild(node, i));
-				total_size += sizes[i];
-			}
-		} else {
-			for (std::size_t i = 0; sizes.size() != i; ++i) {
-				sizes[i] = getSemantics(derived().getInnerChild(node, i));
-				total_size += sizes[i];
-			}
+		std::array<std::size_t, 8> sizes;
+		std::size_t index = 0;
+		for (auto const& child : children) {
+			sizes[index++] = getSemantics(child).size();
 		}
 
-		// Create buffers
-		std::vector<semantic_label_type> labels;
-		std::vector<semantic_value_type> values;
-		labels.reserve(total_size);
-		values.reserve(total_size);
+		// Create buffer
+		std::vector<SemanticPair> data(std::reduce(std::cbegin(sizes), std::cend(sizes)));
 
 		// Fill in data
-		if (1 == depth) {
-			// TODO: Implement
-			for (auto const& child : derived().getLeafChildren(node)) {
-				total_size += getSemantics(child).size();
-			}
-		} else {
-			// TODO: Implement
-			for (auto const& child : derived().getLeafChildren(node)) {
-				total_size += getSemantics(child).size();
-			}
+		auto it = std::begin(data);
+		for (auto const& child : children) {
+			it = std::copy(std::begin(getSemantics(child)), std::end(getSemantics(child)), it);
 		}
+
+		// Sort data
+		auto beg = std::begin(data);
+		auto mid = std::next(beg, sizes[0]);
+		for (std::size_t i = 1; sizes.size() != i; ++i) {
+			auto end = std::next(mid, sizes[i]);
+			std::inplace_merge(beg, mid, end, [](auto a, auto b) { return a.label < b.label; });
+			mid = end;
+		}
+
+		// Handle duplicate labels
+		auto new_last = removeDuplicateLabels(std::begin(data), std::end(data));
 
 		// Copy over data
-		getSemantics(node).resize(labels.size());
-		std::copy(std::cbegin(labels), std::cend(labels),
-		          std::next(getSemantics(node).labels_.get()));
-		std::copy(std::cbegin(values), std::cend(values), getSemantics(node).values_.get());
+		getSemantics(node).resize(std::distance(std::begin(data), new_last));
+		std::copy(std::cbegin(data), new_last, getSemantics(node).data());
+	}
 
-		if (1 == depth) {
-			std::array<std::reference_wrapper<Semantics const>, 8> child_sem{
-			    std::cref(derived().getLeafChild(node, 0)),
-			    std::cref(derived().getLeafChild(node, 1)),
-			    std::cref(derived().getLeafChild(node, 2)),
-			    std::cref(derived().getLeafChild(node, 3)),
-			    std::cref(derived().getLeafChild(node, 4)),
-			    std::cref(derived().getLeafChild(node, 5)),
-			    std::cref(derived().getLeafChild(node, 6)),
-			    std::cref(derived().getLeafChild(node, 7))};
-			node.semantis.setCombined(std::cbegin(child_sem), std::cend(child_sem),
-			                          label_propagation_);
-		} else {
-			std::array<std::reference_wrapper<Semantics const>, 8> child_sem{
-			    std::cref(derived().getInnerChild(node, 0)),
-			    std::cref(derived().getInnerChild(node, 1)),
-			    std::cref(derived().getInnerChild(node, 2)),
-			    std::cref(derived().getInnerChild(node, 3)),
-			    std::cref(derived().getInnerChild(node, 4)),
-			    std::cref(derived().getInnerChild(node, 5)),
-			    std::cref(derived().getInnerChild(node, 6)),
-			    std::cref(derived().getInnerChild(node, 7))};
-			node.semantis.setCombined(std::cbegin(child_sem), std::cend(child_sem),
-			                          label_propagation_);
+	template <class ForwardIt>
+	ForwardIt removeDuplicateLabels(ForwardIt first, ForwardIt last)
+	{
+		if (first == last) {
+			return last;
 		}
+
+		ForwardIt result = first;
+		while (first != last) {
+			auto const label = first->label;
+
+			auto it = std::find_if(first, last, [label](auto v) { return label != v.label; });
+
+			if (1 < std::distance(first, it)) {
+				PropagationCriteria prop = label_propagation_.getPropCriteria(label);
+				first->value = getValue(prop, first, it);
+			}
+
+			if (result != first) {
+				*result = std::move(*first);
+			}
+
+			first = it;
+			std::advance(result);
+		}
+
+		return result;
 	}
 
 	//

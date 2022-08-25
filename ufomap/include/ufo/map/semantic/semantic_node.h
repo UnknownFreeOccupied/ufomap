@@ -45,6 +45,9 @@
 // UFO
 #include <ufo/map/semantic/semantics.h>
 
+// STL
+#include <array>
+
 namespace ufo::map
 {
 template <std::size_t NumLabelBits, std::size_t NumValueBits>
@@ -61,6 +64,36 @@ struct SemanticNode {
 	}
 
 	constexpr bool operator!=(SemanticNode const& rhs) const { return !(*this == rhs); }
+};
+
+struct SemanticNodeNew {
+	using semantic_label_t = uint32_t;
+	using semantic_value_t = float;
+	using semantic_container_t = float;  // TODO: Change
+
+	// Data
+	std::array<semantic_container_t, 8> semantics;
+
+	bool operator==(SemanticNodeNew const& rhs) const { return semantics == rhs.semantics; }
+
+	bool operator!=(SemanticNodeNew const& rhs) const { return !(*this == rhs); }
+
+	constexpr semantic_container_t const& getSemantics(std::size_t const index) const
+	{
+		return semantics[index];
+	}
+
+	constexpr semantic_container_t& getSemantics(std::size_t const index)
+	{
+		return semantics[index];
+	}
+
+	void setSemantics(semantic_container_t const& value) { semantics.fill(value); }
+
+	constexpr void setSemantics(std::size_t const index, semantic_container_t const& value)
+	{
+		semantics[index] = value;
+	}
 };
 }  // namespace ufo::map
 

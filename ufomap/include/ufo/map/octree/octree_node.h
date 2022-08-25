@@ -117,6 +117,18 @@ struct OctreeInnerBlockNode2 : LeafBlockNode {
 		std::array<LeafChildrenBlock*, 8> leaf_children;
 	};
 };
+
+template <class LeafNode>
+struct OctreeInnerNodeNew : LeafNode {
+	using InnerChildrenBlock = std::array<OctreeInnerNodeNew, 8>;
+	using LeafChildrenBlock = std::array<LeafNode, 8>;
+
+	// Pointer to children
+	union {
+		InnerChildrenBlock* inner_children = nullptr;
+		LeafChildrenBlock* leaf_children;
+	};
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCTREE_OCTREE_NODE_H

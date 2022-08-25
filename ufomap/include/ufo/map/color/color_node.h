@@ -59,6 +59,68 @@ struct ColorNode {
 
 	constexpr bool operator!=(ColorNode rhs) const { return !(*this == rhs); }
 };
+
+struct ColorNodeNew {
+	using color_t = std::uint8_t;
+
+	// Data
+	std::array<color_t, 8> red;
+	std::array<color_t, 8> green;
+	std::array<color_t, 8> blue;
+
+	bool operator==(ColorNodeNew const rhs) const
+	{
+		return red == rhs.red && green == rhs.green && blue == rhs.blue;
+	}
+
+	bool operator!=(ColorNodeNew const rhs) const { return !(*this == rhs); }
+
+	constexpr RGBColor getColor(std::size_t const index) const
+	{
+		return RGBColor(red[index], green[index], blue[index]);
+	}
+
+	constexpr color_t getRed(std::size_t const index) const { return red[index]; }
+
+	constexpr color_t getGreen(std::size_t const index) const { return green[index]; }
+
+	constexpr color_t getBlue(std::size_t const index) const { return blue[index]; }
+
+	void setColor(RGBColor const value)
+	{
+		red.fill(value.red);
+		green.fill(value.green);
+		blue.fill(value.blue);
+	}
+
+	constexpr void setColor(std::size_t const index, RGBColor const value)
+	{
+		red[index] = value.red;
+		green[index] = value.green;
+		blue[index] = value.blue;
+	}
+
+	void setRed(color_t const value) { red.fill(value); }
+
+	constexpr void setRed(std::size_t const index, color_t const value)
+	{
+		red[index] = value;
+	}
+
+	void setGreen(color_t const value) { green.fill(value); }
+
+	constexpr void setGreen(std::size_t const index, color_t const value)
+	{
+		green[index] = value;
+	}
+
+	void setBlue(color_t const value) { blue.fill(value); }
+
+	constexpr void setBlue(std::size_t const index, color_t const value)
+	{
+		blue[index] = value;
+	}
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_COLOR_NODE_H

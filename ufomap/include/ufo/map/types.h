@@ -54,6 +54,15 @@ enum class PropagationCriteria { MIN, MAX, MEAN };
 using depth_t = uint8_t;
 using time_step_t = uint32_t;
 
+// TODO: New types
+// using depth_t = uint8_t;
+// using occupancy_t = float;
+// using time_t = float;
+// using color_t = uint8_t;
+// using semantic_label_t = uint32_t;
+// using semantic_value_t = float;
+// using semantic_container_t = ...;
+
 // Check if
 template <template <typename...> class Base, typename Derived>
 struct is_base_of_template_impl {

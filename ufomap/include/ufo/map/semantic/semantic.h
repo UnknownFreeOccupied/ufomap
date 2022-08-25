@@ -82,6 +82,30 @@ struct SemanticPair {
 
 	constexpr bool operator!=(SemanticPair const& rhs) const { return !(*this == rhs); }
 };
+
+struct SemanticPair {
+	semantic_label_t label = 0;
+	semantic_value_t value = 0;
+
+	constexpr SemanticPair() = default;
+
+	constexpr SemanticPair(semantic_label_t label, semantic_value_t value = 0)
+	    : label(label), value(value)
+	{
+	}
+
+	constexpr bool operator==(SemanticPair const rhs) const
+	{
+		return label == rhs.label && value == rhs.value;
+	}
+
+	constexpr bool operator!=(SemanticPair const rhs) const { return !(*this == rhs); }
+
+	friend std::ostream& operator<<(std::ostream& out, SemanticPair const sp)
+	{
+		return out << sp.label << ": " << sp.value;
+	}
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SEMANTIC_H

@@ -61,6 +61,26 @@ struct TimeNode {
 
 	constexpr bool operator!=(TimeNode rhs) const { return !(*this == rhs); }
 };
+
+struct TimeNodeNew {
+	using time_t = float;
+
+	// Data
+	std::array<time_t, 8> time;
+
+	bool operator==(TimeNodeNew const rhs) const { return time == rhs.time; }
+
+	bool operator!=(TimeNodeNew const rhs) const { return !(*this == rhs); }
+
+	constexpr time_t getTime(std::size_t const index) const { return time[index]; }
+
+	void setTime(time_t const value) { time.fill(value); }
+
+	constexpr void setTime(std::size_t const index, time_t const value)
+	{
+		time[index] = value;
+	}
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TIME_NODE_H

@@ -69,6 +69,82 @@ struct OccupancyNode {
 
 	constexpr bool operator!=(OccupancyNode rhs) const { return !(*this == rhs); }
 };
+
+struct OccupancyNodeNew {
+	using occupancy_t = float;
+
+	// Indicators
+	uint8_t contains_unknown;
+	uint8_t contains_free;
+	uint8_t contains_occupied;
+
+	// Data
+	std::array<occupancy_t, 8> occupancy;
+
+	bool operator==(OccupancyNodeNew const rhs) const { return occupancy == rhs.occupancy; }
+
+	bool operator!=(OccupancyNodeNew const rhs) const { return !(*this == rhs); }
+
+	constexpr occupancy_t getOccupancy(std::size_t const index) const
+	{
+		return occupancy[index];
+	}
+
+	void setOccupancy(occupancy_t const value) { occupancy.fill(value); }
+
+	constexpr void setOccupancy(std::size_t const index, occupancy_t const value)
+	{
+		occupancy[index] = value;
+	}
+
+	constexpr bool containsUnknown(std::size_t const index) const
+	{
+		return (contains_unknown >> index) & uint8_t(1);
+	}
+
+	constexpr bool containsFree(std::size_t const index) const
+	{
+		return (contains_free >> index) & uint8_t(1);
+	}
+
+	constexpr bool containsOccupied(std::size_t const index) const
+	{
+		return (contains_occupied >> index) & uint8_t(1);
+	}
+
+	constexpr void setContainsUnknown(bool const contains) const
+	{
+		contains_unknown = contains ? std::numeric_limits<uint8_t>::max() : 0;
+	}
+
+	constexpr void setContainsUnknown(std::size_t const index, bool const contains) const
+	{
+		contains_unknown = (contains_unknown & ~(uint8_t(1) << index)) |
+		                   (uint8_t(contains ? 1 : 0) << index);
+	}
+
+	constexpr void setContainsFree(bool const contains) const
+	{
+		contains_free = contains ? std::numeric_limits<uint8_t>::max() : 0;
+	}
+
+	constexpr void setContainsFree(std::size_t const index, bool const contains) const
+	{
+		contains_free =
+		    (contains_free & ~(uint8_t(1) << index)) | (uint8_t(contains ? 1 : 0) << index);
+	}
+
+	constexpr void setContainsOccupied(bool const contains) const
+	{
+		contains_occupied = contains ? std::numeric_limits<uint8_t>::max() : 0;
+	}
+
+	constexpr void setContainsOccupied(std::size_t const index, bool const contains) const
+	{
+		contains_occupied = (contains_occupied & ~(uint8_t(1) << index)) |
+		                    (uint8_t(contains ? 1 : 0) << index);
+	}
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCCUPANCY_NODE_H
