@@ -53,7 +53,7 @@
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode, class InnerNode>
+template <class Derived, class LeafNode>
 class SignedDistanceMapBase
 {
  public:
@@ -194,17 +194,18 @@ class SignedDistanceMapBase
 	// Update node
 	//
 
-	void updateNode(InnerNode& node, depth_t depth)
+	template <class T>
+	void updateNode(LeafNode& node, T const& children)
 	{
 		switch (signed_distance_prop_criteria_) {
 			case PropagationCriteria::MIN:
-				setSignedDistance(node, minChildSignedDistance(node, depth));
+				setSignedDistance(node, minChildSignedDistance(children));
 				break;
 			case PropagationCriteria::MAX:
-				setSignedDistance(node, maxChildSignedDistance(node, depth));
+				setSignedDistance(node, maxChildSignedDistance(children));
 				break;
 			case PropagationCriteria::MEAN:
-				setSignedDistance(node, averageChildSignedDistance(node, depth));
+				setSignedDistance(node, averageChildSignedDistance(children));
 				break;
 		}
 	}
@@ -213,71 +214,30 @@ class SignedDistanceMapBase
 	// Min child signed distance
 	//
 
-	constexpr signed_distance_t minChildSignedDistance(InnerNode const& node,
-	                                                   depth_t depth) const
+	template <class T>
+	constexpr signed_distance_t minChildSignedDistance(T const& children) const
 	{
-		return 1 == depth ? std::min({getSignedDistance(derived().getLeafChild(node, 0)),
-		                              getSignedDistance(derived().getLeafChild(node, 1)),
-		                              getSignedDistance(derived().getLeafChild(node, 2)),
-		                              getSignedDistance(derived().getLeafChild(node, 3)),
-		                              getSignedDistance(derived().getLeafChild(node, 4)),
-		                              getSignedDistance(derived().getLeafChild(node, 5)),
-		                              getSignedDistance(derived().getLeafChild(node, 6)),
-		                              getSignedDistance(derived().getLeafChild(node, 7))})
-		                  : std::min({getSignedDistance(derived().getInnerChild(node, 0)),
-		                              getSignedDistance(derived().getInnerChild(node, 1)),
-		                              getSignedDistance(derived().getInnerChild(node, 2)),
-		                              getSignedDistance(derived().getInnerChild(node, 3)),
-		                              getSignedDistance(derived().getInnerChild(node, 4)),
-		                              getSignedDistance(derived().getInnerChild(node, 5)),
-		                              getSignedDistance(derived().getInnerChild(node, 6)),
-		                              getSignedDistance(derived().getInnerChild(node, 7))});
+		// TODO: Implement
 	}
 
 	//
 	// Max child signed distance
 	//
 
-	constexpr signed_distance_t maxChildSignedDistance(InnerNode const& node,
-	                                                   depth_t depth) const
+	template <class T>
+	constexpr signed_distance_t maxChildSignedDistance(T const& children) const
 	{
-		return 1 == depth ? std::max({getSignedDistance(derived().getLeafChild(node, 0)),
-		                              getSignedDistance(derived().getLeafChild(node, 1)),
-		                              getSignedDistance(derived().getLeafChild(node, 2)),
-		                              getSignedDistance(derived().getLeafChild(node, 3)),
-		                              getSignedDistance(derived().getLeafChild(node, 4)),
-		                              getSignedDistance(derived().getLeafChild(node, 5)),
-		                              getSignedDistance(derived().getLeafChild(node, 6)),
-		                              getSignedDistance(derived().getLeafChild(node, 7))})
-		                  : std::max({getSignedDistance(derived().getInnerChild(node, 0)),
-		                              getSignedDistance(derived().getInnerChild(node, 1)),
-		                              getSignedDistance(derived().getInnerChild(node, 2)),
-		                              getSignedDistance(derived().getInnerChild(node, 3)),
-		                              getSignedDistance(derived().getInnerChild(node, 4)),
-		                              getSignedDistance(derived().getInnerChild(node, 5)),
-		                              getSignedDistance(derived().getInnerChild(node, 6)),
-		                              getSignedDistance(derived().getInnerChild(node, 7))});
+		// TODO: Implement
 	}
 
 	//
 	// Average child signed distance
 	//
 
-	constexpr signed_distance_t averageChildSignedDistance(InnerNode const& node,
-	                                                       depth_t depth) const
+	template <class T>
+	constexpr signed_distance_t averageChildSignedDistance(T const& children) const
 	{
-		signed_distance_t sum =
-		    1 == depth
-		        ? std::accumulate(
-		              std::begin(derived().getLeafChildren(node)),
-		              std::end(derived().getLeafChildren(node)), signed_distance_t(0),
-		              [](auto cur, auto&& child) { return cur + getSignedDistance(child); })
-		        : std::accumulate(
-		              std::begin(derived().getInnerChildren(node)),
-		              std::end(derived().getInnerChildren(node)), signed_distance_t(0),
-		              [](auto cur, auto&& child) { return cur + getSignedDistance(child); });
-
-		return sum / signed_distance_t(8);
+		// TODO: Implement
 	}
 
 	//

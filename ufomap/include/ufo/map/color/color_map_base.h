@@ -53,11 +53,10 @@
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode, class InnerNode>
+template <class Derived, class LeafNode>
 class ColorMapBase
 {
  protected:
-	static_assert(std::is_base_of_v<LeafNode, InnerNode>);
 	static_assert(std::is_base_of_v<ColorNode, LeafNode>);
 
  public:
@@ -192,33 +191,15 @@ class ColorMapBase
 	// Update node
 	//
 
-	void updateNode(InnerNode& node, depth_t depth)
+	template <class T>
+	void updateNode(LeafNode& node, T const& children)
 	{
-		setColor(node, averageChildColor(node, depth));
-	}
+		std::array<RGBColor, children.size()> colors;
+		for (std::size_t i = 0; children.size() != i; ++i) {
+			colors[i] = children[i].color;
+		}
 
-	//
-	// Average child color
-	//
-
-	constexpr RGBColor averageChildColor(InnerNode const& node, depth_t depth) const
-	{
-		return 1 == depth ? RGBColor::average({derived().getLeafChild(node, 0).color,
-		                                       derived().getLeafChild(node, 1).color,
-		                                       derived().getLeafChild(node, 2).color,
-		                                       derived().getLeafChild(node, 3).color,
-		                                       derived().getLeafChild(node, 4).color,
-		                                       derived().getLeafChild(node, 5).color,
-		                                       derived().getLeafChild(node, 6).color,
-		                                       derived().getLeafChild(node, 7).color})
-		                  : RGBColor::average({derived().getInnerChild(node, 0).color,
-		                                       derived().getInnerChild(node, 1).color,
-		                                       derived().getInnerChild(node, 2).color,
-		                                       derived().getInnerChild(node, 3).color,
-		                                       derived().getInnerChild(node, 4).color,
-		                                       derived().getInnerChild(node, 5).color,
-		                                       derived().getInnerChild(node, 6).color,
-		                                       derived().getInnerChild(node, 7).color});
+		setColor(node, RGBColor::average(std::cbegin(colors), std::cend(colors)));
 	}
 
 	//

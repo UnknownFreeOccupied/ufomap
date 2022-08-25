@@ -63,12 +63,10 @@
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode, class InnerNode>
+template <class Derived, class LeafNode>
 class OccupancyMapBase
 {
  protected:
-	static_assert(std::is_base_of_v<LeafNode, InnerNode>);
-
 	// Support float and uint8_t Occupancy value right now.
 	// (and uint32_t given that it is packed with Time)
 	static_assert(std::is_base_of_v<OccupancyNode<float>, LeafNode> ||
@@ -421,19 +419,10 @@ class OccupancyMapBase
 
 	bool containsUnknown(Node const& node) const
 	{
-		if (derived().isLeaf(node)) {
-			return isUnknown(node);
-		}
-		return containsUnknown(derived().getInnerNode(node));
+		return containsUnknown(derived().getLeafNode(node));
 	}
 
-	bool containsUnknown(Code code) const
-	{
-		if (0 == code.depth()) {
-			return isUnknown(code);
-		}
-		return containsUnknown(derived().getInnerNode(code));
-	}
+	bool containsUnknown(Code code) const { containsUnknown(derived().getLeafNode(code)); }
 
 	bool containsUnknown(Key key) const { return containsUnknown(Derived::toCode(key)); }
 
@@ -453,19 +442,10 @@ class OccupancyMapBase
 
 	bool containsFree(Node const& node) const
 	{
-		if (derived().isLeaf(node)) {
-			return isFree(node);
-		}
-		return containsFree(derived().getInnerNode(node));
+		return containsFree(derived().getLeafNode(node));
 	}
 
-	bool containsFree(Code code) const
-	{
-		if (0 == code.depth()) {
-			return isFree(code);
-		}
-		return containsFree(derived().getInnerNode(code));
-	}
+	bool containsFree(Code code) const { return containsFree(derived().getLeafNode(code)); }
 
 	bool containsFree(Key key) const { return containsFree(Derived::toCode(key)); }
 
@@ -485,18 +465,12 @@ class OccupancyMapBase
 
 	bool containsOccupied(Node const& node) const
 	{
-		if (derived().isLeaf(node)) {
-			return isOccupied(node);
-		}
-		return containsOccupied(derived().getInnerNode(node));
+		return containsOccupied(derived().getLeafNode(node));
 	}
 
 	bool containsOccupied(Code code) const
 	{
-		if (0 == code.depth()) {
-			return isOccupied(code);
-		}
-		return containsOccupied(derived().getInnerNode(code));
+		return containsOccupied(derived().getLeafNode(code));
 	}
 
 	bool containsOccupied(Key key) const { return containsOccupied(Derived::toCode(key)); }
@@ -860,20 +834,14 @@ class OccupancyMapBase
 
 	constexpr bool containsUnknown(LeafNode const& node) const noexcept
 	{
-		// return node.contains_unknown;
-		return derived().isLeaf(node) ? isUnknown(node) : node.contains_unknown;
+		return node.contains_unknown;
 	}
 
-	constexpr bool containsFree(LeafNode const& node) const noexcept
-	{
-		// node.contains_free;
-		return derived().isLeaf(node) ? isFree(node) : node.contains_free;
-	}
+	constexpr bool containsFree(LeafNode const& node) const noexcept { node.contains_free; }
 
 	constexpr bool containsOccupied(LeafNode const& node) const noexcept
 	{
-		// node.contains_occupied;
-		return derived().isLeaf(node) ? isOccupied(node) : node.contains_occupied;
+		node.contains_occupied;
 	}
 
 	//
@@ -910,18 +878,18 @@ class OccupancyMapBase
 	// Update node
 	//
 
-	// NOTE: Only called when node has children
-	void updateNode(InnerNode& node, depth_t depth)
+	template <class T>
+	void updateNode(LeafNode& node, T const& children)
 	{
 		switch (occupancy_prop_criteria_) {
 			case PropagationCriteria::MIN:
-				setOccupancyLogit(node, minChildOccupancyLogit(node, depth));
+				setOccupancyLogit(node, minChildOccupancyLogit(children));
 				break;
 			case PropagationCriteria::MAX:
-				setOccupancyLogit(node, maxChildOccupancyLogit(node, depth));
+				setOccupancyLogit(node, maxChildOccupancyLogit(children));
 				break;
 			case PropagationCriteria::MEAN:
-				setOccupancyLogit(node, averageChildOccupancyLogit(node, depth));
+				setOccupancyLogit(node, averageChildOccupancyLogit(children));
 				break;
 		}
 	}
@@ -930,20 +898,13 @@ class OccupancyMapBase
 	// Min child occupancy logit
 	//
 
-	constexpr logit_t minChildOccupancyLogit(InnerNode const& node, depth_t depth) const
+	template <class T>
+	constexpr logit_t minChildOccupancyLogit(T const& children) const
 	{
 		logit_t min = std::numeric_limits<logit_t>::max();
-
-		if (1 == depth) {
-			for (LeafNode const& child : derived().getLeafChildren(node)) {
-				min = std::min(min, getOccupancyLogit(child));
-			}
-		} else {
-			for (InnerNode const& child : derived().getInnerChildren(node)) {
-				min = std::min(min, getOccupancyLogit(child));
-			}
+		for (auto const& child : children) {
+			min = std::min(min, getOccupancyLogit(child));
 		}
-
 		return min;
 	}
 
@@ -951,20 +912,13 @@ class OccupancyMapBase
 	// Max child occupancy logit
 	//
 
-	constexpr logit_t maxChildOccupancyLogit(InnerNode const& node, depth_t depth) const
+	template <class T>
+	constexpr logit_t maxChildOccupancyLogit(T const& children) const
 	{
 		logit_t max = std::numeric_limits<logit_t>::lowest();
-
-		if (1 == depth) {
-			for (LeafNode const& child : derived().getLeafChildren(node)) {
-				max = std::max(max, getOccupancyLogit(child));
-			}
-		} else {
-			for (InnerNode const& child : derived().getInnerChildren(node)) {
-				max = std::max(max, getOccupancyLogit(child));
-			}
+		for (auto const& child : children) {
+			max = std::max(max, getOccupancyLogit(child));
 		}
-
 		return max;
 	}
 
@@ -972,70 +926,39 @@ class OccupancyMapBase
 	// Average child occupancy logit
 	//
 
-	constexpr logit_t averageChildOccupancyLogit(InnerNode const& node, depth_t depth) const
+	template <class T>
+	constexpr logit_t averageChildOccupancyLogit(T const& children) const
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
-			unsigned int sum =
-			    1 == depth ? std::accumulate(std::begin(derived().getLeafChildren(node)),
-			                                 std::end(derived().getLeafChildren(node)), 0u,
-			                                 [](auto cur, auto const& child) {
-				                                 return cur + getOccupancyLogit(child);
-			                                 })
-			               : std::accumulate(std::begin(derived().getInnerChildren(node)),
-			                                 std::end(derived().getInnerChildren(node)), 0u,
-			                                 [](auto cur, auto const& child) {
-				                                 return cur + getOccupancyLogit(child);
-			                                 });
-
-			return sum / 8u;
+			unsigned int sum = std::accumulate(
+			    std::cbegin(children), std::cend(children), 0u,
+			    [](auto cur, auto const& child) { return cur + getOccupancyLogit(child); });
+			return sum / unsigned int(children.size());
 		} else {
-			float sum = 1 == depth
-			                ? std::accumulate(std::begin(derived().getLeafChildren(node)),
-			                                  std::end(derived().getLeafChildren(node)), 0.0f,
-			                                  [](auto cur, auto const& child) {
-				                                  return cur + getOccupancyLogit(child);
-			                                  })
-			                : std::accumulate(std::begin(derived().getInnerChildren(node)),
-			                                  std::end(derived().getInnerChildren(node)), 0.0f,
-			                                  [](auto cur, auto const& child) {
-				                                  return cur + getOccupancyLogit(child);
-			                                  });
+			float sum = std::accumulate(
+			    std::cbegin(children), std::cend(children), 0.0f,
+			    [](auto cur, auto const& child) { return cur + getOccupancyLogit(child); });
 
-			return sum / 8.0f;
+			return sum / float(children.size());
 		}
 	}
 
-	// NOTE: Only called when node has no children
 	void updateNodeIndicators(LeafNode& node)
 	{
-		// node.contains_unknown = isUnknown(node);
-		// node.contains_free = isFree(node);
-		// node.contains_occupied = isOccupied(node);
+		node.contains_unknown = isUnknown(node);
+		node.contains_free = isFree(node);
+		node.contains_occupied = isOccupied(node);
 	}
 
-	// NOTE: Only called when node has children
-	void updateNodeIndicators(InnerNode& node, depth_t depth)
+	template <class T>
+	void updateNodeIndicators(LeafNode& node, T const& children)
 	{
-		if (1 == depth) {
-			any_of(derived().getLeafChildren(node),
-			       [this](LeafNode const& child) { return containsUnknown(child); });
-			node.contains_free =
-			    any_of(derived().getLeafChildren(node),
-			           [this](LeafNode const& child) { return containsFree(child); });
-			node.contains_occupied =
-			    any_of(derived().getLeafChildren(node),
-			           [this](LeafNode const& child) { return containsOccupied(child); });
-		} else {
-			node.contains_unknown =
-			    any_of(derived().getInnerChildren(node),
-			           [this](InnerNode const& child) { return containsUnknown(child); });
-			node.contains_free =
-			    any_of(derived().getInnerChildren(node),
-			           [this](InnerNode const& child) { return containsFree(child); });
-			node.contains_occupied =
-			    any_of(derived().getInnerChildren(node),
-			           [this](InnerNode const& child) { return containsOccupied(child); });
-		}
+		node.contains_unknown =
+		    any_of(children, [this](auto const& child) { return containsUnknown(child); });
+		node.contains_free =
+		    any_of(children, [this](auto const& child) { return containsFree(child); });
+		node.contains_occupied =
+		    any_of(children, [this](auto const& child) { return containsOccupied(child); });
 	}
 
 	//
@@ -1151,9 +1074,9 @@ class OccupancyMapBase
 
 std::false_type is_occupancy_map_base_impl(...);
 
-template <class Derived, class LeafNode, class InnerNode>
+template <class Derived, class LeafNode>
 std::true_type is_occupancy_map_base_impl(
-    OccupancyMapBase<Derived, LeafNode, InnerNode> const volatile&);
+    OccupancyMapBase<Derived, LeafNode> const volatile&);
 
 template <typename T>
 using is_occupancy_map_base = decltype(is_occupancy_map_base_impl(std::declval<T&>()));

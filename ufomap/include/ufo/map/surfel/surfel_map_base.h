@@ -57,7 +57,7 @@
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode, class InnerNode>
+template <class Derived, class LeafNode>
 class SurfelMapBase
 {
  public:
@@ -540,32 +540,17 @@ class SurfelMapBase
 	// Update node
 	//
 
-	void updateNode(InnerNode& node, depth_t depth)
+	template <class T>
+	void updateNode(LeafNode& node, T const& children)
 	{
 		clearSurfel(node);
 
-		if (1 == depth) {
-			for (LeafNode const& child : derived().getLeafChildren(node)) {
-				if (hasSurfel(child)) {
-					insertSurfel(node, getSurfel(child));
-				}
-			}
-		} else {
-			for (InnerNode const& child : derived().getInnerChildren(node)) {
-				if (hasSurfel(child)) {
-					insertSurfel(node, getSurfel(child));
-				}
+		for (auto const& child : children) {
+			if (hasSurfel(child)) {
+				insertSurfel(node, getSurfel((child)));
 			}
 		}
 	}
-
-	//
-	// FIXME: REMOVE Update node indicators
-	//
-
-	void updateNodeIndicators(LeafNode&) {}
-
-	void updateNodeIndicators(InnerNode&, depth_t) {}
 
 	//
 	// Input/output (read/write)

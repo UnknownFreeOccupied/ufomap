@@ -2615,6 +2615,24 @@ class OctreeBase
 	// Update nodes
 	//
 
+	void updateNode(InnerNode& node, depth_t const depth)
+	{
+		if (1 == depth) {
+			derived().updateNode(node, getLeafChildren(node));
+		} else {
+			derived().updateNode(node, getInnerChildren(node));
+		}
+	}
+
+	void updateNodeIndicators(InnerNode& node, depth_t depth)
+	{
+		if (1 == depth) {
+			derived().updateNodeIndicators(node, getLeafChildren(node));
+		} else {
+			derived().updateNodeIndicators(node, getInnerChildren(node));
+		}
+	}
+
 	template <bool KeepModified>
 	void updateModifiedNodesRecurs(depth_t max_depth, InnerNode& node, depth_t depth)
 	{
@@ -2646,8 +2664,8 @@ class OctreeBase
 		}
 
 		if (depth <= max_depth) {
-			derived().updateNode(node, depth);
-			derived().updateNodeIndicators(node, depth);
+			updateNode(node, depth);
+			updateNodeIndicators(node, depth);
 			pruneNode(node, depth);
 			if constexpr (!KeepModified) {
 				setModified(node, false);
@@ -3001,8 +3019,8 @@ class OctreeBase
 		} else if (valid_inner) {
 			modifiedDataRecurs<UpdateNodes>(indicators, nodes, root, depthLevels());
 			if constexpr (UpdateNodes) {
-				derived().updateNode(root, depthLevels());
-				derived().updateNodeIndicators(root, depthLevels());
+				updateNode(root, depthLevels());
+				updateNodeIndicators(root, depthLevels());
 				pruneNode(root, depthLevels());
 			}
 			if (nodes.empty()) {
@@ -3062,8 +3080,8 @@ class OctreeBase
 						modifiedDataRecurs<UpdateNodes>(indicators, nodes, child, depth - 1);
 
 						if constexpr (UpdateNodes) {
-							derived().updateNode(child, depth - 1);
-							derived().updateNodeIndicators(child, depth - 1);
+							updateNode(child, depth - 1);
+							updateNodeIndicators(child, depth - 1);
 							pruneNode(child, depth - 1);
 						}
 					}

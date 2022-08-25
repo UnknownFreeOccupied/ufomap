@@ -51,7 +51,7 @@
 
 namespace ufo::map
 {
-template <std::size_t Num, class Derived, class LeafNode, class InnerNode>
+template <std::size_t Num, class Derived, class LeafNode>
 class EmptyMap
 {
  protected:
@@ -65,7 +65,10 @@ class EmptyMap
 	// Update node
 	//
 
-	static constexpr void updateNode(InnerNode&, depth_t) noexcept {}
+	template <class T>
+	static constexpr void updateNode(LeafNode&, T const&) noexcept
+	{
+	}
 
 	//
 	// Input/ouput (read/write)

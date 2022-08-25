@@ -1390,7 +1390,10 @@ class Semantics
  private:
 	std::unique_ptr<value_type[]> data_;
 
-	template <class Derived, class LeafNode, class InnerNode>
+	std::unique_ptr<label_type[]> labels_;
+	std::unique_ptr<value_type[]> values_;
+
+	template <class Derived, class LeafNode>
 	friend class SemanticMapBase;
 };
 

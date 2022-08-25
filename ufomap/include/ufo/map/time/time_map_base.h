@@ -51,7 +51,7 @@
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode, class InnerNode>
+template <class Derived, class LeafNode>
 class TimeMapBase
 {
  public:
@@ -170,87 +170,62 @@ class TimeMapBase
 	// Update node
 	//
 
-	void updateNode(InnerNode& node, depth_t depth)
+	template <class T>
+	void updateNode(LeafNode& node, T const& children)
 	{
 		switch (time_prop_criteria_) {
 			case PropagationCriteria::MIN:
-				setTime(node, minChildTime(node, depth));
+				setTime(node, minChildTime(children));
 				break;
 			case PropagationCriteria::MAX:
-				setTime(node, maxChildTime(node, depth));
+				setTime(node, maxChildTime(children));
 				break;
 			case PropagationCriteria::MEAN:
-				setTime(node, averageChildTime(node, depth));
+				setTime(node, averageChildTime(children));
 				break;
 		}
-	}
-
-	//
-	// Max child time step
-	//
-
-	constexpr time_t maxChildTime(InnerNode const& node, depth_t depth) const
-	{
-		return 1 == depth ? std::max({getTime(derived().getLeafChild(node, 0)),
-		                              getTime(derived().getLeafChild(node, 1)),
-		                              getTime(derived().getLeafChild(node, 2)),
-		                              getTime(derived().getLeafChild(node, 3)),
-		                              getTime(derived().getLeafChild(node, 4)),
-		                              getTime(derived().getLeafChild(node, 5)),
-		                              getTime(derived().getLeafChild(node, 6)),
-		                              getTime(derived().getLeafChild(node, 7))})
-		                  : std::max({getTime(derived().getInnerChild(node, 0)),
-		                              getTime(derived().getInnerChild(node, 1)),
-		                              getTime(derived().getInnerChild(node, 2)),
-		                              getTime(derived().getInnerChild(node, 3)),
-		                              getTime(derived().getInnerChild(node, 4)),
-		                              getTime(derived().getInnerChild(node, 5)),
-		                              getTime(derived().getInnerChild(node, 6)),
-		                              getTime(derived().getInnerChild(node, 7))});
 	}
 
 	//
 	// Min child time step
 	//
 
-	constexpr time_t minChildTime(InnerNode const& node, depth_t depth) const
+	template <class T>
+	constexpr time_t minChildTime(T const& children) const
 	{
-		return 1 == depth ? std::min({getTime(derived().getLeafChild(node, 0)),
-		                              getTime(derived().getLeafChild(node, 1)),
-		                              getTime(derived().getLeafChild(node, 2)),
-		                              getTime(derived().getLeafChild(node, 3)),
-		                              getTime(derived().getLeafChild(node, 4)),
-		                              getTime(derived().getLeafChild(node, 5)),
-		                              getTime(derived().getLeafChild(node, 6)),
-		                              getTime(derived().getLeafChild(node, 7))})
-		                  : std::min({getTime(derived().getInnerChild(node, 0)),
-		                              getTime(derived().getInnerChild(node, 1)),
-		                              getTime(derived().getInnerChild(node, 2)),
-		                              getTime(derived().getInnerChild(node, 3)),
-		                              getTime(derived().getInnerChild(node, 4)),
-		                              getTime(derived().getInnerChild(node, 5)),
-		                              getTime(derived().getInnerChild(node, 6)),
-		                              getTime(derived().getInnerChild(node, 7))});
+		time_t min = std::numeric_limits<time_t>::max();
+		for (auto const& child : children) {
+			min = std::min(min, getTime(child));
+		}
+		return min;
+	}
+
+	//
+	// Max child time step
+	//
+
+	template <class T>
+	constexpr time_t maxChildTime(T const& children) const
+	{
+		time_t max = std::numeric_limits<time_t>::lowest();
+		for (auto const& child : children) {
+			max = std::max(max, getTime(child));
+		}
+		return max;
 	}
 
 	//
 	// Average child time step
 	//
 
-	constexpr time_t averageChildTime(InnerNode const& node, depth_t depth) const
+	template <class T>
+	constexpr time_t averageChildTime(T const& children) const
 	{
+		// FIXME: Make sure not overflow
 		time_t sum =
-		    1 == depth
-		        ? std::accumulate(
-		              std::begin(derived().getLeafChildren(node)),
-		              std::end(derived().getLeafChildren(node)), time_t(0),
-		              [](auto cur, LeafNode const& child) { return cur + getTime(child); })
-		        : std::accumulate(
-		              std::begin(derived().getInnerChildren(node)),
-		              std::end(derived().getInnerChildren(node)), time_t(0),
-		              [](auto cur, LeafNode const& child) { return cur + getTime(child); });
-
-		return sum / time_t(8);
+		    std::accumulate(std::cbegin(children), std::cend(children), time_t(0),
+		                    [](auto cur, auto const& child) { return cur + getTime(child); });
+		return sum / time_t(children.size());
 	}
 
 	//

@@ -61,17 +61,14 @@ namespace ufo::map
 
 // All your base are belong to us
 template <class Node, class Indicators, bool ReuseNodes, bool LockLess,
-          template <typename, typename, typename> typename... Bases>
+          template <typename, typename> typename... Bases>
 class OctreeMapBase
     : public OctreeBase<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
                         Node, Indicators, ReuseNodes, LockLess>,
       public Bases<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
                    typename OctreeBase<
                        OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
-                       Node, Indicators, ReuseNodes, LockLess>::LeafNode,
-                   typename OctreeBase<
-                       OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
-                       Node, Indicators, ReuseNodes, LockLess>::InnerNode>...
+                       Node, Indicators, ReuseNodes, LockLess>::LeafNode>...
 {
  protected:
 	//
@@ -79,18 +76,17 @@ class OctreeMapBase
 	//
 
 	using Octree = OctreeBase<OctreeMapBase, Node, Indicators, ReuseNodes, LockLess>;
-	using LeafNode = typename Octree::LeafNode;
-	using InnerNode = typename Octree::InnerNode;
+	using typename Octree::LeafNode;
 
 	//
 	// Friends
 	//
 
 	friend Octree;
-#define FRIEND(N)                                                  \
-	friend std::tuple_element_t<                                     \
-	    std::min(static_cast<std::size_t>(N + 1), sizeof...(Bases)), \
-	    std::tuple<void, Bases<OctreeMapBase, LeafNode, InnerNode>...>>;
+#define FRIEND(N)                                                       \
+	friend std::tuple_element_t<std::min(static_cast<std::size_t>(N + 1), \
+	                                     sizeof...(Bases)),               \
+	                            std::tuple<void, Bases<OctreeMapBase, LeafNode>...>>;
 	REPEAT_128(FRIEND, 0)
 
  public:
@@ -118,7 +114,7 @@ class OctreeMapBase
 	}
 
 	OctreeMapBase(OctreeMapBase const& other)
-	    : Octree(other), Bases<OctreeMapBase, LeafNode, InnerNode>(other)...
+	    : Octree(other), Bases<OctreeMapBase, LeafNode>(other)...
 	{
 		initRoot();
 
@@ -153,7 +149,7 @@ class OctreeMapBase
 	OctreeMapBase& operator=(OctreeMapBase const& rhs)
 	{
 		Octree::operator=(rhs);
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::operator=(rhs), ...);
+		(Bases<OctreeMapBase, LeafNode>::operator=(rhs), ...);
 
 		initRoot();
 
@@ -196,16 +192,24 @@ class OctreeMapBase
 	void initRoot()
 	{
 		Octree::initRoot();
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::initRoot(), ...);
+		(Bases<OctreeMapBase, LeafNode>::initRoot(), ...);
 	}
 
 	//
 	// Update node
 	//
 
-	void updateNode(InnerNode& node, depth_t depth)
+	template <class T>
+	void updateNode(LeafNode& node, T const& children)
 	{
-		(Bases<OctreeMapBase, LeafNode, InnerNode>::updateNode(node, depth), ...);
+		(Bases<OctreeMapBase, LeafNode>::updateNode(node, children), ...);
+	}
+
+	template <class T>
+	void updateNodeIndicators(LeafNode& node, T const& children)
+	{
+		// TODO: Check if has this function
+		(Bases<OctreeMapBase, LeafNode>::updateNodeIndicators(node, children), ...);
 	}
 
 	//
@@ -214,7 +218,7 @@ class OctreeMapBase
 
 	static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
-		return (Bases<OctreeMapBase, LeafNode, InnerNode>::canReadData(identifier) || ...);
+		return (Bases<OctreeMapBase, LeafNode>::canReadData(identifier) || ...);
 	}
 
 	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
@@ -230,8 +234,8 @@ class OctreeMapBase
 			uint64_t data_size;
 			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if (!(readNodes<Bases<OctreeMapBase, LeafNode, InnerNode>>(
-			          in_stream, nodes, identifier, data_size, compressed) ||
+			if (!(readNodes<Bases<OctreeMapBase, LeafNode>>(in_stream, nodes, identifier,
+			                                                data_size, compressed) ||
 			      ...)) {
 				// Skip forward
 				in_stream.seekg(data_size, std::istream::cur);
@@ -243,7 +247,7 @@ class OctreeMapBase
 	                bool const compress, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		(writeNodes<Bases<OctreeMapBase, LeafNode, InnerNode>>(
+		(writeNodes<Bases<OctreeMapBase, LeafNode>>(
 		     out_stream, nodes, compress, compression_acceleration_level, compression_level),
 		 ...);
 	}

@@ -57,7 +57,7 @@
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode, class InnerNode>
+template <class Derived, class LeafNode>
 class SemanticMapBase
 {
  public:
@@ -941,8 +941,49 @@ class SemanticMapBase
 	// Update node
 	//
 
-	void updateNode(InnerNode& node, depth_t const depth)
+	template <class T>
+	void updateNode(LeafNode& node, T const& children)
 	{
+		// Get size
+		std::array<std::size_t, Derived::maxNumChildrenInnerNode()> sizes;
+		std::size_t total_size;
+		if (1 == depth) {
+			for (std::size_t i = 0; sizes.size() != i; ++i) {
+				sizes[i] = getSemantics(derived().getLeafChild(node, i));
+				total_size += sizes[i];
+			}
+		} else {
+			for (std::size_t i = 0; sizes.size() != i; ++i) {
+				sizes[i] = getSemantics(derived().getInnerChild(node, i));
+				total_size += sizes[i];
+			}
+		}
+
+		// Create buffers
+		std::vector<semantic_label_type> labels;
+		std::vector<semantic_value_type> values;
+		labels.reserve(total_size);
+		values.reserve(total_size);
+
+		// Fill in data
+		if (1 == depth) {
+			// TODO: Implement
+			for (auto const& child : derived().getLeafChildren(node)) {
+				total_size += getSemantics(child).size();
+			}
+		} else {
+			// TODO: Implement
+			for (auto const& child : derived().getLeafChildren(node)) {
+				total_size += getSemantics(child).size();
+			}
+		}
+
+		// Copy over data
+		getSemantics(node).resize(labels.size());
+		std::copy(std::cbegin(labels), std::cend(labels),
+		          std::next(getSemantics(node).labels_.get()));
+		std::copy(std::cbegin(values), std::cend(values), getSemantics(node).values_.get());
+
 		if (1 == depth) {
 			std::array<std::reference_wrapper<Semantics const>, 8> child_sem{
 			    std::cref(derived().getLeafChild(node, 0)),
