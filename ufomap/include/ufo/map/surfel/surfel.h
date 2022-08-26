@@ -384,7 +384,7 @@ struct Surfel {
 	// Get num points
 	//
 
-	constexpr uint32_t numPoints() const { return num_points_; }
+	constexpr uint32_t getNumPoints() const { return num_points_; }
 
 	//
 	// Get sum
