@@ -200,16 +200,15 @@ class OctreeMapBase
 	//
 
 	template <class T>
-	void updateNode(LeafNode& node, T const& children)
+	void updateNode(LeafNode& node)
 	{
-		(Bases<OctreeMapBase, LeafNode>::updateNode(node, children), ...);
+		(Bases<OctreeMapBase, LeafNode>::updateNode(node), ...);
 	}
 
 	template <class T>
-	void updateNodeIndicators(LeafNode& node, T const& children)
+	void updateNode(LeafNode& node, T const& children)
 	{
-		// TODO: Check if has this function
-		(Bases<OctreeMapBase, LeafNode>::updateNodeIndicators(node, children), ...);
+		(Bases<OctreeMapBase, LeafNode>::updateNode(node, children), ...);
 	}
 
 	//
