@@ -1002,10 +1002,65 @@ class SemanticMapBase
 			}
 
 			first = it;
-			std::advance(result);
+			std::advance(result, 1);
 		}
 
 		return result;
+	}
+
+	template <class InputIt>
+	semantic_value_t getValue(PropagationCriteria prop, InputIt first, InputIt last) const
+	{
+		switch (prop) {
+			case PropagationCriteria::MIN:
+				getMinValue(first, last);
+				break;
+			case PropagationCriteria::MAX:
+				getMaxValue(first, last);
+				break;
+			case PropagationCriteria::MEAN:
+				getMeanValue(first, last);
+				break;
+		}
+	}
+
+	template <class InputIt>
+	semantic_value_t getMinValue(InputIt first, InputIt last) const
+	{
+		semantic_value_t min = first->value;
+		std::advance(first, 1);
+		while (first != last) {
+			min = std::min(min, first->value);
+			std::advance(first, 1);
+		}
+		return min;
+	}
+
+	template <class InputIt>
+	semantic_value_t getMaxValue(InputIt first, InputIt last) const
+	{
+		semantic_value_t max = first->value;
+		std::advance(first, 1);
+		while (first != last) {
+			max = std::max(max, first->value);
+			std::advance(first, 1);
+		}
+		return max;
+	}
+
+	template <class InputIt>
+	semantic_value_t getMeanValue(InputIt first, InputIt last) const
+	{
+		// FIXME: Make sure no overflow and how to round?
+		semantic_value_t total = first->value;
+		std::size_t num = 1;
+		std::advance(first, 1);
+		while (first != last) {
+			total += first->value;
+			++num;
+			std::advance(first, 1);
+		}
+		return total / num;
 	}
 
 	//

@@ -183,7 +183,7 @@ class SurfelMapBase
 			return;
 		}
 
-		insertSurfel(surfel.getSum() / surfel.numPoints(), surfel, depth, propagate);
+		insertSurfel(surfel.getSum() / surfel.getNumPoints(), surfel, depth, propagate);
 	}
 
 	void insertSurfel(Node node, Surfel const& surfel, bool propagate = true)
@@ -233,7 +233,7 @@ class SurfelMapBase
 			return;
 		}
 
-		eraseSurfel(surfel.getSum() / surfel.numPoints(), surfel, depth, propagate);
+		eraseSurfel(surfel.getSum() / surfel.getNumPoints(), surfel, depth, propagate);
 	}
 
 	void eraseSurfel(Node node, Surfel const& surfel, bool propagate = true)
@@ -477,7 +477,7 @@ class SurfelMapBase
 
 	static constexpr std::size_t getNumSurfelPoints(LeafNode const& node) noexcept
 	{
-		return node.surfel.numPoints();
+		return node.surfel.getNumPoints();
 	}
 
 	//
