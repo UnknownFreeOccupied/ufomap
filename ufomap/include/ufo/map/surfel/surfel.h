@@ -377,7 +377,7 @@ struct Surfel {
 
 	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors() const
 	{
-		return getEigenVector(getSymmetricCovariance());
+		return getEigenVectors(getSymmetricCovariance());
 	}
 
 	//
