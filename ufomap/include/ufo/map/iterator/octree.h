@@ -81,6 +81,8 @@ class IteratorBase
 
 	constexpr IteratorBase(Tree const* tree) : tree_(tree) {}
 
+	virtual ~IteratorBase() {}
+
 	virtual IteratorBase& next() = 0;
 
 	virtual IteratorBase* copy() = 0;
