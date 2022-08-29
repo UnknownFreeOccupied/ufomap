@@ -338,7 +338,7 @@ struct Surfel {
 
 	constexpr math::Vector3<scalar_t> getNormal() const
 	{
-		return getEigenVectors()[0].normalize();
+		return getEigenVectors(getSymmetricCovariance())[0].normalize();
 	}
 
 	//
@@ -381,7 +381,11 @@ struct Surfel {
 
 	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors() const
 	{
-		return getEigenVectors(getSymmetricCovariance());
+		auto eigen_vectors = getEigenVectors(getSymmetricCovariance());
+		for (auto& v : eigen_vectors) {
+			v.normalize();  // FIXME: Needed?
+		}
+		return eigen_vectors;
 	}
 
 	//
