@@ -61,14 +61,11 @@ namespace ufo::map
 
 // All your base are belong to us
 template <class Node, class Indicators, bool ReuseNodes, bool LockLess,
-          template <typename, typename> typename... Bases>
+          template <typename> typename... Bases>
 class OctreeMapBase
     : public OctreeBase<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
                         Node, Indicators, ReuseNodes, LockLess>,
-      public Bases<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
-                   typename OctreeBase<
-                       OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
-                       Node, Indicators, ReuseNodes, LockLess>::LeafNode>...
+      public Bases<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>>...
 {
  protected:
 	//
@@ -86,7 +83,7 @@ class OctreeMapBase
 #define FRIEND(N)                                                       \
 	friend std::tuple_element_t<std::min(static_cast<std::size_t>(N + 1), \
 	                                     sizeof...(Bases)),               \
-	                            std::tuple<void, Bases<OctreeMapBase, LeafNode>...>>;
+	                            std::tuple<void, Bases<OctreeMapBase>...>>;
 	REPEAT_128(FRIEND, 0)
 
  public:
@@ -114,7 +111,7 @@ class OctreeMapBase
 	}
 
 	OctreeMapBase(OctreeMapBase const& other)
-	    : Octree(other), Bases<OctreeMapBase, LeafNode>(other)...
+	    : Octree(other), Bases<OctreeMapBase>(other)...
 	{
 		initRoot();
 
@@ -128,7 +125,7 @@ class OctreeMapBase
 	}
 
 	template <class Node2, class Indicators2, bool ReuseNodes2, bool LockLess2,
-	          template <typename, typename, typename> typename... Bases2>
+	          template <typename> typename... Bases2>
 	OctreeMapBase(
 	    OctreeMapBase<Node2, Indicators2, ReuseNodes2, LockLess2, Bases2...> const& other)
 	    : Octree(other.resolution(), other.depthLevels(), other.automaticPruning())
@@ -149,7 +146,7 @@ class OctreeMapBase
 	OctreeMapBase& operator=(OctreeMapBase const& rhs)
 	{
 		Octree::operator=(rhs);
-		(Bases<OctreeMapBase, LeafNode>::operator=(rhs), ...);
+		(Bases<OctreeMapBase>::operator=(rhs), ...);
 
 		initRoot();
 
@@ -165,7 +162,7 @@ class OctreeMapBase
 	}
 
 	template <class Node2, class Indicators2, bool ReuseNodes2, bool LockLess2,
-	          template <typename, typename, typename> typename... Bases2>
+	          template <typename> typename... Bases2>
 	OctreeMapBase& operator=(
 	    OctreeMapBase<Node2, Indicators2, ReuseNodes2, LockLess2, Bases2...> const& rhs)
 	{
@@ -192,62 +189,55 @@ class OctreeMapBase
 	void initRoot()
 	{
 		Octree::initRoot();
-		(Bases<OctreeMapBase, LeafNode>::initRoot(), ...);
+		(Bases<OctreeMapBase>::initRoot(), ...);
 	}
 
 	//
 	// Update node
 	//
 
-	template <class T>
-	void updateNode(LeafNode& node)
-	{
-		(Bases<OctreeMapBase, LeafNode>::updateNode(node), ...);
-	}
+	void updateNode(LeafNode& node) { (Bases<OctreeMapBase>::updateNode(node), ...); }
 
 	template <class T>
 	void updateNode(LeafNode& node, T const& children)
 	{
-		(Bases<OctreeMapBase, LeafNode>::updateNode(node, children), ...);
+		(Bases<OctreeMapBase>::updateNode(node, children), ...);
 	}
 
 	//
 	// Input/output (read/write)
 	//
 
-	static constexpr bool canReadData(DataIdentifier identifier) noexcept
+	template <class InputIt>
+	void readNodes(std::istream& in, InputIt first, InputIt last, bool const compressed)
 	{
-		return (Bases<OctreeMapBase, LeafNode>::canReadData(identifier) || ...);
-	}
-
-	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
-	               bool const compressed)
-	{
-		auto cur_pos = in_stream.tellg();
-		in_stream.seekg(0, std::ios_base::end);
-		auto end_pos = in_stream.tellg();
-		in_stream.seekg(cur_pos);
-		while (in_stream.tellg() != end_pos && in_stream.good()) {
+		auto cur_pos = in.tellg();
+		in.seekg(0, std::ios_base::end);
+		auto end_pos = in.tellg();
+		in.seekg(cur_pos);
+		while (in.tellg() != end_pos && in.good()) {
 			DataIdentifier identifier;
-			in_stream.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
 			uint64_t data_size;
-			in_stream.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if (!(readNodes<Bases<OctreeMapBase, LeafNode>>(in_stream, nodes, identifier,
-			                                                data_size, compressed) ||
+			in.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
+			in.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
+
+			if (!(readNodes<Bases<OctreeMapBase>>(in, first, last, identifier, data_size,
+			                                      compressed) ||
 			      ...)) {
 				// Skip forward
-				in_stream.seekg(data_size, std::istream::cur);
+				in.seekg(data_size, std::istream::cur);
 			}
 		}
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
-	                bool const compress, int const compression_acceleration_level,
+	template <class InputIt>
+	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
+	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		(writeNodes<Bases<OctreeMapBase, LeafNode>>(
-		     out_stream, nodes, compress, compression_acceleration_level, compression_level),
+		(writeNodes<Bases<OctreeMapBase>>(out, first, last, compress,
+		                                  compression_acceleration_level, compression_level),
 		 ...);
 	}
 
@@ -256,8 +246,8 @@ class OctreeMapBase
 	// Input/output (read/write)
 	//
 
-	template <class Base>
-	bool readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes,
+	template <class Base, class InputIt>
+	bool readNodes(std::istream& in, InputIt first, InputIt last,
 	               DataIdentifier const identifier, uint64_t const data_size,
 	               bool const compressed)
 	{
@@ -273,19 +263,19 @@ class OctreeMapBase
 
 			uint64_t compressed_data_size = 0;
 
-			decompressData(in_stream, data_stream, data_size, compressed_data_size);
+			decompressData(in, data_stream, data_size, compressed_data_size);
 
-			Base::readNodes(data_stream, nodes);
+			Base::readNodes(data_stream, first, last);
 		} else {
-			Base::readNodes(in_stream, nodes);
+			Base::readNodes(in, first, last);
 		}
 
 		return true;
 	}
 
-	template <class Base>
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
-	                bool const compress, int const compression_acceleration_level,
+	template <class Base, class InputIt>
+	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
+	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
 		constexpr DataIdentifier identifier = Base::getDataIdentifier();
@@ -293,31 +283,30 @@ class OctreeMapBase
 			return;
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
+		out.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
 
 		if (compress) {
-			std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
-			                              std::ios_base::binary);
-			data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-			data_stream.imbue(std::locale());
+			std::stringstream buf(std::ios_base::in | std::ios_base::out |
+			                      std::ios_base::binary);
+			buf.exceptions(std::stringstream::failbit | std::stringstream::badbit);
+			buf.imbue(std::locale());
 
-			Base::writeNodes(data_stream, nodes);
+			Base::writeNodes(buf, first, last);
 
-			uint64_t size = data_stream.tellp();
-			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
-			compressData(data_stream, out_stream, size, compression_acceleration_level,
-			             compression_level);
+			uint64_t size = buf.tellp();
+			out.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			compressData(buf, out, size, compression_acceleration_level, compression_level);
 		} else {
 			uint64_t size;
-			auto size_pos = out_stream.tellp();
-			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			auto size_pos = out.tellp();
+			out.write(reinterpret_cast<char const*>(&size), sizeof(size));
 
-			Base::writeNodes(out_stream, nodes);
+			Base::writeNodes(out, first, last);
 
-			size = out_stream.tellp() - size_pos - sizeof(size);
-			out_stream.seekp(size_pos);
-			out_stream.write(reinterpret_cast<char const*>(&size), sizeof(size));
-			out_stream.seekp(0, std::ios_base::end);
+			size = out.tellp() - size_pos - sizeof(size);
+			out.seekp(size_pos);
+			out.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			out.seekp(0, std::ios_base::end);
 		}
 	}
 };

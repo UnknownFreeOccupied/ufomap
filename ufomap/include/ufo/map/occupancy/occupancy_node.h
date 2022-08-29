@@ -56,11 +56,11 @@
 
 namespace ufo::map
 {
-template <typename OccupancyType = float, std::size_t Num = 1>
+template <typename OccupancyType = float>
 struct OccupancyNode {
 	using occupancy_t = OccupancyType;
 
-	std::conditional_t<1 == Num, occupancy_t, std::array<occupancy_t, Num>> occupancy;
+	occupancy_t occupancy;
 
 	constexpr bool operator==(OccupancyNode rhs) const
 	{
@@ -70,8 +70,9 @@ struct OccupancyNode {
 	constexpr bool operator!=(OccupancyNode rhs) const { return !(*this == rhs); }
 };
 
-struct OccupancyNodeNew {
-	using occupancy_t = float;
+template <typename OccupancyType = float>
+struct OccupancyNodeBlock {
+	using occupancy_t = OccupancyType;
 
 	// Indicators
 	uint8_t contains_unknown;
@@ -81,9 +82,12 @@ struct OccupancyNodeNew {
 	// Data
 	std::array<occupancy_t, 8> occupancy;
 
-	bool operator==(OccupancyNodeNew const rhs) const { return occupancy == rhs.occupancy; }
+	bool operator==(OccupancyNodeBlock const& rhs) const
+	{
+		return occupancy == rhs.occupancy;
+	}
 
-	bool operator!=(OccupancyNodeNew const rhs) const { return !(*this == rhs); }
+	bool operator!=(OccupancyNodeBlock const& rhs) const { return !(*this == rhs); }
 
 	constexpr occupancy_t getOccupancy(std::size_t const index) const
 	{
@@ -114,35 +118,35 @@ struct OccupancyNodeNew {
 
 	constexpr void setContainsUnknown(bool const contains) const
 	{
-		contains_unknown = contains ? std::numeric_limits<uint8_t>::max() : 0;
+		contains_unknown = contains ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
 	}
 
 	constexpr void setContainsUnknown(std::size_t const index, bool const contains) const
 	{
 		contains_unknown = (contains_unknown & ~(uint8_t(1) << index)) |
-		                   (uint8_t(contains ? 1 : 0) << index);
+		                   (uint8_t(contains ? uint8_t(1) : uint8_t(0)) << index);
 	}
 
 	constexpr void setContainsFree(bool const contains) const
 	{
-		contains_free = contains ? std::numeric_limits<uint8_t>::max() : 0;
+		contains_free = contains ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
 	}
 
 	constexpr void setContainsFree(std::size_t const index, bool const contains) const
 	{
-		contains_free =
-		    (contains_free & ~(uint8_t(1) << index)) | (uint8_t(contains ? 1 : 0) << index);
+		contains_free = (contains_free & ~(uint8_t(1) << index)) |
+		                (uint8_t(contains ? uint8_t(1) : uint8_t(0)) << index);
 	}
 
 	constexpr void setContainsOccupied(bool const contains) const
 	{
-		contains_occupied = contains ? std::numeric_limits<uint8_t>::max() : 0;
+		contains_occupied = contains ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
 	}
 
 	constexpr void setContainsOccupied(std::size_t const index, bool const contains) const
 	{
 		contains_occupied = (contains_occupied & ~(uint8_t(1) << index)) |
-		                    (uint8_t(contains ? 1 : 0) << index);
+		                    (uint8_t(contains ? uint8_t(1) : uint8_t(0)) << index);
 	}
 };
 }  // namespace ufo::map

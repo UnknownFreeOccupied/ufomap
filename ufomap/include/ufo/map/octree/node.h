@@ -71,7 +71,7 @@ struct Node {
 	 * @param lhs,rhs The nodes to compare.
 	 * @return Whether the two nodes are equal.
 	 */
-	friend constexpr bool operator==(Node const& lhs, Node const& rhs) noexcept
+	friend constexpr bool operator==(Node lhs, Node rhs) noexcept
 	{
 		return lhs.data_ == rhs.data_ && lhs.code_ == rhs.code_;
 	}
@@ -82,27 +82,24 @@ struct Node {
 	 * @param lhs,rhs The nodes to compare.
 	 * @return Whether the two nodes are different.
 	 */
-	friend constexpr bool operator!=(Node const& lhs, Node const& rhs) noexcept
-	{
-		return !(lhs == rhs);
-	}
+	friend constexpr bool operator!=(Node lhs, Node rhs) noexcept { return !(lhs == rhs); }
 
-	friend constexpr bool operator<(Node const& lhs, Node const& rhs) noexcept
+	friend constexpr bool operator<(Node lhs, Node rhs) noexcept
 	{
 		return lhs.code() < rhs.code();
 	}
 
-	friend constexpr bool operator<=(Node const& lhs, Node const& rhs) noexcept
+	friend constexpr bool operator<=(Node lhs, Node rhs) noexcept
 	{
 		return lhs.code() <= rhs.code();
 	}
 
-	friend constexpr bool operator>(Node const& lhs, Node const& rhs) noexcept
+	friend constexpr bool operator>(Node lhs, Node rhs) noexcept
 	{
 		return lhs.code() > rhs.code();
 	}
 
-	friend constexpr bool operator>=(Node const& lhs, Node const& rhs) noexcept
+	friend constexpr bool operator>=(Node lhs, Node rhs) noexcept
 	{
 		return lhs.code() >= rhs.code();
 	}
@@ -122,11 +119,11 @@ struct Node {
 	constexpr depth_t depth() const noexcept { return code_.depth(); }
 
 	struct Hash {
-		static constexpr Code::code_t hash(Node const& node) { return node.code().code(); }
+		static constexpr Code::code_t hash(Node node) { return node.code().code(); }
 
-		constexpr Code::code_t operator()(Node const& node) const { return hash(node); }
+		constexpr Code::code_t operator()(Node node) const { return hash(node); }
 
-		static constexpr bool equal(Node const& lhs, Node const& rhs) { return lhs == rhs; }
+		static constexpr bool equal(Node lhs, Node rhs) { return lhs == rhs; }
 	};
 
  protected:
@@ -171,7 +168,7 @@ struct NodeBV : public Node {
 
 	friend constexpr bool operator==(NodeBV const& lhs, NodeBV const& rhs) noexcept
 	{
-		return static_cast<Node const&>(lhs) == static_cast<Node const&>(rhs);
+		return static_cast<Node>(lhs) == static_cast<Node>(rhs);
 	}
 
 	friend constexpr bool operator!=(NodeBV const& lhs, NodeBV const& rhs) noexcept
@@ -248,7 +245,7 @@ struct NodeBV : public Node {
 	{
 	}
 
-	constexpr NodeBV(Node const& node, geometry::AAEBB const& aaebb) noexcept
+	constexpr NodeBV(Node node, geometry::AAEBB const& aaebb) noexcept
 	    : Node(node), aaebb_(aaebb)
 	{
 	}

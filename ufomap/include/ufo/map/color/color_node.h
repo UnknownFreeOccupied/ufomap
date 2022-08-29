@@ -47,33 +47,29 @@
 
 // STL
 #include <array>
-#include <type_traits>
 
 namespace ufo::map
 {
-template <std::size_t Num = 1>
 struct ColorNode {
-	std::conditional_t<1 == Num, RGBColor, std::array<RGBColor, Num>> color;
+	RGBColor color;
 
 	constexpr bool operator==(ColorNode rhs) const { return color == rhs.color; }
 
 	constexpr bool operator!=(ColorNode rhs) const { return !(*this == rhs); }
 };
 
-struct ColorNodeNew {
-	using color_t = std::uint8_t;
-
+struct ColorNodeBlock {
 	// Data
 	std::array<color_t, 8> red;
 	std::array<color_t, 8> green;
 	std::array<color_t, 8> blue;
 
-	bool operator==(ColorNodeNew const rhs) const
+	bool operator==(ColorNodeBlock const& rhs) const
 	{
 		return red == rhs.red && green == rhs.green && blue == rhs.blue;
 	}
 
-	bool operator!=(ColorNodeNew const rhs) const { return !(*this == rhs); }
+	bool operator!=(ColorNodeBlock const& rhs) const { return !(*this == rhs); }
 
 	constexpr RGBColor getColor(std::size_t const index) const
 	{

@@ -175,6 +175,12 @@ class Code
 		return (code_ >> static_cast<code_t>(3 * depth)) & ((code_t)0x7);
 	}
 
+	// TODO: Rename?
+	constexpr std::size_t index() const { return indexAtDepth(depth()); }
+
+	// TODO: Rename?
+	constexpr Code parent() const { return toDepth(depth() + 1); }
+
 	/*!
 	 * @brief Get the code of a specific child to this code
 	 *

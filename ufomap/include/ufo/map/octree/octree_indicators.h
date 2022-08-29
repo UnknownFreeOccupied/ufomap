@@ -44,6 +44,7 @@
 
 // STL
 #include <cstdint>
+#include <limits>
 
 namespace ufo::map
 {
@@ -54,6 +55,47 @@ struct OctreeIndicators {
 	// Indicates whether this node has to be updated (get information from children and/or
 	// update indicators). Useful when propagating information up the tree
 	uint8_t modified : 1;
+};
+
+struct OctreeIndicatorBlock {
+	// Indicates whether this is a leaf node (has no children) or not. If true then the
+	// children are not valid and should not be accessed
+	uint8_t is_leaf;
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	uint8_t modified;
+
+	constexpr bool isLeaf(std::size_t const index) const
+	{
+		return (is_leaf >> index) & uint8_t(1);
+	}
+
+	constexpr bool isModified(std::size_t const index) const
+	{
+		return (modified >> index) & uint8_t(1);
+	}
+
+	constexpr void setLeaf(bool const value) const
+	{
+		is_leaf = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
+	}
+
+	constexpr void setLeaf(std::size_t const index, bool const value) const
+	{
+		is_leaf = (is_leaf & ~(uint8_t(1) << index)) |
+		          (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
+	}
+
+	constexpr void setModified(bool const value) const
+	{
+		modified = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
+	}
+
+	constexpr void setModified(std::size_t const index, bool const value) const
+	{
+		modified = (modified & ~(uint8_t(1) << index)) |
+		           (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
+	}
 };
 }  // namespace ufo::map
 

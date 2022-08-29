@@ -43,15 +43,15 @@
 #define UFO_MAP_EMPTY_MAP_H
 
 // UFO
+#include <ufo/map/empty/empty_node.h>
 #include <ufo/map/types.h>
 
 // STL
 #include <iostream>
-#include <vector>
 
 namespace ufo::map
 {
-template <std::size_t Num, class Derived, class LeafNode>
+template <std::size_t Num, class Derived>
 class EmptyMap
 {
  protected:
@@ -65,8 +65,10 @@ class EmptyMap
 	// Update node
 	//
 
+	static constexpr void updateNode(EmptyNode) noexcept {}
+
 	template <class T>
-	static constexpr void updateNode(LeafNode&, T const&) noexcept
+	static constexpr void updateNode(EmptyNode, T const&) noexcept
 	{
 	}
 
@@ -84,11 +86,13 @@ class EmptyMap
 		return getDataIdentifier() == identifier;
 	}
 
-	static constexpr void readNodes(std::istream&, std::vector<LeafNode*> const&) noexcept
+	template <class InputIt>
+	static constexpr void readNodes(std::istream&, InputIt, InputIt) noexcept
 	{
 	}
 
-	static constexpr void writeNodes(std::ostream&, std::vector<LeafNode> const&) noexcept
+	template <class InputIt>
+	static constexpr void writeNodes(std::ostream&, InputIt, InputIt) noexcept
 	{
 	}
 };

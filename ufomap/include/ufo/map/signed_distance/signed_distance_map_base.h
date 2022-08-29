@@ -48,6 +48,7 @@
 
 // STL
 #include <cstdint>
+#include <iostream>
 #include <type_traits>
 #include <utility>
 
@@ -194,8 +195,10 @@ class SignedDistanceMapBase
 	// Update node
 	//
 
+	void updateNode(SignedDistanceNode) {}
+
 	template <class T>
-	void updateNode(LeafNode& node, T const& children)
+	void updateNode(SignedDistanceNode& node, T const& children)
 	{
 		switch (signed_distance_prop_criteria_) {
 			case PropagationCriteria::MIN:
@@ -254,32 +257,33 @@ class SignedDistanceMapBase
 		return getDataIdentifier() == identifier;
 	}
 
-	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
+	template <class InputIt>
+	void readNodes(std::istream& in, InputIt first, InputIt last)
 	{
-		auto const num_nodes = nodes.size();
+		auto const num_nodes = std::distance(first, last);
 
 		auto data = std::make_unique<signed_distance_t[]>(num_nodes);
-		in_stream.read(reinterpret_cast<char*>(data.get()),
-		               num_nodes * sizeof(signed_distance_t));
+		in.read(reinterpret_cast<char*>(data.get()),
+		        num_nodes * sizeof(typename decltype(data)::element_type));
 
-		for (size_t i = 0; num_nodes != i; ++i) {
-			setSignedDistance(*nodes[i], data[i]);
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			setSignedDistance(*first, data[i]);
 		}
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes,
-	                bool compress, int compression_acceleration_level,
-	                int compression_level) const
+	template <class InputIt>
+	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool compress,
+	                int compression_acceleration_level, int compression_level) const
 	{
-		auto const num_nodes = nodes.size();
+		auto const num_nodes = std::distance(first, last);
 
 		auto data = std::make_unique<signed_distance_t[]>(num_nodes);
-		for (size_t i = 0; num_nodes != i; ++i) {
-			data[i] = getSignedDistance(nodes[i]);
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			data[i] = getSignedDistance(*first);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 num_nodes * sizeof(signed_distance_t));
+		out.write(reinterpret_cast<char const*>(data.get()),
+		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:

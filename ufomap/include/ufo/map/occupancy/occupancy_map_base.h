@@ -56,77 +56,68 @@
 
 // STL
 #include <cstdint>
-#include <numeric>
-#include <sstream>
+#include <iostream>
+#include <limits>
 #include <type_traits>
-#include <vector>
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode>
+template <class Derived>
 class OccupancyMapBase
 {
- protected:
-	// Support float and uint8_t Occupancy value right now.
-	// (and uint32_t given that it is packed with Time)
-	static_assert(std::is_base_of_v<OccupancyNode<float>, LeafNode> ||
-	              std::is_base_of_v<OccupancyNode<uint8_t>, LeafNode> ||
-	              std::is_base_of_v<OccupancyTimeNode, LeafNode>);
-
- public:
-	using logit_t = std::conditional_t<std::is_base_of_v<OccupancyTimeNode, LeafNode>,
-	                                   uint8_t, decltype(LeafNode::occupancy)>;
-
  public:
 	//
 	// Get sensor model
 	//
 
-	constexpr float getOccupancyClampingThresMin() const noexcept
+	constexpr occupancy_t getOccupancyClampingThresMin() const noexcept
 	{
 		return math::probability(getOccupancyClampingThresMinLogit());
 	}
 
-	constexpr float getOccupancyClampingThresMinLogit() const noexcept
+	constexpr occupancy_t getOccupancyClampingThresMinLogit() const noexcept
 	{
-		return occupancy_clamping_thres_min_log_;
+		return clamping_thres_min_logit_;
 	}
 
-	constexpr float getOccupancyClampingThresMax() const noexcept
+	constexpr occupancy_t getOccupancyClampingThresMax() const noexcept
 	{
 		return math::probability(getOccupancyClampingThresMaxLogit());
 	}
 
-	constexpr float getOccupancyClampingThresMaxLogit() const noexcept
+	constexpr occupancy_t getOccupancyClampingThresMaxLogit() const noexcept
 	{
-		return occupancy_clamping_thres_max_log_;
+		return clamping_thres_max_logit_;
 	}
 
-	constexpr float getOccupiedThres() const noexcept
+	constexpr occupancy_t getOccupiedThres() const noexcept
 	{
 		return toOccupancyProbability(getOccupiedThresLogit());
 	}
 
-	constexpr logit_t getOccupiedThresLogit() const noexcept { return occupied_thres_log_; }
+	constexpr logit_t getOccupiedThresLogit() const noexcept
+	{
+		return occupied_thres_logit_;
+	}
 
-	constexpr float getFreeThres() const noexcept
+	constexpr occupancy_t getFreeThres() const noexcept
 	{
 		return toOccupancyProbability(getFreeThresLogit());
 	}
 
-	constexpr logit_t getFreeThresLogit() const noexcept { return free_thres_log_; }
+	constexpr logit_t getFreeThresLogit() const noexcept { return free_thres_logit_; }
 
 	//
 	// Probability <-> logit
 	//
 
-	constexpr logit_t toOccupancyLogit(float probability) const
+	constexpr logit_t toOccupancyLogit(occupancy_t probability) const
 	{
 		return math::logit<logit_t>(probability, getOccupancyClampingThresMinLogit(),
 		                            getOccupancyClampingThresMaxLogit());
 	}
 
-	constexpr float toOccupancyProbability(logit_t logit) const
+	constexpr occupancy_t toOccupancyProbability(logit_t logit) const
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			return math::probability(logit, getOccupancyClampingThresMinLogit(),
@@ -136,7 +127,7 @@ class OccupancyMapBase
 		}
 	}
 
-	constexpr logit_t toOccupancyChangeLogit(float probability) const
+	constexpr logit_t toOccupancyChangeLogit(occupancy_t probability) const
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			return math::logitChangeValue<uint8_t>(probability,
@@ -151,7 +142,7 @@ class OccupancyMapBase
 	// Set sensor model
 	//
 
-	void setOccupiedFreeThres(float new_occupied_thres, float new_free_thres,
+	void setOccupiedFreeThres(occupancy_t new_occupied_thres, occupancy_t new_free_thres,
 	                          bool propagate = true)
 	{
 		// FIXME: Should add a warning that these are very computational expensive to
@@ -168,8 +159,8 @@ class OccupancyMapBase
 		// FIXME: Should add a warning that these are very computational expensive to
 		// call since the whole tree has to be updated
 
-		occupied_thres_log_ = new_occupied_thres;
-		free_thres_log_ = new_free_thres;
+		occupied_thres_logit_ = new_occupied_thres;
+		free_thres_logit_ = new_free_thres;
 
 		derived().setModifiedChildren();
 
@@ -178,22 +169,22 @@ class OccupancyMapBase
 		}
 	}
 
-	constexpr void setOccupancyClampingThres(float min_thres_probability,
-	                                         float max_thres_probability)
+	constexpr void setOccupancyClampingThres(occupancy_t min_thres_probability,
+	                                         occupancy_t max_thres_probability)
 	{
 		setOccupancyClampingThresMin(min_thres_probability);
 		setOccupancyClampingThresMax(max_thres_probability);
 	}
 
-	constexpr void setOccupancyClampingThresMin(float probability)
+	constexpr void setOccupancyClampingThresMin(occupancy_t probability)
 	{
-		occupancy_clamping_thres_min_log_ = math::logit(probability);
+		clamping_thres_min_logit_ = math::logit(probability);
 		// FIXME: Should this update occupancy values?
 	}
 
-	constexpr void setOccupancyClampingThresMax(float probability)
+	constexpr void setOccupancyClampingThresMax(occupancy_t probability)
 	{
-		occupancy_clamping_thres_max_log_ = math::logit(probability);
+		clamping_thres_max_logit_ = math::logit(probability);
 		// FIXME: Should this update occupancy values?
 	}
 
@@ -203,17 +194,17 @@ class OccupancyMapBase
 
 	constexpr PropagationCriteria getOccupancyPropagationCriteria() const noexcept
 	{
-		return occupancy_prop_criteria_;
+		return prop_criteria_;
 	}
 
 	constexpr void setOccupancyPropagationCriteria(
 	    PropagationCriteria occupancy_prop_criteria, bool propagate = true) noexcept
 	{
-		if (occupancy_prop_criteria_ == occupancy_prop_criteria) {
+		if (prop_criteria_ == occupancy_prop_criteria) {
 			return;
 		}
 
-		occupancy_prop_criteria_ = occupancy_prop_criteria;
+		prop_criteria_ = occupancy_prop_criteria;
 
 		// Set all inner nodes to modified
 		// FIXME: Possible to optimize this to only set the ones with children
@@ -264,7 +255,7 @@ class OccupancyMapBase
 	// Get occupancy state
 	//
 
-	OccupancyState getOccupancyState(Node const& node) const
+	OccupancyState getOccupancyState(Node node) const
 	{
 		if (isUnknown(derived().getLeafNode(node))) {
 			return OccupancyState::UNKNOWN;
@@ -277,7 +268,7 @@ class OccupancyMapBase
 
 	OccupancyState getOccupancyState(Code code) const
 	{
-		LeafNode const& node = derived().getLeafNode(code);
+		auto const& node = derived().getLeafNode(code);
 		if (isUnknown(node)) {
 			return OccupancyState::UNKNOWN;
 		} else if (isFree(node)) {
@@ -289,7 +280,7 @@ class OccupancyMapBase
 
 	OccupancyState getOccupancyState(Key key) const
 	{
-		return getOccupancyState(Derived::toCode(key));
+		return getOccupancyState(derived().toCode(key));
 	}
 
 	OccupancyState getOccupancyState(Point3 coord, depth_t depth = 0) const
@@ -307,7 +298,7 @@ class OccupancyMapBase
 	// Contains occupancy state
 	//
 
-	bool containsOccupancyState(OccupancyState state, Node const& node) const
+	bool containsOccupancyState(Node node, OccupancyState state) const
 	{
 		switch (state) {
 			case OccupancyState::UNKNOWN:
@@ -319,7 +310,7 @@ class OccupancyMapBase
 		}
 	}
 
-	bool containsOccupancyState(OccupancyState state, Code code) const
+	bool containsOccupancyState(Code code, OccupancyState state) const
 	{
 		switch (state) {
 			case OccupancyState::UNKNOWN:
@@ -331,34 +322,31 @@ class OccupancyMapBase
 		}
 	}
 
-	bool containsOccupancyState(OccupancyState state, Key key) const
+	bool containsOccupancyState(Key key, OccupancyState state) const
 	{
-		return containsOccupancyState(state, Derived::toCode(key));
+		return containsOccupancyState(derived().toCode(key), state);
 	}
 
-	bool containsOccupancyState(OccupancyState state, Point3 coord, depth_t depth = 0) const
+	bool containsOccupancyState(Point3 coord, OccupancyState state, depth_t depth = 0) const
 	{
-		return containsOccupancyState(state, derived().toCode(coord, depth));
+		return containsOccupancyState(derived().toCode(coord, depth), state);
 	}
 
-	bool containsOccupancyState(OccupancyState state, coord_t x, coord_t y, coord_t z,
+	bool containsOccupancyState(coord_t x, coord_t y, coord_t z, OccupancyState state,
 	                            depth_t depth = 0) const
 	{
-		return containsOccupancyState(state, derived().toCode(x, y, z, depth));
+		return containsOccupancyState(derived().toCode(x, y, z, depth), state);
 	}
 
 	//
 	// Is unknown
 	//
 
-	bool isUnknown(Node const& node) const
-	{
-		return isUnknown(derived().getLeafNode(node));
-	}
+	bool isUnknown(Node node) const { return isUnknown(derived().getLeafNode(node)); }
 
 	bool isUnknown(Code code) const { return isUnknown(derived().getLeafNode(code)); }
 
-	bool isUnknown(Key key) const { return isUnknown(Derived::toCode(key)); }
+	bool isUnknown(Key key) const { return isUnknown(derived().toCode(key)); }
 
 	bool isUnknown(Point3 coord, depth_t depth = 0) const
 	{
@@ -374,11 +362,11 @@ class OccupancyMapBase
 	// Is free
 	//
 
-	bool isFree(Node const& node) const { return isFree(derived().getLeafNode(node)); }
+	bool isFree(Node node) const { return isFree(derived().getLeafNode(node)); }
 
 	bool isFree(Code code) const { return isFree(derived().getLeafNode(code)); }
 
-	bool isFree(Key key) const { return isFree(Derived::toCode(key)); }
+	bool isFree(Key key) const { return isFree(derived().toCode(key)); }
 
 	bool isFree(Point3 coord, depth_t depth = 0) const
 	{
@@ -394,14 +382,11 @@ class OccupancyMapBase
 	// Is occupied
 	//
 
-	bool isOccupied(Node const& node) const
-	{
-		return isOccupied(derived().getLeafNode(node));
-	}
+	bool isOccupied(Node node) const { return isOccupied(derived().getLeafNode(node)); }
 
 	bool isOccupied(Code code) const { return isOccupied(derived().getLeafNode(code)); }
 
-	bool isOccupied(Key key) const { return isOccupied(Derived::toCode(key)); }
+	bool isOccupied(Key key) const { return isOccupied(derived().toCode(key)); }
 
 	bool isOccupied(Point3 coord, depth_t depth = 0) const
 	{
@@ -417,14 +402,14 @@ class OccupancyMapBase
 	// Contains unknown
 	//
 
-	bool containsUnknown(Node const& node) const
+	bool containsUnknown(Node node) const
 	{
 		return containsUnknown(derived().getLeafNode(node));
 	}
 
 	bool containsUnknown(Code code) const { containsUnknown(derived().getLeafNode(code)); }
 
-	bool containsUnknown(Key key) const { return containsUnknown(Derived::toCode(key)); }
+	bool containsUnknown(Key key) const { return containsUnknown(derived().toCode(key)); }
 
 	bool containsUnknown(Point3 coord, depth_t depth = 0) const
 	{
@@ -440,14 +425,11 @@ class OccupancyMapBase
 	// Contains free
 	//
 
-	bool containsFree(Node const& node) const
-	{
-		return containsFree(derived().getLeafNode(node));
-	}
+	bool containsFree(Node node) const { return containsFree(derived().getLeafNode(node)); }
 
 	bool containsFree(Code code) const { return containsFree(derived().getLeafNode(code)); }
 
-	bool containsFree(Key key) const { return containsFree(Derived::toCode(key)); }
+	bool containsFree(Key key) const { return containsFree(derived().toCode(key)); }
 
 	bool containsFree(Point3 coord, depth_t depth = 0) const
 	{
@@ -463,7 +445,7 @@ class OccupancyMapBase
 	// Contains occupied
 	//
 
-	bool containsOccupied(Node const& node) const
+	bool containsOccupied(Node node) const
 	{
 		return containsOccupied(derived().getLeafNode(node));
 	}
@@ -473,7 +455,7 @@ class OccupancyMapBase
 		return containsOccupied(derived().getLeafNode(code));
 	}
 
-	bool containsOccupied(Key key) const { return containsOccupied(Derived::toCode(key)); }
+	bool containsOccupied(Key key) const { return containsOccupied(derived().toCode(key)); }
 
 	bool containsOccupied(Point3 coord, depth_t depth = 0) const
 	{
@@ -489,24 +471,24 @@ class OccupancyMapBase
 	// Get occupancy
 	//
 
-	float getOccupancy(Node const& node) const
+	occupancy_t getOccupancy(Node node) const
 	{
 		return getOccupancy(derived().getLeafNode(node));
 	}
 
-	float getOccupancy(Code code) const
+	occupancy_t getOccupancy(Code code) const
 	{
 		return getOccupancy(derived().getLeafNode(code));
 	}
 
-	float getOccupancy(Key key) const { return getOccupancy(Derived::toCode(key)); }
+	occupancy_t getOccupancy(Key key) const { return getOccupancy(derived().toCode(key)); }
 
-	float getOccupancy(Point3 coord, depth_t depth = 0) const
+	occupancy_t getOccupancy(Point3 coord, depth_t depth = 0) const
 	{
 		return getOccupancy(derived().toCode(coord, depth));
 	}
 
-	float getOccupancy(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	occupancy_t getOccupancy(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return getOccupancy(derived().toCode(x, y, z, depth));
 	}
@@ -515,7 +497,7 @@ class OccupancyMapBase
 	// Get occupancy logit
 	//
 
-	logit_t getOccupancyLogit(Node const& node) const
+	logit_t getOccupancyLogit(Node node) const
 	{
 		return getOccupancyLogit(derived().getLeafNode(node));
 	}
@@ -527,7 +509,7 @@ class OccupancyMapBase
 
 	logit_t getOccupancyLogit(Key key) const
 	{
-		return getOccupancyLogit(Derived::toCode(key));
+		return getOccupancyLogit(derived().toCode(key));
 	}
 
 	logit_t getOccupancyLogit(Point3 coord, depth_t depth = 0) const
@@ -544,30 +526,30 @@ class OccupancyMapBase
 	// Set occupancy
 	//
 
-	void setOccupancy(Node& node, float occupancy, bool propagate = true)
+	void setOccupancy(Node& node, occupancy_t occupancy, bool propagate = true)
 	{
 		logit_t logit = toOccupancyLogit(occupancy);
 		setOccupancyLogit(node, logit, propagate);
 	}
 
-	void setOccupancy(Code code, float occupancy, bool propagate = true)
+	void setOccupancy(Code code, occupancy_t occupancy, bool propagate = true)
 	{
 		logit_t logit = toOccupancyLogit(occupancy);
 		setOccupancyLogit(code, logit, propagate);
 	}
 
-	void setOccupancy(Key key, float occupancy, bool propagate = true)
+	void setOccupancy(Key key, occupancy_t occupancy, bool propagate = true)
 	{
-		setOccupancy(Derived::toCode(key), occupancy, propagate);
+		setOccupancy(derived().toCode(key), occupancy, propagate);
 	}
 
-	void setOccupancy(Point3 coord, float occupancy, bool propagate = true,
+	void setOccupancy(Point3 coord, occupancy_t occupancy, bool propagate = true,
 	                  depth_t depth = 0)
 	{
 		setOccupancy(derived().toCode(coord, depth), occupancy, propagate);
 	}
 
-	void setOccupancy(coord_t x, coord_t y, coord_t z, float occupancy,
+	void setOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t occupancy,
 	                  bool propagate = true, depth_t depth = 0)
 	{
 		setOccupancy(derived().toCode(x, y, z, depth), occupancy, propagate);
@@ -577,23 +559,23 @@ class OccupancyMapBase
 	// Set occupancy logit
 	//
 
-	void setOccupancyLogit(Node& node, logit_t logit, bool propagate = true)
+	void setOccupancyLogit(Node node, logit_t logit, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, logit](LeafNode& node) { setOccupancyLogit(node, logit); },
+		    node, [this, logit](OccupancyNode& node) { setOccupancyLogit(node, logit); },
 		    propagate);
 	}
 
 	void setOccupancyLogit(Code code, logit_t logit, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, logit](LeafNode& node) { setOccupancyLogit(node, logit); },
+		    code, [this, logit](OccupancyNode& node) { setOccupancyLogit(node, logit); },
 		    propagate);
 	}
 
 	void setOccupancyLogit(Key key, logit_t logit, bool propagate = true)
 	{
-		setOccupancyLogit(Derived::toCode(key), logit, propagate);
+		setOccupancyLogit(derived().toCode(key), logit, propagate);
 	}
 
 	void setOccupancyLogit(Point3 coord, logit_t logit, bool propagate = true,
@@ -615,20 +597,20 @@ class OccupancyMapBase
 	void increaseOccupancyLogit(Node& node, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
+		    node, [this, inc](OccupancyNode& node) { increaseOccupancyLogit(node, inc); },
 		    propagate);
 	}
 
 	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, inc](LeafNode& node) { increaseOccupancyLogit(node, inc); },
+		    code, [this, inc](OccupancyNode& node) { increaseOccupancyLogit(node, inc); },
 		    propagate);
 	}
 
 	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
 	{
-		increaseOccupancyLogit(Derived::toCode(key), inc, propagate);
+		increaseOccupancyLogit(derived().toCode(key), inc, propagate);
 	}
 
 	void increaseOccupancyLogit(Point3 coord, logit_t inc, bool propagate = true,
@@ -650,20 +632,20 @@ class OccupancyMapBase
 	void decreaseOccupancyLogit(Node& node, logit_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
+		    node, [this, dec](OccupancyNode& node) { decreaseOccupancyLogit(node, dec); },
 		    propagate);
 	}
 
 	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, dec](LeafNode& node) { decreaseOccupancyLogit(node, dec); },
+		    code, [this, dec](OccupancyNode& node) { decreaseOccupancyLogit(node, dec); },
 		    propagate);
 	}
 
 	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
 	{
-		decreaseOccupancyLogit(Derived::toCode(key), dec, propagate);
+		decreaseOccupancyLogit(derived().toCode(key), dec, propagate);
 	}
 
 	void decreaseOccupancyLogit(Point3 coord, logit_t dec, bool propagate = true,
@@ -682,28 +664,28 @@ class OccupancyMapBase
 	// Increase occupancy
 	//
 
-	void increaseOccupancy(Node& node, float inc, bool propagate = true)
+	void increaseOccupancy(Node& node, occupancy_t inc, bool propagate = true)
 	{
 		increaseOccupancyLogit(node, toOccupancyChangeLogit(inc), propagate);
 	}
 
-	void increaseOccupancy(Code code, float inc, bool propagate = true)
+	void increaseOccupancy(Code code, occupancy_t inc, bool propagate = true)
 	{
 		increaseOccupancyLogit(code, toOccupancyChangeLogit(inc), propagate);
 	}
 
-	void increaseOccupancy(Key key, float inc, bool propagate = true)
+	void increaseOccupancy(Key key, occupancy_t inc, bool propagate = true)
 	{
-		increaseOccupancy(Derived::toCode(key), inc, propagate);
+		increaseOccupancy(derived().toCode(key), inc, propagate);
 	}
 
-	void increaseOccupancy(Point3 coord, float inc, bool propagate = true,
+	void increaseOccupancy(Point3 coord, occupancy_t inc, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		increaseOccupancy(derived().toCode(coord, depth), inc, propagate);
 	}
 
-	void increaseOccupancy(coord_t x, coord_t y, coord_t z, float inc,
+	void increaseOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t inc,
 	                       bool propagate = true, depth_t depth = 0)
 	{
 		increaseOccupancy(derived().toCode(x, y, z, depth), inc, propagate);
@@ -713,55 +695,34 @@ class OccupancyMapBase
 	// Decrease occupancy
 	//
 
-	void decreaseOccupancy(Node& node, float dec, bool propagate = true)
+	void decreaseOccupancy(Node& node, occupancy_t dec, bool propagate = true)
 	{
 		decreaseOccupancyLogit(node, toOccupancyChangeLogit(dec), propagate);
 	}
 
-	void decreaseOccupancy(Code code, float dec, bool propagate = true)
+	void decreaseOccupancy(Code code, occupancy_t dec, bool propagate = true)
 	{
 		decreaseOccupancyLogit(code, toOccupancyChangeLogit(dec), propagate);
 	}
 
-	void decreaseOccupancy(Key key, float dec, bool propagate = true)
+	void decreaseOccupancy(Key key, occupancy_t dec, bool propagate = true)
 	{
-		decreaseOccupancy(Derived::toCode(key), dec, propagate);
+		decreaseOccupancy(derived().toCode(key), dec, propagate);
 	}
 
-	void decreaseOccupancy(Point3 coord, float dec, bool propagate = true,
+	void decreaseOccupancy(Point3 coord, occupancy_t dec, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		decreaseOccupancy(derived().toCode(coord, depth), dec, propagate);
 	}
 
-	void decreaseOccupancy(coord_t x, coord_t y, coord_t z, float dec,
+	void decreaseOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t dec,
 	                       bool propagate = true, depth_t depth = 0)
 	{
 		decreaseOccupancy(derived().toCode(x, y, z, depth), dec, propagate);
 	}
 
  protected:
-	//
-	// Constructors
-	//
-
-	OccupancyMapBase(float occupied_thres = 0.5, float free_thres = 0.5,
-	                 float clamping_thres_min = 0.1192, float clamping_thres_max = 0.971)
-	    : occupancy_clamping_thres_min_log_(math::logit(clamping_thres_min)),
-	      occupancy_clamping_thres_max_log_(math::logit(clamping_thres_max))
-	{
-		occupied_thres_log_ = toOccupancyLogit(occupied_thres);
-		free_thres_log_ = toOccupancyLogit(free_thres);
-	}
-
-	OccupancyMapBase(OccupancyMapBase const& other) = default;
-
-	OccupancyMapBase(OccupancyMapBase&& other) = default;
-
-	OccupancyMapBase& operator=(OccupancyMapBase const& rhs) = default;
-
-	OccupancyMapBase& operator=(OccupancyMapBase&& rhs) = default;
-
 	//
 	// Derived
 	//
@@ -784,12 +745,12 @@ class OccupancyMapBase
 	// Get occupancy
 	//
 
-	constexpr float getOccupancy(LeafNode const& node) const noexcept
+	constexpr occupancy_t getOccupancy(OccupancyNode node) const noexcept
 	{
 		return toOccupancyProbability(getOccupancyLogit(node));
 	}
 
-	static constexpr logit_t getOccupancyLogit(LeafNode const& node) noexcept
+	static constexpr logit_t getOccupancyLogit(OccupancyNode node) noexcept
 	{
 		return node.occupancy;
 	}
@@ -798,12 +759,12 @@ class OccupancyMapBase
 	// Set occupancy
 	//
 
-	constexpr void setOccupancy(LeafNode& node, float new_occupancy)
+	constexpr void setOccupancy(OccupancyNode& node, occupancy_t new_occupancy)
 	{
 		setOccupancyLogit(node, toOccupancyLogit(new_occupancy));
 	}
 
-	constexpr void setOccupancyLogit(LeafNode& node, logit_t new_occupancy)
+	constexpr void setOccupancyLogit(OccupancyNode& node, logit_t new_occupancy)
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			node.occupancy = new_occupancy;
@@ -817,29 +778,29 @@ class OccupancyMapBase
 	// Checking state
 	//
 
-	constexpr bool isUnknown(LeafNode const& node) const noexcept
+	constexpr bool isUnknown(OccupancyNode node) const noexcept
 	{
 		return !isFree(node) && !isOccupied(node);
 	}
 
-	constexpr bool isFree(LeafNode const& node) const noexcept
+	constexpr bool isFree(OccupancyNode node) const noexcept
 	{
 		return getOccupancyLogit(node) < getFreeThresLogit();
 	}
 
-	constexpr bool isOccupied(LeafNode const& node) const noexcept
+	constexpr bool isOccupied(OccupancyNode node) const noexcept
 	{
 		return getOccupancyLogit(node) > getOccupiedThresLogit();
 	}
 
-	constexpr bool containsUnknown(LeafNode const& node) const noexcept
+	constexpr bool containsUnknown(OccupancyNode node) const noexcept
 	{
 		return node.contains_unknown;
 	}
 
-	constexpr bool containsFree(LeafNode const& node) const noexcept { node.contains_free; }
+	constexpr bool containsFree(OccupancyNode node) const noexcept { node.contains_free; }
 
-	constexpr bool containsOccupied(LeafNode const& node) const noexcept
+	constexpr bool containsOccupied(OccupancyNode node) const noexcept
 	{
 		node.contains_occupied;
 	}
@@ -848,7 +809,7 @@ class OccupancyMapBase
 	// Increase occupancy
 	//
 
-	constexpr void increaseOccupancyLogit(LeafNode& node, logit_t inc)
+	constexpr void increaseOccupancyLogit(OccupancyNode& node, logit_t inc)
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			node.occupancy = math::increaseLogit(static_cast<uint8_t>(node.occupancy), inc);
@@ -863,7 +824,7 @@ class OccupancyMapBase
 	// Decrease occupancy
 	//
 
-	constexpr void decreaseOccupancyLogit(LeafNode& node, logit_t dec)
+	constexpr void decreaseOccupancyLogit(OccupancyNode& node, logit_t dec)
 	{
 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
 			node.occupancy = math::decreaseLogit(static_cast<uint8_t>(node.occupancy), dec);
@@ -878,10 +839,17 @@ class OccupancyMapBase
 	// Update node
 	//
 
-	template <class T>
-	void updateNode(LeafNode& node, T const& children)
+	void updateNode(OccupancyNode& node)
 	{
-		switch (occupancy_prop_criteria_) {
+		node.contains_unknown = isUnknown(node);
+		node.contains_free = isFree(node);
+		node.contains_occupied = isOccupied(node);
+	}
+
+	template <class T>
+	void updateNode(OccupancyNode& node, T const& children)
+	{
+		switch (prop_criteria_) {
 			case PropagationCriteria::MIN:
 				setOccupancyLogit(node, minChildOccupancyLogit(children));
 				break;
@@ -892,6 +860,13 @@ class OccupancyMapBase
 				setOccupancyLogit(node, averageChildOccupancyLogit(children));
 				break;
 		}
+
+		node.contains_unknown =
+		    any_of(children, [this](auto const& child) { return containsUnknown(child); });
+		node.contains_free =
+		    any_of(children, [this](auto const& child) { return containsFree(child); });
+		node.contains_occupied =
+		    any_of(children, [this](auto const& child) { return containsOccupied(child); });
 	}
 
 	//
@@ -933,32 +908,14 @@ class OccupancyMapBase
 			unsigned int sum = std::accumulate(
 			    std::cbegin(children), std::cend(children), 0u,
 			    [](auto cur, auto const& child) { return cur + getOccupancyLogit(child); });
-			return sum / unsigned int(children.size());
+			return sum / children.size();
 		} else {
-			float sum = std::accumulate(
-			    std::cbegin(children), std::cend(children), 0.0f,
+			logit_t sum = std::accumulate(
+			    std::cbegin(children), std::cend(children), logit_t(0),
 			    [](auto cur, auto const& child) { return cur + getOccupancyLogit(child); });
 
-			return sum / float(children.size());
+			return sum / children.size();
 		}
-	}
-
-	void updateNodeIndicators(LeafNode& node)
-	{
-		node.contains_unknown = isUnknown(node);
-		node.contains_free = isFree(node);
-		node.contains_occupied = isOccupied(node);
-	}
-
-	template <class T>
-	void updateNodeIndicators(LeafNode& node, T const& children)
-	{
-		node.contains_unknown =
-		    any_of(children, [this](auto const& child) { return containsUnknown(child); });
-		node.contains_free =
-		    any_of(children, [this](auto const& child) { return containsFree(child); });
-		node.contains_occupied =
-		    any_of(children, [this](auto const& child) { return containsOccupied(child); });
 	}
 
 	//
@@ -975,101 +932,129 @@ class OccupancyMapBase
 		return getDataIdentifier() == identifier;
 	}
 
-	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
+	template <class InputIt>
+	void readNodes(std::istream& in, InputIt first, InputIt last)
 	{
-		uint8_t type;
-		in_stream.read(reinterpret_cast<char*>(&type), sizeof(type));
+		auto const num_nodes = std::distance(first, last);
 
-		// Get min/max threshold
-		decltype(occupancy_clamping_thres_min_log_) min_logit;
-		decltype(occupancy_clamping_thres_max_log_) max_logit;
-		in_stream.read(reinterpret_cast<char*>(&min_logit), sizeof(min_logit));
-		in_stream.read(reinterpret_cast<char*>(&max_logit), sizeof(max_logit));
-
-		auto const num_nodes = nodes.size();
-
-		if (0 == type) {
-			// uint8_t
-
-			auto data = std::make_unique<uint8_t[]>(num_nodes);
-			in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(uint8_t));
-
-			if constexpr (std::is_same_v<logit_t, uint8_t>) {
-				if (getOccupancyClampingThresMinLogit() == min_logit &&
-				    getOccupancyClampingThresMaxLogit() == max_logit) {
-					for (size_t i = 0; num_nodes != i; ++i) {
-						setOccupancyLogit(*nodes[i], data[i]);
-					}
-				} else {
-					for (size_t i = 0; num_nodes != i; ++i) {
-						setOccupancyLogit(*nodes[i],
-						                  math::convertLogit<uint8_t>(
-						                      math::convertLogit(data[i], min_logit, max_logit),
-						                      getOccupancyClampingThresMinLogit(),
-						                      getOccupancyClampingThresMaxLogit()));
-					}
-				}
-			} else {
-				for (size_t i = 0; num_nodes != i; ++i) {
-					setOccupancyLogit(*nodes[i],
-					                  std::clamp(math::convertLogit(data[i], min_logit, max_logit),
-					                             getOccupancyClampingThresMinLogit(),
-					                             getOccupancyClampingThresMaxLogit()));
-				}
-			}
-
-		} else {
-			// float
-
-			auto data = std::make_unique<float[]>(num_nodes);
-			in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(float));
-
-			for (size_t i = 0; num_nodes != i; ++i) {
-				if constexpr (std::is_same_v<logit_t, uint8_t>) {
-					setOccupancyLogit(*nodes[i],
-					                  math::convertLogit<uint8_t>(
-					                      std::clamp(data[i], getOccupancyClampingThresMinLogit(),
-					                                 getOccupancyClampingThresMaxLogit()),
-					                      getOccupancyClampingThresMinLogit(),
-					                      getOccupancyClampingThresMaxLogit()));
-				} else {
-					setOccupancyLogit(*nodes[i],
-					                  std::clamp(data[i], getOccupancyClampingThresMinLogit(),
-					                             getOccupancyClampingThresMaxLogit()));
-				}
-			}
-		}
-	}
-
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
-	{
-		constexpr uint8_t type = std::is_same_v<logit_t, uint8_t> ? 0 : 1;
-
-		out_stream.write(reinterpret_cast<char const*>(&type), sizeof(type));
-		out_stream.write(reinterpret_cast<char const*>(&occupancy_clamping_thres_min_log_),
-		                 sizeof(occupancy_clamping_thres_min_log_));
-		out_stream.write(reinterpret_cast<char const*>(&occupancy_clamping_thres_max_log_),
-		                 sizeof(occupancy_clamping_thres_max_log_));
-
-		auto const num_nodes = nodes.size();
 		auto data = std::make_unique<logit_t[]>(num_nodes);
-		for (size_t i = 0; num_nodes != i; ++i) {
-			data[i] = getOccupancyLogit(nodes[i]);
+		in.read(reinterpret_cast<char*>(data.get()),
+		        num_nodes * sizeof(typename decltype(data)::element_type));
+
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			setOccupancyLogit(*first, data[i]);
+		}
+	}
+
+	template <class InputIt>
+	void writeNodes(std::ostream& out, InputIt first, InputIt last)
+	{
+		auto const num_nodes = std::distance(first, last);
+
+		auto data = std::make_unique<logit_t[]>(num_nodes);
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			data[i] = getOccupancyLogit(*first);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 num_nodes * sizeof(logit_t));
+		out.write(reinterpret_cast<char const*>(data.get()),
+		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}
+
+	// void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
+	// {
+	// 	uint8_t type;
+	// 	in_stream.read(reinterpret_cast<char*>(&type), sizeof(type));
+
+	// 	// Get min/max threshold
+	// 	decltype(clamping_thres_min_logit_) min_logit;
+	// 	decltype(clamping_thres_max_logit_) max_logit;
+	// 	in_stream.read(reinterpret_cast<char*>(&min_logit), sizeof(min_logit));
+	// 	in_stream.read(reinterpret_cast<char*>(&max_logit), sizeof(max_logit));
+
+	// 	auto const num_nodes = nodes.size();
+
+	// 	if (0 == type) {
+	// 		// uint8_t
+
+	// 		auto data = std::make_unique<uint8_t[]>(num_nodes);
+	// 		in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(uint8_t));
+
+	// 		if constexpr (std::is_same_v<logit_t, uint8_t>) {
+	// 			if (getOccupancyClampingThresMinLogit() == min_logit &&
+	// 			    getOccupancyClampingThresMaxLogit() == max_logit) {
+	// 				for (size_t i = 0; num_nodes != i; ++i) {
+	// 					setOccupancyLogit(*nodes[i], data[i]);
+	// 				}
+	// 			} else {
+	// 				for (size_t i = 0; num_nodes != i; ++i) {
+	// 					setOccupancyLogit(*nodes[i],
+	// 					                  math::convertLogit<uint8_t>(
+	// 					                      math::convertLogit(data[i], min_logit, max_logit),
+	// 					                      getOccupancyClampingThresMinLogit(),
+	// 					                      getOccupancyClampingThresMaxLogit()));
+	// 				}
+	// 			}
+	// 		} else {
+	// 			for (size_t i = 0; num_nodes != i; ++i) {
+	// 				setOccupancyLogit(*nodes[i],
+	// 				                  std::clamp(math::convertLogit(data[i], min_logit,
+	// max_logit), 				                             getOccupancyClampingThresMinLogit(),
+	// 				                             getOccupancyClampingThresMaxLogit()));
+	// 			}
+	// 		}
+
+	// 	} else {
+	// 		// float
+
+	// 		auto data = std::make_unique<float[]>(num_nodes);
+	// 		in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(float));
+
+	// 		for (size_t i = 0; num_nodes != i; ++i) {
+	// 			if constexpr (std::is_same_v<logit_t, uint8_t>) {
+	// 				setOccupancyLogit(*nodes[i],
+	// 				                  math::convertLogit<uint8_t>(
+	// 				                      std::clamp(data[i], getOccupancyClampingThresMinLogit(),
+	// 				                                 getOccupancyClampingThresMaxLogit()),
+	// 				                      getOccupancyClampingThresMinLogit(),
+	// 				                      getOccupancyClampingThresMaxLogit()));
+	// 			} else {
+	// 				setOccupancyLogit(*nodes[i],
+	// 				                  std::clamp(data[i], getOccupancyClampingThresMinLogit(),
+	// 				                             getOccupancyClampingThresMaxLogit()));
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	// {
+	// 	constexpr uint8_t type = std::is_same_v<logit_t, uint8_t> ? 0 : 1;
+
+	// 	out_stream.write(reinterpret_cast<char const*>(&type), sizeof(type));
+	// 	out_stream.write(reinterpret_cast<char const*>(&clamping_thres_min_logit_),
+	// 	                 sizeof(clamping_thres_min_logit_));
+	// 	out_stream.write(reinterpret_cast<char const*>(&clamping_thres_max_logit_),
+	// 	                 sizeof(clamping_thres_max_logit_));
+
+	// 	auto const num_nodes = nodes.size();
+	// 	auto data = std::make_unique<logit_t[]>(num_nodes);
+	// 	for (size_t i = 0; num_nodes != i; ++i) {
+	// 		data[i] = getOccupancyLogit(nodes[i]);
+	// 	}
+
+	// 	out_stream.write(reinterpret_cast<char const*>(data.get()),
+	// 	                 num_nodes * sizeof(logit_t));
+	// }
 
  protected:
-	//  Sensor model
-	float occupancy_clamping_thres_min_log_;  // Min logit value
-	float occupancy_clamping_thres_max_log_;  // Max logit value
-	logit_t occupied_thres_log_;              // Threshold for occupied
-	logit_t free_thres_log_;                  // Threshold for free
+	occupancy_t clamping_thres_min_logit_ = math::logit(0.1192);  // Min logit value
+	occupancy_t clamping_thres_max_logit_ = math::logit(0.971);   // Max logit value
 
-	// Occupancy propagation criteria
-	PropagationCriteria occupancy_prop_criteria_ = PropagationCriteria::MAX;
+	logit_t occupied_thres_logit_ = toOccupancyLogit(0.5);  // Threshold for occupied
+	logit_t free_thres_logit_ = toOccupancyLogit(0.5);      // Threshold for free
+
+	// Propagation criteria
+	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
 };
 
 std::false_type is_occupancy_map_base_impl(...);

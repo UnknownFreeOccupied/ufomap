@@ -79,7 +79,7 @@ class IteratorBase
 
 	constexpr IteratorBase(Tree const* tree) : tree_(tree) {}
 
-	virtual IteratorBase& next() = 0;
+	virtual void next() = 0;
 
 	virtual IteratorBase* copy() = 0;
 
@@ -91,6 +91,8 @@ class IteratorBase
 	virtual bool equal(IteratorBase const& other) const = 0;
 
  protected:
+	virtual std::size_t status() const = 0;
+
 	template <class NodeType>
 	constexpr depth_t depth(NodeType const& node) const
 	{
@@ -159,13 +161,13 @@ class IteratorWrapper
 
  public:
 	// Tags
-	using iterator_category = typename Base::iterator_category;
-	using difference_type = typename Base::difference_type;
-	using value_type = typename Base::value_type;
-	using pointer = typename Base::pointer;
-	using reference = typename Base::reference;
-	using const_pointer = typename Base::const_pointer;
-	using const_reference = typename Base::const_reference;
+	using typename Base::const_pointer;
+	using typename Base::const_reference;
+	using typename Base::difference_type;
+	using typename Base::iterator_category;
+	using typename Base::pointer;
+	using typename Base::reference;
+	using typename Base::value_type;
 
 	IteratorWrapper(Base* it_base) : it_base_(it_base) {}
 
@@ -216,6 +218,9 @@ class Iterator : public IteratorBase<Tree, BaseNodeType>
 
 	using Base = IteratorBase<Tree, BaseNodeType>;
 
+	using Stack = std::stack<NodeType, std::vector<NodeType>>;
+	using Queue = std::queue<NodeType, std::vector<NodeType>>;
+
  public:
 	// Tags
 	using typename Base::const_pointer;
@@ -234,48 +239,7 @@ class Iterator : public IteratorBase<Tree, BaseNodeType>
 		init(root);
 	}
 
-	Iterator& next() override
-	{
-		increment();
-		return *this;
-	}
-
-	Iterator* copy() override { return new Iterator(*this); }
-
-	// reference data() override { return node_; }
-
-	const_reference data() const override { return return_nodes_.front(); }
-
-	bool equal(Base const& other) const override
-	{
-		return other.tree() == this->tree() && other.return_nodes_ == return_nodes_ &&
-		       other.inner_nodes_ == inner_nodes_;
-	}
-
- private:
-	void init(NodeType const& node)
-	{
-		if constexpr (OnlyLeaves) {
-			if (this->validReturnNode(node, predicates_)) {
-				return_nodes_.push(node);
-			} else if (this->validInnerNodeOnlyLeaves(node, predicates_)) {
-				inner_nodes_.push(node);
-				increment();
-			}
-		} else {
-			if (this->validInnerNode(node, predicates_)) {
-				inner_nodes_.push(node);
-			}
-
-			if (this->validReturnNode(node, predicates_)) {
-				return_nodes_.push(node);
-			} else {
-				increment();
-			}
-		}
-	}
-
-	void increment()
+	void next() override
 	{
 		if (!return_nodes_.empty()) {
 			return_nodes_.pop();
@@ -308,12 +272,50 @@ class Iterator : public IteratorBase<Tree, BaseNodeType>
 		}
 	}
 
- private:
-	// Predicates
-	Predicates const predicates_;
+	Iterator* copy() override { return new Iterator(*this); }
 
-	std::stack<NodeType, std::vector<NodeType>> inner_nodes_;
-	std::queue<NodeType, std::vector<NodeType>> return_nodes_;
+	// reference data() override { return node_; }
+
+	const_reference data() const override { return return_nodes_.front(); }
+
+	bool equal(Base const& other) const override
+	{
+		return other.tree() == this->tree() && other.status() == status() &&
+		       (!return_nodes_.empty() && other.data() == data());
+	}
+
+	std::size_t status() const override
+	{
+		return inner_nodes_.size() + return_nodes_.size();
+	}
+
+ private:
+	void init(NodeType const& node)
+	{
+		if constexpr (OnlyLeaves) {
+			if (this->validReturnNode(node, predicates_)) {
+				return_nodes_.push(node);
+			} else if (this->validInnerNodeOnlyLeaves(node, predicates_)) {
+				inner_nodes_.push(node);
+				next();
+			}
+		} else {
+			if (this->validInnerNode(node, predicates_)) {
+				inner_nodes_.push(node);
+			}
+
+			if (this->validReturnNode(node, predicates_)) {
+				return_nodes_.push(node);
+			} else {
+				next();
+			}
+		}
+	}
+
+ private:
+	Predicates const predicates_;  // Predicates that nodes has to fulfill
+	Stack inner_nodes_;            // To be processed inner nodes
+	Queue return_nodes_;           // To be processed return nodes
 };
 
 struct NearestNode {
@@ -366,6 +368,9 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 
 	using Base = IteratorBase<Tree, NearestNode>;
 
+	using Queue =
+	    std::priority_queue<value_type, std::vector<value_type>, std::greater<value_type>>;
+
  public:
 	// Tags
 	using typename Base::const_pointer;
@@ -385,10 +390,47 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 		init(root);
 	}
 
-	NearestIterator& next() override
+	void next() override
 	{
-		increment();
-		return *this;
+		if (!return_nodes_.empty()) {
+			return_nodes_.pop();
+		}
+
+		// Skip forward to next valid return node
+		while (!inner_nodes_.empty()) {
+			if (!return_nodes_.empty() && return_nodes_.top() <= inner_nodes_.top()) {
+				return;
+			}
+
+			auto current = this->child(inner_nodes_.top().node, 0);
+			inner_nodes_.pop();
+
+			for (unsigned int idx = 0; 8 != idx; ++idx) {
+				current = this->sibling(current, idx);
+
+				if constexpr (OnlyLeaves) {
+					if (this->validReturnNode(current, predicates_)) {
+						return_nodes_.emplace(current, squaredDistance(current));
+					} else if (this->validInnerNodeOnlyLeaves(current, predicates_)) {
+						inner_nodes_.emplace(current, squaredDistance(current) + epsilon_);
+					}
+				} else {
+					// No need to add inner nodes that does not have children
+					bool const valid_inner = this->validInnerNode(current, predicates_);
+					bool const valid_return = this->validReturnNode(current, predicates_);
+
+					if (valid_inner || valid_return) {
+						auto const dist_sq = squaredDistance(current);
+						if (valid_inner) {
+							inner_nodes_.emplace(current, dist_sq + epsilon_);
+						}
+						if (valid_return) {
+							return_nodes_.emplace(current, dist_sq);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	NearestIterator* copy() override { return new NearestIterator(*this); }
@@ -399,14 +441,17 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 
 	bool equal(Base const& other) const override
 	{
-		return other.tree() == this->tree() &&
-		       ((other.return_nodes_.empty() && return_nodes_.empty()) ||
-		        (!other.return_nodes_.empty() && !return_nodes_.empty() &&
-		         other.data() == data()));
+		return other.tree() == this->tree() && other.status() == status() &&
+		       (!return_nodes_.empty() && other.data() == data());
+	}
+
+	std::size_t status() const override
+	{
+		return inner_nodes_.size() + return_nodes_.size();
 	}
 
  private:
-	double squaredDistance(NodeBV const& node) const
+	float squaredDistance(NodeBV const& node) const
 	{
 		return geometry::squaredDistance(node.getBoundingVolume(), geometry_);
 	}
@@ -425,11 +470,11 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				inner_nodes_ = return_nodes_;
 
 				inner_nodes_.emplace(node, squaredDistance(node) + epsilon_);
-				increment();
+				next();
 			}
 		} else {
-			bool valid_inner = this->validInnerNode(node, predicates_);
-			bool valid_return = this->validReturnNode(node, predicates_);
+			bool const valid_inner = this->validInnerNode(node, predicates_);
+			bool const valid_return = this->validReturnNode(node, predicates_);
 
 			if (valid_inner || valid_return) {
 				std::vector<value_type> container;
@@ -439,7 +484,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				    std::greater<value_type>(), std::move(container));
 				inner_nodes_ = return_nodes_;
 
-				float dist_sq = squaredDistance(node);
+				auto const dist_sq = squaredDistance(node);
 
 				if (valid_inner) {
 					inner_nodes_.emplace(node, dist_sq + epsilon_);
@@ -447,69 +492,18 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				if (valid_return) {
 					return_nodes_.emplace(node, dist_sq);
 				} else {
-					increment();
-				}
-			}
-		}
-	}
-
-	void increment()
-	{
-		if (!return_nodes_.empty()) {
-			return_nodes_.pop();
-		}
-
-		// Skip forward to next valid return node
-		while (!inner_nodes_.empty()) {
-			if (!return_nodes_.empty() && return_nodes_.top() <= inner_nodes_.top()) {
-				return;
-			}
-
-			NodeBV current = this->child(inner_nodes_.top().node, 0);
-			inner_nodes_.pop();
-
-			for (unsigned int idx = 0; 8 != idx; ++idx) {
-				current = this->sibling(current, idx);
-
-				if constexpr (OnlyLeaves) {
-					if (this->validInnerNodeOnlyLeaves(current, predicates_)) {
-						inner_nodes_.emplace(current, squaredDistance(current) + epsilon_);
-					} else if (this->validReturnNode(current, predicates_)) {
-						return_nodes_.emplace(current, squaredDistance(current));
-					}
-				} else {
-					// No need to add inner nodes that does not have children
-					bool const valid_inner = this->validInnerNode(current, predicates_);
-					bool const valid_return = this->validReturnNode(current, predicates_);
-
-					if (valid_inner || valid_return) {
-						float dist_sq = squaredDistance(current);
-						if (valid_inner) {
-							inner_nodes_.emplace(current, dist_sq + epsilon_);
-						}
-						if (valid_return) {
-							return_nodes_.emplace(current, dist_sq);
-						}
-					}
+					next();
 				}
 			}
 		}
 	}
 
  private:
-	// Predicates
-	Predicates const predicates_;
-
-	// Geometry
-	Geometry const geometry_;
-
-	// Epsilon for approximate search
-	float const epsilon_;
-
-	std::priority_queue<value_type, std::vector<value_type>, std::greater<value_type>>
-	    inner_nodes_;
-	std::priority_queue<value_type, std::vector<value_type>, std::greater<value_type>>
-	    return_nodes_;
+	Predicates const predicates_;  // Predicates that nodes has to fulfill
+	Geometry const geometry_;      // Geometry to find nearest to
+	float const epsilon_;          // Epsilon for approximate search
+	Queue inner_nodes_;            // To be processed inner nodes
+	Queue return_nodes_;           // To be processed return nodes
 };
 }  // namespace ufo::map
 

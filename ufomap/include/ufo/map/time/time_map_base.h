@@ -44,21 +44,28 @@
 
 // UFO
 #include <ufo/map/predicate/time.h>
+#include <ufo/map/time/time_node.h>
 #include <ufo/map/types.h>
 
 // STL
-#include <vector>
+#include <functional>
+#include <iostream>
+#include <limits>
+#include <utility>
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode>
+template <class Derived>
 class TimeMapBase
 {
- public:
-	using time_t = typename LeafNode::time_t;
+ private:
+	using BlockNode = std::pair<std::reference_wrapper<TimeNodeBlock>, std::size_t>;
 
+	static constexpr bool BLOCK_BASED = Derived::BLOCK_BASED;
+
+ public:
 	//
-	// Get time step
+	// Get time
 	//
 
 	constexpr time_t getTime(Node node) const noexcept
@@ -81,19 +88,21 @@ class TimeMapBase
 	}
 
 	//
-	// Set time step
+	// Set time
 	//
 
 	void setTime(Node node, time_t time, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, time](LeafNode& node) { setTime(node, time); }, propagate);
+		    node, [time](auto& node) { TimeMapBase::setTime(node, time); },
+		    [time](auto& nodes) { TimeMapBase::setTime(nodes, time); }, propagate);
 	}
 
 	void setTime(Code code, time_t time, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, time](LeafNode& node) { setTime(node, time); }, propagate);
+		    code, [time](auto& node) { TimeMapBase::setTime(node, time); },
+		    [time](auto& nodes) { TimeMapBase::setTime(nodes, time); }, propagate);
 	}
 
 	void setTime(Key key, time_t time, bool propagate = true)
@@ -155,23 +164,48 @@ class TimeMapBase
 	void initRoot() { setTime(derived().getRoot(), 0); }
 
 	//
-	// Get time step
+	// Get time
 	//
 
-	static constexpr time_t getTime(LeafNode const& node) { return node.time; }
+	static constexpr time_t getTime(TimeNode node) noexcept { return node.time; }
+
+	static constexpr time_t getTime(BlockNode const& node) noexcept
+	{
+		return node.first.getTime(node.second);
+	}
 
 	//
-	// Set time step
+	// Set time
 	//
 
-	static constexpr void setTime(LeafNode& node, time_t time) { node.time = time; }
+	static constexpr void setTime(TimeNode& node, time_t time) { node.time = time; }
+
+	template <class T>
+	static constexpr void setTime(T& nodes, time_t time)
+	{
+		for (TimeNode& node : nodes) {
+			node.time = time;
+		}
+	}
+
+	static constexpr void setTime(BlockNode& node, time_t time)
+	{
+		node.first.setTime(node.second, time);
+	}
+
+	static constexpr void setTime(TimeNodeBlock& nodes, time_t time)
+	{
+		nodes.setTime(time);
+	}
 
 	//
 	// Update node
 	//
 
+	constexpr void updateNode(TimeNode) noexcept {}
+
 	template <class T>
-	void updateNode(LeafNode& node, T const& children)
+	void updateNode(TimeNode& node, T const& children)
 	{
 		switch (time_prop_criteria_) {
 			case PropagationCriteria::MIN:
@@ -186,8 +220,17 @@ class TimeMapBase
 		}
 	}
 
+	constexpr void updateNode(TimeNodeBlock&) noexcept {}
+
+	template <class T>
+	constexpr void updateNode(TimeNodeBlock& nodes, T const& children)
+	{
+		for (std::size_t i = 0; i !=) }
+
+	constexpr void updateNode(BlockNode& node, ) {}
+
 	//
-	// Min child time step
+	// Min child time
 	//
 
 	template <class T>
@@ -201,7 +244,7 @@ class TimeMapBase
 	}
 
 	//
-	// Max child time step
+	// Max child time
 	//
 
 	template <class T>
@@ -215,7 +258,7 @@ class TimeMapBase
 	}
 
 	//
-	// Average child time step
+	// Average child time
 	//
 
 	template <class T>
@@ -242,35 +285,32 @@ class TimeMapBase
 		return getDataIdentifier() == identifier;
 	}
 
-	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
+	template <class InputIt>
+	void readNodes(std::istream& in, InputIt first, InputIt last)
 	{
-		uint8_t type;
-		in_stream.read(reinterpret_cast<char*>(&type), sizeof(type));
-		DataType dt = getDataType(type);
+		auto const num_nodes = std::distance(first, last);
 
-		auto const num_nodes = nodes.size();
+		auto data = std::make_unique<time_t[]>(num_nodes);
+		in.read(reinterpret_cast<char*>(data.get()),
+		        num_nodes * sizeof(typename decltype(data)::element_type));
 
-		auto data = std::make_unique<time_t[]>(nodes.size());
-		in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(time_t));
-
-		for (size_t i = 0; num_nodes != i; ++i) {
-			setTime(*nodes[i], data[i]);
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			setTime(*first, data[i]);
 		}
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	template <class InputIt>
+	void writeNodes(std::ostream& out, InputIt first, InputIt last)
 	{
-		uint8_t type = util::enumToValue(getDataType<time_t>());
-		out_stream.write(reinterpret_cast<char const*>(&type), sizeof(type));
+		auto const num_nodes = std::distance(first, last);
 
-		auto num_nodes = nodes.size();
 		auto data = std::make_unique<time_t[]>(num_nodes);
-		for (size_t i = 0; num_nodes != i; ++i) {
-			data[i] = getTime(nodes[i]);
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			data[i] = getTime(*first);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 num_nodes * sizeof(time_t));
+		out.write(reinterpret_cast<char const*>(data.get()),
+		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:

@@ -44,21 +44,16 @@
 
 // UFO
 #include <ufo/map/color/color_node.h>
-#include <ufo/map/octree/octree_base.h>
 #include <ufo/map/predicate/color.h>
 
 // STL
-#include <deque>
-#include <type_traits>
+#include <iostream>
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode>
+template <class Derived>
 class ColorMapBase
 {
- protected:
-	static_assert(std::is_base_of_v<ColorNode, LeafNode>);
-
  public:
 	//
 	// Get color
@@ -93,13 +88,15 @@ class ColorMapBase
 	constexpr void setColor(Node& node, RGBColor color, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, &color](LeafNode& node) { setColor(node, color); }, propagate);
+		    node, [color](ColorNode& node) { ColorMapBase::setColor(node, color); },
+		    propagate);
 	}
 
 	constexpr void setColor(Code code, RGBColor color, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, color](LeafNode& node) { setColor(node, color); }, propagate);
+		    code, [color](ColorNode& node) { ColorMapBase::setColor(node, color); },
+		    propagate);
 	}
 
 	constexpr void setColor(Key key, RGBColor color, bool propagate = true)
@@ -126,13 +123,13 @@ class ColorMapBase
 	constexpr void clearColor(Node& node, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this](LeafNode& node) { clearColor(node); }, propagate);
+		    node, [](ColorNode& node) { ColorMapBase::clearColor(node); }, propagate);
 	}
 
 	constexpr void clearColor(Code code, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this](LeafNode& node) { clearColor(node); }, propagate);
+		    code, [](ColorNode& node) { ColorMapBase::clearColor(node); }, propagate);
 	}
 
 	constexpr void clearColor(Key key, bool propagate = true)
@@ -170,13 +167,15 @@ class ColorMapBase
 	// Get color
 	//
 
-	static constexpr RGBColor getColor(LeafNode const& node) noexcept { return node.color; }
+	static constexpr RGBColor& getColor(ColorNode& node) noexcept { return node.color; }
+
+	static constexpr RGBColor getColor(ColorNode node) noexcept { return node.color; }
 
 	//
 	// Set color
 	//
 
-	static constexpr void setColor(LeafNode& node, RGBColor color) noexcept
+	static constexpr void setColor(ColorNode& node, RGBColor color) noexcept
 	{
 		node.color = color;
 	}
@@ -185,18 +184,20 @@ class ColorMapBase
 	// Clear color
 	//
 
-	static constexpr void clearColor(LeafNode& node) noexcept { node.color.clear(); }
+	static constexpr void clearColor(ColorNode& node) noexcept { getColor(node).clear(); }
 
 	//
 	// Update node
 	//
 
+	constexpr void updateNode(ColorNode) noexcept {}
+
 	template <class T>
-	void updateNode(LeafNode& node, T const& children)
+	void updateNode(ColorNode& node, T const& children)
 	{
 		std::array<RGBColor, children.size()> colors;
 		for (std::size_t i = 0; children.size() != i; ++i) {
-			colors[i] = children[i].color;
+			colors[i] = getColor(children[i]);
 		}
 
 		setColor(node, RGBColor::average(std::cbegin(colors), std::cend(colors)));
@@ -216,29 +217,32 @@ class ColorMapBase
 		return getDataIdentifier() == identifier;
 	}
 
-	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
+	template <class InputIt>
+	void readNodes(std::istream& in, InputIt first, InputIt last)
 	{
-		auto const num_nodes = nodes.size();
+		auto const num_nodes = std::distance(first, last);
 
 		auto data = std::make_unique<RGBColor[]>(num_nodes);
-		in_stream.read(reinterpret_cast<char*>(data.get()), num_nodes * sizeof(RGBColor));
+		in.read(reinterpret_cast<char*>(data.get()),
+		        num_nodes * sizeof(typename decltype(data)::element_type));
 
-		for (std::size_t i = 0; num_nodes != i; ++i) {
-			setColor(*nodes[i], data[i]);
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			setColor(*first, data[i]);
 		}
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	template <class InputIt>
+	void writeNodes(std::ostream& out, InputIt first, InputIt last)
 	{
-		auto const num_nodes = nodes.size();
+		auto const num_nodes = std::distance(first, last);
 
 		auto data = std::make_unique<RGBColor[]>(num_nodes);
-		for (size_t i = 0; num_nodes != i; ++i) {
-			data[i] = getColor(nodes[i]);
+		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
+			data[i] = getColor(*first);
 		}
 
-		out_stream.write(reinterpret_cast<char const*>(data.get()),
-		                 num_nodes * sizeof(RGBColor));
+		out.write(reinterpret_cast<char const*>(data.get()),
+		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}
 };
 }  // namespace ufo::map

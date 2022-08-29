@@ -75,29 +75,10 @@ struct OctreeLeafNode : Data, Indicators {
 	constexpr bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
 };
 
-template <class LeafNode, std::size_t Num = 1>
+template <class LeafNode>
 struct OctreeInnerNode : LeafNode {
 	using InnerChildrenBlock = std::array<OctreeInnerNode, 8>;
 	using LeafChildrenBlock = std::array<LeafNode, 8>;
-
-	// Pointer to children
-	union {
-		std::conditional_t<1 == Num, InnerChildrenBlock*,
-		                   std::array<InnerChildrenBlock*, Num>>
-		    inner_children{};
-		std::conditional_t<1 == Num, LeafChildrenBlock*, std::array<LeafChildrenBlock*, Num>>
-		    leaf_children;
-	};
-};
-
-//
-// Block
-//
-
-template <class LeafBlockNode>
-struct OctreeInnerBlockNode : LeafBlockNode {
-	using InnerChildrenBlock = std::array<OctreeInnerBlockNode, 8 * 8>;
-	using LeafChildrenBlock = std::array<LeafBlockNode, 8 * 8>;
 
 	// Pointer to children
 	union {
@@ -106,22 +87,24 @@ struct OctreeInnerBlockNode : LeafBlockNode {
 	};
 };
 
-template <class LeafBlockNode>
-struct OctreeInnerBlockNode2 : LeafBlockNode {
-	using InnerChildrenBlock = std::array<OctreeInnerBlockNode2, 8>;
-	using LeafChildrenBlock = std::array<LeafBlockNode, 8>;
+//
+// Block
+//
 
-	// Pointer to children
-	union {
-		std::array<InnerChildrenBlock*, 8> inner_children{};
-		std::array<LeafChildrenBlock*, 8> leaf_children;
-	};
+template <class Data, class Indicators>
+struct OctreeLeafNodeBlock : Data, Indicators {
+	bool operator==(OctreeLeafNodeBlock const& rhs) const
+	{
+		return static_cast<Data const&>(*this) == static_cast<Data const&>(rhs);
+	}
+
+	bool operator!=(OctreeLeafNodeBlock const& rhs) const { return !(*this == rhs); }
 };
 
-template <class LeafNode>
-struct OctreeInnerNodeNew : LeafNode {
-	using InnerChildrenBlock = std::array<OctreeInnerNodeNew, 8>;
-	using LeafChildrenBlock = std::array<LeafNode, 8>;
+template <class LeafNodeBlock>
+struct OctreeInnerNodeBlock : LeafNodeBlock {
+	using InnerChildrenBlock = std::array<OctreeInnerNodeBlock, 8>;
+	using LeafChildrenBlock = std::array<LeafNodeBlock, 8>;
 
 	// Pointer to children
 	union {

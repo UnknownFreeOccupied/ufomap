@@ -51,26 +51,27 @@
 
 namespace ufo::map
 {
-template <typename TimeType = float, std::size_t Num = 1>
+template <typename TimeType = float>
 struct TimeNode {
 	using time_t = TimeType;
 
-	std::conditional_t<1 == Num, time_t, std::array<time_t, Num>> time;
+	time_t time;
 
 	constexpr bool operator==(TimeNode rhs) const { return time == rhs.time; }
 
 	constexpr bool operator!=(TimeNode rhs) const { return !(*this == rhs); }
 };
 
-struct TimeNodeNew {
-	using time_t = float;
+template <typename TimeType = float>
+struct TimeNodeBlock {
+	using time_t = TimeType;
 
 	// Data
 	std::array<time_t, 8> time;
 
-	bool operator==(TimeNodeNew const rhs) const { return time == rhs.time; }
+	bool operator==(TimeNodeBlock const& rhs) const { return time == rhs.time; }
 
-	bool operator!=(TimeNodeNew const rhs) const { return !(*this == rhs); }
+	bool operator!=(TimeNodeBlock const& rhs) const { return !(*this == rhs); }
 
 	constexpr time_t getTime(std::size_t const index) const { return time[index]; }
 
