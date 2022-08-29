@@ -341,9 +341,13 @@ struct Surfel {
 		return getEigenVectors()[0].normalize();
 	}
 
+	//
+	// Get planarity
+	//
+
 	constexpr scalar_t getPlanarity() const
 	{
-		auto const e = getEigenValues();  // FIXME: Normalized?
+		auto const e = getEigenValues(getSymmetricCovariance());  // FIXME: Normalized?
 		return 2.0 * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
 	}
 
