@@ -339,7 +339,7 @@ struct Surfel {
 
 	constexpr scalar_t getPlanarity() const
 	{
-		auto const e = getEigenValues(getSymmetricCovariance());  // FIXME: Normalized?
+		auto const e = getEigenValues(getSymmetricCovariance());
 		return 2 * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
 	}
 
