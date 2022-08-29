@@ -360,7 +360,7 @@ struct Surfel {
 		using as = std::array<scalar_t, 3>;
 		using cov = std::array<as, 3>;
 
-		long double const f = 1.0L / (num_points_ - 1);
+		double const f = 1.0 / (num_points_ - 1);
 		return cov{as{f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2]},
 		           as{f * sum_squares_[1], f * sum_squares_[3], f * sum_squares_[4]},
 		           as{f * sum_squares_[2], f * sum_squares_[4], f * sum_squares_[5]}};
@@ -407,16 +407,13 @@ struct Surfel {
 	constexpr std::array<scalar_t, 6> getSumSquares() const { return sum_squares_; }
 
  private:
-	static constexpr long double M_PIL =
-	    3.14159265358979323846264338327950288419716939937510L;
-
 	//
 	// Get symmetric convariance
 	//
 
-	constexpr std::array<long double, 6> getSymmetricCovariance() const
+	constexpr std::array<double, 6> getSymmetricCovariance() const
 	{
-		long double const f = 1.0L / (num_points_ - 1);
+		double const f = 1.0 / (num_points_ - 1);
 		return {f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2],
 		        f * sum_squares_[3], f * sum_squares_[4], f * sum_squares_[5]};
 	}
@@ -425,47 +422,52 @@ struct Surfel {
 	// Get eigen values
 	//
 
-	constexpr math::Vector3<long double> getEigenValues(
-	    std::array<long double, 6> const& sym_m) const
+	constexpr math::Vector3<double> getEigenValues(std::array<double, 6> const& sym_m) const
 	{
-		long double const a = sym_m[0];
-		long double const b = sym_m[3];
-		long double const c = sym_m[5];
-		long double const d = sym_m[1];
-		long double const e = sym_m[4];
-		long double const f = sym_m[2];
+		double const a = sym_m[0];
+		double const b = sym_m[3];
+		double const c = sym_m[5];
+		double const d = sym_m[1];
+		double const e = sym_m[4];
+		double const f = sym_m[2];
 
-		long double const x_1 =
+		double const x_1 =
 		    a * a + b * b + c * c - a * b - a * c - b * c + 3 * (d * d + f * f + e * e);
 
-		long double const x_2 = -(2 * a - b - c) * (2 * b - a - c) * (2 * c - a - b) +
-		                        9 * ((2 * c - a - b) * (d * d) + (2 * b - a - c) * (f * f) +
-		                             (2 * a - b - c) * (e * e)) -
-		                        54 * (d * e * f);
+		double const x_2 = -(2 * a - b - c) * (2 * b - a - c) * (2 * c - a - b) +
+		                   9 * ((2 * c - a - b) * (d * d) + (2 * b - a - c) * (f * f) +
+		                        (2 * a - b - c) * (e * e)) -
+		                   54 * (d * e * f);
 
-		long double const phi =
+		double const phi =
 		    0 < x_2
 		        ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2)
 		        : (0 > x_2
-		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PIL
-		               : M_PIL / 2);
+		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PI
+		               : M_PI / 2);
 
-		math::Vector3<long double> v{
+		return math::Vector3<double>(
 		    (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
-		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PIL) / 3)) / 3,
-		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PIL) / 3)) / 3};
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PI) / 3)) / 3,
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PI) / 3)) / 3);
 
-		if (v[0] > v[1]) {
-			std::swap(v[0], v[1]);
-		}
-		if (v[0] > v[2]) {
-			std::swap(v[0], v[2]);
-		}
-		if (v[1] > v[2]) {
-			std::swap(v[1], v[2]);
-		}
+		// math::Vector3<double> v{
+		//     (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
+		//     (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PI) / 3)) / 3,
+		//     (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PI) / 3)) / 3};
 
-		return v;
+		// FIXME: Is this needed?
+		// if (v[0] > v[1]) {
+		// 	std::swap(v[0], v[1]);
+		// }
+		// if (v[0] > v[2]) {
+		// 	std::swap(v[0], v[2]);
+		// }
+		// if (v[1] > v[2]) {
+		// 	std::swap(v[1], v[2]);
+		// }
+
+		// return v;
 	}
 
 	//
@@ -473,34 +475,32 @@ struct Surfel {
 	//
 
 	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
-	    std::array<long double, 6> const& sym_m) const
+	    std::array<double, 6> const& sym_m) const
 	{
 		return getEigenVectors(sym_m, getEigenValues(sym_m));
 	}
 
 	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
-	    std::array<long double, 6> const& sym_m,
-	    math::Vector3<long double> const& eigen_values) const
+	    std::array<double, 6> const& sym_m, math::Vector3<double> const& eigen_values) const
 	{
 		// FIXME: Make sure denominator is not zero
 
-		long double const a = sym_m[0];
-		long double const b = sym_m[3];
-		long double const c = sym_m[5];
-		long double const d = sym_m[1];
-		long double const e = sym_m[4];
-		long double const f =
-		    0 == sym_m[2] ? std::numeric_limits<float>::epsilon() : sym_m[2];
+		double const a = sym_m[0];
+		double const b = sym_m[3];
+		double const c = sym_m[5];
+		double const d = sym_m[1];
+		double const e = sym_m[4];
+		double const f = 0 == sym_m[2] ? std::numeric_limits<float>::epsilon() : sym_m[2];
 
-		long double const l_1 = eigen_values[0];
-		long double const l_2 = eigen_values[1];
-		long double const l_3 = eigen_values[2];
+		double const l_1 = eigen_values[0];
+		double const l_2 = eigen_values[1];
+		double const l_3 = eigen_values[2];
 
-		long double const m_1 = (d * (c - l_1) - e * f) / (f * (b - l_1) - d * e);
+		double const m_1 = (d * (c - l_1) - e * f) / (f * (b - l_1) - d * e);
 
-		long double const m_2 = (d * (c - l_2) - e * f) / (f * (b - l_2) - d * e);
+		double const m_2 = (d * (c - l_2) - e * f) / (f * (b - l_2) - d * e);
 
-		long double const m_3 = (d * (c - l_3) - e * f) / (f * (b - l_3) - d * e);
+		double const m_3 = (d * (c - l_3) - e * f) / (f * (b - l_3) - d * e);
 
 		return {math::Vector3<scalar_t>((l_1 - c - e * m_1) / f, m_1, 1),
 		        math::Vector3<scalar_t>((l_2 - c - e * m_2) / f, m_2, 1),
