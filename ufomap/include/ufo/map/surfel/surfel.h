@@ -403,6 +403,9 @@ struct Surfel {
 	constexpr std::array<scalar_t, 6> getSumSquares() const { return sum_squares_; }
 
  private:
+	static constexpr long double M_PIL =
+	    3.14159265358979323846264338327950288419716939937510L;
+
 	//
 	// Get symmetric convariance
 	//
@@ -440,13 +443,13 @@ struct Surfel {
 		    0 < x_2
 		        ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2)
 		        : (0 > x_2
-		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PI
-		               : M_PI / 2);
+		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PIL
+		               : M_PIL / 2);
 
 		math::Vector3<long double> v{
 		    (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
-		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PI) / 3)) / 3,
-		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PI) / 3)) / 3};
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PIL) / 3)) / 3,
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PIL) / 3)) / 3};
 
 		if (v[0] > v[1]) {
 			std::swap(v[0], v[1]);
@@ -482,7 +485,8 @@ struct Surfel {
 		long double const c = sym_m[5];
 		long double const d = sym_m[1];
 		long double const e = sym_m[4];
-		long double const f = sym_m[2];
+		long double const f =
+		    0 == sym_m[2] ? std::numeric_limits<float>::epsilon() : sym_m[2];
 
 		long double const l_1 = eigen_values[0];
 		long double const l_2 = eigen_values[1];
