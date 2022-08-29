@@ -61,24 +61,25 @@ struct Surfel {
 	constexpr Surfel(math::Vector3<scalar_t> point) : num_points_(1), sum_(point) {}
 
 	template <class InputIt>
-	constexpr Surfel(InputIt first, InputIt last) : num_points_(std::distance(first, last))
+	constexpr Surfel(InputIt first, InputIt last)
 	{
 		if (first == last) {
 			return;
 		}
 
 		for (; first != last; ++first) {
-			sum_ += *first;
+			sum_squares_[0] += (*first)[0] * (*first)[0];
+			sum_squares_[1] += (*first)[0] * (*first)[1];
+			sum_squares_[2] += (*first)[0] * (*first)[2];
+			sum_squares_[3] += (*first)[1] * (*first)[1];
+			sum_squares_[4] += (*first)[1] * (*first)[2];
+			sum_squares_[5] += (*first)[2] * (*first)[2];
 
-			sum_squares_[0] = (*first)[0] * (*first)[0];
-			sum_squares_[1] = (*first)[0] * (*first)[1];
-			sum_squares_[2] = (*first)[0] * (*first)[2];
-			sum_squares_[3] = (*first)[1] * (*first)[1];
-			sum_squares_[4] = (*first)[1] * (*first)[2];
-			sum_squares_[5] = (*first)[2] * (*first)[2];
+			sum_ += *first;
+			++num_points_;
 		}
 
-		scalar_t n = scalar_t(1) / scalar_t(num_points_);
+		auto const n = scalar_t(1) / num_points_;
 
 		sum_squares_[0] -= sum_[0] * sum_[0] * n;
 		sum_squares_[1] -= sum_[0] * sum_[1] * n;
@@ -133,19 +134,16 @@ struct Surfel {
 
 	constexpr void addSurfel(Surfel const& other)
 	{
-		if (0 == num_points_) {
+		auto const n = num_points_;
+		if (0 == n) {
 			num_points_ = other.num_points_;
 			sum_ = other.sum_;
 			sum_squares_ = other.sum_squares_;
 		} else {
-			scalar_t const n = num_points_;
-			scalar_t const n_o = other.num_points_;
+			auto const n_o = other.num_points_;
 
 			auto const alpha = scalar_t(1) / (n * n_o * (n + n_o));
 			auto const beta = (sum_ * n_o) - (other.sum_ * n);
-
-			num_points_ += other.num_points_;
-			sum_ += other.sum_;
 
 			sum_squares_[0] += other.sum_squares_[0] + alpha * beta[0] * beta[0];
 			sum_squares_[1] += other.sum_squares_[1] + alpha * beta[0] * beta[1];
@@ -153,6 +151,9 @@ struct Surfel {
 			sum_squares_[3] += other.sum_squares_[3] + alpha * beta[1] * beta[1];
 			sum_squares_[4] += other.sum_squares_[4] + alpha * beta[1] * beta[2];
 			sum_squares_[5] += other.sum_squares_[5] + alpha * beta[2] * beta[2];
+
+			sum_ += other.sum_;
+			num_points_ += n_o;
 		}
 	}
 
@@ -179,14 +180,14 @@ struct Surfel {
 			return;
 		}
 
-		num_points_ -= other.num_points_;
 		sum_ -= other.sum_;
+		num_points_ -= other.num_points_;
 
-		scalar_t const n = num_points_;
-		scalar_t const n_o = other.num_points_;
+		auto const n = num_points_;
+		auto const n_o = other.num_points_;
 
-		auto const& alpha = scalar_t(1) / (n * n_o * (n + n_o));
-		auto const& beta = (sum_ * n_o) - (other.sum_ * n);
+		auto const alpha = scalar_t(1) / (n * n_o * (n + n_o));
+		auto const beta = (sum_ * n_o) - (other.sum_ * n);
 
 		sum_squares_[0] -= other.sum_squares_[0] - alpha * beta[0] * beta[0];
 		sum_squares_[1] -= other.sum_squares_[1] - alpha * beta[0] * beta[1];
@@ -202,31 +203,26 @@ struct Surfel {
 
 	constexpr void addPoint(math::Vector3<scalar_t> point)
 	{
-		switch (num_points_) {
-			case 0:
-				num_points_ = 1;
-				sum_ = point;
-				return;
-			case 1:
-				++num_points_;
-				sum_ += point;
-			default:
-				scalar_t const n = num_points_;
+		auto const n = num_points_;
 
-				auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
-				auto const beta = (sum_ - (point * n));
-
-				++num_points_;
-				sum_ += point;
-
-				sum_squares_[0] += alpha * beta[0] * beta[0];
-				sum_squares_[1] += alpha * beta[0] * beta[1];
-				sum_squares_[2] += alpha * beta[0] * beta[2];
-				sum_squares_[3] += alpha * beta[1] * beta[1];
-				sum_squares_[4] += alpha * beta[1] * beta[2];
-				sum_squares_[5] += alpha * beta[2] * beta[2];
-				break;
+		if (0 == n) {
+			num_points_ = 1;
+			sum_ = point;
+			return;
 		}
+
+		auto const alpha = scalar_t(1) / (n * (n + 1));
+		auto const beta = (sum_ - (point * n));
+
+		sum_squares_[0] += alpha * beta[0] * beta[0];
+		sum_squares_[1] += alpha * beta[0] * beta[1];
+		sum_squares_[2] += alpha * beta[0] * beta[2];
+		sum_squares_[3] += alpha * beta[1] * beta[1];
+		sum_squares_[4] += alpha * beta[1] * beta[2];
+		sum_squares_[5] += alpha * beta[2] * beta[2];
+
+		sum_ += point;
+		++num_points_;
 	}
 
 	template <class InputIt>
@@ -238,20 +234,19 @@ struct Surfel {
 				return;
 			}
 
-			num_points_ = std::distance(first, last);
-
 			for (; first != last; ++first) {
-				sum_ += *first;
+				sum_squares_[0] += (*first)[0] * (*first)[0];
+				sum_squares_[1] += (*first)[0] * (*first)[1];
+				sum_squares_[2] += (*first)[0] * (*first)[2];
+				sum_squares_[3] += (*first)[1] * (*first)[1];
+				sum_squares_[4] += (*first)[1] * (*first)[2];
+				sum_squares_[5] += (*first)[2] * (*first)[2];
 
-				sum_squares_[0] = (*first)[0] * (*first)[0];
-				sum_squares_[1] = (*first)[0] * (*first)[1];
-				sum_squares_[2] = (*first)[0] * (*first)[2];
-				sum_squares_[3] = (*first)[1] * (*first)[1];
-				sum_squares_[4] = (*first)[1] * (*first)[2];
-				sum_squares_[5] = (*first)[2] * (*first)[2];
+				sum_ += *first;
+				++num_points_;
 			}
 
-			scalar_t n = scalar_t(1) / scalar_t(num_points_);
+			auto const n = scalar_t(1) / num_points_;
 
 			sum_squares_[0] -= sum_[0] * sum_[0] * n;
 			sum_squares_[1] -= sum_[0] * sum_[1] * n;
@@ -261,7 +256,7 @@ struct Surfel {
 			sum_squares_[5] -= sum_[2] * sum_[2] * n;
 		} else {
 			// FIXME: Improve
-			std::for_each(first, last, [this](auto&& p) { addPoint(p); });
+			std::for_each(first, last, [this](auto const& p) { addPoint(p); });
 		}
 	}
 
@@ -276,19 +271,16 @@ struct Surfel {
 
 	constexpr void removePoint(math::Vector3<scalar_t> point)
 	{
-		switch (num_points_) {
+		auto const n = num_points_;
+
+		switch (n) {
 			case 0:
 				return;
 			case 1:
 				clear();
 				return;
 			default:
-				--num_points_;
-				sum_ -= point;
-
-				scalar_t const n = num_points_;
-
-				auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
+				auto const alpha = scalar_t(1) / (n * (n + 1));
 				auto const beta = (sum_ - (point * n));
 
 				sum_squares_[0] -= alpha * beta[0] * beta[0];
@@ -297,6 +289,9 @@ struct Surfel {
 				sum_squares_[3] -= alpha * beta[1] * beta[1];
 				sum_squares_[4] -= alpha * beta[1] * beta[2];
 				sum_squares_[5] -= alpha * beta[2] * beta[2];
+
+				sum_ -= point;
+				--num_points_;
 		}
 	}
 
@@ -304,7 +299,7 @@ struct Surfel {
 	constexpr void removePoint(InputIt first, InputIt last)
 	{
 		// FIXME: Improve
-		std::for_each(first, last, [this](auto&& p) { removePoint(p); });
+		std::for_each(first, last, [this](auto const& p) { removePoint(p); });
 	}
 
 	constexpr void removePoint(std::initializer_list<math::Vector3<scalar_t>> points)
@@ -327,10 +322,7 @@ struct Surfel {
 	// Get mean
 	//
 
-	constexpr math::Vector3<scalar_t> getMean() const
-	{
-		return sum_ / scalar_t(num_points_);
-	}
+	constexpr math::Vector3<scalar_t> getMean() const { return sum_ / num_points_; }
 
 	//
 	// Get normal
@@ -348,7 +340,7 @@ struct Surfel {
 	constexpr scalar_t getPlanarity() const
 	{
 		auto const e = getEigenValues(getSymmetricCovariance());  // FIXME: Normalized?
-		return 2.0 * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
+		return 2 * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
 	}
 
 	//
@@ -360,7 +352,7 @@ struct Surfel {
 		using as = std::array<scalar_t, 3>;
 		using cov = std::array<as, 3>;
 
-		double const f = 1.0 / (num_points_ - 1);
+		auto const f = scalar_t(1) / (num_points_ - 1);
 		return cov{as{f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2]},
 		           as{f * sum_squares_[1], f * sum_squares_[3], f * sum_squares_[4]},
 		           as{f * sum_squares_[2], f * sum_squares_[4], f * sum_squares_[5]}};
@@ -413,7 +405,7 @@ struct Surfel {
 
 	constexpr std::array<double, 6> getSymmetricCovariance() const
 	{
-		double const f = 1.0 / (num_points_ - 1);
+		auto const f = scalar_t(1) / (num_points_ - 1);
 		return {f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2],
 		        f * sum_squares_[3], f * sum_squares_[4], f * sum_squares_[5]};
 	}
@@ -431,43 +423,37 @@ struct Surfel {
 		double const e = sym_m[4];
 		double const f = sym_m[2];
 
-		double const x_1 =
-		    a * a + b * b + c * c - a * b - a * c - b * c + 3 * (d * d + f * f + e * e);
+		double const a2 = a * a;
+		double const b2 = b * b;
+		double const c2 = c * c;
+		double const d2 = d * d;
+		double const e2 = e * e;
+		double const f2 = f * f;
 
-		double const x_2 = -(2 * a - b - c) * (2 * b - a - c) * (2 * c - a - b) +
-		                   9 * ((2 * c - a - b) * (d * d) + (2 * b - a - c) * (f * f) +
-		                        (2 * a - b - c) * (e * e)) -
-		                   54 * (d * e * f);
+		double const abc = 2 * a - b - c;
+		double const bac = 2 * b - a - c;
+		double const cab = 2 * c - a - b;
+
+		double const x_1 = a2 + b2 + c2 - a * b - a * c - b * c + 3 * (d2 + f2 + e2);
+		double const x_2 =
+		    -abc * bac * cab + 9 * (cab * d2 + bac * f2 + abc * e2) - 54 * (d * e * f);
+
+		double const x_1_3 = x_1 * x_1 * x_1;
+		double const x_2_2 = x_2 * x_2;
 
 		double const phi =
 		    0 < x_2
-		        ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2)
-		        : (0 > x_2
-		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PI
-		               : M_PI / 2);
+		        ? std::atan(std::sqrt(4 * x_1_3 - x_2_2) / x_2)
+		        : (0 > x_2 ? std::atan(std::sqrt(4 * x_1_3 - x_2_2) / x_2) + M_PI : M_PI_2);
 
-		return math::Vector3<double>(
-		    (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
-		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PI) / 3)) / 3,
-		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PI) / 3)) / 3);
+		double const z = a + b + c;
+		double const x_1_s = 2 * std::sqrt(x_1);
 
-		// math::Vector3<double> v{
-		//     (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
-		//     (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PI) / 3)) / 3,
-		//     (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PI) / 3)) / 3};
+		constexpr double third = 1.0 / 3;
 
-		// FIXME: Is this needed?
-		// if (v[0] > v[1]) {
-		// 	std::swap(v[0], v[1]);
-		// }
-		// if (v[0] > v[2]) {
-		// 	std::swap(v[0], v[2]);
-		// }
-		// if (v[1] > v[2]) {
-		// 	std::swap(v[1], v[2]);
-		// }
-
-		// return v;
+		return math::Vector3<double>((z - x_1_s * std::cos(phi * third)) * third,
+		                             (z + x_1_s * std::cos((phi + M_PI) * third)) * third,
+		                             (z + x_1_s * std::cos((phi - M_PI) * third)) * third);
 	}
 
 	//
@@ -496,23 +482,25 @@ struct Surfel {
 		double const l_2 = eigen_values[1];
 		double const l_3 = eigen_values[2];
 
-		double const m_1 = (d * (c - l_1) - e * f) / (f * (b - l_1) - d * e);
+		double const ef = e * f;
+		double const de = d * e;
+		double const ce = c - e;
 
-		double const m_2 = (d * (c - l_2) - e * f) / (f * (b - l_2) - d * e);
+		double const m_1 = (d * (c - l_1) - ef) / (f * (b - l_1) - de);
+		double const m_2 = (d * (c - l_2) - ef) / (f * (b - l_2) - de);
+		double const m_3 = (d * (c - l_3) - ef) / (f * (b - l_3) - de);
 
-		double const m_3 = (d * (c - l_3) - e * f) / (f * (b - l_3) - d * e);
+		double const f_i = 1.0 / f;
 
-		return {math::Vector3<scalar_t>((l_1 - c - e * m_1) / f, m_1, 1),
-		        math::Vector3<scalar_t>((l_2 - c - e * m_2) / f, m_2, 1),
-		        math::Vector3<scalar_t>((l_3 - c - e * m_3) / f, m_3, 1)};
+		return {math::Vector3<scalar_t>((l_1 - ce * m_1) * f_i, m_1, 1),
+		        math::Vector3<scalar_t>((l_2 - ce * m_2) * f_i, m_2, 1),
+		        math::Vector3<scalar_t>((l_3 - ce * m_3) * f_i, m_3, 1)};
 	}
 
  private:
-	uint32_t num_points_ = 0;
-	math::Vector3<scalar_t> sum_;
 	std::array<scalar_t, 6> sum_squares_ = {0, 0, 0, 0, 0, 0};
-	// FIXME: Save planarity?
-	// FIXME: Save first view position or normal?
+	math::Vector3<scalar_t> sum_;
+	uint32_t num_points_ = 0;
 };
 }  // namespace ufo::map
 
