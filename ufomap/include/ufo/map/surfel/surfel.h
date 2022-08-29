@@ -438,13 +438,12 @@ struct Surfel {
 		double const x_2 =
 		    -abc * bac * cab + 9 * (cab * d2 + bac * f2 + abc * e2) - 54 * (d * e * f);
 
-		double const x_1_3 = x_1 * x_1 * x_1;
-		double const x_2_2 = x_2 * x_2;
-
 		double const phi =
 		    0 < x_2
-		        ? std::atan(std::sqrt(4 * x_1_3 - x_2_2) / x_2)
-		        : (0 > x_2 ? std::atan(std::sqrt(4 * x_1_3 - x_2_2) / x_2) + M_PI : M_PI_2);
+		        ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2)
+		        : (0 > x_2
+		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PI
+		               : M_PI_2);
 
 		double const z = a + b + c;
 		double const x_1_s = 2 * std::sqrt(x_1);
