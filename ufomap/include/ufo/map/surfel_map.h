@@ -53,7 +53,7 @@ template <class SurfelType, bool ReuseNodes, bool LockLess>
 using SurfelMapT = OctreeMapBase<SurfelNode<SurfelType>, OctreeIndicators, ReuseNodes,
                                  LockLess, SurfelMapBase>;
 
-using SurfelMap = SurfelMapT<double, false, false>;
+using SurfelMap = SurfelMapT<float, false, false>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SURFEL_MAP_H

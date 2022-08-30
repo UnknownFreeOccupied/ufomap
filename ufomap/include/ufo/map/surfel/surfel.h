@@ -117,19 +117,27 @@ struct Surfel {
 			sum_ = other.sum_;
 			sum_squares_ = other.sum_squares_;
 		} else {
+			math::Vector3<double> s = sum_;
+			math::Vector3<double> s_o = other.sum_;
 			auto const n_o = other.num_points_;
 
 			auto const alpha = n * n_o * (n + n_o);
-			auto const beta = (sum_ * n_o) - (other.sum_ * n);
+			auto const beta = (s * n_o) - (s_o * n);
 
-			sum_squares_[0] += other.sum_squares_[0] + beta[0] * beta[0] / alpha;
-			sum_squares_[1] += other.sum_squares_[1] + beta[0] * beta[1] / alpha;
-			sum_squares_[2] += other.sum_squares_[2] + beta[0] * beta[2] / alpha;
-			sum_squares_[3] += other.sum_squares_[3] + beta[1] * beta[1] / alpha;
-			sum_squares_[4] += other.sum_squares_[4] + beta[1] * beta[2] / alpha;
-			sum_squares_[5] += other.sum_squares_[5] + beta[2] * beta[2] / alpha;
+			sum_squares_[0] =
+			    sum_squares_[0] + (other.sum_squares_[0] + beta[0] * beta[0] / alpha);
+			sum_squares_[1] =
+			    sum_squares_[1] + (other.sum_squares_[1] + beta[0] * beta[1] / alpha);
+			sum_squares_[2] =
+			    sum_squares_[2] + (other.sum_squares_[2] + beta[0] * beta[2] / alpha);
+			sum_squares_[3] =
+			    sum_squares_[3] + (other.sum_squares_[3] + beta[1] * beta[1] / alpha);
+			sum_squares_[4] =
+			    sum_squares_[4] + (other.sum_squares_[4] + beta[1] * beta[2] / alpha);
+			sum_squares_[5] =
+			    sum_squares_[5] + (other.sum_squares_[5] + beta[2] * beta[2] / alpha);
 
-			sum_ += other.sum_;
+			sum_ = s + s_o;
 			num_points_ += n_o;
 		}
 	}
@@ -205,35 +213,66 @@ struct Surfel {
 	template <class InputIt>
 	constexpr void addPoint(InputIt first, InputIt last)
 	{
+		if (first == last) {
+			return;
+		}
+
+		math::Vector3<double> s;
+		std::array<double, 6> ss{0, 0, 0, 0, 0, 0};
+		uint32_t n = 0;
+
+		for (; first != last; ++first) {
+			math::Vector3<double> const p = *first;
+			ss[0] += p[0] * p[0];
+			ss[1] += p[0] * p[1];
+			ss[2] += p[0] * p[2];
+			ss[3] += p[1] * p[1];
+			ss[4] += p[1] * p[2];
+			ss[5] += p[2] * p[2];
+
+			s += p;
+			++n;
+		}
+
+		if (1 == n) {
+			addPoint(s);
+			return;
+		}
+
+		ss[0] -= s[0] * s[0] / n;
+		ss[1] -= s[0] * s[1] / n;
+		ss[2] -= s[0] * s[2] / n;
+		ss[3] -= s[1] * s[1] / n;
+		ss[4] -= s[1] * s[2] / n;
+		ss[5] -= s[2] * s[2] / n;
+
 		if (empty()) {
-			// FIXME: Make into a function
-			if (first == last) {
-				return;
+			if (1 != n) {
+				sum_squares_[0] = ss[0];
+				sum_squares_[1] = ss[1];
+				sum_squares_[2] = ss[2];
+				sum_squares_[3] = ss[3];
+				sum_squares_[4] = ss[4];
+				sum_squares_[5] = ss[5];
 			}
-
-			for (; first != last; ++first) {
-				sum_squares_[0] += (*first)[0] * (*first)[0];
-				sum_squares_[1] += (*first)[0] * (*first)[1];
-				sum_squares_[2] += (*first)[0] * (*first)[2];
-				sum_squares_[3] += (*first)[1] * (*first)[1];
-				sum_squares_[4] += (*first)[1] * (*first)[2];
-				sum_squares_[5] += (*first)[2] * (*first)[2];
-
-				sum_ += *first;
-				++num_points_;
-			}
-
-			auto const n = num_points_;
-
-			sum_squares_[0] -= sum_[0] * sum_[0] / n;
-			sum_squares_[1] -= sum_[0] * sum_[1] / n;
-			sum_squares_[2] -= sum_[0] * sum_[2] / n;
-			sum_squares_[3] -= sum_[1] * sum_[1] / n;
-			sum_squares_[4] -= sum_[1] * sum_[2] / n;
-			sum_squares_[5] -= sum_[2] * sum_[2] / n;
+			sum_ = s;
+			num_points_ = n;
 		} else {
-			// FIXME: Improve
-			std::for_each(first, last, [this](auto const& p) { addPoint(p); });
+			math::Vector3<double> const s_c = sum_;
+			auto const n_c = num_points_;
+
+			auto const alpha = n_c * n * (n_c + n);
+			auto const beta = (s_c * n) - (s * n_c);
+
+			sum_squares_[0] = sum_squares_[0] + (ss[0] + beta[0] * beta[0] / alpha);
+			sum_squares_[1] = sum_squares_[1] + (ss[1] + beta[0] * beta[1] / alpha);
+			sum_squares_[2] = sum_squares_[2] + (ss[2] + beta[0] * beta[2] / alpha);
+			sum_squares_[3] = sum_squares_[3] + (ss[3] + beta[1] * beta[1] / alpha);
+			sum_squares_[4] = sum_squares_[4] + (ss[4] + beta[1] * beta[2] / alpha);
+			sum_squares_[5] = sum_squares_[5] + (ss[5] + beta[2] * beta[2] / alpha);
+
+			sum_ = s_c + s;
+			num_points_ += n;
 		}
 	}
 

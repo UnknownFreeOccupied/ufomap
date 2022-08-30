@@ -146,13 +146,13 @@ class SurfelMapBase
 	void setSurfel(Node node, Surfel const& surfel, bool propagate = true)
 	{
 		derived().apply(
-		    node, [&surfel](auto&& node) { setSurfel(node, surfel); }, propagate);
+		    node, [&surfel](auto& node) { setSurfel(node, surfel); }, propagate);
 	}
 
 	void setSurfel(Code code, Surfel const& surfel, bool propagate = true)
 	{
 		derived().apply(
-		    code, [&surfel](auto&& node) { setSurfel(node, surfel); }, propagate);
+		    code, [&surfel](auto& node) { setSurfel(node, surfel); }, propagate);
 	}
 
 	void setSurfel(Key key, Surfel const& surfel, bool propagate = true)
@@ -295,16 +295,16 @@ class SurfelMapBase
 		}
 
 		std::sort(std::begin(codes), std::end(codes),
-		          [](auto&& a, auto&& b) { return a.first < b.first; });
+		          [](auto const& a, auto const& b) { return a.first < b.first; });
 
 		std::vector<Point3> points;
 		for (auto it = std::cbegin(codes); it != std::cend(codes);) {
 			auto it_end = std::find_if(std::next(it), std::cend(codes),
-			                           [it](auto&& v) { return it->first != v.first; });
+			                           [it](auto const& v) { return it->first != v.first; });
 
 			points.reserve(std::distance(it, it_end));
 			std::transform(it, it_end, std::back_insert_iterator(points),
-			               [](auto&& elem) { return elem.second; });
+			               [](auto const& elem) { return elem.second; });
 
 			derived().apply(
 			    it->first,
@@ -336,7 +336,7 @@ class SurfelMapBase
 	{
 		derived().apply(
 		    derived().toCode(point, depth),
-		    [point](auto&& node) { eraseSurfelPoint(node, point); }, propagate);
+		    [point](auto& node) { eraseSurfelPoint(node, point); }, propagate);
 	}
 
 	template <class InputIt>
@@ -351,16 +351,16 @@ class SurfelMapBase
 		}
 
 		std::sort(std::begin(codes), std::end(codes),
-		          [](auto&& a, auto&& b) { return a.first < b.first; });
+		          [](auto const& a, auto const& b) { return a.first < b.first; });
 
 		std::vector<Point3> points;
 		for (auto it = std::cbegin(codes); it != std::cend(codes);) {
 			auto it_end = std::find_if(std::next(it), std::cend(codes),
-			                           [it](auto&& v) { return it->first != v.first; });
+			                           [it](auto const& v) { return it->first != v.first; });
 
 			points.reserve(std::distance(it, it_end));
 			std::transform(it, it_end, std::back_insert_iterator(points),
-			               [](auto&& elem) { return elem.second; });
+			               [](auto const& elem) { return elem.second; });
 
 			derived().apply(
 			    it->first,
