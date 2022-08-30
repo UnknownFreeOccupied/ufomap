@@ -79,14 +79,14 @@ struct Surfel {
 			++num_points_;
 		}
 
-		auto const n = scalar_t(1) / num_points_;
+		auto const n = num_points_;
 
-		sum_squares_[0] -= sum_[0] * sum_[0] * n;
-		sum_squares_[1] -= sum_[0] * sum_[1] * n;
-		sum_squares_[2] -= sum_[0] * sum_[2] * n;
-		sum_squares_[3] -= sum_[1] * sum_[1] * n;
-		sum_squares_[4] -= sum_[1] * sum_[2] * n;
-		sum_squares_[5] -= sum_[2] * sum_[2] * n;
+		sum_squares_[0] -= sum_[0] * sum_[0] / n;
+		sum_squares_[1] -= sum_[0] * sum_[1] / n;
+		sum_squares_[2] -= sum_[0] * sum_[2] / n;
+		sum_squares_[3] -= sum_[1] * sum_[1] / n;
+		sum_squares_[4] -= sum_[1] * sum_[2] / n;
+		sum_squares_[5] -= sum_[2] * sum_[2] / n;
 	}
 
 	constexpr Surfel(std::initializer_list<math::Vector3<scalar_t>> points)
@@ -142,15 +142,15 @@ struct Surfel {
 		} else {
 			auto const n_o = other.num_points_;
 
-			auto const alpha = scalar_t(1) / (n * n_o * (n + n_o));
+			auto const alpha = n * n_o * (n + n_o);
 			auto const beta = (sum_ * n_o) - (other.sum_ * n);
 
-			sum_squares_[0] += other.sum_squares_[0] + alpha * beta[0] * beta[0];
-			sum_squares_[1] += other.sum_squares_[1] + alpha * beta[0] * beta[1];
-			sum_squares_[2] += other.sum_squares_[2] + alpha * beta[0] * beta[2];
-			sum_squares_[3] += other.sum_squares_[3] + alpha * beta[1] * beta[1];
-			sum_squares_[4] += other.sum_squares_[4] + alpha * beta[1] * beta[2];
-			sum_squares_[5] += other.sum_squares_[5] + alpha * beta[2] * beta[2];
+			sum_squares_[0] += other.sum_squares_[0] + beta[0] * beta[0] / alpha;
+			sum_squares_[1] += other.sum_squares_[1] + beta[0] * beta[1] / alpha;
+			sum_squares_[2] += other.sum_squares_[2] + beta[0] * beta[2] / alpha;
+			sum_squares_[3] += other.sum_squares_[3] + beta[1] * beta[1] / alpha;
+			sum_squares_[4] += other.sum_squares_[4] + beta[1] * beta[2] / alpha;
+			sum_squares_[5] += other.sum_squares_[5] + beta[2] * beta[2] / alpha;
 
 			sum_ += other.sum_;
 			num_points_ += n_o;
@@ -186,15 +186,15 @@ struct Surfel {
 		auto const n = num_points_;
 		auto const n_o = other.num_points_;
 
-		auto const alpha = scalar_t(1) / (n * n_o * (n + n_o));
+		auto const alpha = n * n_o * (n + n_o);
 		auto const beta = (sum_ * n_o) - (other.sum_ * n);
 
-		sum_squares_[0] -= other.sum_squares_[0] - alpha * beta[0] * beta[0];
-		sum_squares_[1] -= other.sum_squares_[1] - alpha * beta[0] * beta[1];
-		sum_squares_[2] -= other.sum_squares_[2] - alpha * beta[0] * beta[2];
-		sum_squares_[3] -= other.sum_squares_[3] - alpha * beta[1] * beta[1];
-		sum_squares_[4] -= other.sum_squares_[4] - alpha * beta[1] * beta[2];
-		sum_squares_[5] -= other.sum_squares_[5] - alpha * beta[2] * beta[2];
+		sum_squares_[0] -= other.sum_squares_[0] - beta[0] * beta[0] / alpha;
+		sum_squares_[1] -= other.sum_squares_[1] - beta[0] * beta[1] / alpha;
+		sum_squares_[2] -= other.sum_squares_[2] - beta[0] * beta[2] / alpha;
+		sum_squares_[3] -= other.sum_squares_[3] - beta[1] * beta[1] / alpha;
+		sum_squares_[4] -= other.sum_squares_[4] - beta[1] * beta[2] / alpha;
+		sum_squares_[5] -= other.sum_squares_[5] - beta[2] * beta[2] / alpha;
 	}
 
 	//
@@ -211,15 +211,15 @@ struct Surfel {
 			return;
 		}
 
-		auto const alpha = scalar_t(1) / (n * (n + 1));
+		auto const alpha = n * (n + 1);
 		auto const beta = (sum_ - (point * n));
 
-		sum_squares_[0] += alpha * beta[0] * beta[0];
-		sum_squares_[1] += alpha * beta[0] * beta[1];
-		sum_squares_[2] += alpha * beta[0] * beta[2];
-		sum_squares_[3] += alpha * beta[1] * beta[1];
-		sum_squares_[4] += alpha * beta[1] * beta[2];
-		sum_squares_[5] += alpha * beta[2] * beta[2];
+		sum_squares_[0] += beta[0] * beta[0] / alpha;
+		sum_squares_[1] += beta[0] * beta[1] / alpha;
+		sum_squares_[2] += beta[0] * beta[2] / alpha;
+		sum_squares_[3] += beta[1] * beta[1] / alpha;
+		sum_squares_[4] += beta[1] * beta[2] / alpha;
+		sum_squares_[5] += beta[2] * beta[2] / alpha;
 
 		sum_ += point;
 		++num_points_;
@@ -246,14 +246,14 @@ struct Surfel {
 				++num_points_;
 			}
 
-			auto const n = scalar_t(1) / num_points_;
+			auto const n = num_points_;
 
-			sum_squares_[0] -= sum_[0] * sum_[0] * n;
-			sum_squares_[1] -= sum_[0] * sum_[1] * n;
-			sum_squares_[2] -= sum_[0] * sum_[2] * n;
-			sum_squares_[3] -= sum_[1] * sum_[1] * n;
-			sum_squares_[4] -= sum_[1] * sum_[2] * n;
-			sum_squares_[5] -= sum_[2] * sum_[2] * n;
+			sum_squares_[0] -= sum_[0] * sum_[0] / n;
+			sum_squares_[1] -= sum_[0] * sum_[1] / n;
+			sum_squares_[2] -= sum_[0] * sum_[2] / n;
+			sum_squares_[3] -= sum_[1] * sum_[1] / n;
+			sum_squares_[4] -= sum_[1] * sum_[2] / n;
+			sum_squares_[5] -= sum_[2] * sum_[2] / n;
 		} else {
 			// FIXME: Improve
 			std::for_each(first, last, [this](auto const& p) { addPoint(p); });
@@ -280,15 +280,15 @@ struct Surfel {
 				clear();
 				return;
 			default:
-				auto const alpha = scalar_t(1) / (n * (n + 1));
+				auto const alpha = n * (n + 1);
 				auto const beta = (sum_ - (point * n));
 
-				sum_squares_[0] -= alpha * beta[0] * beta[0];
-				sum_squares_[1] -= alpha * beta[0] * beta[1];
-				sum_squares_[2] -= alpha * beta[0] * beta[2];
-				sum_squares_[3] -= alpha * beta[1] * beta[1];
-				sum_squares_[4] -= alpha * beta[1] * beta[2];
-				sum_squares_[5] -= alpha * beta[2] * beta[2];
+				sum_squares_[0] -= beta[0] * beta[0] / alpha;
+				sum_squares_[1] -= beta[0] * beta[1] / alpha;
+				sum_squares_[2] -= beta[0] * beta[2] / alpha;
+				sum_squares_[3] -= beta[1] * beta[1] / alpha;
+				sum_squares_[4] -= beta[1] * beta[2] / alpha;
+				sum_squares_[5] -= beta[2] * beta[2] / alpha;
 
 				sum_ -= point;
 				--num_points_;
@@ -352,10 +352,10 @@ struct Surfel {
 		using as = std::array<scalar_t, 3>;
 		using cov = std::array<as, 3>;
 
-		auto const f = scalar_t(1) / (num_points_ - 1);
-		return cov{as{f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2]},
-		           as{f * sum_squares_[1], f * sum_squares_[3], f * sum_squares_[4]},
-		           as{f * sum_squares_[2], f * sum_squares_[4], f * sum_squares_[5]}};
+		auto const n = num_points_ - 1;
+		return cov{as{sum_squares_[0] / n, sum_squares_[1] / n, sum_squares_[2] / n},
+		           as{sum_squares_[1] / n, sum_squares_[3] / n, sum_squares_[4] / n},
+		           as{sum_squares_[2] / n, sum_squares_[4] / n, sum_squares_[5] / n}};
 	}
 
 	//
@@ -405,9 +405,9 @@ struct Surfel {
 
 	constexpr std::array<double, 6> getSymmetricCovariance() const
 	{
-		auto const f = scalar_t(1) / (num_points_ - 1);
-		return {f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2],
-		        f * sum_squares_[3], f * sum_squares_[4], f * sum_squares_[5]};
+		auto const n = num_points_ - 1;
+		return {sum_squares_[0] / n, sum_squares_[1] / n, sum_squares_[2] / n,
+		        sum_squares_[3] / n, sum_squares_[4] / n, sum_squares_[5] / n};
 	}
 
 	//
@@ -436,7 +436,7 @@ struct Surfel {
 		        ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2)
 		        : (0 > x_2
 		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PI
-		               : M_PI / 2);
+		               : M_PI_2);
 
 		return math::Vector3<double>(
 		    (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
