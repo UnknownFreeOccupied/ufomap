@@ -63,30 +63,7 @@ struct Surfel {
 	template <class InputIt>
 	constexpr Surfel(InputIt first, InputIt last)
 	{
-		if (first == last) {
-			return;
-		}
-
-		for (; first != last; ++first) {
-			sum_squares_[0] += (*first)[0] * (*first)[0];
-			sum_squares_[1] += (*first)[0] * (*first)[1];
-			sum_squares_[2] += (*first)[0] * (*first)[2];
-			sum_squares_[3] += (*first)[1] * (*first)[1];
-			sum_squares_[4] += (*first)[1] * (*first)[2];
-			sum_squares_[5] += (*first)[2] * (*first)[2];
-
-			sum_ += *first;
-			++num_points_;
-		}
-
-		auto const n = num_points_;
-
-		sum_squares_[0] -= sum_[0] * sum_[0] / n;
-		sum_squares_[1] -= sum_[0] * sum_[1] / n;
-		sum_squares_[2] -= sum_[0] * sum_[2] / n;
-		sum_squares_[3] -= sum_[1] * sum_[1] / n;
-		sum_squares_[4] -= sum_[1] * sum_[2] / n;
-		sum_squares_[5] -= sum_[2] * sum_[2] / n;
+		addPoint(first, last);
 	}
 
 	constexpr Surfel(std::initializer_list<math::Vector3<scalar_t>> points)
@@ -328,7 +305,7 @@ struct Surfel {
 	// Get normal
 	//
 
-	constexpr math::Vector3<scalar_t> getNormal() const
+	constexpr math::Vector3<double> getNormal() const
 	{
 		return getEigenVectors(getSymmetricCovariance())[0].normalize();
 	}
@@ -337,7 +314,7 @@ struct Surfel {
 	// Get planarity
 	//
 
-	constexpr scalar_t getPlanarity() const
+	constexpr double getPlanarity() const
 	{
 		auto const e = getEigenValues(getSymmetricCovariance());
 		return 2 * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
