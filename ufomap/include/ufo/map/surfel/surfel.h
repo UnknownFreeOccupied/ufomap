@@ -160,6 +160,7 @@ struct Surfel {
 
 	constexpr void removeSurfel(Surfel const& other)
 	{
+		// FIXME: Update with double precision
 		if (other.num_points_ >= num_points_) {
 			clear();
 			return;
@@ -186,7 +187,7 @@ struct Surfel {
 	// Add point
 	//
 
-	constexpr void addPoint(math::Vector3<scalar_t> point)
+	constexpr void addPoint(math::Vector3<double> point)
 	{
 		auto const n = num_points_;
 
@@ -196,17 +197,18 @@ struct Surfel {
 			return;
 		}
 
+		math::Vector3<double> s = sum_;
 		auto const alpha = n * (n + 1);
-		auto const beta = (sum_ - (point * n));
+		auto const beta = (s - (point * n));
 
-		sum_squares_[0] += beta[0] * beta[0] / alpha;
-		sum_squares_[1] += beta[0] * beta[1] / alpha;
-		sum_squares_[2] += beta[0] * beta[2] / alpha;
-		sum_squares_[3] += beta[1] * beta[1] / alpha;
-		sum_squares_[4] += beta[1] * beta[2] / alpha;
-		sum_squares_[5] += beta[2] * beta[2] / alpha;
+		sum_squares_[0] = sum_squares_[0] + (beta[0] * beta[0] / alpha);
+		sum_squares_[1] = sum_squares_[1] + (beta[0] * beta[1] / alpha);
+		sum_squares_[2] = sum_squares_[2] + (beta[0] * beta[2] / alpha);
+		sum_squares_[3] = sum_squares_[3] + (beta[1] * beta[1] / alpha);
+		sum_squares_[4] = sum_squares_[4] + (beta[1] * beta[2] / alpha);
+		sum_squares_[5] = sum_squares_[5] + (beta[2] * beta[2] / alpha);
 
-		sum_ += point;
+		sum_ = s + point;
 		++num_points_;
 	}
 
@@ -285,7 +287,7 @@ struct Surfel {
 	// Remove point
 	//
 
-	constexpr void removePoint(math::Vector3<scalar_t> point)
+	constexpr void removePoint(math::Vector3<double> point)
 	{
 		auto const n = num_points_;
 
@@ -296,6 +298,7 @@ struct Surfel {
 				clear();
 				return;
 			default:
+				// FIXME: Update with double precision
 				auto const alpha = n * (n + 1);
 				auto const beta = (sum_ - (point * n));
 
