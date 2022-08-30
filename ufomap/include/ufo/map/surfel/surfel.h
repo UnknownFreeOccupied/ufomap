@@ -324,12 +324,12 @@ struct Surfel {
 	// Get covariance
 	//
 
-	constexpr std::array<std::array<scalar_t, 3>, 3> getCovariance() const
+	constexpr std::array<std::array<double, 3>, 3> getCovariance() const
 	{
 		using as = std::array<scalar_t, 3>;
 		using cov = std::array<as, 3>;
 
-		auto const n = num_points_ - 1;
+		double const n = num_points_ - 1;
 		return cov{as{sum_squares_[0] / n, sum_squares_[1] / n, sum_squares_[2] / n},
 		           as{sum_squares_[1] / n, sum_squares_[3] / n, sum_squares_[4] / n},
 		           as{sum_squares_[2] / n, sum_squares_[4] / n, sum_squares_[5] / n}};
@@ -339,7 +339,7 @@ struct Surfel {
 	// Get eigenvalues
 	//
 
-	constexpr math::Vector3<scalar_t> getEigenValues() const
+	constexpr math::Vector3<double> getEigenValues() const
 	{
 		return getEigenValues(getSymmetricCovariance());
 	}
@@ -348,7 +348,7 @@ struct Surfel {
 	// Get eigen vectors
 	//
 
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors() const
+	constexpr std::array<math::Vector3<double>, 3> getEigenVectors() const
 	{
 		auto eigen_vectors = getEigenVectors(getSymmetricCovariance());
 		for (auto& v : eigen_vectors) {
