@@ -423,36 +423,25 @@ struct Surfel {
 		double const e = sym_m[4];
 		double const f = sym_m[2];
 
-		double const a2 = a * a;
-		double const b2 = b * b;
-		double const c2 = c * c;
-		double const d2 = d * d;
-		double const e2 = e * e;
-		double const f2 = f * f;
+		double const x_1 =
+		    a * a + b * b + c * c - a * b - a * c - b * c + 3 * (d * d + f * f + e * e);
 
-		double const abc = 2 * a - b - c;
-		double const bac = 2 * b - a - c;
-		double const cab = 2 * c - a - b;
-
-		double const x_1 = a2 + b2 + c2 - a * b - a * c - b * c + 3 * (d2 + f2 + e2);
-		double const x_2 =
-		    -abc * bac * cab + 9 * (cab * d2 + bac * f2 + abc * e2) - 54 * (d * e * f);
+		double const x_2 = -(2 * a - b - c) * (2 * b - a - c) * (2 * c - a - b) +
+		                   9 * ((2 * c - a - b) * (d * d) + (2 * b - a - c) * (f * f) +
+		                        (2 * a - b - c) * (e * e)) -
+		                   54 * (d * e * f);
 
 		double const phi =
 		    0 < x_2
 		        ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2)
 		        : (0 > x_2
 		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PI
-		               : M_PI_2);
+		               : M_PI / 2);
 
-		double const z = a + b + c;
-		double const x_1_s = 2 * std::sqrt(x_1);
-
-		constexpr double third = 1.0 / 3;
-
-		return math::Vector3<double>((z - x_1_s * std::cos(phi * third)) * third,
-		                             (z + x_1_s * std::cos((phi + M_PI) * third)) * third,
-		                             (z + x_1_s * std::cos((phi - M_PI) * third)) * third);
+		return math::Vector3<double>(
+		    (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PI) / 3)) / 3,
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PI) / 3)) / 3);
 	}
 
 	//
@@ -481,19 +470,13 @@ struct Surfel {
 		double const l_2 = eigen_values[1];
 		double const l_3 = eigen_values[2];
 
-		double const ef = e * f;
-		double const de = d * e;
-		double const ce = c - e;
+		double const m_1 = (d * (c - l_1) - e * f) / (f * (b - l_1) - d * e);
+		double const m_2 = (d * (c - l_2) - e * f) / (f * (b - l_2) - d * e);
+		double const m_3 = (d * (c - l_3) - e * f) / (f * (b - l_3) - d * e);
 
-		double const m_1 = (d * (c - l_1) - ef) / (f * (b - l_1) - de);
-		double const m_2 = (d * (c - l_2) - ef) / (f * (b - l_2) - de);
-		double const m_3 = (d * (c - l_3) - ef) / (f * (b - l_3) - de);
-
-		double const f_i = 1.0 / f;
-
-		return {math::Vector3<scalar_t>((l_1 - ce * m_1) * f_i, m_1, 1),
-		        math::Vector3<scalar_t>((l_2 - ce * m_2) * f_i, m_2, 1),
-		        math::Vector3<scalar_t>((l_3 - ce * m_3) * f_i, m_3, 1)};
+		return {math::Vector3<scalar_t>((l_1 - c - e * m_1) / f, m_1, 1),
+		        math::Vector3<scalar_t>((l_2 - c - e * m_2) / f, m_2, 1),
+		        math::Vector3<scalar_t>((l_3 - c - e * m_3) / f, m_3, 1)};
 	}
 
  private:
