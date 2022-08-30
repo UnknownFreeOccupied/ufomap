@@ -316,7 +316,7 @@ struct Surfel {
 
 	constexpr double getPlanarity() const
 	{
-		auto const e = getEigenValues(getSymmetricCovariance());
+		auto const e = getEigenValues();
 		return 2 * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
 	}
 
