@@ -382,7 +382,7 @@ struct Surfel {
 
 	constexpr std::array<double, 6> getSymmetricCovariance() const
 	{
-		auto const n = num_points_ - 1;
+		double const n = num_points_ - 1;
 		return {sum_squares_[0] / n, sum_squares_[1] / n, sum_squares_[2] / n,
 		        sum_squares_[3] / n, sum_squares_[4] / n, sum_squares_[5] / n};
 	}
