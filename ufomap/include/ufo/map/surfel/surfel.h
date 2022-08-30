@@ -425,13 +425,13 @@ struct Surfel {
 	// Get eigen vectors
 	//
 
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
+	constexpr std::array<math::Vector3<double>, 3> getEigenVectors(
 	    std::array<double, 6> const& sym_m) const
 	{
 		return getEigenVectors(sym_m, getEigenValues(sym_m));
 	}
 
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
+	constexpr std::array<math::Vector3<double>, 3> getEigenVectors(
 	    std::array<double, 6> const& sym_m, math::Vector3<double> const& eigen_values) const
 	{
 		// FIXME: Make sure denominator is not zero
@@ -451,9 +451,9 @@ struct Surfel {
 		double const m_2 = (d * (c - l_2) - e * f) / (f * (b - l_2) - d * e);
 		double const m_3 = (d * (c - l_3) - e * f) / (f * (b - l_3) - d * e);
 
-		return {math::Vector3<scalar_t>((l_1 - c - e * m_1) / f, m_1, 1),
-		        math::Vector3<scalar_t>((l_2 - c - e * m_2) / f, m_2, 1),
-		        math::Vector3<scalar_t>((l_3 - c - e * m_3) / f, m_3, 1)};
+		return {math::Vector3<double>((l_1 - c - e * m_1) / f, m_1, 1),
+		        math::Vector3<double>((l_2 - c - e * m_2) / f, m_2, 1),
+		        math::Vector3<double>((l_3 - c - e * m_3) / f, m_3, 1)};
 	}
 
  private:
