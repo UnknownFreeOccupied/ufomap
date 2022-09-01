@@ -50,19 +50,13 @@
 
 namespace ufo::map
 {
-struct ColorNode {
-	RGBColor color;
 
-	constexpr bool operator==(ColorNode rhs) const { return color == rhs.color; }
-
-	constexpr bool operator!=(ColorNode rhs) const { return !(*this == rhs); }
-};
-
+template <bool Single = false>
 struct ColorNodeBlock {
 	// Data
-	std::array<color_t, 8> red;
-	std::array<color_t, 8> green;
-	std::array<color_t, 8> blue;
+	std::conditional_t<Single, color_t, std::array<color_t, 8>> red;
+	std::conditional_t<Single, color_t, std::array<color_t, 8>> green;
+	std::conditional_t<Single, color_t, std::array<color_t, 8>> blue;
 
 	bool operator==(ColorNodeBlock const& rhs) const
 	{
@@ -71,50 +65,120 @@ struct ColorNodeBlock {
 
 	bool operator!=(ColorNodeBlock const& rhs) const { return !(*this == rhs); }
 
-	constexpr RGBColor getColor(std::size_t const index) const
+	constexpr RGBColor getColor(index_t const index) const
 	{
-		return RGBColor(red[index], green[index], blue[index]);
+		if constexpr (Single) {
+			return RGBColor(red, green, blue);
+		} else {
+			return RGBColor(red[index], green[index], blue[index]);
+		}
 	}
 
-	constexpr color_t getRed(std::size_t const index) const { return red[index]; }
+	constexpr color_t getRed(index_t const index) const
+	{
+		if constexpr (Single) {
+			return red;
+		} else {
+			return red[index];
+		}
+	}
 
-	constexpr color_t getGreen(std::size_t const index) const { return green[index]; }
+	constexpr color_t getGreen(index_t const index) const
+	{
+		if constexpr (Single) {
+			return green;
+		} else {
+			return green[index];
+		}
+	}
 
-	constexpr color_t getBlue(std::size_t const index) const { return blue[index]; }
+	constexpr color_t getBlue(index_t const index) const
+	{
+		if constexpr (Single) {
+			return blue;
+		} else {
+			return blue[index];
+		}
+	}
 
 	void setColor(RGBColor const value)
 	{
-		red.fill(value.red);
-		green.fill(value.green);
-		blue.fill(value.blue);
+		if constexpr (Single) {
+			red = value.red;
+			green = value.green;
+			blue = value.blue;
+		} else {
+			red.fill(value.red);
+			green.fill(value.green);
+			blue.fill(value.blue);
+		}
 	}
 
 	constexpr void setColor(std::size_t const index, RGBColor const value)
 	{
-		red[index] = value.red;
-		green[index] = value.green;
-		blue[index] = value.blue;
+		if constexpr (Single) {
+			red = value.red;
+			green = value.green;
+			blue = value.blue;
+		} else {
+			red[index] = value.red;
+			green[index] = value.green;
+			blue[index] = value.blue;
+		}
 	}
 
-	void setRed(color_t const value) { red.fill(value); }
+	void setRed(color_t const value)
+	{
+		if constexpr (Single) {
+			red = value;
+		} else {
+			red.fill(value);
+		}
+	}
 
 	constexpr void setRed(std::size_t const index, color_t const value)
 	{
-		red[index] = value;
+		if constexpr (Single) {
+			red = value;
+		} else {
+			red[index] = value;
+		}
 	}
 
-	void setGreen(color_t const value) { green.fill(value); }
+	void setGreen(color_t const value)
+	{
+		if constexpr (Single) {
+			green = value;
+		} else {
+			green.fill(value);
+		}
+	}
 
 	constexpr void setGreen(std::size_t const index, color_t const value)
 	{
-		green[index] = value;
+		if constexpr (Single) {
+			green = value;
+		} else {
+			green[index] = value;
+		}
 	}
 
-	void setBlue(color_t const value) { blue.fill(value); }
+	void setBlue(color_t const value)
+	{
+		if constexpr (Single) {
+			blue = value;
+		} else {
+			blue.fill(value);
+		}
+	}
 
 	constexpr void setBlue(std::size_t const index, color_t const value)
 	{
-		blue[index] = value;
+		if constexpr (Single) {
+			blue = value;
+		} else {
+			blue[index] = value;
+		}
 	}
 };
 }  // namespace ufo::map

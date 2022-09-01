@@ -119,13 +119,13 @@ struct OctreeLeafNode : Data {
 
 template <class LeafNode>
 struct OctreeInnerNode : LeafNode {
-	using InnerChildrenBlock = std::array<OctreeInnerNode, 8>;
-	using LeafChildrenBlock = std::array<LeafNode, 8>;
+	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
+	using LeafNodeBlock = std::array<LeafNode, 8>;
 
 	// Pointer to children
 	union {
-		InnerChildrenBlock* inner_children = nullptr;
-		LeafChildrenBlock* leaf_children;
+		InnerNodeBlock* inner_children = nullptr;
+		LeafNodeBlock* leaf_children;
 	};
 };
 }  // namespace ufo::map

@@ -113,23 +113,23 @@ void writeHeader(std::ostream& out_stream, FileOptions const& options)
 	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_PATCH),
 	                 sizeof(FileHeader::CURRENT_PATCH));
 
-	uint8_t compressed = options.compressed ? 1U : 0U;
-	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(compressed));
+	uint8_t const compressed = options.compressed ? uint8_t(1) : uint8_t(0);
+	double const resolution = options.resolution;
+	uint8_t const depth_levels = options.depth_levels;
 
-	out_stream.write(reinterpret_cast<char const*>(&options.resolution),
-	                 sizeof(options.resolution));
-	out_stream.write(reinterpret_cast<char const*>(&options.depth_levels),
-	                 sizeof(options.depth_levels));
+	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(compressed));
+	out_stream.write(reinterpret_cast<char const*>(&resolution), sizeof(resolution));
+	out_stream.write(reinterpret_cast<char const*>(&depth_levels), sizeof(depth_levels));
 }
 
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
-                  uint64_t uncompressed_data_size, int acceleration_level,
+                  uint_fast64_t uncompressed_data_size, int acceleration_level,
                   int compression_level)
 {
-	static constexpr uint64_t max = std::numeric_limits<int32_t>::max();
+	static constexpr uint_fast64_t max = std::numeric_limits<int32_t>::max();
 
-	uint64_t begin = 0;
-	uint64_t end = std::min(max, uncompressed_data_size);
+	uint_fast64_t begin = 0;
+	uint_fast64_t end = std::min(max, uncompressed_data_size);
 	int const max_dst_size = LZ4_compressBound(end);
 	auto data = std::make_unique<char[]>(end);
 	auto compressed_data = std::make_unique<char[]>(max_dst_size);
@@ -159,7 +159,7 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
 
 		// Move to next
 		begin = end;
-		uint64_t const diff = uncompressed_data_size - end;
+		uint_fast64_t const diff = uncompressed_data_size - end;
 		end += std::min(max, diff);
 	}
 
@@ -167,7 +167,7 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
 }
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint64_t uncompressed_data_size)
+                    uint_fast64_t uncompressed_data_size)
 {
 	auto regen_buffer = std::make_unique<char[]>(uncompressed_data_size);
 	size_t cur = 0;
@@ -198,7 +198,8 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 }
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint64_t uncompressed_data_size, uint64_t& compressed_data_size)
+                    uint_fast64_t uncompressed_data_size,
+                    uint_fast64_t& compressed_data_size)
 {
 	auto regen_buffer = std::make_unique<char[]>(uncompressed_data_size);
 	size_t cur = 0;

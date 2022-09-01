@@ -87,15 +87,12 @@ class OctreeBase
 	// Maximum number of depth levels
 	static constexpr depth_t MAX_DEPTH_LEVELS = 21;
 
-	friend Derived;
-
- private:
 	using LeafNode = OctreeLeafNode<DataType>;
 	using InnerNode = OctreeInnerNode<LeafNode>;
-	using LeafNodeBlock = typename InnerNode::LeafChildrenBlock;
-	using InnerNodeBlock = typename InnerNode::InnerChildrenBlock;
+	using typename InnerNode::InnerNodeBlock;
+	using typename InnerNode::LeafNodeBlock;
 
-	using index_t = std::size_t;
+	friend Derived;
 
  public:
 	using const_iterator = IteratorWrapper<Derived, Node>;
@@ -3747,8 +3744,8 @@ class OctreeBase
 	// Locks to support parallel insertion, one per level
 	std::array<std::atomic_flag, maxDepthLevels() + 1> children_locks_;
 
-	std::stack<InnerNodeBlock*, std::vector<InnerNodeBlock*>> free_inner_blocks_;
-	std::stack<LeafNodeBlock*, std::vector<LeafNodeBlock*>> free_leaf_blocks_;
+	std::stack<InnerNodeBlock*> free_inner_blocks_;
+	std::stack<LeafNodeBlock*> free_leaf_blocks_;
 
 	std::atomic_flag free_inner_block_lock_ = ATOMIC_FLAG_INIT;
 	std::atomic_flag free_leaf_block_lock_ = ATOMIC_FLAG_INIT;

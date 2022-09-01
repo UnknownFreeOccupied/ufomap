@@ -55,7 +55,13 @@ using depth_t = uint8_t;
 using time_step_t = uint32_t;
 
 // TODO: New types
-// using depth_t = uint8_t;
+// using coord_t = float;
+// using resolution_t = double;
+// using index_t = uint_fast8_t;
+// using index_field_t = uint8_t;
+// using depth_t = uint_fast8_t;
+// using key_t = uint_fast32_t;
+// using code_t = uint_fast64_t;
 // using occupancy_t = float;
 // using time_t = float;
 // using color_t = uint8_t;

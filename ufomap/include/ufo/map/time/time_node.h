@@ -51,35 +51,40 @@
 
 namespace ufo::map
 {
-template <typename TimeType = float>
+template <bool Single>
 struct TimeNode {
-	using time_t = TimeType;
-
-	time_t time;
-
-	constexpr bool operator==(TimeNode rhs) const { return time == rhs.time; }
-
-	constexpr bool operator!=(TimeNode rhs) const { return !(*this == rhs); }
-};
-
-template <typename TimeType = float>
-struct TimeNodeBlock {
-	using time_t = TimeType;
-
 	// Data
-	std::array<time_t, 8> time;
+	std::conditional_t<Single, time_t, std::array<time_t, 8>> time;
 
-	bool operator==(TimeNodeBlock const& rhs) const { return time == rhs.time; }
+	bool operator==(TimeNode const& rhs) const { return time == rhs.time; }
 
-	bool operator!=(TimeNodeBlock const& rhs) const { return !(*this == rhs); }
+	bool operator!=(TimeNode const& rhs) const { return !(*this == rhs); }
 
-	constexpr time_t getTime(std::size_t const index) const { return time[index]; }
-
-	void setTime(time_t const value) { time.fill(value); }
-
-	constexpr void setTime(std::size_t const index, time_t const value)
+	constexpr time_t getTime(index_t const index) const
 	{
-		time[index] = value;
+		if constexpr (Single) {
+			return time;
+		} else {
+			return time[index];
+		}
+	}
+
+	void setTime(time_t const value)
+	{
+		if constexpr (Single) {
+			time = value;
+		} else {
+			time.fill(value);
+		}
+	}
+
+	constexpr void setTime(index_t const index, time_t const value)
+	{
+		if constexpr (Single) {
+			time = value;
+		} else {
+			time[index] = value;
+		}
 	}
 };
 }  // namespace ufo::map

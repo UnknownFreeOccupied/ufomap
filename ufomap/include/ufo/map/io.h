@@ -117,7 +117,7 @@ constexpr inline DataType getDataType(T)
 // File options
 struct FileOptions {
 	bool compressed;
-	double resolution;
+	resolution_t resolution;
 	depth_t depth_levels;
 };
 

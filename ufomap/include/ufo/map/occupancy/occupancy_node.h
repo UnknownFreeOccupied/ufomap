@@ -60,34 +60,17 @@ template <typename OccupancyType = float>
 struct OccupancyNode {
 	using occupancy_t = OccupancyType;
 
-	occupancy_t occupancy;
-
-	constexpr bool operator==(OccupancyNode rhs) const
-	{
-		return occupancy == rhs.occupancy;
-	}
-
-	constexpr bool operator!=(OccupancyNode rhs) const { return !(*this == rhs); }
-};
-
-template <typename OccupancyType = float>
-struct OccupancyNodeBlock {
-	using occupancy_t = OccupancyType;
+	// Data
+	std::array<occupancy_t, 8> occupancy;
 
 	// Indicators
 	uint8_t contains_unknown;
 	uint8_t contains_free;
 	uint8_t contains_occupied;
 
-	// Data
-	std::array<occupancy_t, 8> occupancy;
+	bool operator==(OccupancyNode const& rhs) const { return occupancy == rhs.occupancy; }
 
-	bool operator==(OccupancyNodeBlock const& rhs) const
-	{
-		return occupancy == rhs.occupancy;
-	}
-
-	bool operator!=(OccupancyNodeBlock const& rhs) const { return !(*this == rhs); }
+	bool operator!=(OccupancyNode const& rhs) const { return !(*this == rhs); }
 
 	constexpr occupancy_t getOccupancy(std::size_t const index) const
 	{
