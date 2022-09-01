@@ -39,20 +39,25 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_NODE_BASE_H
-#define UFO_MAP_NODE_BASE_H
+#ifndef UFO_MAP_OCTREE_NODE_BASE_H
+#define UFO_MAP_OCTREE_NODE_BASE_H
 
 namespace ufo::map
 {
 template <typename... Nodes>
-struct NodeBase : Nodes... {
-	constexpr bool operator==(NodeBase<Nodes...> const& rhs) const
+struct OctreeNodeBase : Nodes... {
+	constexpr bool operator==(OctreeNodeBase const& rhs) const
 	{
 		return (Nodes::operator==(rhs) && ...);
 	}
 
-	constexpr bool operator!=(NodeBase const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(OctreeNodeBase const& rhs) const { return !(*this == rhs); }
+
+	void fill(OctreeNodeBase const& other, std::size_t const index)
+	{
+		(Nodes::fill(other, index), ...);
+	}
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_NODE_BASE_H
+#endif  // UFO_MAP_OCTREE_NODE_BASE_H

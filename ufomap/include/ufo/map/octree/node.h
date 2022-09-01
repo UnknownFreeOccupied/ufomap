@@ -147,14 +147,15 @@ struct Node {
 	 */
 	constexpr void const* data() const noexcept { return data_; }
 
+	constexpr std::size_t index() const noexcept { return code_.index(); }
+
  protected:
 	// Pointer to the actual node
 	void* data_ = nullptr;
 	// The code for the node
 	Code code_;
 
-	template <class Derived, class DataType, class Indicators, bool ReuseNodes,
-	          bool LockLess>
+	template <class Derived, class DataType, bool ReuseNodes, bool LockLess>
 	friend class OctreeBase;
 };
 
@@ -259,8 +260,7 @@ struct NodeBV : public Node {
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
 
-	template <class Derived, class DataType, class Indicators, bool ReuseNodes,
-	          bool LockLess>
+	template <class Derived, class DataType, bool ReuseNodes, bool LockLess>
 	friend class OctreeBase;
 };
 }  // namespace ufo::map

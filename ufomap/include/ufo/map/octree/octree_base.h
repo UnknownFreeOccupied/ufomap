@@ -49,7 +49,6 @@
 #include <ufo/map/key.h>
 #include <ufo/map/octree/iterator.h>
 #include <ufo/map/octree/node.h>
-#include <ufo/map/octree/octree_indicators.h>
 #include <ufo/map/octree/octree_node.h>
 #include <ufo/map/octree/query.h>
 #include <ufo/map/point.h>
@@ -79,8 +78,7 @@
 namespace ufo::map
 {
 // Utilizing Curiously recurring template pattern (CRTP)
-template <class Derived, class DataType, class Indicators = OctreeIndicators,
-          bool BlockBased = false, bool ReuseNodes = false, bool LockLess = false>
+template <class Derived, class DataType, bool ReuseNodes = false, bool LockLess = false>
 class OctreeBase
 {
  private:
@@ -92,18 +90,12 @@ class OctreeBase
 	friend Derived;
 
  private:
-	using LeafNode = std::conditional_t<
-	    BlockBased,
-	    std::pair<std::reference_wrapper<OctreeLeafNodeBlock<DataType, Indicators>>,
-	              std::size_t>,
-	    OctreeLeafNode<DataType, Indicators>>;
-	using InnerNode = std::conditional_t<
-	    BlockBased,
-	    std::pair<std::reference_wrapper<OctreeInnerNodeBlock<LeafNode>>, std::size_t>,
-	    OctreeInnerNode<LeafNode>>;
-
+	using LeafNode = OctreeLeafNode<DataType>;
+	using InnerNode = OctreeInnerNode<LeafNode>;
 	using LeafNodeBlock = typename InnerNode::LeafChildrenBlock;
 	using InnerNodeBlock = typename InnerNode::InnerChildrenBlock;
+
+	using index_t = std::size_t;
 
  public:
 	using const_iterator = IteratorWrapper<Derived, Node>;
@@ -532,7 +524,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isLeaf(Node node) const noexcept
 	{
-		return isPureLeaf(node) || isLeaf(getInnerNode(node));
+		return isLeaf(getLeafNode(node), node.index());
 	}
 
 	/*!
@@ -543,7 +535,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isLeaf(Code code) const noexcept
 	{
-		return isPureLeaf(code) || isLeaf(getInnerNode(code));
+		return isLeaf(getLeafNode(code), code.index());
 	}
 
 	/*!
@@ -554,7 +546,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isLeaf(Key key) const noexcept
 	{
-		return isPureLeaf(key) || isLeaf(getInnerNode(toCode(key)));
+		return isPureLeaf(key) || isLeaf(toCode(key));
 	}
 
 	/*!
@@ -567,7 +559,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isLeaf(Point3 coord, depth_t depth = 0) const noexcept
 	{
-		return isPureLeaf(coord, depth) || isLeaf(getInnerNode(toCode(coord, depth)));
+		return isPureLeaf(coord, depth) || isLeaf(toCode(coord, depth));
 	}
 
 	/*!
@@ -581,7 +573,7 @@ class OctreeBase
 	[[nodiscard]] constexpr bool isLeaf(coord_t x, coord_t y, coord_t z,
 	                                    depth_t depth = 0) const noexcept
 	{
-		return isPureLeaf(x, y, z, depth) || isLeaf(getInnerNode(toCode(x, y, z, depth)));
+		return isPureLeaf(x, y, z, depth) || isLeaf(toCode(x, y, z, depth));
 	}
 
 	//
@@ -860,21 +852,24 @@ class OctreeBase
 
 	Node createNode(Code code)
 	{
+		// FIXME: Handle wrong codes
+
 		InnerNode* node = &getRoot();
 		auto const min_depth = std::max(depth_t(1), code.depth());
-		depth_t cur_depth = depthLevels();
-		for (; min_depth < cur_depth; --cur_depth) {
-			if (isLeaf(*node)) {
-				createInnerChildren(*node, cur_depth);
+		for (depth_t depth = depthLevels(); min_depth < depth; --depth) {
+			auto const index = code.indexAtDepth(depth);
+			if (isLeaf(*node, index)) {
+				createInnerChildren(*node, index, depth);
 			}
-			node = &getInnerChild(*node, code.indexAtDepth(cur_depth - 1));
+			node = &getInnerChild(*node, index, code.indexAtDepth(depth - 1));
 		}
 
 		if (0 == code.depth()) {
-			if (isLeaf(*node)) {
-				createLeafChildren(*node);
+			auto const index = code.index();
+			if (isLeaf(*node, index)) {
+				createLeafChildren(*node, index);
 			}
-			return Node(&getLeafChild(*node, code.indexAtDepth(0)), code);
+			return Node(&getLeafChild(*node, code.index()), code);
 		} else {
 			return Node(node, code);
 		}
@@ -896,21 +891,7 @@ class OctreeBase
 	// Create bv node
 	//
 
-	NodeBV createNodeBV(Code code)
-	{
-		// FIXME: Handle wrong codes
-
-		NodeBV node(getRootNode());
-
-		while (code.depth() != node.depth()) {
-			if (isLeaf(node)) {
-				createChildren(getInnerNode(node), node.depth());
-			}
-			node = getNodeChild(node, code.indexAtDepth(node.depth() - 1));
-		}
-
-		return node;
-	}
+	NodeBV createNodeBV(Code code) { return getNodeBV(createNode(code)); }
 
 	NodeBV createNodeBV(Key key) { return createNodeBV(toCode(key)); }
 
@@ -1032,12 +1013,7 @@ class OctreeBase
 
 	NodeBV getNodeBV(Node node) const { return NodeBV(node, getNodeBoundingVolume(node)); }
 
-	NodeBV getNodeBV(Code code) const
-	{
-		return getNodeBV(getNode(code));
-		// return NodeBV(getNode(code), getNodeBoundingVolume(code)); // TODO:
-		// getNodeBoundingVolume(code) does not exist
-	}
+	NodeBV getNodeBV(Code code) const { return getNodeBV(getNode(code)); }
 
 	NodeBV getNodeBV(Key key) const { return getNodeBV(toCode(key)); }
 
@@ -1175,9 +1151,12 @@ class OctreeBase
 	// Node child
 	//
 
+	// TODO: Continue from here
+
 	Node getNodeChild(Node node, size_t child_idx) const
 	{
-		LeafNode& child = getChild(getInnerNode(node), node.depth() - 1, child_idx);
+		LeafNode& child =
+		    getChild(getInnerNode(node), node.index(), node.depth() - 1, child_idx);
 
 		return Node(&child, node.code().child(child_idx));
 	}
@@ -2289,12 +2268,6 @@ class OctreeBase
 	      node_size_factor_(other.node_size_factor_),
 	      automatic_pruning_enabled_(other.automatic_pruning_enabled_)
 	{
-		// TODO: Implement
-
-		// num_inner_nodes_ = other.num_inner_nodes_;
-		// num_inner_leaf_nodes_ = other.num_inner_leaf_nodes_;
-		// num_leaf_nodes_ = other.num_leaf_nodes_;
-
 		init();
 	}
 
@@ -2331,9 +2304,6 @@ class OctreeBase
 		node_size_ = rhs.node_size_;
 		node_size_factor_ = rhs.node_size_factor_;
 		automatic_pruning_enabled_ = rhs.automatic_pruning_enabled_;
-		// num_inner_nodes_.store(rhs.num_inner_nodes_);
-		// num_inner_leaf_nodes_.store(rhs.num_inner_leaf_nodes_);
-		// num_leaf_nodes_.store(rhs.num_leaf_nodes_);
 		return *this;
 	}
 
@@ -2808,6 +2778,70 @@ class OctreeBase
 			}
 		}
 
+		// TODO: Implement
+
+		setIsLeaf(node, false);
+		if constexpr (!LockLess) {
+			unlockChildren(0);
+		}
+	}
+
+	void createLeafChildren(InnerNode& node, index_t index)
+	{
+		if constexpr (!LockLess) {
+			if (!lockIfLeaf(node, 0)) {
+				return;
+			}
+		}
+
+		// TODO: Implement
+
+		setIsLeaf(node, index, false);
+		if constexpr (!LockLess) {
+			unlockChildren(0);
+		}
+	}
+
+	void createInnerChildren(InnerNode& node, depth_t depth)
+	{
+		if constexpr (!LockLess) {
+			if (!lockIfLeaf(node, depth)) {
+				return;
+			}
+		}
+
+		// TODO: Implement
+
+		setIsLeaf(node, false);
+		if constexpr (!LockLess) {
+			unlockChildren(depth);
+		}
+	}
+
+	void createInnerChildren(InnerNode& node, index_t index, depth_t depth)
+	{
+		if constexpr (!LockLess) {
+			if (!lockIfLeaf(node, depth)) {
+				return;
+			}
+		}
+
+		// TODO: Implement
+
+		setIsLeaf(node, index, false);
+		if constexpr (!LockLess) {
+			unlockChildren(depth);
+		}
+	}
+
+	void createLeafChildren(InnerNode& node)
+	{
+		if constexpr (!LockLess) {
+			if (!lockIfLeaf(node, 0)) {
+				return;
+			}
+		}
+
 		if constexpr (ReuseNodes) {
 			if constexpr (!LockLess) {
 				if (lockIfNonEmptyLeaves()) {
@@ -2917,15 +2951,6 @@ class OctreeBase
 		}
 	}
 
-	void createChildren(InnerNode& node, depth_t depth)
-	{
-		if (1 == depth) {
-			createLeafChildren(node);
-		} else {
-			createInnerChildren(node, depth);
-		}
-	}
-
 	//
 	// Delete children
 	//
@@ -3032,30 +3057,30 @@ class OctreeBase
 	// Get children
 	//
 
-	static constexpr LeafNodeBlock& getLeafChildren(InnerNode const& node)
+	static constexpr LeafNodeBlock& getLeafChildrenBlock(InnerNode const& node)
 	{
 		return *node.leaf_children;
 	}
 
-	static constexpr InnerNodeBlock& getInnerChildren(InnerNode const& node)
+	static constexpr InnerNodeBlock& getInnerChildrenBlock(InnerNode const& node)
 	{
 		return *node.inner_children;
 	}
 
-	static constexpr LeafNode& getLeafChild(InnerNode const& node, unsigned int const idx)
+	static constexpr LeafNode& getLeafChildren(InnerNode const& node, index_t index)
 	{
-		return getLeafChildren(node)[idx];
+		return getLeafChildrenBlock(node)[index];
 	}
 
-	static constexpr InnerNode& getInnerChild(InnerNode const& node, unsigned int const idx)
+	static constexpr InnerNode& getInnerChildren(InnerNode const& node, index_t index)
 	{
-		return getInnerChildren(node)[idx];
+		return getInnerChildrenBlock(node)[index];
 	}
 
-	static constexpr LeafNode& getChild(InnerNode const& node, depth_t const child_depth,
-	                                    unsigned int const idx)
+	static constexpr LeafNode& getChildren(InnerNode const& node, index_t index,
+	                                       depth_t depth)
 	{
-		return 0 == child_depth ? getLeafChild(node, idx) : getInnerChild(node, idx);
+		return 1 == depth ? getLeafChildren(node, index) : getInnerChildren(node, index);
 	}
 
 	//
@@ -3104,57 +3129,100 @@ class OctreeBase
 	// Is leaf
 	//
 
-	static constexpr bool isLeaf(LeafNode const& node) noexcept { return node.is_leaf; }
-
-	template <class T>
-	static constexpr bool isAllLeaf(T const& nodes) noexcept
+	static constexpr bool isLeaf(LeafNode const& node, index_t index) noexcept
 	{
-		// TODO: Implement
+		return node.isLeaf(index);
 	}
 
-	template <class T>
-	static constexpr bool isAnyLeaf(T const& nodes) noexcept
+	static constexpr bool isAllLeaf(LeafNode const& node) noexcept
 	{
-		// TODO: Implement
+		return node.isAllLeaf();
 	}
 
-	template <class T>
-	static constexpr bool isNoneLeaf(T const& nodes) noexcept
+	static constexpr bool isAnyLeaf(LeafNode const& node) noexcept
 	{
-		// TODO: Implement
+		return node.isAnyLeaf();
+	}
+
+	static constexpr bool isNoneLeaf(LeafNode const& node) noexcept
+	{
+		return node.isNoneLeaf();
 	}
 
 	//
 	// Set is leaf
 	//
 
+	static constexpr void setIsLeaf(LeafNode& node, index_t index, bool is_leaf) noexcept
+	{
+		node.setLeaf(index, is_leaf);
+	}
+
 	static constexpr void setIsLeaf(LeafNode& node, bool is_leaf) noexcept
 	{
-		node.is_leaf = is_leaf;
+		node.setLeaf(is_leaf);
 	}
 
 	//
 	// Is parent
 	//
 
-	static constexpr bool isParent(LeafNode const& node) noexcept { return !isLeaf(node); }
+	static constexpr bool isParent(LeafNode const& node, index_t index) noexcept
+	{
+		return !isLeaf(node, index);
+	}
+
+	static constexpr bool isAllParent(LeafNode const& node) noexcept
+	{
+		return isNoneLeaf(node);
+	}
+
+	static constexpr bool isAnyParent(LeafNode const& node) noexcept
+	{
+		return !isAllLeaf(node);
+	}
+
+	static constexpr bool isNoneParent(LeafNode const& node) noexcept
+	{
+		return isAllLeaf(node);
+	}
 
 	//
 	// Is modified
 	//
 
-	static constexpr bool isModified(LeafNode const& node) noexcept
+	static constexpr bool isModified(LeafNode const& node, index_t index) noexcept
 	{
-		return node.modified;
+		return node.isModified(index);
+	}
+
+	static constexpr bool isAllModified(LeafNode const& node) noexcept
+	{
+		return node.isAllModified();
+	}
+
+	static constexpr bool isAnyModified(LeafNode const& node) noexcept
+	{
+		return node.isAnyModified();
+	}
+
+	static constexpr bool isNoneModified(LeafNode const& node) noexcept
+	{
+		return node.isNoneModified();
 	}
 
 	//
 	// Set is modified
 	//
 
+	static constexpr void setModified(LeafNode& node, index_t index, bool modified) noexcept
+	{
+		node.setModified(index, modified);
+	}
+
 	static constexpr void setModified(LeafNode& node, bool modified) noexcept
 	{
-		node.modified = modified;
+		node.setModified(modified);
 	}
 
 	//

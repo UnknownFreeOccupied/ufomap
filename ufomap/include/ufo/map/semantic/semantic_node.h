@@ -72,7 +72,7 @@ struct SemanticNodeNew {
 	using semantic_container_t = float;  // TODO: Change
 
 	// Data
-	std::array<semantic_container_t, 8> semantics;
+	semantic_container_t semantics;
 
 	bool operator==(SemanticNodeNew const& rhs) const { return semantics == rhs.semantics; }
 

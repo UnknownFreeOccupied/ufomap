@@ -61,6 +61,54 @@ struct SurfelNode {
 
 	constexpr bool operator!=(SurfelNode const& rhs) const { return !(*this == rhs); }
 };
+
+template <bool Single = false>
+struct SurfelNodeBlock {
+	using surfel_t = Surfel<float>;
+	using surfel_type = std::conditional_t<Single, surfel_t, std::array<surfel_t, 8>>;
+
+	surfel_type surfel;
+
+	bool operator==(SurfelNodeBlock const& rhs) const { return surfel == rhs.surfel; }
+
+	bool operator!=(SurfelNodeBlock const& rhs) const { return !(*this == rhs); }
+
+	constexpr surfel_type& getSurfel(std::size_t index)
+	{
+		if constexpr (Single) {
+			return surfel;
+		} else {
+			return surfel[index];
+		}
+	}
+
+	constexpr surfel_type const& getSurfel(std::size_t index) const
+	{
+		if constexpr (Single) {
+			return surfel;
+		} else {
+			return surfel[index];
+		}
+	}
+
+	void setSurfel(surfel_t const& s)
+	{
+		if constexpr (Single) {
+			surfel = s;
+		} else {
+			surfel.fill(s);
+		}
+	}
+
+	void setSurfel(std::size_t index, surfel_t const& s)
+	{
+		if constexpr (Single) {
+			surfel = s;
+		} else {
+			surfel[index] = s;
+		}
+	}
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SURFEL_NODE_H

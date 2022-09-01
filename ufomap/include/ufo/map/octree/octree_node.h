@@ -50,61 +50,77 @@
 
 namespace ufo::map
 {
-template <typename Data, class Indicators>
-struct OctreeDataLeafNode : Indicators {
-	Data value;
+template <class Data>
+struct OctreeLeafNode : Data {
+	// Indicates whether this is a leaf node (has no children) or not. If true then the
+	// children are not valid and should not be accessed
+	uint8_t is_leaf;
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	uint8_t modified;
 
-	constexpr bool operator==(OctreeDataLeafNode const& rhs) const
-	{
-		return static_cast<Data const&>(rhs.value) == value;
-	}
-
-	constexpr bool operator!=(OctreeDataLeafNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
-};
-
-template <class Data, class Indicators>
-struct OctreeLeafNode : Data, Indicators {
-	constexpr bool operator==(OctreeLeafNode const& rhs) const
+	bool operator==(OctreeLeafNode const& rhs) const
 	{
 		return static_cast<Data const&>(rhs) == static_cast<Data const&>(*this);
 	}
 
-	constexpr bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
+	bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
+
+	constexpr bool isLeaf(std::size_t const index) const
+	{
+		return (is_leaf >> index) & uint8_t(1);
+	}
+
+	constexpr bool isAllLeaf() const
+	{
+		return std::numeric_limits<uint8_t>::max() == is_leaf;
+	}
+
+	constexpr bool isAnyLeaf() const { return 0 != is_leaf; }
+
+	constexpr bool isNoneLeaf() const { return 0 == is_leaf; }
+
+	constexpr bool isModified(std::size_t const index) const
+	{
+		return (modified >> index) & uint8_t(1);
+	}
+
+	constexpr bool isAllModified() const
+	{
+		return std::numeric_limits<uint8_t>::max() == modified;
+	}
+
+	constexpr bool isAnyModified() const { return 0 != modified; }
+
+	constexpr bool isNoneModified() const { return 0 == modified; }
+
+	constexpr void setLeaf(bool const value) const
+	{
+		is_leaf = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
+	}
+
+	constexpr void setLeaf(std::size_t const index, bool const value) const
+	{
+		is_leaf = (is_leaf & ~(uint8_t(1) << index)) |
+		          (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
+	}
+
+	constexpr void setModified(bool const value) const
+	{
+		modified = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
+	}
+
+	constexpr void setModified(std::size_t const index, bool const value) const
+	{
+		modified = (modified & ~(uint8_t(1) << index)) |
+		           (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
+	}
 };
 
 template <class LeafNode>
 struct OctreeInnerNode : LeafNode {
 	using InnerChildrenBlock = std::array<OctreeInnerNode, 8>;
 	using LeafChildrenBlock = std::array<LeafNode, 8>;
-
-	// Pointer to children
-	union {
-		InnerChildrenBlock* inner_children = nullptr;
-		LeafChildrenBlock* leaf_children;
-	};
-};
-
-//
-// Block
-//
-
-template <class Data, class Indicators>
-struct OctreeLeafNodeBlock : Data, Indicators {
-	bool operator==(OctreeLeafNodeBlock const& rhs) const
-	{
-		return static_cast<Data const&>(*this) == static_cast<Data const&>(rhs);
-	}
-
-	bool operator!=(OctreeLeafNodeBlock const& rhs) const { return !(*this == rhs); }
-};
-
-template <class LeafNodeBlock>
-struct OctreeInnerNodeBlock : LeafNodeBlock {
-	using InnerChildrenBlock = std::array<OctreeInnerNodeBlock, 8>;
-	using LeafChildrenBlock = std::array<LeafNodeBlock, 8>;
 
 	// Pointer to children
 	union {
