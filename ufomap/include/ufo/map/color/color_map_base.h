@@ -222,31 +222,45 @@ class ColorMapBase
 	//
 
 	template <bool Single>
-	constexpr void updateNode(ColorNode<Single> const&) noexcept
+	constexpr void updateNode(ColorNode<Single> const&, index_field_t const) noexcept
 	{
 	}
 
 	template <bool Single, class T>
 	void updateNode(ColorNode<Single>& node, index_field_t const indices, T const& children)
 	{
+		std::array<color_t, children.size()> reds;
+		std::array<color_t, children.size()> greens;
+		std::array<color_t, children.size()> blues;
 		if constexpr (Single) {
-			std::array<RGBColor, children.size()> colors;
 			for (std::size_t i = 0; children.size() != i; ++i) {
-				colors[i] = getColor(children[i], 0);
+				reds[i] = getRed(children[i], 0);
+				greens[i] = getGreen(children[i], 0);
+				blues[i] = getBlues(children[i], 0);
 			}
-			setColor(node, RGBColor::average(std::cbegin(colors), std::cend(colors)));
+			node.setRed(average(std::cbegin(reds), std::cend(reds)));
+			node.setGreen(average(std::cbegin(greens), std::cend(greens)));
+			node.setBlue(average(std::cbegin(blues), std::cend(blues)));
 		} else {
 			for (index_t index = 0; children.size() != index; ++index) {
 				if ((indices >> index) & index_field_t(1)) {
-					std::array<RGBColor, children.size()> colors;
 					for (std::size_t i = 0; children.size() != i; ++i) {
-						colors[i] = getColor(children[index], i);
+						reds[i] = getRed(children[index], i);
+						greens[i] = getGreen(children[index], i);
+						blues[i] = getBlue(children[index], i);
 					}
-					setColor(node, index,
-					         RGBColor::average(std::cbegin(colors), std::cend(colors)));
+					node.setRed(index, average(std::cbegin(reds), std::cend(reds)));
+					node.setGreen(index, average(std::cbegin(greens), std::cend(greens)));
+					node.setBlue(index, average(std::cbegin(blues), std::cend(blues)));
 				}
 			}
 		}
+	}
+
+	template <class InputIt>
+	static constexpr color_t average(InputIt first, InputIt last)
+	{
+		return std::reduce(first, last, 0.0) / double(std::distance(first, last));
 	}
 
 	//
@@ -276,31 +290,102 @@ class ColorMapBase
 	}
 
 	template <class InputIt>
-	void readNodes(std::istream& in, InputIt first, InputIt last)
+	void readNodes(std::istream& in, InputIt first, InputIt last, std::size_t num_nodes)
 	{
-		// TODO: Implement
+		uint8_t single;
+		in.read(reinterpret_cast<char*>(&single), sizeof(single));
 
-		auto const num_nodes = std::distance(first, last);
+		num_nodes = 3 * std::distance(first, last);
+		if (!single) {
+			num_nodes *= 8;
+		}
 
-		auto data = std::make_unique<RGBColor[]>(num_nodes);
+		auto data = std::make_unique<color_t[]>(num_nodes);
 		in.read(reinterpret_cast<char*>(data.get()),
 		        num_nodes * sizeof(typename decltype(data)::element_type));
 
-		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			setColor(*first, data[i]);
+		if constexpr (isSingle<InputIt>()) {
+			if (single) {
+				for (std::size_t i = 0; first != last; ++first) {
+					setRed(first->node, data[i++]);
+					setGreen(first->node, data[i++]);
+					setBlue(first->node, data[i++]);
+				}
+			} else {
+				for (auto d_first = data.get(); first != last; ++first) {
+					auto d_last = std::next(d_first, 8);
+					first->node.setRed(average(d_first, d_last));
+					d_first = d_last;
+					d_last = std::next(d_first, 8);
+					first->node.setGreen(average(d_first, d_last));
+					d_first = d_last;
+					d_last = std::next(d_first, 8);
+					first->node.setBlue(average(d_first, d_last));
+					d_first = d_last;
+					d_last = std::next(d_first, 8);
+				}
+			}
+		} else {
+			if (single) {
+				for (std::size_t i = 0; first != last; ++first) {
+					first->node.setRed(data[i++]);
+					first->node.setGreen(data[i++]);
+					first->node.setBlue(data[i++]);
+				}
+			} else {
+				for (std::size_t i = 0; first != last; ++first) {
+					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+						auto d_first = &(data[i]);
+						auto d_last = std::next(d_first, first->node.red.size());
+						std::copy(d_first, d_last, first->node.red.data());
+						d_first = d_last;
+						d_last = std::next(d_first, first->node.green.size());
+						std::copy(d_first, d_last, first->node.green.data());
+						d_first = d_last;
+						d_last = std::next(d_first, first->node.blue.size());
+						std::copy(d_first, d_last, first->node.blue.data());
+						i += first->node.red.size() + first->node.green.size() +
+						     first->node.blue.size();
+					} else {
+						for (index_t index = 0; first->node.red.size() != index; ++index) {
+							if ((first.index_field >> index) & index_field_t(1)) {
+								first->node.setRed(index, data[i++]);
+								first->node.setGreen(index, data[i++]);
+								first->node.setBlue(index, data[i++]);
+							} else {
+								i += 3;
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last)
+	void writeNodes(std::ostream& out, InputIt first, InputIt last, std::size_t num_nodes)
 	{
-		// TODO: Implement
+		constexpr uint8_t const single = isSingle<InputIt>();
+		out.write(reinterpret_cast<char const*>(&single), sizeof(single));
 
-		auto const num_nodes = std::distance(first, last);
+		num_nodes = 3 * std::distance(first, last);
+		if constexpr (!single) {
+			num_nodes *= 8;
+		}
 
-		auto data = std::make_unique<RGBColor[]>(num_nodes);
-		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			data[i] = getColor(*first);
+		auto data = std::make_unique<color_t[]>(num_nodes);
+		if constexpr (single) {
+			for (std::size_t i = 0; first != last; ++first) {
+				data[i++] = first->node.red;
+				data[i++] = first->node.green;
+				data[i++] = first->node.blue;
+			}
+		} else {
+			for (auto d = data.get(); first != last; ++first) {
+				d = std::copy(std::cbegin(first->node.red), std::cend(first->node.red), d);
+				d = std::copy(std::cbegin(first->node.green), std::cend(first->node.green), d);
+				d = std::copy(std::cbegin(first->node.blue), std::cend(first->node.blue), d);
+			}
 		}
 
 		out.write(reinterpret_cast<char const*>(data.get()),

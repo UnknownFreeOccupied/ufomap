@@ -50,29 +50,14 @@
 
 namespace ufo::map
 {
-template <std::size_t NumLabelBits, std::size_t NumValueBits>
-struct SemanticNode {
-	using semantic_container_type = Semantics<NumLabelBits, NumValueBits>;
-	using semantic_label_type = typename semantic_container_type::label_type;
-	using Semantic_value_type = typename semantic_container_type::value_type;
-
-	semantic_container_type semantics;
-
-	constexpr bool operator==(SemanticNode const& rhs) const
-	{
-		return semantics == rhs.semantics;
-	}
-
-	constexpr bool operator!=(SemanticNode const& rhs) const { return !(*this == rhs); }
-};
-
+template <bool Single = false>
 struct SemanticNodeNew {
 	using semantic_label_t = uint32_t;
 	using semantic_value_t = float;
 	using semantic_container_t = float;  // TODO: Change
 
 	// Data
-	semantic_container_t semantics;
+	semantic_container_t<Single> semantics;
 
 	bool operator==(SemanticNodeNew const& rhs) const { return semantics == rhs.semantics; }
 

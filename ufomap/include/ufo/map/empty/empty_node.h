@@ -42,9 +42,12 @@
 #ifndef UFO_MAP_EMPTY_NODE_H
 #define UFO_MAP_EMPTY_NODE_H
 
+// STL
+#include <cstdint>
+
 namespace ufo::map
 {
-template <std::size_t Num>
+template <std::uint64_t Num>
 struct EmptyNode {
 	constexpr bool operator==(EmptyNode) const noexcept { return true; }
 

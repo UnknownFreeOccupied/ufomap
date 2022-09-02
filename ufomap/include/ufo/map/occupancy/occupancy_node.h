@@ -56,9 +56,9 @@
 
 namespace ufo::map
 {
-template <typename OccupancyType = float>
+template <bool Single = false>
 struct OccupancyNode {
-	using occupancy_t = OccupancyType;
+	using occupancy_t = uint8_t;
 
 	// Data
 	std::array<occupancy_t, 8> occupancy;

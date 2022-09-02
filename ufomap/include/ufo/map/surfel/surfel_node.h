@@ -51,19 +51,8 @@
 
 namespace ufo::map
 {
-template <typename T>
-struct SurfelNode {
-	using surfel_type = Surfel<T>;
-
-	surfel_type surfel;
-
-	constexpr bool operator==(SurfelNode const& rhs) const { return surfel == rhs.surfel; }
-
-	constexpr bool operator!=(SurfelNode const& rhs) const { return !(*this == rhs); }
-};
-
 template <bool Single = false>
-struct SurfelNodeBlock {
+struct SurfelNode {
 	using surfel_t = Surfel<float>;
 	using surfel_type = std::conditional_t<Single, surfel_t, std::array<surfel_t, 8>>;
 

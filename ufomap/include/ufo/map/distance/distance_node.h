@@ -43,25 +43,24 @@
 #define UFO_MAP_SIGNED_DISTANCE_NODE_H
 
 // STL
+#include <array>
 #include <cstdint>
 
 namespace ufo::map
 {
-template <typename SignedDistanceType>
+template <bool Single = false>
 struct SignedDistanceNode {
-	using signed_distance_type = SignedDistanceType;
+	using signed_distance_type = float;
 
-	signed_distance_type signed_distance;
+	std::conditional_t<Single, signed_distance_type, std::array<signed_distance_type, 8>>
+	    signed_distance;
 
-	constexpr bool operator==(SignedDistanceNode const& rhs) const
+	bool operator==(SignedDistanceNode const& rhs) const
 	{
 		return signed_distance == rhs.signed_distance;
 	}
 
-	constexpr bool operator!=(SignedDistanceNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
+	bool operator!=(SignedDistanceNode const& rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 

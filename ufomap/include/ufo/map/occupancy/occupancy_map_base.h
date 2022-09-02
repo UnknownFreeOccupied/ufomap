@@ -257,9 +257,11 @@ class OccupancyMapBase
 
 	OccupancyState getOccupancyState(Node node) const
 	{
-		if (isUnknown(derived().getLeafNode(node))) {
+		auto const& leaf_node = derived().getLeafNode(node);
+		auto const index = node.index();
+		if (isUnknown(leaf_node, index)) {
 			return OccupancyState::UNKNOWN;
-		} else if (isFree(derived().getLeafNode(node))) {
+		} else if (isFree(leaf_node, index)) {
 			return OccupancyState::FREE;
 		} else {
 			return OccupancyState::OCCUPIED;
@@ -269,9 +271,10 @@ class OccupancyMapBase
 	OccupancyState getOccupancyState(Code code) const
 	{
 		auto const& node = derived().getLeafNode(code);
-		if (isUnknown(node)) {
+		auto const index = code.index();
+		if (isUnknown(node, index)) {
 			return OccupancyState::UNKNOWN;
-		} else if (isFree(node)) {
+		} else if (isFree(node, index)) {
 			return OccupancyState::FREE;
 		} else {
 			return OccupancyState::OCCUPIED;
@@ -302,11 +305,11 @@ class OccupancyMapBase
 	{
 		switch (state) {
 			case OccupancyState::UNKNOWN:
-				return containsUnknown(derived().getLeafNode(node));
+				return containsUnknown(node);
 			case OccupancyState::FREE:
-				return containsFree(derived().getLeafNode(node));
+				return containsFree(node);
 			case OccupancyState::OCCUPIED:
-				return containsOccupied(derived().getLeafNode(node));
+				return containsOccupied(node);
 		}
 	}
 
@@ -342,9 +345,15 @@ class OccupancyMapBase
 	// Is unknown
 	//
 
-	bool isUnknown(Node node) const { return isUnknown(derived().getLeafNode(node)); }
+	bool isUnknown(Node node) const
+	{
+		return isUnknown(derived().getLeafNode(node), node.index());
+	}
 
-	bool isUnknown(Code code) const { return isUnknown(derived().getLeafNode(code)); }
+	bool isUnknown(Code code) const
+	{
+		return isUnknown(derived().getLeafNode(code), code.index());
+	}
 
 	bool isUnknown(Key key) const { return isUnknown(derived().toCode(key)); }
 
@@ -362,9 +371,15 @@ class OccupancyMapBase
 	// Is free
 	//
 
-	bool isFree(Node node) const { return isFree(derived().getLeafNode(node)); }
+	bool isFree(Node node) const
+	{
+		return isFree(derived().getLeafNode(node), node.index());
+	}
 
-	bool isFree(Code code) const { return isFree(derived().getLeafNode(code)); }
+	bool isFree(Code code) const
+	{
+		return isFree(derived().getLeafNode(code), code.index());
+	}
 
 	bool isFree(Key key) const { return isFree(derived().toCode(key)); }
 
@@ -382,9 +397,15 @@ class OccupancyMapBase
 	// Is occupied
 	//
 
-	bool isOccupied(Node node) const { return isOccupied(derived().getLeafNode(node)); }
+	bool isOccupied(Node node) const
+	{
+		return isOccupied(derived().getLeafNode(node), node.index());
+	}
 
-	bool isOccupied(Code code) const { return isOccupied(derived().getLeafNode(code)); }
+	bool isOccupied(Code code) const
+	{
+		return isOccupied(derived().getLeafNode(code), code.index());
+	}
 
 	bool isOccupied(Key key) const { return isOccupied(derived().toCode(key)); }
 
@@ -404,10 +425,13 @@ class OccupancyMapBase
 
 	bool containsUnknown(Node node) const
 	{
-		return containsUnknown(derived().getLeafNode(node));
+		return containsUnknown(derived().getLeafNode(node), node.index());
 	}
 
-	bool containsUnknown(Code code) const { containsUnknown(derived().getLeafNode(code)); }
+	bool containsUnknown(Code code) const
+	{
+		containsUnknown(derived().getLeafNode(code), code.index());
+	}
 
 	bool containsUnknown(Key key) const { return containsUnknown(derived().toCode(key)); }
 
@@ -425,9 +449,15 @@ class OccupancyMapBase
 	// Contains free
 	//
 
-	bool containsFree(Node node) const { return containsFree(derived().getLeafNode(node)); }
+	bool containsFree(Node node) const
+	{
+		return containsFree(derived().getLeafNode(node), node.index());
+	}
 
-	bool containsFree(Code code) const { return containsFree(derived().getLeafNode(code)); }
+	bool containsFree(Code code) const
+	{
+		return containsFree(derived().getLeafNode(code), code.index());
+	}
 
 	bool containsFree(Key key) const { return containsFree(derived().toCode(key)); }
 
@@ -447,12 +477,12 @@ class OccupancyMapBase
 
 	bool containsOccupied(Node node) const
 	{
-		return containsOccupied(derived().getLeafNode(node));
+		return containsOccupied(derived().getLeafNode(node), node.index());
 	}
 
 	bool containsOccupied(Code code) const
 	{
-		return containsOccupied(derived().getLeafNode(code));
+		return containsOccupied(derived().getLeafNode(code), code.index());
 	}
 
 	bool containsOccupied(Key key) const { return containsOccupied(derived().toCode(key)); }
@@ -473,12 +503,12 @@ class OccupancyMapBase
 
 	occupancy_t getOccupancy(Node node) const
 	{
-		return getOccupancy(derived().getLeafNode(node));
+		return getOccupancy(derived().getLeafNode(node), node.index());
 	}
 
 	occupancy_t getOccupancy(Code code) const
 	{
-		return getOccupancy(derived().getLeafNode(code));
+		return getOccupancy(derived().getLeafNode(code), code.index());
 	}
 
 	occupancy_t getOccupancy(Key key) const { return getOccupancy(derived().toCode(key)); }
@@ -499,12 +529,12 @@ class OccupancyMapBase
 
 	logit_t getOccupancyLogit(Node node) const
 	{
-		return getOccupancyLogit(derived().getLeafNode(node));
+		return getOccupancyLogit(derived().getLeafNode(node), node.index());
 	}
 
 	logit_t getOccupancyLogit(Code code) const
 	{
-		return getOccupancyLogit(derived().getLeafNode(code));
+		return getOccupancyLogit(derived().getLeafNode(code), code.index());
 	}
 
 	logit_t getOccupancyLogit(Key key) const
@@ -562,15 +592,21 @@ class OccupancyMapBase
 	void setOccupancyLogit(Node node, logit_t logit, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, logit](OccupancyNode& node) { setOccupancyLogit(node, logit); },
-		    propagate);
+		    node,
+		    [this, logit](auto& node, index_t const index) {
+			    setOccupancyLogit(node, index, logit);
+		    },
+		    [this, logit](auto& node) { setOccupancyLogit(node, logit); }, propagate);
 	}
 
 	void setOccupancyLogit(Code code, logit_t logit, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, logit](OccupancyNode& node) { setOccupancyLogit(node, logit); },
-		    propagate);
+		    code,
+		    [this, logit](auto& node, index_t const index) {
+			    setOccupancyLogit(node, index, logit);
+		    },
+		    [this, logit](auto& node) { setOccupancyLogit(node, logit); }, propagate);
 	}
 
 	void setOccupancyLogit(Key key, logit_t logit, bool propagate = true)
@@ -597,15 +633,21 @@ class OccupancyMapBase
 	void increaseOccupancyLogit(Node& node, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, inc](OccupancyNode& node) { increaseOccupancyLogit(node, inc); },
-		    propagate);
+		    node,
+		    [this, inc](auto& node, index_t const index) {
+			    increaseOccupancyLogit(node, index, inc);
+		    },
+		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
 	}
 
 	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, inc](OccupancyNode& node) { increaseOccupancyLogit(node, inc); },
-		    propagate);
+		    code,
+		    [this, inc](auto& node, index_t const index) {
+			    increaseOccupancyLogit(node, index, inc);
+		    },
+		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
 	}
 
 	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
@@ -632,15 +674,21 @@ class OccupancyMapBase
 	void decreaseOccupancyLogit(Node& node, logit_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, dec](OccupancyNode& node) { decreaseOccupancyLogit(node, dec); },
-		    propagate);
+		    node,
+		    [this, dec](auto& node, index_t const index) {
+			    decreaseOccupancyLogit(node, index, dec);
+		    },
+		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
 	}
 
 	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, dec](OccupancyNode& node) { decreaseOccupancyLogit(node, dec); },
-		    propagate);
+		    code,
+		    [this, dec](auto& node, index_t const index) {
+			    decreaseOccupancyLogit(node, index, dec);
+		    },
+		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
 	}
 
 	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
@@ -737,27 +785,31 @@ class OccupancyMapBase
 
 	void initRoot()
 	{
-		setOccupancy(derived().getRoot(), 0.5);
-		updateNodeIndicators(derived().getRoot());
+		setOccupancy(derived().getRoot(), derived().getRootIndex(), 0.5);
+		updateNode(derived().getRoot(), derived().getRootIndex());
 	}
 
 	//
 	// Get occupancy
 	//
 
-	constexpr occupancy_t getOccupancy(OccupancyNode node) const noexcept
+	constexpr occupancy_t getOccupancy(OccupancyNode node,
+	                                   index_t const index) const noexcept
 	{
-		return toOccupancyProbability(getOccupancyLogit(node));
+		return toOccupancyProbability(getOccupancyLogit(node), index);
 	}
 
-	static constexpr logit_t getOccupancyLogit(OccupancyNode node) noexcept
+	static constexpr logit_t getOccupancyLogit(OccupancyNode node,
+	                                           index_t const index) noexcept
 	{
-		return node.occupancy;
+		return node.getOccupancy(index);
 	}
 
 	//
 	// Set occupancy
 	//
+
+	// TODO: Implement under
 
 	constexpr void setOccupancy(OccupancyNode& node, occupancy_t new_occupancy)
 	{
@@ -774,33 +826,48 @@ class OccupancyMapBase
 		}
 	}
 
+	constexpr void setOccupancy(OccupancyNode& node, index_t const index,
+	                            occupancy_t const new_occupancy)
+	{
+		setOccupancyLogit(node, index, toOccupancyLogit(new_occupancy));
+	}
+
+	constexpr void setOccupancyLogit(OccupancyNode& node, index_t const index,
+	                                 logit_t const new_occupancy)
+	{
+		// TODO: Implement
+	}
+
 	//
 	// Checking state
 	//
 
-	constexpr bool isUnknown(OccupancyNode node) const noexcept
+	constexpr bool isUnknown(OccupancyNode node, index_t const index) const noexcept
 	{
-		return !isFree(node) && !isOccupied(node);
+		return !isFree(node, index) && !isOccupied(node, index);
 	}
 
-	constexpr bool isFree(OccupancyNode node) const noexcept
+	constexpr bool isFree(OccupancyNode node, index_t const index) const noexcept
 	{
-		return getOccupancyLogit(node) < getFreeThresLogit();
+		return getOccupancyLogit(node, index) < getFreeThresLogit();
 	}
 
-	constexpr bool isOccupied(OccupancyNode node) const noexcept
+	constexpr bool isOccupied(OccupancyNode node, index_t const index) const noexcept
 	{
-		return getOccupancyLogit(node) > getOccupiedThresLogit();
+		return getOccupancyLogit(node, index) > getOccupiedThresLogit();
 	}
 
-	constexpr bool containsUnknown(OccupancyNode node) const noexcept
+	constexpr bool containsUnknown(OccupancyNode node, index_t const index) const noexcept
 	{
 		return node.contains_unknown;
 	}
 
-	constexpr bool containsFree(OccupancyNode node) const noexcept { node.contains_free; }
+	constexpr bool containsFree(OccupancyNode node, index_t const index) const noexcept
+	{
+		node.contains_free;
+	}
 
-	constexpr bool containsOccupied(OccupancyNode node) const noexcept
+	constexpr bool containsOccupied(OccupancyNode node, index_t const index) const noexcept
 	{
 		node.contains_occupied;
 	}

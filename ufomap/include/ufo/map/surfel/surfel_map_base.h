@@ -68,9 +68,15 @@ class SurfelMapBase
 	// Get surfel
 	//
 
-	Surfel getSurfel(Node node) const { return getSurfel(derived().getLeafNode(node)); }
+	Surfel getSurfel(Node node) const
+	{
+		return getSurfel(derived().getLeafNode(node), node.index());
+	}
 
-	Surfel getSurfel(Code code) const { return getSurfel(derived().getLeafNode(code)); }
+	Surfel getSurfel(Code code) const
+	{
+		return getSurfel(derived().getLeafNode(code), code.index());
+	}
 
 	Surfel getSurfel(Key key) const { return getSurfel(Derived::toCode(key)); }
 
@@ -90,12 +96,12 @@ class SurfelMapBase
 
 	[[nodiscard]] bool hasSurfel(Node node) const
 	{
-		return hasSurfel(derived().getLeafNode(node));
+		return hasSurfel(derived().getLeafNode(node), node.index());
 	}
 
 	[[nodiscard]] bool hasSurfel(Code code) const
 	{
-		return hasSurfel(derived().getLeafNode(code));
+		return hasSurfel(derived().getLeafNode(code), code.index());
 	}
 
 	[[nodiscard]] bool hasSurfel(Key key) const { return hasSurfel(Derived::toCode(key)); }
@@ -116,12 +122,12 @@ class SurfelMapBase
 
 	[[nodiscard]] std::size_t getNumSurfelPoints(Node node) const
 	{
-		return getNumSurfelPoints(derived().getLeafNode(node));
+		return getNumSurfelPoints(derived().getLeafNode(node), node.index());
 	}
 
 	[[nodiscard]] std::size_t getNumSurfelPoints(Code code) const
 	{
-		return getNumSurfelPoints(derived().getLeafNode(code));
+		return getNumSurfelPoints(derived().getLeafNode(code), code.index());
 	}
 
 	[[nodiscard]] std::size_t getNumSurfelPoints(Key key) const
@@ -147,13 +153,17 @@ class SurfelMapBase
 	void setSurfel(Node node, Surfel const& surfel, bool propagate = true)
 	{
 		derived().apply(
-		    node, [&surfel](auto&& node) { setSurfel(node, surfel); }, propagate);
+		    node,
+		    [&surfel](auto& node, index_t const index) { setSurfel(node, index, surfel); },
+		    [&surfel](auto& node) { setSurfel(node, surfel); }, propagate);
 	}
 
 	void setSurfel(Code code, Surfel const& surfel, bool propagate = true)
 	{
 		derived().apply(
-		    code, [&surfel](auto&& node) { setSurfel(node, surfel); }, propagate);
+		    code,
+		    [&surfel](auto& node, index_t const index) { setSurfel(node, index, surfel); },
+		    [&surfel](auto& node) { setSurfel(node, surfel); }, propagate);
 	}
 
 	void setSurfel(Key key, Surfel const& surfel, bool propagate = true)
@@ -193,7 +203,9 @@ class SurfelMapBase
 		}
 
 		derived().apply(
-		    node, [&surfel](LeafNode& node) { insertSurfel(node, surfel); }, propagate);
+		    node,
+		    [&surfel](auto& node, index_t const index) { insertSurfel(node, index, surfel); },
+		    [&surfel](auto& node) { insertSurfel(node, surfel); }, propagate);
 	}
 
 	void insertSurfel(Code code, Surfel const& surfel, bool propagate = true)
@@ -203,7 +215,9 @@ class SurfelMapBase
 		}
 
 		derived().apply(
-		    code, [&surfel](LeafNode& node) { insertSurfel(node, surfel); }, propagate);
+		    code,
+		    [&surfel](auto& node, index_t const index) { insertSurfel(node, index, surfel); },
+		    [&surfel](auto& node) { insertSurfel(node, surfel); }, propagate);
 	}
 
 	void insertSurfel(Key key, Surfel const& surfel, bool propagate = true)
@@ -243,7 +257,9 @@ class SurfelMapBase
 		}
 
 		derived().apply(
-		    node, [&surfel](LeafNode& node) { eraseSurfel(node, surfel); }, propagate);
+		    node,
+		    [&surfel](auto& node, index_t const index) { eraseSurfel(node, index, surfel); },
+		    [&surfel](auto& node) { eraseSurfel(node, surfel); }, propagate);
 	}
 
 	void eraseSurfel(Code code, Surfel const& surfel, bool propagate = true)
@@ -253,7 +269,9 @@ class SurfelMapBase
 		}
 
 		derived().apply(
-		    code, [&surfel](LeafNode& node) { eraseSurfel(node, surfel); }, propagate);
+		    code,
+		    [&surfel](auto& node, index_t const index) { eraseSurfel(node, index, surfel); },
+		    [&surfel](auto& node) { eraseSurfel(node, surfel); }, propagate);
 	}
 
 	void eraseSurfel(Key key, Surfel const& surfel, bool propagate = true)
@@ -309,7 +327,10 @@ class SurfelMapBase
 
 			derived().apply(
 			    it->first,
-			    [&points](LeafNode& node) {
+			    [&points](auto& node, index_t const index) {
+				    insertSurfelPoint(node, index, std::begin(points), std::end(points));
+			    },
+			    [&points](auto& node) {
 				    insertSurfelPoint(node, std::begin(points), std::end(points));
 			    },
 			    false);
@@ -337,7 +358,10 @@ class SurfelMapBase
 	{
 		derived().apply(
 		    derived().toCode(point, depth),
-		    [point](auto&& node) { eraseSurfelPoint(node, point); }, propagate);
+		    [point](auto& node, index_t const index) {
+			    eraseSurfelPoint(node, index, point);
+		    },
+		    [point](auto& node) { eraseSurfelPoint(node, point); }, propagate);
 	}
 
 	template <class InputIt>
@@ -365,7 +389,10 @@ class SurfelMapBase
 
 			derived().apply(
 			    it->first,
-			    [&points](LeafNode& node) {
+			    [&points](auto& node, index_t const index) {
+				    eraseSurfelPoint(node, index, std::begin(points), std::end(points));
+			    },
+			    [&points](auto& node) {
 				    eraseSurfelPoint(node, std::begin(points), std::end(points));
 			    },
 			    false);
@@ -392,13 +419,15 @@ class SurfelMapBase
 	void clearSurfel(Node node, bool propagate = true)
 	{
 		derived().apply(
-		    node, [](LeafNode& node) { clearSurfel(node); }, propagate);
+		    node, [](auto& node, index_t const index) { clearSurfel(node, index); },
+		    [](auto& node) { clearSurfel(node); }, propagate);
 	}
 
 	void clearSurfel(Code code, bool propagate = true)
 	{
 		derived().apply(
-		    code, [](LeafNode& node) { clearSurfel(node); }, propagate);
+		    code, [](auto& node, index_t const index) { clearSurfel(node, index); },
+		    [](auto& node) { clearSurfel(node); }, propagate);
 	}
 
 	void clearSurfel(Key key, bool propagate = true)
@@ -430,119 +459,227 @@ class SurfelMapBase
 	// Initilize root
 	//
 
-	void initRoot() { clearSurfel(derived().getRoot()); }
+	void initRoot() { clearSurfel(derived().getRoot(), derived().getRootIndex()); }
 
 	//
 	// Get surfel
 	//
 
-	static constexpr Surfel& getSurfel(LeafNode& node) { return node.surfel; }
+	template <bool Single>
+	static constexpr Surfel& getSurfel(SurfelNode<Single>& node, index_t const index)
+	{
+		return node.getSurfel(index);
+	}
 
-	static constexpr Surfel const& getSurfel(LeafNode const& node) { return node.surfel; }
+	template <bool Single>
+	static constexpr Surfel const& getSurfel(SurfelNode<Single> const& node,
+	                                         index_t const index)
+	{
+		return node.getSurfel(index);
+	}
 
 	//
 	// Set surfel
 	//
 
-	template <typename T>
-	static constexpr void setSurfel(LeafNode& node, Surfel<T> const& surfel) noexcept
+	// TODO: Continue from here
+
+	template <bool Single, typename T>
+	static constexpr void setSurfel(SurfelNode<Single>& node,
+	                                Surfel<T> const& surfel) noexcept
 	{
-		node.surfel = surfel;
+		node.setSurfel(surfel);
 	}
 
-	template <class... Args>
-	static constexpr void setSurfel(LeafNode& node, Args&&... args)
+	template <bool Single, typename T>
+	static constexpr void setSurfel(SurfelNode<Single>& node, index_t const index,
+	                                Surfel<T> const& surfel) noexcept
 	{
-		node.surfel = Surfel(std::forward<Args>(args)...);
+		node.setSurfel(index, surfel);
+	}
+
+	template <bool Single, class... Args>
+	static constexpr void setSurfel(SurfelNode<Single>& node, Args&&... args)
+	{
+		node.setSurfel(Surfel(std::forward<Args>(args)...));
+	}
+
+	template <bool Single, class... Args>
+	static constexpr void setSurfel(SurfelNode<Single>& node, index_t const index,
+	                                Args&&... args)
+	{
+		node.setSurfel(index, Surfel(std::forward<Args>(args)...));
 	}
 
 	//
 	// Clear surfel
 	//
 
-	static constexpr void clearSurfel(LeafNode& node) noexcept { node.surfel.clear(); }
+	template <bool Single>
+	static constexpr void clearSurfel(SurfelNode<Single>& node) noexcept
+	{
+		node.clearSurfel();
+	}
+
+	template <bool Single>
+	static constexpr void clearSurfel(SurfelNode<Single>& node,
+	                                  index_t const index) noexcept
+	{
+		node.clearSurfel(index);
+	}
 
 	//
 	// Has surfel
 	//
 
-	static constexpr bool hasSurfel(LeafNode const& node) noexcept
+	template <bool Single>
+	static constexpr bool hasSurfel(SurfelNode<Single> const& node,
+	                                index_t const index) noexcept
 	{
-		return 0 != getNumSurfelPoints(node);
+		return 0 != getNumSurfelPoints(node, index);
 	}
 
 	//
 	// Get num surfel points
 	//
 
-	static constexpr std::size_t getNumSurfelPoints(LeafNode const& node) noexcept
+	template <bool Single>
+	static constexpr std::size_t getNumSurfelPoints(SurfelNode<Single> const& node,
+	                                                index_t const index) noexcept
 	{
-		return node.surfel.getNumPoints();
+		return node.getSurfel(index).getNumPoints();
 	}
 
 	//
 	// Insert surfel
 	//
 
-	static void insertSurfel(LeafNode& node, Surfel const& surfel)
+	template <bool Single>
+	static void insertSurfel(SurfelNode<Single>& node, Surfel const& surfel)
 	{
+		// TODO: Implement
 		getSurfel(node).addSurfel(surfel);
 	}
 
-	template <class InputIt>
-	static void insertSurfel(LeafNode& node, InputIt first, InputIt last)
+	template <bool Single>
+	static void insertSurfel(SurfelNode<Single>& node, index_t const index,
+	                         Surfel const& surfel)
 	{
+		// TODO: Implement
+	}
+
+	template <bool Single, class InputIt>
+	static void insertSurfel(SurfelNode<Single>& node, InputIt first, InputIt last)
+	{
+		// TODO: Implement
 		for (; first != last; ++first) {
 			getSurfel(node).addSurfel(*first);
 		}
+	}
+
+	template <bool Single, class InputIt>
+	static void insertSurfel(SurfelNode<Single>& node, InputIt first, InputIt last)
+	{
+		// TODO: Implement
 	}
 
 	//
 	// Erase surfel
 	//
 
-	static void eraseSurfel(LeafNode& node, Surfel const& surfel)
+	template <bool Single>
+	static void eraseSurfel(SurfelNode<Single>& node, Surfel const& surfel)
 	{
+		// TODO: Implement
 		getSurfel(node).removeSurfel(surfel);
+	}
+
+	template <bool Single>
+	static void eraseSurfel(SurfelNode<Single>& node, index_t const index,
+	                        Surfel const& surfel)
+	{
+		// TODO: Implement
 	}
 
 	//
 	// Insert surfel point
 	//
 
-	static void insertSurfelPoint(LeafNode& node, Point3 point)
+	template <bool Single>
+	static void insertSurfelPoint(SurfelNode<Single>& node, Point3 point)
 	{
+		// TODO: Implement
 		getSurfel(node).addPoint(point);
 	}
 
-	template <class InputIt>
-	static void insertSurfelPoint(LeafNode& node, InputIt first, InputIt last)
+	template <bool Single>
+	static void insertSurfelPoint(SurfelNode<Single>& node, index_t const index,
+	                              Point3 point)
 	{
+		// TODO: Implement
+	}
+
+	template <bool Single, class InputIt>
+	static void insertSurfelPoint(SurfelNode<Single>& node, InputIt first, InputIt last)
+	{
+		// TODO: Implement
 		getSurfel(node).addPoint(first, last);
+	}
+
+	template <bool Single, class InputIt>
+	static void insertSurfelPoint(SurfelNode<Single>& node, index_t const index,
+	                              InputIt first, InputIt last)
+	{
+		// TODO: Implement
 	}
 
 	//
 	// Erase surfel point
 	//
 
-	static void eraseSurfelPoint(LeafNode& node, Point3 point)
+	template <bool Single>
+	static void eraseSurfelPoint(SurfelNode<Single>& node, Point3 point)
 	{
+		// TODO: Implement
 		getSurfel(node).removePoint(point);
 	}
 
-	template <class InputIt>
-	static void eraseSurfelPoint(LeafNode& node, InputIt first, InputIt last)
+	template <bool Single>
+	static void eraseSurfelPoint(SurfelNode<Single>& node, index_t const index,
+	                             Point3 point)
 	{
+		// TODO: Implement
+	}
+
+	template <bool Single, class InputIt>
+	static void eraseSurfelPoint(SurfelNode<Single>& node, InputIt first, InputIt last)
+	{
+		// TODO: Implement
 		getSurfel(node).removePoint(first, last);
+	}
+
+	template <bool Single, class InputIt>
+	static void eraseSurfelPoint(SurfelNode<Single>& node, index_t const index,
+	                             InputIt first, InputIt last)
+	{
+		// TODO: Implement
 	}
 
 	//
 	// Update node
 	//
 
-	template <class T>
-	void updateNode(LeafNode& node, T const& children)
+	template <bool Single>
+	void updateNode(SurfelNode<Single> const&, index_field_t const)
 	{
+	}
+
+	template <bool Single, class T>
+	void updateNode(SurfelNode<Single>& node, index_field_t const indices,
+	                T const& children)
+	{
+		// TODO: Implement
+
 		clearSurfel(node);
 
 		for (auto const& child : children) {
@@ -566,8 +703,23 @@ class SurfelMapBase
 		return getDataIdentifier() == identifier;
 	}
 
-	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)
+	template <class InputIt>
+	static constexpr uint8_t isSingle() noexcept
 	{
+		using typename std::iterator_traits<InputIt>::value_type;
+		using typename value_type::node_type;
+		if constexpr (std::is_base_of_v(SurfelNode<true>, node_type)) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+
+	template <class InputIt>
+	void readNodes(std::istream& in, InputIt first, InputIt last, std::size_t num_nodes)
+	{
+		// TODO: Implement
+
 		uint8_t type;
 		in_stream.read(reinterpret_cast<char*>(&type), sizeof(type));
 		DataType dt = getDataType(type);
@@ -596,8 +748,12 @@ class SurfelMapBase
 		}
 	}
 
-	void writeNodes(std::ostream& out_stream, std::vector<LeafNode> const& nodes) const
+	template <class InputIt>
+	void writeNodes(std::ostream& out, InputIt first, InputIt last,
+	                std::size_t num_nodes) const
 	{
+		// TODO: Implement
+
 		uint8_t type = util::enumToValue(getDataType<typename Surfel::scalar_t>());
 		out_stream.write(reinterpret_cast<char const*>(&type), sizeof(type));
 

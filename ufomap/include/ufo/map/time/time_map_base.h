@@ -200,7 +200,7 @@ class TimeMapBase
 	//
 
 	template <bool Single>
-	constexpr void updateNode(TimeNode<Single> const&) noexcept
+	constexpr void updateNode(TimeNode<Single> const&, index_field_t const) noexcept
 	{
 	}
 
@@ -261,11 +261,12 @@ class TimeMapBase
 		return min;
 	}
 
-	constexpr time_t minTime(std::vector<time_t> const& times) const
+	template <class InputIt>
+	constexpr time_t minTime(InputIt first, InputIt last) const
 	{
 		time_t min = std::numeric_limits::max();
-		for (time_t time : times) {
-			min = std::min(min, time);
+		for (; first != last; ++first) {
+			min = std::min(min, *first);
 		}
 		return min;
 	}
@@ -293,11 +294,12 @@ class TimeMapBase
 		return max;
 	}
 
-	constexpr time_t maxTime(std::vector<time_t> const& times) const
+	template <class InputIt>
+	constexpr time_t maxTime(InputIt first, InputIt last) const
 	{
 		time_t max = std::numeric_limits::lowest();
-		for (time_t time : times) {
-			max = std::max(max, time);
+		for (; first != last; ++first) {
+			max = std::max(max, *first);
 		}
 		return max;
 	}
@@ -306,26 +308,24 @@ class TimeMapBase
 	// Average child time
 	//
 
-	constexpr time_t averageTime(TimeNode<false> const& node) const
+	static constexpr time_t averageTime(TimeNode<false> const& node)
 	{
-		// FIXME: Make sure not overflow
-		return std::accumulate(std::cbegin(node.time), std::cend(node.time), time_t(0),
-		                       [](time_t cur, time_t x) { return cur + x; }) /
+		return std::reduce(std::cbegin(node.time), std::cend(node.time), 0.0) /
 		       double(node.time.size());
 	}
 
 	template <class T>
-	constexpr time_t averageTime(T const& nodes) const
+	static constexpr time_t averageTime(T const& nodes)
 	{
-		// FIXME: Make sure not overflow
-		return std::accumulate(std::cbegin(nodes), std::cend(nodes), time_t(0),
-		                       [](time_t cur, auto const& node) { return cur + node.time; }) /
+		return std::accumulate(std::cbegin(nodes), std::cend(nodes), 0.0,
+		                       [](double cur, auto const& node) { return cur + node.time; }) /
 		       double(nodes.size());
 	}
 
-	constexpr time_t averageTime(std::vector<time_t> const& times) const
+	template <class InputIt>
+	static constexpr time_t averageTime(InputIt first, InputIt last)
 	{
-		return std::reduce(std::begin(times), std::end(times)) / double(times.size());
+		return std::reduce(first, last, 0.0) / double(std::distance(first, last));
 	}
 
 	//
@@ -354,26 +354,15 @@ class TimeMapBase
 		}
 	}
 
-	std::size_t numBitsSet(index_field_t const index_field)
-	{
-		std::size_t num = 0;
-		for (std::size_t i = 0; 8 != i; ++i) {
-			if ((index_field >> i) & index_field_t(1)) {
-				++num;
-			}
-		}
-		return num;
-	}
-
 	template <class InputIt>
 	void readNodes(std::istream& in, InputIt first, InputIt last, std::size_t num_nodes)
 	{
 		uint8_t single;
 		in.read(reinterpret_cast<char*>(&single), sizeof(single));
 
-		if (single) {
-			// Calculate it as we have single nodes here
-			num_nodes = std::distance(first, last);
+		num_nodes = std::distance(first, last);
+		if (!single) {
+			num_nodes *= 8;
 		}
 
 		auto data = std::make_unique<time_t[]>(num_nodes);
@@ -382,52 +371,43 @@ class TimeMapBase
 
 		if constexpr (isSingle<InputIt>()) {
 			if (single) {
-				for (std::size_t i = 0; first != last; ++i, std::advance(first, 1)) {
+				for (std::size_t i = 0; first != last; ++i, ++first) {
 					setTime(first->node, data[i]);
 				}
 			} else {
-				// FIXME: This is weird, as it is not the same if only some of nodes sent
-
-				for (std::size_t i = 0; first != last; ++i, std::advance(first, 1)) {
-					auto const num = numBitsSet(first->index_field);
-					std::vector<time_t> times;
-					times.reserve(num);
-					for (index_t index = 0; 8 != index; ++index) {
-						if ((first.index_field >> index) & index_field_t(1)) {
-							times.push_back(getTime(first->node, index));
-						}
-					}
-					switch (time_prop_criteria_) {
+				auto const time_prop_criteria = time_prop_criteria_;
+				for (auto d_first = data.get(); first != last; ++first) {
+					auto d_last = std::next(d_first, 8);
+					switch (time_prop_criteria) {
 						case PropagationCriteria::MIN:
-							setTime(first->node, minTime(times));
+							setTime(first->node, minTime(d_first, d_last));
 							break;
 						case PropagationCriteria::MAX:
-							setTime(first->node, maxTime(times));
+							setTime(first->node, maxTime(d_first, d_last));
 							break;
 						case PropagationCriteria::MEAN:
-							setTime(first->node, averageTime(times));
+							setTime(first->node, averageTime(d_first, d_last));
 							break;
 					}
-					setTime(first->node, average...);
+					d_first = d_last;
 				}
 			}
 		} else {
 			if (single) {
-				for (std::size_t i = 0; first != last; ++i, std::advance(first, 1)) {
+				for (std::size_t i = 0; first != last; ++i, ++first) {
 					setTime(first->node, data[i]);
 				}
 			} else {
-				for (std::size_t i = 0; first != last; std::advance(first, 1)) {
+				for (std::size_t i = 0; first != last; ++first) {
 					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
-						for (time_t& time : first->node.time) {
-							time = data[i];
-							++i;
-						}
+						auto d_first = &(data[i]);
+						auto d_last = std::next(d_first, first->node.time.size());
+						std::copy(d_first, d_last, first->node.time.data());
+						i += first->node.time.size();
 					} else {
-						for (index_t index = 0; first->node.time.size() != index; ++index) {
+						for (index_t index = 0; first->node.time.size() != index; ++i, ++index) {
 							if ((first.index_field >> index) & index_field_t(1)) {
 								setTime(first->node, index, data[i]);
-								++i;
 							}
 						}
 					}
@@ -439,36 +419,22 @@ class TimeMapBase
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last, std::size_t num_nodes)
 	{
-		constexpr uint8_t single = isSingle<InputIt>();
+		constexpr uint8_t const single = isSingle<InputIt>();
 		out.write(reinterpret_cast<char const*>(&single), sizeof(single));
 
-		if constexpr (single) {
-			// Calculate it as we have single nodes here
-			num_nodes = std::distance(first, last);
+		num_nodes = std::distance(first, last);
+		if constexpr (!single) {
+			num_nodes *= 8;
 		}
 
 		auto data = std::make_unique<time_t[]>(num_nodes);
-
 		if constexpr (single) {
-			for (std::size_t i = 0; first != last; ++i, std::advance(first, 1)) {
+			for (std::size_t i = 0; first != last; ++i, ++first) {
 				data[i] = getTime(first->node, 0);
 			}
 		} else {
-			for (std::size_t i = 0; first != last; std::advance(first, 1)) {
-				if (std::numeric_limits<index_field_t>::max() == first.index_field) {
-					// All nodes should be written
-					for (time_t const time : first->node.time) {
-						data[i] = time;
-						++i;
-					}
-				} else {
-					for (index_t index = 0; first->node.time.size() != index; ++index) {
-						if ((first.index_field >> index) & index_field_t(1)) {
-							data[i] = getTime(first->node, index);
-							++i;
-						}
-					}
-				}
+			for (auto d = data.get(); first != last; ++first) {
+				d = std::copy(std::cbegin(first->node.time), std::cend(first->node.time), d);
 			}
 		}
 

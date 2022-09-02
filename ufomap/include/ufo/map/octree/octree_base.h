@@ -2480,7 +2480,8 @@ class OctreeBase
 	//
 
 	template <class UnaryFunction, class UnaryFunction2,
-	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>>
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>,
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction2>>>
 	void apply(Node node, UnaryFunction f, UnaryFunction2 f2, bool const propagate)
 	{
 		if (isLeaf(node)) {
@@ -2501,16 +2502,17 @@ class OctreeBase
 		}
 	}
 
-	template <class UnaryFunction,
-	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>>
-	void apply(Code code, UnaryFunction f, bool const propagate)
+	template <class UnaryFunction, UnaryFunction2,
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>,
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction2>>>
+	void apply(Code code, UnaryFunction f, UnaryFunction2 f2, bool const propagate)
 	{
 		// FIXME: Should this be here?
 		if (code.depth() > depthLevels()) {
 			return;
 		}
 
-		applyRecurs(getRoot(), depthLevels(), code, f);
+		applyRecurs(getRoot(), depthLevels(), code, f, f2);
 
 		if (propagate) {
 			updateModifiedNodes();
@@ -2518,7 +2520,8 @@ class OctreeBase
 	}
 
 	template <class UnaryFunction, class UnaryFunction2,
-	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>>
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>,
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction2>>>
 	void applyRecurs(InnerNode& node, depth_t depth, Code code, UnaryFunction f,
 	                 UnaryFunction2 f2)
 	{
@@ -2543,7 +2546,8 @@ class OctreeBase
 	}
 
 	template <class UnaryFunction, class UnaryFunction2,
-	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>>
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>,
+	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction2>>>
 	void applyAllRecurs(InnerNode& node, depth_t depth, UnaryFunction f, UnaryFunction2 f2)
 	{
 		if (1 == depth) {

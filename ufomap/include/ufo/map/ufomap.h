@@ -44,23 +44,14 @@
 
 // UFO
 #include <ufo/map/color/color_map_base.h>
-#include <ufo/map/color/color_node.h>
+#include <ufo/map/distance/distance_map_base.h>
 #include <ufo/map/empty/empty_map.h>
-#include <ufo/map/empty/empty_node.h>
 #include <ufo/map/io.h>
-#include <ufo/map/node_base.h>
-#include <ufo/map/occupancy/occupancy_indicators.h>
 #include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/occupancy/occupancy_node.h>
-#include <ufo/map/octree_map_base.h>
+#include <ufo/map/octree/octree_map_base.h>
 #include <ufo/map/semantic/semantic_map_base.h>
-#include <ufo/map/semantic/semantic_node.h>
-#include <ufo/map/signed_distance/signed_distance_map_base.h>
-#include <ufo/map/signed_distance/signed_distance_node.h>
 #include <ufo/map/surfel/surfel_map_base.h>
-#include <ufo/map/surfel/surfel_node.h>
 #include <ufo/map/time/time_map_base.h>
-#include <ufo/map/time/time_node.h>
 
 // STL
 #include <cstdint>
@@ -71,113 +62,113 @@
 
 namespace ufo::map
 {
-enum MapType : std::uint64_t {
-	OCCUPANCY = 1U,
-	TIME = 1U << 1U,
-	COLOR = 1U << 2U,
-	SURFEL = 1U << 3U,
-	SIGNED_DISTANCE = 1U << 4U,
-	OCCUPANCY_SMALL = 1U << 5U,
-};
+//
+// Helpers
+//
 
-template <bool C, std::size_t Num, class Node>
-using conditional_node_t = std::conditional_t<C, Node, EmptyNode<Num>>;
+using mt_t = std::uint64_t;
 
-template <bool C, std::size_t Num, template <typename...> typename MapBase>
-struct conditional_map_base {
+template <mt_t MT, mt_t T, mt_t HRT, template <class> class Node>
+using cond_node_t = std::conditional_t<MT & T, Node<MT ^ T & HRT>, EmptyNode<T>>;
+
+template <bool C, mt_t T, template <typename...> typename MapBase>
+struct cond_map_base {
 	template <typename... ts>
 	using type = MapBase<ts...>;
 };
 
-template <std::size_t Num, template <typename...> typename MapBase>
-struct conditional_map_base<false, Num, MapBase> {
+template <mt_t T, template <typename...> typename MapBase>
+struct cond_map_base<false, T, MapBase> {
 	template <typename... Ts>
-	using type = EmptyMap<Num, Ts...>;
+	using type = EmptyMap<T, Ts...>;
 };
 
-// Forward decleration
-template <std::uint64_t MapType, std::size_t SemanticLabelBits = 16,
-          std::size_t SemanticValueBits = 16, bool ReuseNodes = false,
-          bool LockLess = false>
-class SemanticUFOMap;
+//
+// Map types
+//
+
+enum MapType : mt_t {
+	// clang-format off
+	OCCUPANCY = mt_t(1),
+	TIME      = mt_t(1) << 1U,
+	COLOR     = mt_t(1) << 2U,
+	SEMANTIC  = mt_t(1) << 3U,
+	SURFEL    = mt_t(1) << 4U,
+	DISTANCE  = mt_t(1) << 5U,
+	// Half resolution (/single) below
+	HR_OCCUPANCY = (mt_t(1) << 63U) | OCCUPANCY,
+	HR_TIME      = (mt_t(1) << 62U) | TIME,
+	HR_COLOR     = (mt_t(1) << 61U) | COLOR,
+	HR_SEMANTIC  = (mt_t(1) << 60U) | SEMANTIC,
+	HR_SURFEL    = (mt_t(1) << 59U) | SURFEL,
+	HR_DISTANCE  = (mt_t(1) << 58U) | DISTANCE,
+	// clang-format on
+};
+
+//
+// UFOMap
+//
 
 template <std::uint64_t MapType, bool ReuseNodes = false, bool LockLess = false>
 class UFOMap
     : public OctreeMapBase<
-          NodeBase<conditional_node_t<MapType & OCCUPANCY, 0, OccupancyNode<float>>,
-                   conditional_node_t<MapType & OCCUPANCY_SMALL, 1, OccupancyNodeSmall>,
-                   conditional_node_t<MapType & TIME, 2, TimeNode>,
-                   conditional_node_t<MapType & COLOR, 3, ColorNode>,
-                   conditional_node_t<MapType & SURFEL, 4, SurfelNode<float>>,
-                   conditional_node_t<MapType & SIGNED_DISTANCE, 5,
-                                      SignedDistanceNode<float>>>,
-          std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
-                             OctreeIndicators>,
+          // clang-format off
+          OctreeNodeBase<cond_node_t<MapType, SEMANTIC,  HR_SEMANTIC,  SemanticNode>,
+                         cond_node_t<MapType, SURFEL,    HR_SURFEL,    SurfelNode>,
+                         cond_node_t<MapType, DISTANCE,  HR_DISTANCE,  DistanceNode>,
+                         cond_node_t<MapType, TIME,      HR_TIME,      TimeNode>,
+                         cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
+                         cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
           ReuseNodes, LockLess,
-          conditional_map_base<MapType&(OCCUPANCY | OCCUPANCY_SMALL), 0,
-                               OccupancyMapBase>::template type,
-          conditional_map_base<MapType & TIME, 1, TimeMapBase>::template type,
-          conditional_map_base<MapType & COLOR, 2, ColorMapBase>::template type,
-          conditional_map_base<MapType & SURFEL, 3, SurfelMapBase>::template type,
-          conditional_map_base<MapType & SIGNED_DISTANCE, 4,
-                               SignedDistanceMapBase>::template type>
+          cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
+          cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,
+          cond_map_base<MapType & COLOR,     COLOR,     ColorMapBase>::template type,
+          cond_map_base<MapType & SEMANTIC,  SEMANTIC,  SemanticMapBase>::template type,
+          cond_map_base<MapType & SURFEL,    SURFEL,    SurfelMapBase>::template type,
+          cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type
+          // clang-format on
+          >
 {
  private:
-	// static_assert(!(MapType & OCCUPANCY && MapType & OCCUPANCY_SMALL));
-
 	using Base = OctreeMapBase<
-	    NodeBase<
-	        conditional_node_t<MapType & OCCUPANCY, 0, OccupancyNode<float>>,
-	        conditional_node_t<MapType & OCCUPANCY_SMALL, 1, OccupancyNodeSmall>,
-	        conditional_node_t<MapType & TIME, 2, TimeNode>,
-	        conditional_node_t<MapType & COLOR, 3, ColorNode>,
-	        conditional_node_t<MapType & SURFEL, 4, SurfelNode<float>>,
-	        conditional_node_t<MapType & SIGNED_DISTANCE, 5, SignedDistanceNode<float>>>,
-	    std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
-	                       OctreeIndicators>,
+	    // clang-format off
+	    OctreeNodeBase<cond_node_t<MapType, SEMANTIC,  HR_SEMANTIC,  SemanticNode>,
+	                   cond_node_t<MapType, SURFEL,    HR_SURFEL,    SurfelNode>,
+	                   cond_node_t<MapType, DISTANCE,  HR_DISTANCE,  DistanceNode>,
+	                   cond_node_t<MapType, TIME,      HR_TIME,      TimeNode>,
+	                   cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
+	                   cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
 	    ReuseNodes, LockLess,
-	    conditional_map_base<MapType&(OCCUPANCY | OCCUPANCY_SMALL), 0,
-	                         OccupancyMapBase>::template type,
-	    conditional_map_base<MapType & TIME, 1, TimeMapBase>::template type,
-	    conditional_map_base<MapType & COLOR, 2, ColorMapBase>::template type,
-	    conditional_map_base<MapType & SURFEL, 3, SurfelMapBase>::template type,
-	    conditional_map_base<MapType & SIGNED_DISTANCE, 4,
-	                         SignedDistanceMapBase>::template type>;
+	    cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
+	    cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,
+	    cond_map_base<MapType & COLOR,     COLOR,     ColorMapBase>::template type,
+	    cond_map_base<MapType & SEMANTIC,  SEMANTIC,  SemanticMapBase>::template type,
+	    cond_map_base<MapType & SURFEL,    SURFEL,    SurfelMapBase>::template type,
+	    cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type
+	    // clang-format on
+	    >;
 
  public:
 	//
 	// Constructors
 	//
 
-	UFOMap(double resolution = 0.1, depth_t depth_levels = 16,
-	       bool automatic_pruning = true)
-	    : Base(resolution, depth_levels, automatic_pruning)
+	UFOMap(resolution_t res = 0.1, depth_t depth_levels = 16, bool auto_pruning = true)
+	    : Base(res, depth_levels, auto_pruning)
 	{
 	}
 
-	UFOMap(std::filesystem::path const& filename, bool automatic_pruning = true)
-	    : Base(filename, automatic_pruning)
+	UFOMap(std::filesystem::path const& file, bool auto_pruning = true)
+	    : Base(file, auto_pruning)
 	{
 	}
 
-	UFOMap(std::istream& in_stream, bool automatic_pruning = true)
-	    : Base(in_stream, automatic_pruning)
-	{
-	}
+	UFOMap(std::istream& in, bool auto_pruning = true) : Base(in, auto_pruning) {}
 
-	// FIXME: Why cannot this be default?
 	UFOMap(UFOMap const& other) = default;
 
 	template <std::uint64_t MapType2, bool ReuseNodes2, bool LockLess2>
 	UFOMap(UFOMap<MapType2, ReuseNodes2, LockLess2> const& other) : Base(other)
-	{
-	}
-
-	template <std::uint64_t MapType2, std::size_t SemanticLabelBits2,
-	          std::size_t SemanticValueBits2, bool ReuseNodes2, bool LockLess2>
-	UFOMap(SemanticUFOMap<MapType2, SemanticLabelBits2, SemanticValueBits2, ReuseNodes2,
-	                      LockLess2> const& other)
-	    : Base(other)
 	{
 	}
 
@@ -193,30 +184,12 @@ class UFOMap
 	UFOMap& operator=(UFOMap<MapType2, ReuseNodes2, LockLess2> const& rhs)
 	{
 		// FIXME: Correct?
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
+		std::stringstream io(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+		io.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		io.imbue(std::locale());
 
-		rhs.write(io_stream);
-		Base::read(io_stream);
-
-		return *this;
-	}
-
-	template <std::uint64_t MapType2, std::size_t SemanticLabelBits2,
-	          std::size_t SemanticValueBits2, bool ReuseNodes2, bool LockLess2>
-	UFOMap& operator=(SemanticUFOMap<MapType2, SemanticLabelBits2, SemanticValueBits2,
-	                                 ReuseNodes2, LockLess2> const& rhs)
-	{
-		// FIXME: Correct?
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
-
-		rhs.write(io_stream);
-		Base::read(io_stream);
+		rhs.write(io);
+		Base::read(io);
 
 		return *this;
 	}
@@ -224,144 +197,18 @@ class UFOMap
 	UFOMap& operator=(UFOMap&& rhs) = default;
 };
 
-template <std::uint64_t MapType, std::size_t SemanticLabelBits,
-          std::size_t SemanticValueBits, bool ReuseNodes, bool LockLess>
-class SemanticUFOMap
-    : public OctreeMapBase<
-          NodeBase<SemanticNode<SemanticLabelBits, SemanticValueBits>,
-                   conditional_node_t<MapType & OCCUPANCY, 0, OccupancyNode<float>>,
-                   conditional_node_t<MapType & OCCUPANCY_SMALL, 1, OccupancyNodeSmall>,
-                   conditional_node_t<MapType & TIME, 2, TimeNode>,
-                   conditional_node_t<MapType & COLOR, 3, ColorNode>,
-                   conditional_node_t<MapType & SURFEL, 4, SurfelNode<float>>,
-                   conditional_node_t<MapType & SIGNED_DISTANCE, 5,
-                                      SignedDistanceNode<float>>>,
-          std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
-                             OctreeIndicators>,
-          ReuseNodes, LockLess, SemanticMapBase,
-          conditional_map_base<MapType&(OCCUPANCY | OCCUPANCY_SMALL), 0,
-                               OccupancyMapBase>::template type,
-          conditional_map_base<MapType & TIME, 1, TimeMapBase>::template type,
-          conditional_map_base<MapType & COLOR, 2, ColorMapBase>::template type,
-          conditional_map_base<MapType & SURFEL, 3, SurfelMapBase>::template type,
-          conditional_map_base<MapType & SIGNED_DISTANCE, 4,
-                               SignedDistanceMapBase>::template type>
-{
- private:
-	// static_assert(0 != MapType);
-	// static_assert(!(MapType & OCCUPANCY && MapType & OCCUPANCY_SMALL));
-	// static_assert(!(MapType & SEMANTIC &&));
+//
+// Explicitly define common map types
+//
 
-	using Base = OctreeMapBase<
-	    NodeBase<
-	        SemanticNode<SemanticLabelBits, SemanticValueBits>,
-	        conditional_node_t<MapType & OCCUPANCY, 0, OccupancyNode<float>>,
-	        conditional_node_t<MapType & OCCUPANCY_SMALL, 1, OccupancyNodeSmall>,
-	        conditional_node_t<MapType & TIME, 2, TimeNode>,
-	        conditional_node_t<MapType & COLOR, 3, ColorNode>,
-	        conditional_node_t<MapType & SURFEL, 4, SurfelNode<float>>,
-	        conditional_node_t<MapType & SIGNED_DISTANCE, 5, SignedDistanceNode<float>>>,
-	    std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
-	                       OctreeIndicators>,
-	    ReuseNodes, LockLess, SemanticMapBase,
-	    conditional_map_base<MapType&(OCCUPANCY | OCCUPANCY_SMALL), 0,
-	                         OccupancyMapBase>::template type,
-	    conditional_map_base<MapType & TIME, 1, TimeMapBase>::template type,
-	    conditional_map_base<MapType & COLOR, 2, ColorMapBase>::template type,
-	    conditional_map_base<MapType & SURFEL, 3, SurfelMapBase>::template type,
-	    conditional_map_base<MapType & SIGNED_DISTANCE, 4,
-	                         SignedDistanceMapBase>::template type>;
-
- public:
-	//
-	// Constructors
-	//
-
-	SemanticUFOMap(double resolution = 0.1, depth_t depth_levels = 16,
-	               bool automatic_pruning = true)
-	    : Base(resolution, depth_levels, automatic_pruning)
-	{
-	}
-
-	SemanticUFOMap(std::filesystem::path const& filename, bool automatic_pruning = true)
-	    : Base(filename, automatic_pruning)
-	{
-	}
-
-	SemanticUFOMap(std::istream& in_stream, bool automatic_pruning = true)
-	    : Base(in_stream, automatic_pruning)
-	{
-	}
-
-	SemanticUFOMap(SemanticUFOMap const& other) = default;
-
-	template <std::uint64_t MapType2, std::size_t SemanticLabelBits2,
-	          std::size_t SemanticValueBits2, bool ReuseNodes2, bool LockLess2>
-	SemanticUFOMap(SemanticUFOMap<MapType2, SemanticLabelBits2, SemanticValueBits2,
-	                              ReuseNodes2, LockLess2> const& other)
-	    : Base(other)
-	{
-	}
-
-	template <std::uint64_t MapType2, bool ReuseNodes2, bool LockLess2>
-	SemanticUFOMap(UFOMap<MapType2, ReuseNodes2, LockLess2> const& other) : Base(other)
-	{
-	}
-
-	SemanticUFOMap(SemanticUFOMap&& other) = default;
-
-	//
-	// Operator assignment
-	//
-
-	SemanticUFOMap& operator=(SemanticUFOMap const& rhs) = default;
-
-	template <std::uint64_t MapType2, std::size_t SemanticLabelBits2,
-	          std::size_t SemanticValueBits2, bool ReuseNodes2, bool LockLess2>
-	SemanticUFOMap& operator=(
-	    SemanticUFOMap<MapType2, SemanticLabelBits2, SemanticValueBits2, ReuseNodes2,
-	                   LockLess2> const& rhs)
-	{
-		// FIXME: Correct?
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
-
-		rhs.write(io_stream);
-		Base::read(io_stream);
-
-		return *this;
-	}
-
-	template <std::uint64_t MapType2, bool ReuseNodes2, bool LockLess2>
-	SemanticUFOMap& operator=(UFOMap<MapType2, ReuseNodes2, LockLess2> const& rhs)
-	{
-		// FIXME: Correct?
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
-
-		rhs.write(io_stream);
-		Base::read(io_stream);
-
-		return *this;
-	}
-
-	SemanticUFOMap& operator=(SemanticUFOMap&& rhs) = default;
-};
-
+// clang-format off
 using OccupancyMap = UFOMap<OCCUPANCY>;
-using OccupancyMapSmall = UFOMap<OCCUPANCY_SMALL>;
-
-using TimeMap = UFOMap<TIME>;
-
-using ColorMap = UFOMap<COLOR>;
-
-// using SurfelMap = Map<SURFEL>;
-
-using SignedDistanceMap = UFOMap<SIGNED_DISTANCE>;
+using TimeMap      = UFOMap<TIME>;
+using ColorMap     = UFOMap<COLOR>;
+using SemanticMap  = UFOMap<SEMANTIC>;
+using SurfelMap    = UFOMap<SURFEL>;
+using DistanceMap  = UFOMap<DISTANCE>;
+// clang-format on
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_UFO_MAP_H

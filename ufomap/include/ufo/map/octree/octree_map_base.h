@@ -44,9 +44,7 @@
 
 // UFO
 #include <ufo/map/octree/octree_base.h>
-
-// STL
-#include <deque>
+#include <ufo/map/octree/octree_node_base.h>
 
 namespace ufo::map
 {

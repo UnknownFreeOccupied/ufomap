@@ -47,11 +47,12 @@
 #include <ufo/map/types.h>
 
 // STL
+#include <cstdint>
 #include <iostream>
 
 namespace ufo::map
 {
-template <std::size_t Num, class Derived>
+template <std::uint64_t Num, class Derived>
 class EmptyMap
 {
  protected:
@@ -65,10 +66,10 @@ class EmptyMap
 	// Update node
 	//
 
-	static constexpr void updateNode(EmptyNode) noexcept {}
+	static constexpr void updateNode(EmptyNode, index_field_t const) noexcept {}
 
 	template <class T>
-	static constexpr void updateNode(EmptyNode, T const&) noexcept
+	static constexpr void updateNode(EmptyNode, index_field_t const, T const&) noexcept
 	{
 	}
 
@@ -87,12 +88,12 @@ class EmptyMap
 	}
 
 	template <class InputIt>
-	static constexpr void readNodes(std::istream&, InputIt, InputIt) noexcept
+	static constexpr void readNodes(std::istream&, InputIt, InputIt, std::size_t) noexcept
 	{
 	}
 
 	template <class InputIt>
-	static constexpr void writeNodes(std::ostream&, InputIt, InputIt) noexcept
+	static constexpr void writeNodes(std::ostream&, InputIt, InputIt, std::size_t) noexcept
 	{
 	}
 };

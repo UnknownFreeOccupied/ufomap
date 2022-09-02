@@ -39,21 +39,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SURFEL_MAP_H
-#define UFO_MAP_SURFEL_MAP_H
+#ifndef UFO_MAP_OCTREE_NODE_BASE_H
+#define UFO_MAP_OCTREE_NODE_BASE_H
 
 // UFO
-#include <ufo/map/octree_map_base.h>
-#include <ufo/map/surfel/surfel_map_base.h>
-#include <ufo/map/surfel/surfel_node.h>
+#include <ufo/map/types.h>
 
 namespace ufo::map
 {
-template <class SurfelType, bool ReuseNodes, bool LockLess>
-using SurfelMapT = OctreeMapBase<SurfelNode<SurfelType>, OctreeIndicators, ReuseNodes,
-                                 LockLess, SurfelMapBase>;
+template <typename... Nodes>
+struct OctreeNodeBase : Nodes... {
+	bool operator==(OctreeNodeBase const& rhs) const
+	{
+		return (Nodes::operator==(rhs) && ...);
+	}
 
-using SurfelMap = SurfelMapT<float, false, false>;
+	bool operator!=(OctreeNodeBase const& rhs) const { return !(*this == rhs); }
+
+	void fill(OctreeNodeBase const& other, index_t const index)
+	{
+		(Nodes::fill(other, index), ...);
+	}
+};
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_SURFEL_MAP_H
+#endif  // UFO_MAP_OCTREE_NODE_BASE_H
