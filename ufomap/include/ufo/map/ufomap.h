@@ -109,7 +109,7 @@ enum MapType : mt_t {
 // UFOMap
 //
 
-template <std::uint64_t MapType, bool ReuseNodes = false, bool LockLess = false>
+template <mt_t MapType, bool ReuseNodes = false, bool LockLess = false>
 class UFOMap
     : public OctreeMapBase<
           // clang-format off
@@ -167,7 +167,7 @@ class UFOMap
 
 	UFOMap(UFOMap const& other) = default;
 
-	template <std::uint64_t MapType2, bool ReuseNodes2, bool LockLess2>
+	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2>
 	UFOMap(UFOMap<MapType2, ReuseNodes2, LockLess2> const& other) : Base(other)
 	{
 	}
@@ -180,7 +180,7 @@ class UFOMap
 
 	UFOMap& operator=(UFOMap const& rhs) = default;
 
-	template <std::uint64_t MapType2, bool ReuseNodes2, bool LockLess2>
+	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2>
 	UFOMap& operator=(UFOMap<MapType2, ReuseNodes2, LockLess2> const& rhs)
 	{
 		// FIXME: Correct?
