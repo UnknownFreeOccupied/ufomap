@@ -50,20 +50,19 @@
 
 namespace ufo::map
 {
-
 template <bool Single = false>
-struct ColorNodeBlock {
+struct ColorNode {
 	// Data
 	std::conditional_t<Single, color_t, std::array<color_t, 8>> red;
 	std::conditional_t<Single, color_t, std::array<color_t, 8>> green;
 	std::conditional_t<Single, color_t, std::array<color_t, 8>> blue;
 
-	bool operator==(ColorNodeBlock const& rhs) const
+	bool operator==(ColorNode const rhs) const
 	{
 		return red == rhs.red && green == rhs.green && blue == rhs.blue;
 	}
 
-	bool operator!=(ColorNodeBlock const& rhs) const { return !(*this == rhs); }
+	bool operator!=(ColorNode const rhs) const { return !(*this == rhs); }
 
 	constexpr RGBColor getColor(index_t const index) const
 	{

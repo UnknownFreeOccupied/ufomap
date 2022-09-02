@@ -61,12 +61,12 @@ class ColorMapBase
 
 	constexpr RGBColor getColor(Node node) const
 	{
-		return getColor(derived().getLeafNode(node));
+		return getColor(derived().getLeafNode(node), node.index());
 	}
 
 	constexpr RGBColor getColor(Code code) const
 	{
-		return getColor(derived().getLeafNode(code));
+		return getColor(derived().getLeafNode(code), node.index());
 	}
 
 	constexpr RGBColor getColor(Key key) const { return getColor(Derived::toCode(key)); }
@@ -88,15 +88,21 @@ class ColorMapBase
 	constexpr void setColor(Node& node, RGBColor color, bool propagate = true)
 	{
 		derived().apply(
-		    node, [color](ColorNode& node) { ColorMapBase::setColor(node, color); },
-		    propagate);
+		    node,
+		    [color](auto& node, index_t const index) {
+			    ColorMapBase::setColor(node, index, color);
+		    },
+		    [color](auto& node) { ColorMapBase::setColor(node, color); }, propagate);
 	}
 
 	constexpr void setColor(Code code, RGBColor color, bool propagate = true)
 	{
 		derived().apply(
-		    code, [color](ColorNode& node) { ColorMapBase::setColor(node, color); },
-		    propagate);
+		    code,
+		    [color](auto& node, index_t const index) {
+			    ColorMapBase::setColor(node, index, color);
+		    },
+		    [color](auto& node) { ColorMapBase::setColor(node, color); }, propagate);
 	}
 
 	constexpr void setColor(Key key, RGBColor color, bool propagate = true)
@@ -123,13 +129,17 @@ class ColorMapBase
 	constexpr void clearColor(Node& node, bool propagate = true)
 	{
 		derived().apply(
-		    node, [](ColorNode& node) { ColorMapBase::clearColor(node); }, propagate);
+		    node,
+		    [](auto& node, index_t const index) { ColorMapBase::clearColor(node, index); },
+		    [](auto& node) { ColorMapBase::clearColor(node); }, propagate);
 	}
 
 	constexpr void clearColor(Code code, bool propagate = true)
 	{
 		derived().apply(
-		    code, [](ColorNode& node) { ColorMapBase::clearColor(node); }, propagate);
+		    code,
+		    [](auto& node, index_t const index) { ColorMapBase::clearColor(node, index); },
+		    [](auto& node) { ColorMapBase::clearColor(node); }, propagate);
 	}
 
 	constexpr void clearColor(Key key, bool propagate = true)
@@ -161,46 +171,82 @@ class ColorMapBase
 	// Initilize root
 	//
 
-	void initRoot() { clearColor(derived().getRoot()); }
+	void initRoot() { clearColor(derived().getRoot(), derived().getRootIndex()); }
 
 	//
 	// Get color
 	//
 
-	static constexpr RGBColor& getColor(ColorNode& node) noexcept { return node.color; }
-
-	static constexpr RGBColor getColor(ColorNode node) noexcept { return node.color; }
+	template <bool Single>
+	static constexpr RGBColor getColor(ColorNode<Single> const& node,
+	                                   index_t const index) noexcept
+	{
+		return node.getColor(index);
+	}
 
 	//
 	// Set color
 	//
 
-	static constexpr void setColor(ColorNode& node, RGBColor color) noexcept
+	template <bool Single>
+	static constexpr void setColor(ColorNode<Single>& node, RGBColor const color) noexcept
 	{
-		node.color = color;
+		node.setColor(color);
+	}
+
+	template <bool Single>
+	static constexpr void setColor(ColorNode<Single>& node, index_t const index,
+	                               RGBColor const color) noexcept
+	{
+		node.setColor(index, color);
 	}
 
 	//
 	// Clear color
 	//
 
-	static constexpr void clearColor(ColorNode& node) noexcept { getColor(node).clear(); }
+	template <bool Single>
+	static constexpr void clearColor(ColorNode<Single>& node) noexcept
+	{
+		setColor(node, RGBColor());
+	}
+
+	template <bool Single>
+	static constexpr void clearColor(ColorNodoe<Single>& node, index_t const index) noexcept
+	{
+		setColor(node, index, RGBColor());
+	}
 
 	//
 	// Update node
 	//
 
-	constexpr void updateNode(ColorNode) noexcept {}
-
-	template <class T>
-	void updateNode(ColorNode& node, T const& children)
+	template <bool Single>
+	constexpr void updateNode(ColorNode<Single> const&) noexcept
 	{
-		std::array<RGBColor, children.size()> colors;
-		for (std::size_t i = 0; children.size() != i; ++i) {
-			colors[i] = getColor(children[i]);
-		}
+	}
 
-		setColor(node, RGBColor::average(std::cbegin(colors), std::cend(colors)));
+	template <bool Single, class T>
+	void updateNode(ColorNode<Single>& node, index_field_t const indices, T const& children)
+	{
+		if constexpr (Single) {
+			std::array<RGBColor, children.size()> colors;
+			for (std::size_t i = 0; children.size() != i; ++i) {
+				colors[i] = getColor(children[i], 0);
+			}
+			setColor(node, RGBColor::average(std::cbegin(colors), std::cend(colors)));
+		} else {
+			for (index_t index = 0; children.size() != index; ++index) {
+				if ((indices >> index) & index_field_t(1)) {
+					std::array<RGBColor, children.size()> colors;
+					for (std::size_t i = 0; children.size() != i; ++i) {
+						colors[i] = getColor(children[index], i);
+					}
+					setColor(node, index,
+					         RGBColor::average(std::cbegin(colors), std::cend(colors)));
+				}
+			}
+		}
 	}
 
 	//
@@ -218,8 +264,22 @@ class ColorMapBase
 	}
 
 	template <class InputIt>
+	static constexpr uint8_t isSingle() noexcept
+	{
+		using typename std::iterator_traits<InputIt>::value_type;
+		using typename value_type::node_type;
+		if constexpr (std::is_base_of_v(ColorNode<true>, node_type)) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+
+	template <class InputIt>
 	void readNodes(std::istream& in, InputIt first, InputIt last)
 	{
+		// TODO: Implement
+
 		auto const num_nodes = std::distance(first, last);
 
 		auto data = std::make_unique<RGBColor[]>(num_nodes);
@@ -234,6 +294,8 @@ class ColorMapBase
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last)
 	{
+		// TODO: Implement
+
 		auto const num_nodes = std::distance(first, last);
 
 		auto data = std::make_unique<RGBColor[]>(num_nodes);
