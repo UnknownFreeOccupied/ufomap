@@ -170,16 +170,23 @@ class Code
 	 * @param depth The depth the index is requested for.
 	 * @return The index at the specified depth.
 	 */
-	constexpr std::size_t indexAtDepth(depth_t depth) const
+	constexpr std::size_t index(depth_t depth) const
 	{
-		return (code_ >> static_cast<code_t>(3 * depth)) & ((code_t)0x7);
+		return (code_ >> (code_t(3) * depth)) & code_t(0x7);
 	}
 
 	// TODO: Rename?
-	constexpr std::size_t index() const { return indexAtDepth(depth()); }
+	constexpr std::size_t index() const { return index(depth()); }
+
+	constexpr Code parent(depth_t parent_depth) const
+	{
+		assert(parent_depth >= depth_);  // TODO: Fix
+		code_t temp = 3 * parent_depth;
+		return Code((code_ >> temp) << temp, parent_depth);
+	}
 
 	// TODO: Rename?
-	constexpr Code parent() const { return toDepth(depth() + 1); }
+	constexpr Code parent() const { return parent(depth() + 1); }
 
 	/*!
 	 * @brief Get the code of a specific child to this code

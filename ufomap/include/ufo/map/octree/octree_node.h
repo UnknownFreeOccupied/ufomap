@@ -63,6 +63,25 @@ struct OctreeLeafNode : Data {
 	bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
 
 	//
+	// Fill
+	//
+
+	void fill(OctreeLeafNode const& other, index_t index)
+	{
+		if (index_field_t(1) & (other.leaf_ >> index)) {
+			setLeaf();
+		} else {
+			resetLeaf();
+		}
+
+		if (index_field_t(1) & (other.modified_ >> index)) {
+			setModified();
+		} else {
+			resetModified();
+		}
+	}
+
+	//
 	// Is leaf
 	//
 
