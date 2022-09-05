@@ -39,12 +39,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SIGNED_DISTANCE_MAP_BASE_H
-#define UFO_MAP_SIGNED_DISTANCE_MAP_BASE_H
+#ifndef UFO_MAP_DISTANCE_MAP_BASE_H
+#define UFO_MAP_DISTANCE_MAP_BASE_H
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/predicate/signed_distance.h>
+#include <ufo/map/distance/distance_node.h>
+#include <ufo/map/predicate/distance.h>
 
 // STL
 #include <cstdint>
@@ -54,95 +55,88 @@
 
 namespace ufo::map
 {
-template <class Derived, class LeafNode>
-class SignedDistanceMapBase
+template <class Derived>
+class DistanceMapBase
 {
  public:
-	using signed_distance_t = typename LeafNode::signed_distance_type;
-
- public:
 	//
-	// Get signed distance
+	// Get distance
 	//
 
-	constexpr signed_distance_t getSignedDistance(Node node) const noexcept
+	constexpr distance_t getDistance(Node node) const noexcept
 	{
-		return getSignedDistance(derived().getLeafNode(node));
+		return getDistance(derived().getLeafNode(node));
 	}
 
-	signed_distance_t getSignedDistance(Code code) const
+	distance_t getDistance(Code code) const
 	{
-		return getSignedDistance(derived().getLeafNode(code));
+		return getDistance(derived().getLeafNode(code));
 	}
 
-	signed_distance_t getSignedDistance(Key key) const
+	distance_t getDistance(Key key) const { return getDistance(Derived::toCode(key)); }
+
+	distance_t getDistance(Point3 coord, depth_t depth = 0) const
 	{
-		return getSignedDistance(Derived::toCode(key));
+		return getDistance(derived().toCode(coord, depth));
 	}
 
-	signed_distance_t getSignedDistance(Point3 coord, depth_t depth = 0) const
+	distance_t getDistance(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
-		return getSignedDistance(derived().toCode(coord, depth));
-	}
-
-	signed_distance_t getSignedDistance(coord_t x, coord_t y, coord_t z,
-	                                    depth_t depth = 0) const
-	{
-		return getSignedDistance(derived().toCode(x, y, z, depth));
+		return getDistance(derived().toCode(x, y, z, depth));
 	}
 
 	//
-	// Set signed distance
+	// Set distance
 	//
 
-	void setSignedDistance(Node node, signed_distance_t time_step, bool propagate = true)
+	void setDistance(Node node, distance_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, time_step](auto&& node) { setSignedDistance(node, time_step); },
+		    node, [this, time_step](auto&& node) { setDistance(node, time_step); },
 		    propagate);
 	}
 
-	void setSignedDistance(Code code, signed_distance_t time_step, bool propagate = true)
+	void setDistance(Code code, distance_t time_step, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, time_step](auto&& node) { setSignedDistance(node, time_step); },
+		    code, [this, time_step](auto&& node) { setDistance(node, time_step); },
 		    propagate);
 	}
 
-	void setSignedDistance(Key key, signed_distance_t time_step, bool propagate = true)
+	void setDistance(Key key, distance_t time_step, bool propagate = true)
 	{
-		setSignedDistance(Derived::toCode(key), time_step, propagate);
+		setDistance(Derived::toCode(key), time_step, propagate);
 	}
 
-	void setSignedDistance(Point3 coord, signed_distance_t time_step, bool propagate = true,
-	                       depth_t depth = 0)
+	void setDistance(Point3 coord, distance_t time_step, bool propagate = true,
+	                 depth_t depth = 0)
 	{
-		setSignedDistance(derived().toCode(coord, depth), time_step, propagate);
+		setDistance(derived().toCode(coord, depth), time_step, propagate);
 	}
 
-	void setSignedDistance(coord_t x, coord_t y, coord_t z, signed_distance_t time_step,
-	                       bool propagate = true, depth_t depth = 0)
+	void setDistance(coord_t x, coord_t y, coord_t z, distance_t time_step,
+	                 bool propagate = true, depth_t depth = 0)
 	{
-		setSignedDistance(derived().toCode(x, y, z, depth), time_step, propagate);
+		setDistance(derived().toCode(x, y, z, depth), time_step, propagate);
 	}
 
 	//
 	// Propagation criteria
 	//
 
-	constexpr PropagationCriteria getSignedDistancePropagationCriteria() const noexcept
+	constexpr PropagationCriteria getDistancePropagationCriteria() const noexcept
 	{
-		return signed_distance_prop_criteria_;
+		return distance_prop_criteria_;
 	}
 
-	constexpr void setSignedDistancePropagationCriteria(
-	    PropagationCriteria signed_distance_prop_criteria, bool propagate = true) noexcept
+	constexpr void setDistancePropagationCriteria(
+	    PropagationCriteria distance_prop_criteria, bool propagate = true) noexcept
 	{
-		if (signed_distance_prop_criteria_ == signed_distance_prop_criteria) {
+		if (distance_prop_criteria_ == distance_prop_criteria) {
 			return;
 		}
 
-		signed_distance_prop_criteria_ = signed_distance_prop_criteria;
+		distance_prop_criteria_ = distance_prop_criteria;
 
 		// Set all inner nodes to modified
 		// FIXME: Possible to optimize this to only set the ones with children
@@ -169,76 +163,72 @@ class SignedDistanceMapBase
 	void initRoot()
 	{
 		// FIXME: What should this be?
-		setSignedDistance(derived().getRoot(), std::numeric_limits<signed_distance_t>::max());
+		setDistance(derived().getRoot(), std::numeric_limits<distance_t>::max());
 	}
 
 	//
-	// Get signed distance
+	// Get distance
 	//
 
-	static constexpr signed_distance_t getSignedDistance(LeafNode const& node)
+	static constexpr distance_t getDistance(LeafNode const& node) { return node.distance; }
+
+	//
+	// Set distance
+	//
+
+	static constexpr void setDistance(LeafNode& node, distance_t distance)
 	{
-		return node.signed_distance;
-	}
-
-	//
-	// Set signed distance
-	//
-
-	static constexpr void setSignedDistance(LeafNode& node,
-	                                        signed_distance_t signed_distance)
-	{
-		node.signed_distance = signed_distance;
+		node.distance = distance;
 	}
 
 	//
 	// Update node
 	//
 
-	void updateNode(SignedDistanceNode) {}
+	void updateNode(DistanceNode) {}
 
 	template <class T>
-	void updateNode(SignedDistanceNode& node, T const& children)
+	void updateNode(DistanceNode& node, T const& children)
 	{
-		switch (signed_distance_prop_criteria_) {
+		switch (distance_prop_criteria_) {
 			case PropagationCriteria::MIN:
-				setSignedDistance(node, minChildSignedDistance(children));
+				setDistance(node, minChildDistance(children));
 				break;
 			case PropagationCriteria::MAX:
-				setSignedDistance(node, maxChildSignedDistance(children));
+				setDistance(node, maxChildDistance(children));
 				break;
 			case PropagationCriteria::MEAN:
-				setSignedDistance(node, averageChildSignedDistance(children));
+				setDistance(node, averageChildDistance(children));
 				break;
 		}
 	}
 
 	//
-	// Min child signed distance
+	// Min child distance
 	//
 
 	template <class T>
-	constexpr signed_distance_t minChildSignedDistance(T const& children) const
+	constexpr distance_t minChildDistance(T const& children) const
 	{
 		// TODO: Implement
 	}
 
 	//
-	// Max child signed distance
+	// Max child distance
 	//
 
 	template <class T>
-	constexpr signed_distance_t maxChildSignedDistance(T const& children) const
+	constexpr distance_t maxChildDistance(T const& children) const
 	{
 		// TODO: Implement
 	}
 
 	//
-	// Average child signed distance
+	// Average child distance
 	//
 
 	template <class T>
-	constexpr signed_distance_t averageChildSignedDistance(T const& children) const
+	constexpr distance_t averageChildDistance(T const& children) const
 	{
 		// TODO: Implement
 	}
@@ -249,7 +239,7 @@ class SignedDistanceMapBase
 
 	static constexpr DataIdentifier getDataIdentifier() noexcept
 	{
-		return DataIdentifier::SIGNED_DISTANCE;
+		return DataIdentifier::DISTANCE;
 	}
 
 	static constexpr bool canReadData(DataIdentifier identifier) noexcept
@@ -262,12 +252,12 @@ class SignedDistanceMapBase
 	{
 		auto const num_nodes = std::distance(first, last);
 
-		auto data = std::make_unique<signed_distance_t[]>(num_nodes);
+		auto data = std::make_unique<distance_t[]>(num_nodes);
 		in.read(reinterpret_cast<char*>(data.get()),
 		        num_nodes * sizeof(typename decltype(data)::element_type));
 
 		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			setSignedDistance(*first, data[i]);
+			setDistance(*first, data[i]);
 		}
 	}
 
@@ -277,9 +267,9 @@ class SignedDistanceMapBase
 	{
 		auto const num_nodes = std::distance(first, last);
 
-		auto data = std::make_unique<signed_distance_t[]>(num_nodes);
+		auto data = std::make_unique<distance_t[]>(num_nodes);
 		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			data[i] = getSignedDistance(*first);
+			data[i] = getDistance(*first);
 		}
 
 		out.write(reinterpret_cast<char const*>(data.get()),
@@ -288,8 +278,8 @@ class SignedDistanceMapBase
 
  protected:
 	// Propagation criteria
-	PropagationCriteria signed_distance_prop_criteria_ = PropagationCriteria::MIN;
+	PropagationCriteria distance_prop_criteria_ = PropagationCriteria::MIN;
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_SIGNED_DISTANCE_MAP_BASE_H
+#endif  // UFO_MAP_DISTANCE_MAP_BASE_H

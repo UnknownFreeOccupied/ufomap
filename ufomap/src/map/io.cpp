@@ -96,7 +96,7 @@ FileHeader readHeader(std::istream& in_stream)
 	in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
 	header.compressed = compressed & 1U;
 
-	in_stream.read(reinterpret_cast<char*>(&header.resolution), sizeof(header.resolution));
+	in_stream.read(reinterpret_cast<char*>(&header.leaf_size), sizeof(header.leaf_size));
 	in_stream.read(reinterpret_cast<char*>(&header.depth_levels),
 	               sizeof(header.depth_levels));
 
@@ -114,11 +114,11 @@ void writeHeader(std::ostream& out_stream, FileOptions const& options)
 	                 sizeof(FileHeader::CURRENT_PATCH));
 
 	uint8_t const compressed = options.compressed ? uint8_t(1) : uint8_t(0);
-	double const resolution = options.resolution;
+	double const leaf_size = options.leaf_size;
 	uint8_t const depth_levels = options.depth_levels;
 
 	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(compressed));
-	out_stream.write(reinterpret_cast<char const*>(&resolution), sizeof(resolution));
+	out_stream.write(reinterpret_cast<char const*>(&leaf_size), sizeof(leaf_size));
 	out_stream.write(reinterpret_cast<char const*>(&depth_levels), sizeof(depth_levels));
 }
 

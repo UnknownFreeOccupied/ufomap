@@ -95,6 +95,7 @@ enum MapType : mt_t {
 	SEMANTIC  = mt_t(1) << 3U,
 	SURFEL    = mt_t(1) << 4U,
 	DISTANCE  = mt_t(1) << 5U,
+	INTENSITY = mt_t(1) << 6U,
 	// Half resolution (/single) below
 	HR_OCCUPANCY = (mt_t(1) << 63U) | OCCUPANCY,
 	HR_TIME      = (mt_t(1) << 62U) | TIME,
@@ -102,6 +103,7 @@ enum MapType : mt_t {
 	HR_SEMANTIC  = (mt_t(1) << 60U) | SEMANTIC,
 	HR_SURFEL    = (mt_t(1) << 59U) | SURFEL,
 	HR_DISTANCE  = (mt_t(1) << 58U) | DISTANCE,
+	HR_INTENSITY = (mt_t(1) << 57U) | INTENSITY,
 	// clang-format on
 };
 
@@ -153,17 +155,17 @@ class UFOMap
 	// Constructors
 	//
 
-	UFOMap(resolution_t res = 0.1, depth_t depth_levels = 16, bool auto_pruning = true)
-	    : Base(res, depth_levels, auto_pruning)
+	UFOMap(resolution_t res = 0.1, depth_t depth_levels = 16, bool auto_prune = true)
+	    : Base(res, depth_levels, auto_prune)
 	{
 	}
 
-	UFOMap(std::filesystem::path const& file, bool auto_pruning = true)
-	    : Base(file, auto_pruning)
+	UFOMap(std::filesystem::path const& file, bool auto_prune = true)
+	    : Base(file, auto_prune)
 	{
 	}
 
-	UFOMap(std::istream& in, bool auto_pruning = true) : Base(in, auto_pruning) {}
+	UFOMap(std::istream& in, bool auto_prune = true) : Base(in, auto_prune) {}
 
 	UFOMap(UFOMap const& other) = default;
 
@@ -183,14 +185,7 @@ class UFOMap
 	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2>
 	UFOMap& operator=(UFOMap<MapType2, ReuseNodes2, LockLess2> const& rhs)
 	{
-		// FIXME: Correct?
-		std::stringstream io(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-		io.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io.imbue(std::locale());
-
-		rhs.write(io);
-		Base::read(io);
-
+		Base::operator=(rhs);
 		return *this;
 	}
 
@@ -208,6 +203,7 @@ using ColorMap     = UFOMap<COLOR>;
 using SemanticMap  = UFOMap<SEMANTIC>;
 using SurfelMap    = UFOMap<SURFEL>;
 using DistanceMap  = UFOMap<DISTANCE>;
+using IntensityMap = UFOMap<INTENSITY>;
 // clang-format on
 }  // namespace ufo::map
 

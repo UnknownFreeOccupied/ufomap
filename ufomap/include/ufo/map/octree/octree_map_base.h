@@ -58,19 +58,18 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Node, class Indicators, bool ReuseNodes, bool LockLess,
-          template <typename> typename... Bases>
+template <class Node, bool ReuseNodes, bool LockLess, template <class> class... Bases>
 class OctreeMapBase
-    : public OctreeBase<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>,
-                        Node, Indicators, ReuseNodes, LockLess>,
-      public Bases<OctreeMapBase<Node, Indicators, ReuseNodes, LockLess, Bases...>>...
+    : public OctreeBase<OctreeMapBase<Node, ReuseNodes, LockLess, Bases...>, Node,
+                        ReuseNodes, LockLess>,
+      public Bases<OctreeMapBase<Node, ReuseNodes, LockLess, Bases...>>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMapBase, Node, Indicators, ReuseNodes, LockLess>;
+	using Octree = OctreeBase<OctreeMapBase, Node, ReuseNodes, LockLess>;
 	using typename Octree::LeafNode;
 
 	//
@@ -89,54 +88,36 @@ class OctreeMapBase
 	// Constructors
 	//
 
-	OctreeMapBase(double resolution = 0.1, depth_t depth_levels = 16,
-	              bool automatic_pruning = true)
-	    : Octree(resolution, depth_levels, automatic_pruning)
+	OctreeMapBase(resolution_t res = 0.1, depth_t depth_levels = 16, bool auto_prune = true)
+	    : Octree(res, depth_levels, auto_prune)
 	{
 		initRoot();
 	}
 
-	OctreeMapBase(std::filesystem::path const& filename, bool automatic_pruning = true)
-	    : OctreeMapBase(0.1, 16, automatic_pruning)
+	OctreeMapBase(std::filesystem::path const& file, bool auto_prune = true)
+	    : OctreeMapBase(0.1, 16, auto_prune)
 	{
-		Octree::read(filename);
+		Octree::read(file);
 	}
 
-	OctreeMapBase(std::istream& in_stream, bool automatic_pruning = true)
-	    : OctreeMapBase(0.1, 16, automatic_pruning)
+	OctreeMapBase(std::istream& in, bool auto_prune = true)
+	    : OctreeMapBase(0.1, 16, auto_prune)
 	{
-		Octree::read(in_stream);
+		Octree::read(in);
 	}
 
 	OctreeMapBase(OctreeMapBase const& other)
 	    : Octree(other), Bases<OctreeMapBase>(other)...
 	{
-		initRoot();
-
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
-
-		other.write(io_stream);
-		Octree::read(io_stream);
+		readFromOtherMap(other);
 	}
 
-	template <class Node2, class Indicators2, bool ReuseNodes2, bool LockLess2,
-	          template <typename> typename... Bases2>
-	OctreeMapBase(
-	    OctreeMapBase<Node2, Indicators2, ReuseNodes2, LockLess2, Bases2...> const& other)
+	template <class Node2, bool ReuseNodes2, bool LockLess2,
+	          template <class> class... Bases2>
+	OctreeMapBase(OctreeMapBase<Node2, ReuseNodes2, LockLess2, Bases2...> const& other)
 	    : Octree(other.resolution(), other.depthLevels(), other.automaticPruning())
 	{
-		initRoot();
-
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
-
-		other.write(io_stream);
-		Octree::read(io_stream);
+		readFromOtherMap(other);
 	}
 
 	OctreeMapBase(OctreeMapBase&& other) = default;
@@ -146,33 +127,20 @@ class OctreeMapBase
 		Octree::operator=(rhs);
 		(Bases<OctreeMapBase>::operator=(rhs), ...);
 
-		initRoot();
-
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
-
-		rhs.write(io_stream);
-		Octree::read(io_stream);
+		readFromOtherMap(rhs);
 
 		return *this;
 	}
 
-	template <class Node2, class Indicators2, bool ReuseNodes2, bool LockLess2,
-	          template <typename> typename... Bases2>
+	template <class Node2, bool ReuseNodes2, bool LockLess2,
+	          template <class> class... Bases2>
 	OctreeMapBase& operator=(
-	    OctreeMapBase<Node2, Indicators2, ReuseNodes2, LockLess2, Bases2...> const& rhs)
+	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, Bases2...> const& rhs)
 	{
-		initRoot();
+		Octree::operator=(rhs);
+		(Bases<OctreeMapBase>::operator=(rhs), ...);
 
-		std::stringstream io_stream(std::ios_base::in | std::ios_base::out |
-		                            std::ios_base::binary);
-		io_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		io_stream.imbue(std::locale());
-
-		rhs.write(io_stream);
-		Octree::read(io_stream);
+		readFromOtherMap(rhs);
 
 		return *this;
 	}
@@ -180,6 +148,23 @@ class OctreeMapBase
 	OctreeMapBase& operator=(OctreeMapBase&& rhs) = default;
 
  protected:
+	//
+	// Read from other map
+	//
+
+	template <class Other>
+	void readFromOtherMap(Other const& other)
+	{
+		initRoot();
+
+		std::stringstream io(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+		io.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		io.imbue(std::locale());
+
+		other.write(io);
+		Octree::read(io);
+	}
+
 	//
 	// Initilize root
 	//
@@ -194,12 +179,15 @@ class OctreeMapBase
 	// Update node
 	//
 
-	void updateNode(LeafNode& node) { (Bases<OctreeMapBase>::updateNode(node), ...); }
+	void updateNode(LeafNode& node, index_field_t const indices)
+	{
+		(Bases<OctreeMapBase>::updateNode(node, indices), ...);
+	}
 
 	template <class T>
-	void updateNode(LeafNode& node, T const& children)
+	void updateNode(LeafNode& node, index_field_t const indices, T const& children)
 	{
-		(Bases<OctreeMapBase>::updateNode(node, children), ...);
+		(Bases<OctreeMapBase>::updateNode(node, indices, children), ...);
 	}
 
 	//

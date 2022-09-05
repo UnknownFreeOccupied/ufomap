@@ -55,6 +55,8 @@
 
 namespace ufo::map
 {
+using key_t = uint32_t;
+
 /*!
  * @brief A key represent an octree index at a specified depth
  *
@@ -62,8 +64,6 @@ namespace ufo::map
 class Key
 {
  public:
-	using key_t = uint32_t;
-
 	constexpr Key() = default;
 
 	constexpr Key(key_t const x, key_t const y, key_t const z, depth_t const depth)

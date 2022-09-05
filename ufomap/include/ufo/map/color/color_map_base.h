@@ -212,7 +212,7 @@ class ColorMapBase
 	}
 
 	template <bool Single>
-	static constexpr void clearColor(ColorNodoe<Single>& node, index_t const index) noexcept
+	static constexpr void clearColor(ColorNode<Single>& node, index_t const index) noexcept
 	{
 		setColor(node, index, RGBColor());
 	}
@@ -222,7 +222,7 @@ class ColorMapBase
 	//
 
 	template <bool Single>
-	constexpr void updateNode(ColorNode<Single> const&, index_field_t const) noexcept
+	constexpr void updateNode(ColorNode<Single>&, index_field_t const) noexcept
 	{
 	}
 
@@ -290,12 +290,12 @@ class ColorMapBase
 	}
 
 	template <class InputIt>
-	void readNodes(std::istream& in, InputIt first, InputIt last, std::size_t num_nodes)
+	void readNodes(std::istream& in, InputIt first, InputIt last)
 	{
 		uint8_t single;
 		in.read(reinterpret_cast<char*>(&single), sizeof(single));
 
-		num_nodes = 3 * std::distance(first, last);
+		std::size_t num_nodes = 3 * std::distance(first, last);
 		if (!single) {
 			num_nodes *= 8;
 		}
@@ -363,12 +363,12 @@ class ColorMapBase
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last, std::size_t num_nodes)
+	void writeNodes(std::ostream& out, InputIt first, InputIt last)
 	{
 		constexpr uint8_t const single = isSingle<InputIt>();
 		out.write(reinterpret_cast<char const*>(&single), sizeof(single));
 
-		num_nodes = 3 * std::distance(first, last);
+		std::size_t num_nodes = 3 * std::distance(first, last);
 		if constexpr (!single) {
 			num_nodes *= 8;
 		}

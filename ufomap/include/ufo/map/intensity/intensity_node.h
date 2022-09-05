@@ -39,8 +39,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_DISTANCE_NODE_H
-#define UFO_MAP_DISTANCE_NODE_H
+#ifndef UFO_MAP_INTENSITY_NODE_H
+#define UFO_MAP_INTENSITY_NODE_H
 
 // STL
 #include <array>
@@ -49,15 +49,15 @@
 namespace ufo::map
 {
 template <bool Single = false>
-struct DistanceNode {
-	using distance_type = float;
+struct IntensityNode {
+	using intensity_type = float;
 
-	std::conditional_t<Single, distance_type, std::array<distance_type, 8>> distance;
+	std::conditional_t<Single, intensity_type, std::array<intensity_type, 8>> intensity;
 
-	bool operator==(DistanceNode const& rhs) const { return distance == rhs.distance; }
+	bool operator==(IntensityNode const& rhs) const { return intensity == rhs.intensity; }
 
-	bool operator!=(DistanceNode const& rhs) const { return !(*this == rhs); }
+	bool operator!=(IntensityNode const& rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_DISTANCE_NODE_H
+#endif  // UFO_MAP_INTENSITY_NODE_H

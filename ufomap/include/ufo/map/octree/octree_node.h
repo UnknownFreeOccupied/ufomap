@@ -42,6 +42,9 @@
 #ifndef UFO_MAP_OCTREE_OCTREE_NODE_H
 #define UFO_MAP_OCTREE_OCTREE_NODE_H
 
+// UFO
+#include <ufo/map/types.h>
+
 // STL
 #include <array>
 #include <cstdint>
@@ -52,13 +55,6 @@ namespace ufo::map
 {
 template <class Data>
 struct OctreeLeafNode : Data {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	uint8_t is_leaf;
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	uint8_t modified;
-
 	bool operator==(OctreeLeafNode const& rhs) const
 	{
 		return static_cast<Data const&>(rhs) == static_cast<Data const&>(*this);
@@ -66,55 +62,82 @@ struct OctreeLeafNode : Data {
 
 	bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
 
-	constexpr bool isLeaf(std::size_t const index) const
+	//
+	// Is leaf
+	//
+
+	constexpr index_field_t leaf() const { return leaf_; }
+
+	constexpr bool leaf(index_t index) const { return (leaf_ >> index) & index_t(1); }
+
+	constexpr bool allLeaf() const
 	{
-		return (is_leaf >> index) & uint8_t(1);
+		return std::numeric_limits<index_field_t>::max() == leaf_;
 	}
 
-	constexpr bool isAllLeaf() const
+	constexpr bool anyLeaf() const { return 0 != leaf_; }
+
+	constexpr bool noneLeaf() const { return 0 == leaf_; }
+
+	//
+	// Set leaf
+	//
+
+	constexpr void setLeaf() { leaf_ = std::numeric_limits<index_field_t>::max(); }
+
+	constexpr void setLeaf(index_field_t index_field) { leaf_ |= index_field; }
+
+	//
+	// Reset leaf
+	//
+
+	constexpr void resetLeaf() { leaf_ = 0; }
+
+	constexpr void resetLeaf(index_field_t index_field) { leaf_ &= ~index_field; }
+
+	//
+	// Is modified
+	//
+
+	constexpr index_field_t modified() const noexcept { return modified_; }
+
+	constexpr bool modified(index_t index) const
 	{
-		return std::numeric_limits<uint8_t>::max() == is_leaf;
+		return (modified_ >> index) & index_t(1);
 	}
 
-	constexpr bool isAnyLeaf() const { return 0 != is_leaf; }
-
-	constexpr bool isNoneLeaf() const { return 0 == is_leaf; }
-
-	constexpr bool isModified(std::size_t const index) const
+	constexpr bool allModified() const
 	{
-		return (modified >> index) & uint8_t(1);
+		return std::numeric_limits<index_field_t>::max() == modified_;
 	}
 
-	constexpr bool isAllModified() const
-	{
-		return std::numeric_limits<uint8_t>::max() == modified;
-	}
+	constexpr bool anyModified() const { return 0 != modified_; }
 
-	constexpr bool isAnyModified() const { return 0 != modified; }
+	constexpr bool noneModified() const { return 0 == modified_; }
 
-	constexpr bool isNoneModified() const { return 0 == modified; }
+	//
+	// Set modified
+	//
 
-	constexpr void setLeaf(bool const value) const
-	{
-		is_leaf = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
-	}
+	constexpr void setModified() { modified_ = std::numeric_limits<index_field_t>::max(); }
 
-	constexpr void setLeaf(std::size_t const index, bool const value) const
-	{
-		is_leaf = (is_leaf & ~(uint8_t(1) << index)) |
-		          (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
-	}
+	constexpr void setModified(index_field_t index_field) { modified_ |= index_field; }
 
-	constexpr void setModified(bool const value) const
-	{
-		modified = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
-	}
+	//
+	// Reset modified
+	//
 
-	constexpr void setModified(std::size_t const index, bool const value) const
-	{
-		modified = (modified & ~(uint8_t(1) << index)) |
-		           (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
-	}
+	constexpr void resetModified() { modified_ = 0; }
+
+	constexpr void resetModified(index_field_t index_field) { modified_ &= ~index_field; }
+
+ private:
+	// Indicates whether this is a leaf node (has no children) or not. If true then the
+	// children are not valid and should not be accessed
+	index_field_t leaf_;
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	index_field_t modified_;
 };
 
 template <class LeafNode>
