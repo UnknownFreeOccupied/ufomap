@@ -124,6 +124,13 @@ class Key
 	 */
 	constexpr depth_t depth() const noexcept { return depth_; }
 
+	constexpr index_t index(depth_t depth) const noexcept
+	{
+		// TODO: Implement
+	}
+
+	constexpr index_t index() const noexcept { return index(depth()); }
+
 	/*!
 	 * @brief Change the depth of the key.
 	 *
