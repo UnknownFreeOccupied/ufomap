@@ -70,6 +70,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <thread>
 
 namespace ufomap_ros::rviz_plugins

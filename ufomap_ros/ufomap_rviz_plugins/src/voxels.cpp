@@ -62,7 +62,6 @@
 
 // ROS
 #include <ros/assert.h>
-#include <rviz/ogre_helpers/compatibility.h>
 
 namespace ufomap_ros::rviz_plugins
 {
@@ -351,7 +350,7 @@ void Voxels::setRenderStyle(RenderStyle style)
 
 	for (auto it = std::begin(renderables_), end = std::end(renderables_); it != end;
 	     ++it) {
-		rviz::setMaterial(**it, current_material_);
+		(*it)->setMaterial(current_material_->getName());
 	}
 
 	// FIXME: Not needed as we use geometry shaders
@@ -711,7 +710,7 @@ VoxelsRenderablePtr Voxels::createRenderable(int num_voxels)
 {
 	VoxelsRenderablePtr rend(
 	    new VoxelsRenderable(this, num_voxels, !current_mode_supports_geometry_shader_));
-	rviz::setMaterial(*rend, current_material_);
+	rend->setMaterial(current_material_->getName());
 	Ogre::Vector4 size(dim_, dim_, dim_, 0.0f);
 	Ogre::Vector4 alpha(alpha_, 0.0f, 0.0f, 0.0f);
 	Ogre::Vector4 highlight(0.0f, 0.0f, 0.0f, 0.0f);

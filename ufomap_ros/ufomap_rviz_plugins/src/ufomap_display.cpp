@@ -57,7 +57,7 @@
 #include <OGRE/OgreSceneNode.h>
 
 // QT
-#include <QLocale>
+// #include <QLocale>
 
 // STL
 #include <exception>
@@ -563,7 +563,7 @@ void UFOMapDisplay::updateStatus()
 		res_str.setNum(res, 'g', 3);
 		res_str += " m";
 	}
-	QLocale locale;
+	// QLocale locale;
 	setStatus(rviz::StatusProperty::Ok, "Resolution", res_str);
 	setStatus(rviz::StatusProperty::Ok, "Num. leaf nodes",
 	          QString("%L1").arg(map_.numLeafNodes()));
@@ -571,10 +571,10 @@ void UFOMapDisplay::updateStatus()
 	          QString("%L1").arg(map_.numInnerLeafNodes()));
 	setStatus(rviz::StatusProperty::Ok, "Num. inner nodes",
 	          QString("%L1").arg(map_.numInnerNodes()));
-	setStatus(rviz::StatusProperty::Ok, "Memory usage",
-	          locale.formattedDataSize(map_.memoryUsage()));
-	setStatus(rviz::StatusProperty::Ok, "Memory allocated",
-	          locale.formattedDataSize(map_.memoryUsageAllocated()));
+	// setStatus(rviz::StatusProperty::Ok, "Memory usage",
+	//           locale.formattedDataSize(map_.memoryUsage()));
+	// setStatus(rviz::StatusProperty::Ok, "Memory allocated",
+	//           locale.formattedDataSize(map_.memoryUsageAllocated()));
 }
 
 }  // namespace ufomap_ros::rviz_plugins
