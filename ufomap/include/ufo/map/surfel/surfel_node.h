@@ -53,6 +53,18 @@ namespace ufo::map
 {
 template <bool Single = false>
 struct SurfelNode {
+	using scalar_t = float;
+	std::conditional_t<Single, std::array<scalar_t, 6>,
+	                   std::array<std::array<scalar_t, 6>, 8>>
+	    sum_squares_;
+	std::conditional_t<Single, math::Vector3<scalar_t>,
+	                   std::array<math::Vector3<scalar_t>, 8>>
+	    sum_;
+	std::conditional_t<Single, math::Vector3<scalar_t>,
+	                   std::array<math::Vector3<scalar_t>, 8>>
+	    eigen_values_;
+	std::conditional_t<Single, std::uint32_t, std::array<std::uint32_t, 8>> num_points_;
+
 	using surfel_t = Surfel<float>;
 	using surfel_type = std::conditional_t<Single, surfel_t, std::array<surfel_t, 8>>;
 
