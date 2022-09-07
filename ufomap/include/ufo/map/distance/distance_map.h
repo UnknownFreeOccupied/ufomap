@@ -45,7 +45,7 @@
 // UFO
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/map/distance/distance_node.h>
-#include <ufo/map/predicate/distance.h>
+#include <ufo/map/distance/distance_predicate.h>
 
 // STL
 #include <cstdint>

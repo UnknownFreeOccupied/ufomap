@@ -45,7 +45,7 @@
 // UFO
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/map/code/code_unordered_map.h>
-#include <ufo/map/predicate/surfel.h>
+#include <ufo/map/surfel/surfel_predicate.h>
 #include <ufo/util/enum.h>
 
 // STL

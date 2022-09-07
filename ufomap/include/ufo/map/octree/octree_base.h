@@ -50,9 +50,9 @@
 #include <ufo/map/octree/iterator.h>
 #include <ufo/map/octree/node.h>
 #include <ufo/map/octree/octree_node.h>
+#include <ufo/map/octree/octree_predicate.h>
 #include <ufo/map/octree/query.h>
 #include <ufo/map/point.h>
-#include <ufo/map/predicate/octree.h>
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/predicate/spatial.h>
 #include <ufo/map/types.h>
@@ -77,7 +77,7 @@
 
 namespace ufo::map
 {
-// Utilizing Curiously recurring template pattern (CRTP)
+// Utilizing curiously recurring template pattern (CRTP)
 template <class Derived, class DataType, bool ReuseNodes = false, bool LockLess = false>
 class OctreeBase
 {
@@ -109,6 +109,58 @@ class OctreeBase
 	**************************************************************************************/
 
 	//
+	// Clear
+	//
+
+	/*!
+	 * @brief Erases the map. After this call, the map contains only the root node.
+	 *
+	 * @param prune Whether the memory should be cleared.
+	 */
+	void clear(bool prune = false) { clear(nodeSize(), depthLevels(), prune); }
+
+	/*!
+	 * @brief Erases the map and changes the leaf node size and the number of depth levels.
+	 * After this call, the map contains only the root node.
+	 *
+	 * @param new_leaf_size The new leaf node size.
+	 * @param new_depth_levels The new number of depth levels.
+	 * @param prune Whether the memory should be cleared.
+	 */
+	void clear(node_size_t new_leaf_size, depth_t new_depth_levels, bool prune = false)
+	{
+		deleteChildren(root(), rootIndex(), rootDepth(), prune);
+		setLeafSizeAndDepthLevels(new_leaf_size, new_depth_levels);
+		derived().initRoot();
+	}
+
+	//
+	// Automatic pruning
+	//
+
+	// FIXME: Come up with better names
+
+	/*!
+	 * @brief Check if autonomaic pruning is enabled.
+	 *
+	 * @return Whether automatic pruning is enabled.
+	 */
+	[[nodiscard]] constexpr bool automaticPruning() const noexcept
+	{
+		return automatic_prune_;
+	}
+
+	/*!
+	 * @brief Set (/turn on) automatic pruning.
+	 */
+	constexpr void setAutomaticPruning() noexcept { automatic_prune_ = true; }
+
+	/*!
+	 * @brief Reset (/turn off) automatic pruning.
+	 */
+	constexpr void resetAutomaticPruning() noexcept { automatic_prune_ = false; }
+
+	//
 	// Depth levels
 	//
 
@@ -137,7 +189,13 @@ class OctreeBase
 	// Size
 	//
 
-	// TODO: Add comment
+	/*!
+	 * @brief The size the octree covers.
+	 *
+	 * @note This is the same as `nodeSize(rootDepth())`.
+	 *
+	 * @return The size the octree covers.
+	 */
 	[[nodiscard]] constexpr node_size_t size() const noexcept
 	{
 		return nodeSize(rootDepth());
@@ -147,7 +205,13 @@ class OctreeBase
 	// Volume
 	//
 
-	// TODO: Add comment
+	/*!
+	 * @brief The volume of the octree.
+	 *
+	 * @note This is the same as `size() * size() * size()`.
+	 *
+	 * @return The volume of the octree.
+	 */
 	[[nodiscard]] constexpr node_size_t volume() const noexcept
 	{
 		auto s = size();
@@ -188,6 +252,413 @@ class OctreeBase
 	[[nodiscard]] geometry::AAEBB boundingVolume() const
 	{
 		return geometry::AAEBB(center(), nodeSize(rootDepth() - 1));
+	}
+
+	//
+	// Within
+	//
+
+	/*!
+	 * @brief Check if a coordinate is within the octree bounds.
+	 *
+	 * @param coord The coordinate.
+	 * @return Whether the coordinate is within the octree bounds.
+	 */
+	[[nodiscard]] constexpr bool isWithin(Point3 coord) const
+	{
+		return isWithin(coord.x, coord.y, coord.z);
+	}
+
+	/*!
+	 * @brief Check if a coordinate is within the octree bounds.
+	 *
+	 * @param x,y,z The coordinate.
+	 * @return Whether the coordinate is within the octree bounds.
+	 */
+	[[nodiscard]] constexpr bool isWithin(coord_t x, coord_t y, coord_t z) const
+	{
+		auto max = nodeSize(rootDepth() - 1);
+		auto min = -max;
+		return min <= x && min <= y && min <= z && max >= x && max >= y && max >= z;
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Leaf                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	//
+	// Pure leaf
+	//
+
+	/*!
+	 * @brief Check if a node is a pure leaf node (i.e., can never have children).
+	 *
+	 * @param node The node to check.
+	 * @return Whether the node is a pure leaf node.
+	 */
+	[[nodiscard]] static constexpr bool isPureLeaf(Node node) noexcept
+	{
+		return 0 == node.depth();
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a code is a pure leaf node (i.e., can never
+	 * have children).
+	 *
+	 * @note Only have to check if the depth of the code is 0.
+	 *
+	 * @param code The code of the node to check.
+	 * @return Whether the node is a pure leaf node.
+	 */
+	[[nodiscard]] static constexpr bool isPureLeaf(Code code) noexcept
+	{
+		return 0 == code.depth();
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a key is a pure leaf node (i.e., can never
+	 * have children).
+	 *
+	 * @note Only have to check if the depth of the key is 0.
+	 *
+	 * @param key The key of the node to check.
+	 * @return Whether the node is a pure leaf node.
+	 */
+	[[nodiscard]] static constexpr bool isPureLeaf(Key key) noexcept
+	{
+		return 0 == key.depth();
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a coordinate at a specified depth is a
+	 * pure leaf node (i.e., can never have children).
+	 *
+	 * @note Only have to check if the depth is 0.
+	 *
+	 * @param coord The coordinate of the node to check.
+	 * @param depth The depth of the node to check.
+	 * @return Whether the node is a pure leaf node.
+	 */
+	[[nodiscard]] static constexpr bool isPureLeaf(Point3 coord, depth_t depth = 0) noexcept
+	{
+		return 0 == depth;
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a coordinate at a specified depth is a
+	 * pure leaf node (i.e., can never have children).
+	 *
+	 * @note Only have to check if the depth is 0.
+	 *
+	 * @param x,y,z The coordinate of the node to check.
+	 * @param depth The depth of the node to check.
+	 * @return Whether the node is a pure leaf node.
+	 */
+	[[nodiscard]] static constexpr bool isPureLeaf(coord_t x, coord_t y, coord_t z,
+	                                               depth_t depth = 0) noexcept
+	{
+		return 0 == depth;
+	}
+
+	//
+	// Leaf
+	//
+
+	/*!
+	 * @brief Check if a node is a leaf node (i.e., has no children).
+	 *
+	 * @param node The node to check.
+	 * @return Whether the node is a leaf node.
+	 */
+	[[nodiscard]] constexpr bool isLeaf(Node node) const
+	{
+		return leafNode(node).leafIndex(node.index());
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a code is a leaf node (i.e., has no
+	 * children).
+	 *
+	 * @param code The code of the node to check.
+	 * @return Whether the node is a leaf node.
+	 */
+	[[nodiscard]] bool isLeaf(Code code) const
+	{
+		return leafNode(code).leafIndex(node.index());
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a key is a leaf node (i.e., has no children).
+	 *
+	 * @param key The key of the node to check.
+	 * @return Whether the node is a leaf node.
+	 */
+	[[nodiscard]] bool isLeaf(Key key) const
+	{
+		return isPureLeaf(key) || isLeaf(toCode(key));
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a coordinate at a specified depth is a leaf
+	 * node (i.e., has no children).
+	 *
+	 * @param coord The coordinate of the node to check.
+	 * @param depth The depth of the node to check.
+	 * @return Whether the node is a leaf node.
+	 */
+	[[nodiscard]] bool isLeaf(Point3 coord, depth_t depth = 0) const
+	{
+		return isPureLeaf(coord, depth) || isLeaf(toCode(coord, depth));
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a coordinate at a specified depth is a leaf
+	 * node (i.e., has no children).
+	 *
+	 * @param x,y,z The coordinate of the node to check.
+	 * @param depth The depth of the node to check.
+	 * @return Whether the node is a leaf node.
+	 */
+	[[nodiscard]] bool isLeaf(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	{
+		return isPureLeaf(x, y, z, depth) || isLeaf(toCode(x, y, z, depth));
+	}
+
+	//
+	// Parent
+	//
+
+	/*!
+	 * @brief Check if a node is a parent (i.e., has children).
+	 *
+	 * @param node The node to check.
+	 * @return Whether the node is a parent.
+	 */
+	[[nodiscard]] constexpr bool isParent(Node node) const { return !isLeaf(node); }
+
+	/*!
+	 * @brief Check if a node corresponding to a code is a parent (i.e., has
+	 * children).
+	 *
+	 * @param code The code of the node to check.
+	 * @return Whether the node is a parent.
+	 */
+	[[nodiscard]] constexpr bool isParent(Code code) const { return !isLeaf(code); }
+
+	/*!
+	 * @brief Check if a node corresponding to a key is a parent (i.e., has
+	 * children).
+	 *
+	 * @param key The key of the node to check.
+	 * @return Whether the node is a parent.
+	 */
+	[[nodiscard]] constexpr bool isParent(Key key) const { return !isLeaf(key); }
+
+	/*!
+	 * @brief Check if a node corresponding to a coordinate at a specified depth is a parent
+	 * (i.e., has children).
+	 *
+	 * @param coord The coordinate of the node to check.
+	 * @param depth The depth of the node to check.
+	 * @return Whether the node is a parent.
+	 */
+	[[nodiscard]] constexpr bool isParent(Point3 coord, depth_t depth = 0) const
+	{
+		return !isLeaf(coord, depth);
+	}
+
+	/*!
+	 * @brief Check if a node corresponding to a coordinate at a specified depth is a parent
+	 * (i.e., has children).
+	 *
+	 * @param x,y,z The coordinate of the node to check.
+	 * @param depth The depth of the node to check.
+	 * @return Whether the node is a parent.
+	 */
+	[[nodiscard]] constexpr bool isParent(coord_t x, coord_t y, coord_t z,
+	                                      depth_t depth = 0) const
+	{
+		return !isLeaf(x, y, z, depth);
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                      Modified                                       |
+	|                                                                                     |
+	**************************************************************************************/
+
+	//
+	// Modified
+	//
+
+	[[nodiscard]] constexpr bool isModified() const { return isModified(root()); }
+
+	[[nodiscard]] constexpr bool isModified(Node node) const
+	{
+		return isModified(leafNode(node));
+	}
+
+	[[nodiscard]] constexpr bool isModified(Code code) const
+	{
+		return isModified(leafNode(code));
+	}
+
+	[[nodiscard]] constexpr bool isModified(Key key) const { return modified(code(key)); }
+
+	[[nodiscard]] constexpr bool isModified(Point3 coord, depth_t depth = 0) const
+	{
+		return isModified(code(coord, depth));
+	}
+
+	[[nodiscard]] constexpr bool isModified(coord_t x, coord_t y, coord_t z,
+	                                        depth_t depth = 0) const
+	{
+		return isModified(code(x, y, z, depth));
+	}
+
+	//
+	// Set modified
+	//
+
+	void setModified(depth_t min_depth = 0)
+	{
+		if (rootDepth() >= min_depth) {
+			setModifiedRecurs(root(), rootDepth(), min_depth);
+		}
+	}
+
+	void setModified(Node node, depth_t min_depth = 0)
+	{
+		if (node.depth() >= min_depth) {
+			if (0 == node.depth()) {
+				setModified(leafNode(node), true);
+			} else {
+				setModifiedRecurs(innerNode(node), node.depth(), min_depth);
+			}
+			setModifiedParentsRecurs(root(), rootDepth(), node.code());
+		} else {
+			setModifiedParentsRecurs(root(), rootDepth(), node.code().toDepth(min_depth));
+		}
+	}
+
+	void setModified(Code code, depth_t min_depth = 0)
+	{
+		if (code.depth() >= min_depth) {
+			if (0 == code.depth()) {
+				setModified(leafNode(code), true);
+			} else {
+				setModifiedRecurs(innerNode(code), code.depth(), min_depth);
+			}
+			setModifiedParentsRecurs(root(), rootDepth(), code);
+		} else {
+			setModifiedParentsRecurs(root(), rootDepth(), code.toDepth(min_depth));
+		}
+	}
+
+	void setModified(Key key, depth_t min_depth = 0) { setModified(code(key), min_depth); }
+
+	void setModified(Point3 coord, depth_t depth = 0, depth_t min_depth = 0)
+	{
+		setModified(code(coord, depth), min_depth);
+	}
+
+	void setModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
+	                 depth_t min_depth = 0)
+	{
+		setModified(code(x, y, z, depth), min_depth);
+	}
+
+	//
+	// Reset modified
+	//
+
+	void resetModified(depth_t max_depth = maxDepthLevels())
+	{
+		resetModifiedRecurs(root(), rootDepth(), max_depth);
+	}
+
+	void resetModified(Node node, depth_t max_depth = maxDepthLevels())
+	{
+		if (leaf(node)) {
+			leafNode(node).resetModifiedIndex(node.index());
+		} else {
+			resetModifiedRecurs(innerNode(node), node.depth(), max_depth);
+		}
+	}
+
+	void resetModified(Code code, depth_t max_depth = maxDepthLevels())
+	{
+		if (0 == code.depth()) {
+			setModified(leafNode(code), false);
+		} else {
+			resetModifiedRecurs(innerNode(code), code.depth(), max_depth);
+		}
+	}
+
+	void resetModified(Key key, depth_t max_depth = maxDepthLevels())
+	{
+		resetModified(code(key), max_depth);
+	}
+
+	void resetModified(Point3 coord, depth_t depth = 0,
+	                   depth_t max_depth = maxDepthLevels())
+	{
+		resetModified(code(coord, depth), max_depth);
+	}
+
+	void resetModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
+	                   depth_t max_depth = maxDepthLevels())
+	{
+		resetModified(code(x, y, z, depth), max_depth);
+	}
+
+	//
+	// Propagate
+	//
+
+	void propagate(bool keep_modified = false, depth_t max_depth = maxDepthLevels())
+	{
+		propagate(root(), rootIndex(), rootDepth(), keep_modified, max_depth);
+	}
+
+	void propagate(Node node, bool keep_modified = false,
+	               depth_t max_depth = maxDepthLevels())
+	{
+		if (0 == node.depth()) {
+			// TODO: What to do?
+		} else {
+			propagate(innerNode(node), node.index() node.depth(), keep_modified, max_depth);
+		}
+	}
+
+	void propagate(Code code, bool keep_modified = false,
+	               depth_t max_depth = maxDepthLevels())
+	{
+		if (0 == code.depth()) {
+			// TODO: What to do?
+		} else {
+			propagate(innerNode(code), code.index() code.depth(), keep_modified, max_depth);
+		}
+	}
+
+	void propagate(Key key, bool keep_modified = false,
+	               depth_t max_depth = maxDepthLevels())
+	{
+		propagate(code(key), keep_modified, max_depth);
+	}
+
+	void propagate(Point3 coord, depth_t depth = 0, bool keep_modified = false,
+	               depth_t max_depth = maxDepthLevels())
+	{
+		propagate(code(coord, depth), depth, keep_modified, max_depth);
+	}
+
+	void propagate(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
+	               bool keep_modified = false, depth_t max_depth = maxDepthLevels())
+	{
+		propagate(code(x, y, z, depth), keep_modified, max_depth);
 	}
 
 	/**************************************************************************************
@@ -266,21 +737,39 @@ class OctreeBase
 	// Size
 	//
 
-	// TODO: Add comment
+	/*!
+	 * @brief Get the size of the root node.
+	 *
+	 * @note This is the same as `size()`.
+	 *
+	 * @return The size of the root node.
+	 */
 	[[nodiscard]] constexpr node_size_t rootSize() const noexcept { return size(); }
 
 	//
 	// Center
 	//
 
-	// TODO: Add comment
+	/*!
+	 * @brief Get the center of the root node.
+	 *
+	 * @note This is the same as `center()`.
+	 *
+	 * @return The center of the root node.
+	 */
 	[[nodiscard]] constexpr Point3 rootCenter() const noexcept { return center(); }
 
 	//
 	// Bounding volume
 	//
 
-	// TODO: Add comment
+	/*!
+	 * @brief Get the bounding volume of the root node.
+	 *
+	 * @note This is the same as `boundingVolmue()`.
+	 *
+	 * @return The bounding volume of the root node.
+	 */
 	[[nodiscard]] constexpr geometry::AAEBB rootBoundingVolume() const noexcept
 	{
 		return boundingVolume();
@@ -331,31 +820,421 @@ class OctreeBase
 	// Bounding volume
 	//
 
-	// TODO: Implement
+	/*!
+	 * @brief Bounding volume for a node.
+	 *
+	 * @param node The node
+	 * @return Bounding volume for the node.
+	 */
+	template <class NodeType>
+	[[nodiscard]] geometry::AAEBB boundingVolume(NodeType const& node) const
+	{
+		if constexpr (std::is_same_v<NodeBV, NodeType>) {
+			return node.boundingVolume();
+
+		} else {
+			return geometry::AAEBB(center(node), nodeSize(node) / 2);
+		}
+	}
 
 	//
 	// Find
 	//
 
-	// TODO: Implement
+	/*!
+	 * @brief Get the node corresponding to a code.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @param code The code.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node findNode(Code code) const
+	{
+		auto [n, d] = nodeAndDepth(code);
+		return Node(const_cast<LeafNode*>(n), code.parent(d));
+	}
+
+	/*!
+	 * @brief Get the node corresponding to a key.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @param key The key.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node findNode(Key key) const { return findNode(toCode(key)); }
+
+	/*!
+	 * @brief Get the node corresponding to a coordinate at a specific depth.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @param coord The coordinate.
+	 * @param depth The depth.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node findNode(Point3 coord, depth_t depth = 0) const
+	{
+		return findNode(toCode(coord, depth));
+	}
+
+	/*!
+	 * @brief Get the node corresponding to a coordinate at a specific depth.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @param x,y,z The coordinate.
+	 * @param depth The depth.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node findNode(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	{
+		return findNode(toCode(x, y, z, depth));
+	}
+
+	/*!
+	 * @brief Get the node corresponding to a code with bounds checking.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNodeChecked' function can be used.
+	 * The data inside the nodes returned by this function and 'createNodeChecked' will be
+	 * the same, so it is only neccessary to use 'createNodeChecked' if you intend to alter
+	 * what the node stores.
+	 *
+	 * @param code The code.
+	 * @return The node.
+	 */
+	[[nodiscard]] std::optional<Node> findNodeChecked(Code code) const
+	{
+		return code.depth() <= rootDepth() ? std::optional<Node>(findNode(code))
+		                                   : std::nullopt;
+	}
+
+	/*!
+	 * @brief Get the node corresponding to a key with bounds checking.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNodeChecked' function can be used.
+	 * The data inside the nodes returned by this function and 'createNodeChecked' will be
+	 * the same, so it is only neccessary to use 'createNodeChecked' if you intend to alter
+	 * what the node stores.
+	 *
+	 * @param key The key.
+	 * @return The node.
+	 */
+	[[nodiscard]] std::optional<Node> findNodeChecked(Key key) const
+	{
+		return findNodeChecked(toCode(key));
+	}
+
+	/*!
+	 * @brief Get the node corresponding to a coordinate at a specific depth with bounds
+	 * checking.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNodeChecked' function can be used.
+	 * The data inside the nodes returned by this function and 'createNodeChecked' will be
+	 * the same, so it is only neccessary to use 'createNodeChecked' if you intend to alter
+	 * what the node stores.
+	 *
+	 * @param coord The coordinate.
+	 * @param depth The depth.
+	 * @return The node.
+	 */
+	[[nodiscard]] std::optional<Node> findNodeChecked(Point3 coord, depth_t depth = 0) const
+	{
+		if (auto code = toCodeChecked(coord, depth)) {
+			return std::optional<Node>(*code);
+		} else {
+			return std::nullopt;
+		}
+	}
+
+	/*!
+	 * @brief Get the node corresponding to a coordinate at a specific depth with bounds
+	 * checking.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNodeChecked' function can be used.
+	 * The data inside the nodes returned by this function and 'createNodeChecked' will be
+	 * the same, so it is only neccessary to use 'createNodeChecked' if you intend to alter
+	 * what the node stores.
+	 *
+	 * @param x,y,z The coordinate.
+	 * @param depth The depth.
+	 * @return The node.
+	 */
+	[[nodiscard]] std::optional<Node> findNodeChecked(coord_t x, coord_t y, coord_t z,
+	                                                  depth_t depth = 0) const
+	{
+		return findNodeChecked(Point3(x, y, z), depth);
+	}
+
+	//
+	// Function call operator
+	//
+
+	/*!
+	 * @brief Get the node corresponding to a code.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @note Same as the corresponding `findNode` function.
+	 *
+	 * @param code The code.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node operator()(Code code) const { return findNode(code); }
+
+	/*!
+	 * @brief Get the node corresponding to a key.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @note Same as the corresponding `findNode` function.
+	 *
+	 * @param key The key.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node operator()(Key key) const { return findNode(key); }
+
+	/*!
+	 * @brief Get the node corresponding to a coordinate at a specific depth.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @note Same as the corresponding `findNode` function.
+	 *
+	 * @param coord The coordinate.
+	 * @param depth The depth.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node operator()(Point3 coord, depth_t depth = 0) const
+	{
+		return findNode(coord, depth);
+	}
+
+	/*!
+	 * @brief Get the node corresponding to a coordinate at a specific depth.
+	 *
+	 * @note The node can be higher up the tree than the specified depth. This happens if
+	 * the node at a higher depth has no children. If it is neccessary that the node is at
+	 * the specified depth, then the corresponding 'createNode' function can be used. The
+	 * data inside the nodes returned by this function and 'createNode' will be the same, so
+	 * it is only neccessary to use 'createNode' if you intend to alter what the node
+	 * stores.
+	 *
+	 * @note Same as the corresponding `findNode` function.
+	 *
+	 * @param x,y,z The coordinate.
+	 * @param depth The depth.
+	 * @return The node.
+	 */
+	[[nodiscard]] Node operator()(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	{
+		return findNode(x, y, z, depth);
+	}
 
 	//
 	// Create
 	//
 
-	// TODO: Implement
+	// TODO: Add comments
+
+	Node createNode(Code code)
+	{
+		// FIXME: Handle wrong codes
+
+		InnerNode* node = &root();
+		auto const min_depth = std::max(depth_t(1), code.depth());
+		for (depth_t depth = rootDepth(); min_depth < depth; --depth) {
+			auto const index = code.index(depth);
+			if (node->leafIndex(index)) {
+				createInnerChildren(*node, index, depth);
+			}
+			node = &innerChild(*node, index, code.index(depth - 1));
+		}
+
+		if (0 == code.depth()) {
+			auto const index = code.index();
+			if (node->leafIndex(index)) {
+				createLeafChildren(*node, index);
+			}
+			return Node(&leafChild(*node, code.index()), code);
+		} else {
+			return Node(node, code);
+		}
+	}
+
+	Node createNode(Key key) { return createNode(toCode(key)); }
+
+	Node createNode(Point3 coord, depth_t depth = 0)
+	{
+		return createNode(toCode(coord, depth));
+	}
+
+	Node createNode(coord_t x, coord_t y, coord_t z, depth_t depth = 0)
+	{
+		return createNode(toCode(x, y, z, depth));
+	}
+
+	std::optional<Node> createNodeChecked(Code code)
+	{
+		// TODO: Implement
+	}
+
+	std::optional<Node> createNodeChecked(Key key)
+	{
+		// TODO: Implement
+	}
+
+	std::optional<Node> createNodeChecked(Point3 coord, depth_t depth = 0)
+	{
+		// TODO: Implement
+	}
+
+	std::optional<Node> createNodeChecked(coord_t x, coord_t y, coord_t z,
+	                                      depth_t depth = 0)
+	{
+		// TODO: Implement
+	}
 
 	//
 	// Sibling
 	//
 
-	// TODO: Implement
+	// TODO: Add comments
+
+	[[nodiscard]] Node nodeSibling(Node node, index_t sibling_index) const
+	{
+		return Node(node.data(), node.code().sibling(sibling_index));
+	}
+
+	[[nodiscard]] NodeBV nodeSibling(NodeBV const& node, index_t sibling_index) const
+	{
+		geometry::AAEBB aaebb(
+		    siblingCenter(node.center(), node.halfSize(), node.index(), sibling_index),
+		    node.halfSize());
+		return NodeBV(node.data(), node.code().sibling(sibling_index), aaebb);
+	}
+
+	template <class Node>
+	[[nodiscard]] Node nodeSiblingChecked(Node const& node, index_t sibling_index) const
+	{
+		if (!root(node)) {
+			throw std::out_of_range("Node has no siblings");
+		} else if (7 < sibling_index) {
+			throw std::out_of_range("sibling_index out of range");
+		}
+		return nodeSibling(node, sibling_index);
+	}
+
+	//
+	// Child
+	//
+
+	// TODO: Add comments
+
+	[[nodiscard]] Node nodeChild(Node node, index_t child_index) const
+	{
+		auto& child = children(innerNode(node), node.index(), node.depth() - 1);
+		return Node(child, node.code().child(child_index));
+	}
+
+	[[nodiscard]] NodeBV nodeChild(NodeBV const& node, index_t child_index) const
+	{
+		auto& child = children(innerNode(node), node.index(), node.depth() - 1);
+
+		auto const child_half_size = node.halfSize() / 2;
+		geometry::AAEBB child_aaebb(childCenter(node.center(), child_half_size, child_index),
+		                            child_half_size);
+
+		return NodeBV(&child, node.code().child(child_index), child_aaebb);
+	}
+
+	template <class Node>
+	[[nodiscard]] Node nodeChildChecked(Node const& node, index_t child_index) const
+	{
+		if (!parent(node)) {
+			throw std::out_of_range("Node has no children");
+		} else if (7 < child_index) {
+			throw std::out_of_range("child_index out of range");
+		}
+		return nodeChild(node, child_index);
+	}
 
 	//
 	// Parent
 	//
 
-	// TODO: Implement
+	// TODO: Add comments
+
+	[[nodiscard]] Node nodeParent(Node node) const
+	{
+		// TODO: Implement
+	}
+
+	[[nodiscard]] NodeBV nodeParent(NodeBV const& node) const
+	{
+		// TODO: Implement
+	}
+
+	template <class Node>
+	[[nodiscard]] Node nodeParentChecked(Node const& node) const
+	{
+		if (rootDepth() <= node.depth()) {
+			throw std::out_of_range("Node has no parent");
+		}
+		return nodeParent(node);
+	}
+
+	//
+	// NodeBV
+	//
+
+	// TODO: Add comment
+
+	NodeBV toNodeBV(Node node) { return NodeBV(node, boundingVolume(node)); }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -606,1082 +1485,6 @@ class OctreeBase
 	|                                        Query                                        |
 	|                                                                                     |
 	**************************************************************************************/
-
-	/**************************************************************************************
-	|                                                                                     |
-	|                                         I/O                                         |
-	|                                                                                     |
-	**************************************************************************************/
-
-	/**************************************************************************************
-	|                                                                                     |
-	|                                       Memory                                        |
-	|                                                                                     |
-	**************************************************************************************/
-
-	//
-	// Clear
-	//
-
-	/*!
-	 * @brief Erases the map. After this call, the map contains only the root node.
-	 *
-	 * @param prune Whether the memory should be cleared.
-	 */
-	void clear(bool prune = false) { clear(nodeSize(), depthLevels(), prune); }
-
-	/*!
-	 * @brief Erases the map and changes the leaf node size and the number of depth levels.
-	 * After this call, the map contains only the root node.
-	 *
-	 * @param new_leaf_size The new leaf node size.
-	 * @param new_depth_levels The new number of depth levels.
-	 * @param prune Whether the memory should be cleared.
-	 */
-	void clear(node_size_t new_leaf_size, depth_t new_depth_levels, bool prune = false)
-	{
-		deleteChildren(root(), rootIndex(), rootDepth(), prune);
-		setLeafSizeAndDepthLevels(new_leaf_size, new_depth_levels);
-		derived().initRoot();
-	}
-
-	//
-	// Automatic pruning
-	//
-
-	// FIXME: Come up with better names
-
-	/*!
-	 * @brief Check if autonomaic pruning is enabled.
-	 *
-	 * @return Whether automatic pruning is enabled.
-	 */
-	[[nodiscard]] constexpr bool automaticPruning() const noexcept
-	{
-		return automatic_prune_;
-	}
-
-	/*!
-	 * @brief Set (/turn on) automatic pruning.
-	 */
-	constexpr void setAutomaticPruning() noexcept { automatic_prune_ = true; }
-
-	/*!
-	 * @brief Reset (/turn off) automatic pruning.
-	 */
-	constexpr void resetAutomaticPruning() noexcept { automatic_prune_ = false; }
-
-	//
-	// Min coordinate
-	//
-
-	/*!
-	 * @return The minimum coordinate the octree can store.
-	 */
-	[[nodiscard]] Point3 min() const
-	{
-		auto half_size = -nodeSize(rootDepth() - 1);
-		return Point3(half_size, half_size, half_size);
-	}
-
-	/*!
-	 * @brief The minimum coordinate that a node covers.
-	 *
-	 * @param node The node.
-	 * @return The minimum coordinate that the node covers.
-	 */
-	template <class NodeType>
-	[[nodiscard]] Point3 min(NodeType const& node) const
-	{
-		if constexpr (std::is_same_v<NodeBV, NodeType>) {
-			return node.min();
-		} else {
-			return center(node) - nodeSize(node) / 2;
-		}
-	}
-
-	//
-	// Max coordinate
-	//
-
-	/*!
-	 * @return The maximum coordinate the octree can store.
-	 */
-	[[nodiscard]] Point3 max() const
-	{
-		auto half_size = nodeSize(rootDepth() - 1);
-		return Point3(half_size, half_size, half_size);
-	}
-
-	/*!
-	 * @brief The maximum coordinate that a node covers.
-	 *
-	 * @param node The node.
-	 * @return The maximum coordinate that the node covers.
-	 */
-	template <class NodeType>
-	[[nodiscard]] Point3 max(NodeType const& node) const
-	{
-		if constexpr (std::is_same_v<NodeBV, NodeType>) {
-			return node.max();
-		} else {
-			return center(node) + nodeSize(node) / 2;
-		}
-	}
-
-	//
-	// Bounding volume
-	//
-
-	/*!
-	 * @return Minimum bounding volume convering the whole octree.
-	 */
-	[[nodiscard]] geometry::AAEBB boundingVolume() const
-	{
-		return geometry::AAEBB(center(), nodeSize(rootDepth() - 1));
-	}
-
-	/*!
-	 * @brief Bounding volume for a node.
-	 *
-	 * @param node The node
-	 * @return Bounding volume for the node.
-	 */
-	template <class NodeType>
-	[[nodiscard]] geometry::AAEBB boundingVolume(NodeType const& node) const
-	{
-		if constexpr (std::is_same_v<NodeBV, NodeType>) {
-			return node.boundingVolume();
-
-		} else {
-			return geometry::AAEBB(center(node), nodeSize(node) / 2);
-		}
-	}
-
-	//
-	// Within
-	//
-
-	/*!
-	 * @brief Check if a coordinate is within the octree bounds.
-	 *
-	 * @param coord The coordinate.
-	 * @return Whether the coordinate is within the octree bounds.
-	 */
-	[[nodiscard]] constexpr bool isWithin(Point3 coord) const
-	{
-		return isWithin(coord.x, coord.y, coord.z);
-	}
-
-	/*!
-	 * @brief Check if a coordinate is within the octree bounds.
-	 *
-	 * @param x,y,z The coordinate.
-	 * @return Whether the coordinate is within the octree bounds.
-	 */
-	[[nodiscard]] constexpr bool isWithin(coord_t x, coord_t y, coord_t z) const
-	{
-		auto max = nodeSize(rootDepth() - 1);
-		auto min = -max;
-		return min <= x && min <= y && min <= z && max >= x && max >= y && max >= z;
-	}
-
-	//
-	// Pure leaf
-	//
-
-	/*!
-	 * @brief Check if a node is a pure leaf node (i.e., can never have children).
-	 *
-	 * @param node The node to check.
-	 * @return Whether the node is a pure leaf node.
-	 */
-	[[nodiscard]] static constexpr bool isPureLeaf(Node node) noexcept
-	{
-		return 0 == node.depth();
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a code is a pure leaf node (i.e., can never
-	 * have children).
-	 *
-	 * @note Only have to check if the depth of the code is 0.
-	 *
-	 * @param code The code of the node to check.
-	 * @return Whether the node is a pure leaf node.
-	 */
-	[[nodiscard]] static constexpr bool isPureLeaf(Code code) noexcept
-	{
-		return 0 == code.depth();
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a key is a pure leaf node (i.e., can never
-	 * have children).
-	 *
-	 * @note Only have to check if the depth of the key is 0.
-	 *
-	 * @param key The key of the node to check.
-	 * @return Whether the node is a pure leaf node.
-	 */
-	[[nodiscard]] static constexpr bool isPureLeaf(Key key) noexcept
-	{
-		return 0 == key.depth();
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a coordinate at a specified depth is a
-	 * pure leaf node (i.e., can never have children).
-	 *
-	 * @note Only have to check if the depth is 0.
-	 *
-	 * @param coord The coordinate of the node to check.
-	 * @param depth The depth of the node to check.
-	 * @return Whether the node is a pure leaf node.
-	 */
-	[[nodiscard]] static constexpr bool isPureLeaf(Point3 coord, depth_t depth = 0) noexcept
-	{
-		return 0 == depth;
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a coordinate at a specified depth is a
-	 * pure leaf node (i.e., can never have children).
-	 *
-	 * @note Only have to check if the depth is 0.
-	 *
-	 * @param x,y,z The coordinate of the node to check.
-	 * @param depth The depth of the node to check.
-	 * @return Whether the node is a pure leaf node.
-	 */
-	[[nodiscard]] static constexpr bool isPureLeaf(coord_t x, coord_t y, coord_t z,
-	                                               depth_t depth = 0) noexcept
-	{
-		return 0 == depth;
-	}
-
-	//
-	// Leaf
-	//
-
-	/*!
-	 * @brief Check if a node is a leaf node (i.e., has no children).
-	 *
-	 * @param node The node to check.
-	 * @return Whether the node is a leaf node.
-	 */
-	[[nodiscard]] constexpr bool isLeaf(Node node) const
-	{
-		return leafNode(node).leafIndex(node.index());
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a code is a leaf node (i.e., has no
-	 * children).
-	 *
-	 * @param code The code of the node to check.
-	 * @return Whether the node is a leaf node.
-	 */
-	[[nodiscard]] bool isLeaf(Code code) const
-	{
-		return leafNode(code).leafIndex(node.index());
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a key is a leaf node (i.e., has no children).
-	 *
-	 * @param key The key of the node to check.
-	 * @return Whether the node is a leaf node.
-	 */
-	[[nodiscard]] bool isLeaf(Key key) const
-	{
-		return isPureLeaf(key) || isLeaf(code(key));
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a coordinate at a specified depth is a leaf
-	 * node (i.e., has no children).
-	 *
-	 * @param coord The coordinate of the node to check.
-	 * @param depth The depth of the node to check.
-	 * @return Whether the node is a leaf node.
-	 */
-	[[nodiscard]] bool isLeaf(Point3 coord, depth_t depth = 0) const
-	{
-		return isPureLeaf(coord, depth) || isLeaf(code(coord, depth));
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a coordinate at a specified depth is a leaf
-	 * node (i.e., has no children).
-	 *
-	 * @param x,y,z The coordinate of the node to check.
-	 * @param depth The depth of the node to check.
-	 * @return Whether the node is a leaf node.
-	 */
-	[[nodiscard]] bool isLeaf(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
-	{
-		return isPureLeaf(x, y, z, depth) || isLeaf(code(x, y, z, depth));
-	}
-
-	//
-	// Parent
-	//
-
-	/*!
-	 * @brief Check if a node is a parent (i.e., has children).
-	 *
-	 * @param node The node to check.
-	 * @return Whether the node is a parent.
-	 */
-	[[nodiscard]] constexpr bool isParent(Node node) const { return !isLeaf(node); }
-
-	/*!
-	 * @brief Check if a node corresponding to a code is a parent (i.e., has
-	 * children).
-	 *
-	 * @param code The code of the node to check.
-	 * @return Whether the node is a parent.
-	 */
-	[[nodiscard]] constexpr bool isParent(Code code) const { return !isLeaf(code); }
-
-	/*!
-	 * @brief Check if a node corresponding to a key is a parent (i.e., has
-	 * children).
-	 *
-	 * @param key The key of the node to check.
-	 * @return Whether the node is a parent.
-	 */
-	[[nodiscard]] constexpr bool isParent(Key key) const { return !isLeaf(key); }
-
-	/*!
-	 * @brief Check if a node corresponding to a coordinate at a specified depth is a parent
-	 * (i.e., has children).
-	 *
-	 * @param coord The coordinate of the node to check.
-	 * @param depth The depth of the node to check.
-	 * @return Whether the node is a parent.
-	 */
-	[[nodiscard]] constexpr bool isParent(Point3 coord, depth_t depth = 0) const
-	{
-		return !isLeaf(coord, depth);
-	}
-
-	/*!
-	 * @brief Check if a node corresponding to a coordinate at a specified depth is a parent
-	 * (i.e., has children).
-	 *
-	 * @param x,y,z The coordinate of the node to check.
-	 * @param depth The depth of the node to check.
-	 * @return Whether the node is a parent.
-	 */
-	[[nodiscard]] constexpr bool isParent(coord_t x, coord_t y, coord_t z,
-	                                      depth_t depth = 0) const
-	{
-		return !isLeaf(x, y, z, depth);
-	}
-
-	//
-	// Modified
-	//
-
-	[[nodiscard]] constexpr bool isModified() const
-	{
-		// TODO: Implement
-	}
-
-	[[nodiscard]] constexpr bool isModified(Node node) const
-	{
-		return isModified(leafNode(node));
-	}
-
-	[[nodiscard]] constexpr bool isModified(Code code) const
-	{
-		return isModified(leafNode(code));
-	}
-
-	[[nodiscard]] constexpr bool isModified(Key key) const { return modified(code(key)); }
-
-	[[nodiscard]] constexpr bool isModified(Point3 coord, depth_t depth = 0) const
-	{
-		return isModified(code(coord, depth));
-	}
-
-	[[nodiscard]] constexpr bool isModified(coord_t x, coord_t y, coord_t z,
-	                                        depth_t depth = 0) const
-	{
-		return isModified(code(x, y, z, depth));
-	}
-
-	//
-	// Function call operator
-	//
-
-	/*!
-	 * @brief Get the node corresponding to a code.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param code The code.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node operator()(Code code) const { return node(code); }
-
-	/*!
-	 * @brief Get the node corresponding to a key.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param key The key.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node operator()(Key key) const { return node(key); }
-
-	/*!
-	 * @brief Get the node corresponding to a coordinate at a specific depth.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param coord The coordinate.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node operator()(Point3 coord, depth_t depth = 0) const
-	{
-		return node(coord, depth);
-	}
-
-	/*!
-	 * @brief Get the node corresponding to a coordinate at a specific depth.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param x,y,z The coordinate.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node operator()(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
-	{
-		return node(x, y, z, depth);
-	}
-
-	//
-	// Node
-	//
-
-	/*!
-	 * @brief Get the node corresponding to a code.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param code The code.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node node(Code code) const
-	{
-		auto [n, d] = nodeAndDepth(code);
-		return Node(const_cast<LeafNode*>(n), code.parent(d));
-	}
-
-	/*!
-	 * @brief Get the node corresponding to a key.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param key The key.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node node(Key key) const { return node(code(key)); }
-
-	/*!
-	 * @brief Get the node corresponding to a coordinate at a specific depth.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param coord The coordinate.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node node(Point3 coord, depth_t depth = 0) const
-	{
-		return node(code(coord, depth));
-	}
-
-	/*!
-	 * @brief Get the node corresponding to a coordinate at a specific depth.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param x,y,z The coordinate.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] Node node(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
-	{
-		return node(code(x, y, z, depth));
-	}
-
-	//
-	// Node checked
-	//
-
-	// TODO: Update comments
-
-	/*!
-	 * @brief Get the corresponding node for the code with bounds check.
-	 *
-	 * @param code The code for the node.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<Node> nodeChecked(Code code) const
-	{
-		return code.depth() <= rootDepth() ? std::optional<Node>(node(code)) : std::nullopt;
-	}
-
-	/*!
-	 * @brief Get the corresponding node for the key with bounds check.
-	 *
-	 * @param key The key for the node.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<Node> nodeChecked(Key key) const
-	{
-		return nodeChecked(code(key));
-	}
-
-	/*!
-	 * @brief Get the corresponding node for the coordinate at a specific depth with bounds
-	 * check.
-	 *
-	 * @param coord The coordinate for the node.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<Node> nodeChecked(Point3 coord, depth_t depth = 0) const
-	{
-		if (auto code = codeChecked(coord, depth)) {
-			return std::optional<Node>(*code);
-		} else {
-			return std::nullopt;
-		}
-	}
-
-	/*!
-	 * @brief Get the corresponding node for the coordinate at a specific depth with bounds
-	 * check.
-	 *
-	 * @param x,y,z The coordinate for the node.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<Node> nodeChecked(coord_t x, coord_t y, coord_t z,
-	                                              depth_t depth = 0) const
-	{
-		return nodeChecked(Point3(x, y, z), depth);
-	}
-
-	//
-	// Node with bounding volume
-	//
-
-	/*!
-	 * @brief Convert a node to a node with bounding volume.
-	 *
-	 * @param node The node.
-	 * @return The node with bounding volume.
-	 */
-	[[nodiscard]] NodeBV nodeBV(Node node) const
-	{
-		return NodeBV(node, boundingVolume(node));
-	}
-
-	/*!
-	 * @brief Get the node with bounding volume corresponding to a code.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param code The code.
-	 * @return The node with bounding volume.
-	 */
-	[[nodiscard]] NodeBV nodeBV(Code code) const { return nodeBV(node(code)); }
-
-	/*!
-	 * @brief Get the node with bounding volume corresponding to a key.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param key The key.
-	 * @return The node with bounding volume.
-	 */
-	[[nodiscard]] NodeBV nodeBV(Key key) const { return nodeBV(node(key)); }
-
-	/*!
-	 * @brief Get the node with bounding volume corresponding to a coordinate at a specific
-	 * depth.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param coord The coordinate.
-	 * @param depth The depth.
-	 * @return The node with bounding volume.
-	 */
-	[[nodiscard]] NodeBV nodeBV(Point3 coord, depth_t depth = 0) const
-	{
-		return nodeBV(node(coord, depth));
-	}
-
-	/*!
-	 * @brief Get the node with bounding volume corresponding to a coordinate at a specific
-	 * depth.
-	 *
-	 * @note The node can be higher up the tree than the specified depth. This happens if
-	 * the node at a higher depth has no children. If it is neccessary that the node is at
-	 * the specified depth, then the corresponding 'createNode' function can be used. The
-	 * data inside the nodes returned by this function and 'createNode' will be the same, so
-	 * it is only neccessary to use 'createNode' if you intend to alter what the node
-	 * stores.
-	 *
-	 * @param x,y,z The coordinate.
-	 * @param depth The depth.
-	 * @return The node with bounding volume.
-	 */
-	[[nodiscard]] NodeBV nodeBV(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
-	{
-		return nodeBV(node(x, y, z, depth));
-	}
-
-	//
-	// Node with bounding volume checked
-	//
-
-	// TODO: Update comments
-
-	/*!
-	 * @brief Get the corresponding node for the code with bounds check.
-	 *
-	 * @param code The code for the node.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<NodeBV> nodeBVChecked(Code code) const
-	{
-		return code.depth() <= rootDepth() ? std::optional<NodeBV>(nodeBV(code))
-		                                   : std::nullopt;
-	}
-
-	/*!
-	 * @brief Get the corresponding node for the key with bounds check.
-	 *
-	 * @param key The key for the node.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<NodeBV> nodeBVChecked(Key key) const
-	{
-		return nodeBVChecked(code(key));
-	}
-
-	/*!
-	 * @brief Get the corresponding node for the coordinate at a specific depth with bounds
-	 * check.
-	 *
-	 * @param coord The coordinate for the node.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<NodeBV> nodeBVChecked(Point3 coord, depth_t depth = 0) const
-	{
-		if (auto code = codeChecked(coord, depth)) {
-			return std::optional<NodeBV>(*code);
-		} else {
-			return std::nullopt;
-		}
-	}
-
-	/*!
-	 * @brief Get the corresponding node for the coordinate at a specific depth with bounds
-	 * check.
-	 *
-	 * @param x,y,z The coordinate for the node.
-	 * @param depth The depth.
-	 * @return The node.
-	 */
-	[[nodiscard]] std::optional<NodeBV> nodeBVChecked(coord_t x, coord_t y, coord_t z,
-	                                                  depth_t depth = 0) const
-	{
-		return nodeBVChecked(Point3(x, y, z), depth);
-	}
-
-	//
-	// Create node
-	//
-
-	// TODO: Add comments
-
-	Node createNode(Code code)
-	{
-		// FIXME: Handle wrong codes
-
-		InnerNode* node = &root();
-		auto const min_depth = std::max(depth_t(1), code.depth());
-		for (depth_t depth = rootDepth(); min_depth < depth; --depth) {
-			auto const index = code.index(depth);
-			if (node->leafIndex(index)) {
-				createInnerChildren(*node, index, depth);
-			}
-			node = &innerChild(*node, index, code.index(depth - 1));
-		}
-
-		if (0 == code.depth()) {
-			auto const index = code.index();
-			if (node->leafIndex(index)) {
-				createLeafChildren(*node, index);
-			}
-			return Node(&leafChild(*node, code.index()), code);
-		} else {
-			return Node(node, code);
-		}
-	}
-
-	Node createNode(Key key) { return createNode(code(key)); }
-
-	Node createNode(Point3 coord, depth_t depth = 0)
-	{
-		return createNode(code(coord, depth));
-	}
-
-	Node createNode(coord_t x, coord_t y, coord_t z, depth_t depth = 0)
-	{
-		return createNode(code(x, y, z, depth));
-	}
-
-	//
-	// Create node checked
-	//
-
-	std::optional<Node> createNodeChecked(Code code)
-	{
-		// TODO: Implement
-	}
-
-	std::optional<Node> createNodeChecked(Key key)
-	{
-		// TODO: Implement
-	}
-
-	std::optional<Node> createNodeChecked(Point3 coord, depth_t depth = 0)
-	{
-		// TODO: Implement
-	}
-
-	std::optional<Node> createNodeChecked(coord_t x, coord_t y, coord_t z,
-	                                      depth_t depth = 0)
-	{
-		// TODO: Implement
-	}
-
-	//
-	// Create node with bounding volume
-	//
-
-	// TODO: Add comments
-
-	NodeBV createNodeBV(Code code) { return nodeBV(createNode(code)); }
-
-	NodeBV createNodeBV(Key key) { return createNodeBV(code(key)); }
-
-	NodeBV createNodeBV(Point3 coord, depth_t depth = 0)
-	{
-		return createNodeBV(code(coord, depth));
-	}
-
-	NodeBV createNodeBV(coord_t x, coord_t y, coord_t z, depth_t depth = 0)
-	{
-		return createNodeBV(code(x, y, z, depth));
-	}
-
-	//
-	// Create node with bounding volume checked
-	//
-
-	std::optional<NodeBV> createNodeBVChecked(Code code)
-	{
-		// TODO: Implement
-	}
-
-	std::optional<NodeBV> createNodeBVChecked(Key key)
-	{
-		// TODO: Implement
-	}
-
-	std::optional<NodeBV> createNodeBVChecked(Point3 coord, depth_t depth = 0)
-	{
-		// TODO: Implement
-	}
-
-	std::optional<NodeBV> createNodeBVChecked(coord_t x, coord_t y, coord_t z,
-	                                          depth_t depth = 0)
-	{
-		// TODO: Implement
-	}
-
-	//
-	// Child
-	//
-
-	// TODO: Continue from here
-
-	[[nodiscard]] Node child(Node node, index_t child_index) const
-	{
-		auto& child = children(innerNode(node), node.index(), node.depth() - 1);
-		return Node(child, node.code().child(child_index));
-	}
-
-	[[nodiscard]] NodeBV child(NodeBV const& node, index_t child_index) const
-	{
-		auto& child = children(innerNode(node), node.index(), node.depth() - 1);
-
-		auto const child_half_size = node.halfSize() / 2;
-		geometry::AAEBB child_aaebb(childCenter(node.center(), child_half_size, child_index),
-		                            child_half_size);
-
-		return NodeBV(&child, node.code().child(child_index), child_aaebb);
-	}
-
-	template <class Node>
-	[[nodiscard]] Node childChecked(Node const& node, index_t child_index) const
-	{
-		if (!parent(node)) {
-			throw std::out_of_range("Node has no children");
-		} else if (7 < child_index) {
-			throw std::out_of_range("child_index out of range");
-		}
-		return child(node, child_index);
-	}
-
-	//
-	// Sibling
-	//
-
-	[[nodiscard]] Node sibling(Node node, index_t sibling_index) const
-	{
-		return Node(node.data(), node.code().sibling(sibling_index));
-	}
-
-	[[nodiscard]] NodeBV sibling(NodeBV const& node, index_t sibling_index) const
-	{
-		geometry::AAEBB aaebb(
-		    siblingCenter(node.center(), node.halfSize(), node.index(), sibling_index),
-		    node.halfSize());
-		return NodeBV(node.data(), node.code().sibling(sibling_index), aaebb);
-	}
-
-	template <class Node>
-	[[nodiscard]] Node siblingChecked(Node const& node, index_t sibling_index) const
-	{
-		if (!root(node)) {
-			throw std::out_of_range("Node has no siblings");
-		} else if (7 < sibling_index) {
-			throw std::out_of_range("sibling_index out of range");
-		}
-		return sibling(node, sibling_index);
-	}
-
-	//
-	// Propagate modified
-	//
-
-	void propagate(bool keep_modified = false, depth_t max_depth = maxDepthLevels())
-	{
-		propagate(root(), rootIndex(), rootDepth(), keep_modified, max_depth);
-	}
-
-	void propagate(Node node, bool keep_modified = false,
-	               depth_t max_depth = maxDepthLevels())
-	{
-		if (0 == node.depth()) {
-			// TODO: What to do?
-		} else {
-			propagate(innerNode(node), node.index() node.depth(), keep_modified, max_depth);
-		}
-	}
-
-	void propagate(Code code, bool keep_modified = false,
-	               depth_t max_depth = maxDepthLevels())
-	{
-		if (0 == code.depth()) {
-			// TODO: What to do?
-		} else {
-			propagate(innerNode(code), code.index() code.depth(), keep_modified, max_depth);
-		}
-	}
-
-	void propagate(Key key, bool keep_modified = false,
-	               depth_t max_depth = maxDepthLevels())
-	{
-		propagate(code(key), keep_modified, max_depth);
-	}
-
-	void propagate(Point3 coord, depth_t depth = 0, bool keep_modified = false,
-	               depth_t max_depth = maxDepthLevels())
-	{
-		propagate(code(coord, depth), depth, keep_modified, max_depth);
-	}
-
-	void propagate(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
-	               bool keep_modified = false, depth_t max_depth = maxDepthLevels())
-	{
-		propagate(code(x, y, z, depth), keep_modified, max_depth);
-	}
-
-	//
-	// Set modified
-	//
-
-	void setModified(depth_t min_depth = 0)
-	{
-		if (rootDepth() >= min_depth) {
-			setModifiedRecurs(root(), rootDepth(), min_depth);
-		}
-	}
-
-	void setModified(Node node, depth_t min_depth = 0)
-	{
-		if (node.depth() >= min_depth) {
-			if (0 == node.depth()) {
-				setModified(leafNode(node), true);
-			} else {
-				setModifiedRecurs(innerNode(node), node.depth(), min_depth);
-			}
-			setModifiedParentsRecurs(root(), rootDepth(), node.code());
-		} else {
-			setModifiedParentsRecurs(root(), rootDepth(), node.code().toDepth(min_depth));
-		}
-	}
-
-	void setModified(Code code, depth_t min_depth = 0)
-	{
-		if (code.depth() >= min_depth) {
-			if (0 == code.depth()) {
-				setModified(leafNode(code), true);
-			} else {
-				setModifiedRecurs(innerNode(code), code.depth(), min_depth);
-			}
-			setModifiedParentsRecurs(root(), rootDepth(), code);
-		} else {
-			setModifiedParentsRecurs(root(), rootDepth(), code.toDepth(min_depth));
-		}
-	}
-
-	void setModified(Key key, depth_t min_depth = 0) { setModified(code(key), min_depth); }
-
-	void setModified(Point3 coord, depth_t depth = 0, depth_t min_depth = 0)
-	{
-		setModified(code(coord, depth), min_depth);
-	}
-
-	void setModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
-	                 depth_t min_depth = 0)
-	{
-		setModified(code(x, y, z, depth), min_depth);
-	}
-
-	//
-	// Reset modified
-	//
-
-	void resetModified(depth_t max_depth = maxDepthLevels())
-	{
-		resetModifiedRecurs(root(), rootDepth(), max_depth);
-	}
-
-	void resetModified(Node node, depth_t max_depth = maxDepthLevels())
-	{
-		if (leaf(node)) {
-			leafNode(node).resetModifiedIndex(node.index());
-		} else {
-			resetModifiedRecurs(innerNode(node), node.depth(), max_depth);
-		}
-	}
-
-	void resetModified(Code code, depth_t max_depth = maxDepthLevels())
-	{
-		if (0 == code.depth()) {
-			setModified(leafNode(code), false);
-		} else {
-			resetModifiedRecurs(innerNode(code), code.depth(), max_depth);
-		}
-	}
-
-	void resetModified(Key key, depth_t max_depth = maxDepthLevels())
-	{
-		resetModified(code(key), max_depth);
-	}
-
-	void resetModified(Point3 coord, depth_t depth = 0,
-	                   depth_t max_depth = maxDepthLevels())
-	{
-		resetModified(code(coord, depth), max_depth);
-	}
-
-	void resetModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
-	                   depth_t max_depth = maxDepthLevels())
-	{
-		resetModified(code(x, y, z, depth), max_depth);
-	}
 
 	//
 	// Query
@@ -2324,9 +2127,11 @@ class OctreeBase
 
 	const_bounding_volume_iterator endBV() const { return endQueryBV(predicate::TRUE{}); }
 
-	//
-	// Input/output (read/write)
-	//
+	/**************************************************************************************
+	|                                                                                     |
+	|                                         I/O                                         |
+	|                                                                                     |
+	**************************************************************************************/
 
 	void read(std::filesystem::path const& path, bool propagate = true)
 	{
@@ -2445,9 +2250,11 @@ class OctreeBase
 		      compression_acceleration_level, compression_level);
 	}
 
-	//
-	// Memory
-	//
+	/**************************************************************************************
+	|                                                                                     |
+	|                                     Statistics                                      |
+	|                                                                                     |
+	**************************************************************************************/
 
 	/*!
 	 * @return Number of inner nodes in the octree.
@@ -2580,114 +2387,10 @@ class OctreeBase
 
  protected:
 	//
-	// Constructors
+	// Set leaf node size and depth levels
 	//
 
-	OctreeBase(resolution_t resolution = 0.1, depth_t depth_levels = 16,
-	           bool automatic_pruning = true)
-	    : automatic_prune_(automatic_pruning)
-	{
-		setLeafSizeAndDepthLevels(resolution, depth_levels);
-
-		init();
-	}
-
-	OctreeBase(OctreeBase const& other)
-	    : depth_levels_(other.depth_levels_),
-	      max_value_(other.max_value_),
-	      resolution_(other.resolution_),
-	      resolution_factor_(other.resolution_factor_),
-	      automatic_prune_(other.automatic_prune_)
-	{
-		init();
-	}
-
-	OctreeBase(OctreeBase&& other)
-	    : depth_levels_(std::move(other.depth_levels_)),
-	      max_value_(std::move(other.max_value_)),
-	      root_(std::move(other.root_)),
-	      resolution_(std::move(other.resolution_)),
-	      resolution_factor_(std::move(other.resolution_factor_)),
-	      automatic_prune_(std::move(other.automatic_prune_))
-	{
-		num_inner_nodes_.store(other.num_inner_nodes_);
-		num_inner_leaf_nodes_.store(other.num_inner_leaf_nodes_);
-		num_leaf_nodes_.store(other.num_leaf_nodes_);
-
-		num_allocated_inner_nodes_.store(other.num_allocated_inner_nodes_);
-		num_allocated_inner_leaf_nodes_.store(other.num_allocated_inner_leaf_nodes_);
-		num_allocated_leaf_nodes_.store(other.num_allocated_leaf_nodes_);
-
-		init();
-	}
-
-	//
-	// Assignment operator
-	//
-
-	OctreeBase& operator=(OctreeBase const& rhs)
-	{
-		// TODO: Should this clear?
-		clear(rhs.resolution(), rhs.depthLevels());
-
-		depth_levels_ = rhs.depth_levels_;
-		max_value_ = rhs.max_value_;
-		resolution_ = rhs.resolution_;
-		resolution_factor_ = rhs.resolution_factor_;
-		automatic_prune_ = rhs.automatic_prune_;
-		return *this;
-	}
-
-	OctreeBase& operator=(OctreeBase&& rhs)
-	{
-		// TODO: Should this clear?
-		clear(rhs.resolution(), rhs.depthLevels(), true);
-
-		depth_levels_ = std::move(rhs.depth_levels_);
-		max_value_ = std::move(rhs.max_value_);
-		root_ = std::move(rhs.root_);
-		resolution_ = std::move(rhs.resolution_);
-		resolution_factor_ = std::move(rhs.resolution_factor_);
-		automatic_prune_ = std::move(rhs.automatic_prune_);
-		num_inner_nodes_.store(rhs.num_inner_nodes_);
-		num_inner_leaf_nodes_.store(rhs.num_inner_leaf_nodes_);
-		num_leaf_nodes_.store(rhs.num_leaf_nodes_);
-		num_allocated_inner_nodes_.store(rhs.num_allocated_inner_nodes_);
-		num_allocated_inner_leaf_nodes_.store(rhs.num_allocated_inner_leaf_nodes_);
-		num_allocated_leaf_nodes_.store(rhs.num_allocated_leaf_nodes_);
-		return *this;
-	}
-
-	//
-	// Destructor
-	//
-
-	~OctreeBase() { deleteChildren(root(), rootDepth(), true); }
-
-	//
-	// Derived
-	//
-
-	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
-
-	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
-
-	//
-	// Init
-	//
-
-	void init()
-	{
-		for (auto& a_l : children_locks_) {
-			a_l.clear();
-		}
-	}
-
-	//
-	// Set resolution and depth levels
-	//
-
-	void setLeafSizeAndDepthLevels(resolution_t const resolution,
+	void setLeafSizeAndDepthLevels(node_size_t const leaf_node_size,
 	                               depth_t const depth_levels)
 	{
 		// TODO: Implement
@@ -2702,15 +2405,15 @@ class OctreeBase
 		depth_levels_ = depth_levels;
 		max_value_ = std::pow(2, depth_levels - 1);
 
-		std::generate(std::begin(resolution_), std::end(resolution_),
-		              [n = resolution]() mutable {
+		std::generate(std::begin(node_size_), std::end(node_size_),
+		              [n = leaf_node_size]() mutable {
 			              auto const c = n;
 			              n *= 2.0;
 			              return c;
 		              });
 
-		std::transform(std::begin(resolution_), std::end(resolution_),
-		               std::begin(resolution_factor_), [](auto n) { return 1.0 / n; });
+		std::transform(std::begin(node_size_), std::end(node_size_),
+		               std::begin(node_size_factor_), [](auto n) { return 1.0 / n; });
 	}
 
 	//
@@ -2736,7 +2439,7 @@ class OctreeBase
 	 */
 	constexpr Key::key_t key(coord_t coord, depth_t depth = 0) const noexcept
 	{
-		Key::key_t val = std::floor(resolution_factor_[0] * coord);
+		Key::key_t val = std::floor(node_size_factor_[0] * coord);
 		return ((val + max_value_) >> depth) << depth;
 	}
 
@@ -2779,29 +2482,262 @@ class OctreeBase
 		// // FIXME: Check if correct
 		// return depth_levels_ == depth
 		//            ? 0
-		//            : (((key >> depth) << depth) - max_value_) * resolution_;
+		//            : (((key >> depth) << depth) - max_value_) * node_size_;
 	}
 
 	//
-	// Traverse
+	// Get node
 	//
 
-	template <class UnaryFunction, class NodeType>
-	void traverseRecurs(NodeType const& node, UnaryFunction f) const
+	constexpr LeafNode const& leafNode(Node node) const
 	{
-		if (f(node) || leaf(node)) {
-			return;
-		}
+		return *static_cast<LeafNode*>(node.data());
+	}
 
-		auto child = child(node, 0);
-		for (index_t index = 0; 8 != index; ++index) {
-			traverseRecurs(sibling(child, index), f);
+	constexpr LeafNode& leafNode(Node node) { return *static_cast<LeafNode*>(node.data()); }
+
+	LeafNode const& leafNode(Code code) const
+	{
+		LeafNode const* node = &root();
+		depth_t depth = rootDepth();
+		while (code.depth() != depth && isParent(*node)) {
+			--depth;
+			node = 0 == depth
+			           ? &leafChild(static_cast<InnerNode const&>(*node), code.index(depth))
+			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
+		}
+		return *node;
+	}
+
+	LeafNode& leafNode(Code code)
+	{
+		LeafNode* node = &root();
+		depth_t depth = rootDepth();
+		while (code.depth() != depth && isParent(*node)) {
+			--depth;
+			node = 0 == depth
+			           ? &leafNode(static_cast<InnerNode const&>(*node), code.index(depth))
+			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
+		}
+		return *node;
+	}
+
+	constexpr InnerNode const& innerNode(Node node) const
+	{
+		return *static_cast<InnerNode*>(node.data());
+	}
+
+	constexpr InnerNode& innerNode(Node& node)
+	{
+		return *static_cast<InnerNode*>(node.data());
+	}
+
+	InnerNode const& innerNode(Code code) const
+	{
+		// TODO: Implement correctly
+		return static_cast<InnerNode const&>(leafNode(code));
+	}
+
+	InnerNode& innerNode(Code code)
+	{
+		// TODO: Implement correctly
+		return static_cast<InnerNode&>(leafNode(code));
+	}
+
+	std::pair<LeafNode const*, depth_t> nodeAndDepth(Code code) const
+	{
+		LeafNode const* node = &root();
+		depth_t depth = rootDepth();
+		while (code.depth() != depth && isParent(*node)) {
+			--depth;
+			node = 0 == depth
+			           ? &leafChild(static_cast<InnerNode const&>(*node), code.index(depth))
+			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
+		}
+		return {node, depth};
+	}
+
+	std::pair<LeafNode*, depth_t> nodeAndDepth(Code code)
+	{
+		LeafNode* node = &root();
+		depth_t depth = rootDepth();
+		while (code.depth() != depth && isParent(*node)) {
+			--depth;
+			node = 0 == depth
+			           ? &leafChild(static_cast<InnerNode const&>(*node), code.index(depth))
+			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
+		}
+		return {node, depth};
+	}
+
+	//
+	// Get children
+	//
+
+	static constexpr LeafNodeBlock& leafChildren(InnerNode const& node)
+	{
+		return *node.leaf_children;
+	}
+
+	static constexpr InnerNodeBlock& innerChildren(InnerNode const& node)
+	{
+		return *node.inner_children;
+	}
+
+	static constexpr LeafNode& leafChildren(InnerNode const& node, index_t index)
+	{
+		return leafChildren(node)[index];
+	}
+
+	static constexpr InnerNode& innerChildren(InnerNode const& node, index_t index)
+	{
+		return innerChildren(node)[index];
+	}
+
+	static constexpr LeafNode& children(InnerNode const& node, index_t index, depth_t depth)
+	{
+		return 1 == depth ? leafChildren(node, index) : innerChildren(node, index);
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                    Constructors                                     |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Add comments
+
+	OctreeBase(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16,
+	           bool automatic_pruning = true)
+	    : automatic_prune_(automatic_pruning)
+	{
+		setLeafSizeAndDepthLevels(leaf_node_size, depth_levels);
+
+		init();
+	}
+
+	OctreeBase(OctreeBase const& other)
+	    : depth_levels_(other.depth_levels_),
+	      max_value_(other.max_value_),
+	      node_size_(other.node_size_),
+	      node_size_factor_(other.node_size_factor_),
+	      automatic_prune_(other.automatic_prune_)
+	{
+		init();
+	}
+
+	OctreeBase(OctreeBase&& other)
+	    : depth_levels_(std::move(other.depth_levels_)),
+	      max_value_(std::move(other.max_value_)),
+	      root_(std::move(other.root_)),
+	      node_size_(std::move(other.node_size_)),
+	      node_size_factor_(std::move(other.node_size_factor_)),
+	      automatic_prune_(std::move(other.automatic_prune_))
+	{
+		num_inner_nodes_.store(other.num_inner_nodes_);
+		num_inner_leaf_nodes_.store(other.num_inner_leaf_nodes_);
+		num_leaf_nodes_.store(other.num_leaf_nodes_);
+
+		num_allocated_inner_nodes_.store(other.num_allocated_inner_nodes_);
+		num_allocated_inner_leaf_nodes_.store(other.num_allocated_inner_leaf_nodes_);
+		num_allocated_leaf_nodes_.store(other.num_allocated_leaf_nodes_);
+
+		init();
+	}
+
+	//
+	// Init
+	//
+
+	void init()
+	{
+		for (auto& a_l : children_locks_) {
+			a_l.clear();
 		}
 	}
 
 	//
-	// Apply
+	// Destructor
 	//
+
+	~OctreeBase() { deleteChildren(root(), rootDepth(), true); }
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                 Assignment operator                                 |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Add comments
+
+	OctreeBase& operator=(OctreeBase const& rhs)
+	{
+		// TODO: Should this clear?
+		clear(rhs.nodeSize(), rhs.depthLevels());
+
+		depth_levels_ = rhs.depth_levels_;
+		max_value_ = rhs.max_value_;
+		node_size_ = rhs.node_size_;
+		node_size_factor_ = rhs.node_size_factor_;
+		automatic_prune_ = rhs.automatic_prune_;
+		return *this;
+	}
+
+	OctreeBase& operator=(OctreeBase&& rhs)
+	{
+		// TODO: Should this clear?
+		clear(rhs.nodeSize(), rhs.depthLevels(), true);
+
+		depth_levels_ = std::move(rhs.depth_levels_);
+		max_value_ = std::move(rhs.max_value_);
+		root_ = std::move(rhs.root_);
+		node_size_ = std::move(rhs.node_size_);
+		node_size_factor_ = std::move(rhs.node_size_factor_);
+		automatic_prune_ = std::move(rhs.automatic_prune_);
+		num_inner_nodes_.store(rhs.num_inner_nodes_);
+		num_inner_leaf_nodes_.store(rhs.num_inner_leaf_nodes_);
+		num_leaf_nodes_.store(rhs.num_leaf_nodes_);
+		num_allocated_inner_nodes_.store(rhs.num_allocated_inner_nodes_);
+		num_allocated_inner_leaf_nodes_.store(rhs.num_allocated_inner_leaf_nodes_);
+		num_allocated_leaf_nodes_.store(rhs.num_allocated_leaf_nodes_);
+		return *this;
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                       Derived                                       |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Add comments
+
+	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
+
+	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Root                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Add comments
+
+	constexpr InnerNode const& root() const noexcept { return root_; }
+
+	constexpr InnerNode& root() noexcept { return root_; }
+
+	constexpr index_field_t rootIndexField() const noexcept { return 1U; }
+
+	constexpr index_t rootIndex() const noexcept { return 0U; }
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Apply                                        |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Add comments
 
 	template <class UnaryFunction, class UnaryFunction2,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<UnaryFunction>>,
@@ -2894,203 +2830,287 @@ class OctreeBase
 		}
 	}
 
-	//
-	// Get root
-	//
+	/**************************************************************************************
+	|                                                                                     |
+	|                                      Traverse                                       |
+	|                                                                                     |
+	**************************************************************************************/
 
-	constexpr InnerNode const& root() const noexcept { return root_; }
+	// TODO: Add comment
 
-	constexpr InnerNode& root() noexcept { return root_; }
-
-	//
-	// Get root index
-	//
-
-	constexpr index_t rootIndex() const noexcept { return 0; }
-
-	//
-	// Get node
-	//
-
-	constexpr LeafNode const& leafNode(Node node) const
+	template <class UnaryFunction, class NodeType>
+	void traverseRecurs(NodeType const& node, UnaryFunction f) const
 	{
-		return *static_cast<LeafNode*>(node.data());
-	}
-
-	constexpr LeafNode& leafNode(Node node) { return *static_cast<LeafNode*>(node.data()); }
-
-	LeafNode const& leafNode(Code code) const
-	{
-		LeafNode const* node = &root();
-		depth_t depth = rootDepth();
-		while (code.depth() != depth && isParent(*node)) {
-			--depth;
-			node = 0 == depth
-			           ? &leafChild(static_cast<InnerNode const&>(*node), code.index(depth))
-			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
+		if (f(node) || leaf(node)) {
+			return;
 		}
-		return *node;
-	}
 
-	LeafNode& leafNode(Code code)
-	{
-		LeafNode* node = &root();
-		depth_t depth = rootDepth();
-		while (code.depth() != depth && isParent(*node)) {
-			--depth;
-			node = 0 == depth
-			           ? &leafNode(static_cast<InnerNode const&>(*node), code.index(depth))
-			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
+		auto child = child(node, 0);
+		for (index_t index = 0; 8 != index; ++index) {
+			traverseRecurs(sibling(child, index), f);
 		}
-		return *node;
 	}
 
-	constexpr InnerNode const& innerNode(Node node) const
-	{
-		return *static_cast<InnerNode*>(node.data());
-	}
+	/**************************************************************************************
+	|                                                                                     |
+	|                                    Access nodes                                     |
+	|                                                                                     |
+	**************************************************************************************/
 
-	constexpr InnerNode& innerNode(Node& node)
-	{
-		return *static_cast<InnerNode*>(node.data());
-	}
+	// TODO: Implement
 
-	InnerNode const& innerNode(Code code) const
-	{
-		// TODO: Implement correctly
-		return static_cast<InnerNode const&>(leafNode(code));
-	}
+	/**************************************************************************************
+	|                                                                                     |
+	|                                       Center                                        |
+	|                                                                                     |
+	**************************************************************************************/
 
-	InnerNode& innerNode(Code code)
-	{
-		// TODO: Implement correctly
-		return static_cast<InnerNode&>(leafNode(code));
-	}
+	// TODO: Add comments
 
-	std::pair<LeafNode const*, depth_t> nodeAndDepth(Code code) const
-	{
-		LeafNode const* node = &root();
-		depth_t depth = rootDepth();
-		while (code.depth() != depth && isParent(*node)) {
-			--depth;
-			node = 0 == depth
-			           ? &leafChild(static_cast<InnerNode const&>(*node), code.index(depth))
-			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
-		}
-		return {node, depth};
-	}
+	//
+	// Child center
+	//
 
-	std::pair<LeafNode*, depth_t> nodeAndDepth(Code code)
+	static constexpr Point3 childCenter(Point3 parent_center, node_size_t child_half_size,
+	                                    index_t child_index)
 	{
-		LeafNode* node = &root();
-		depth_t depth = rootDepth();
-		while (code.depth() != depth && isParent(*node)) {
-			--depth;
-			node = 0 == depth
-			           ? &leafChild(static_cast<InnerNode const&>(*node), code.index(depth))
-			           : &innerChild(static_cast<InnerNode const&>(*node), code.index(depth));
-		}
-		return {node, depth};
+		parent_center[0] += child_index & index_t(1) ? child_half_size : -child_half_size;
+		parent_center[1] += child_index & index_t(2) ? child_half_size : -child_half_size;
+		parent_center[2] += child_index & index_t(4) ? child_half_size : -child_half_size;
+		return parent_center;
 	}
 
 	//
-	// (Un)lock children
+	// Sibling center
 	//
 
-	bool tryLockChildren(depth_t depth)
+	static constexpr Point3 siblingCenter(Point3 center, node_size_t half_size,
+	                                      index_t index, index_t sibling_index)
 	{
-		return !children_locks_[depth].test_and_set(std::memory_order_acquire);
+		index_t const temp = index ^ sibling_index;
+		node_size_t const size = 2 * half_size;
+		if (temp & index_t(1)) {
+			center[0] += sibling_index & index_t(1) ? size : -size;
+		}
+		if (temp & index_t(2)) {
+			center[1] += sibling_index & index_t(2) ? size : -size;
+		}
+		if (temp & index_t(4)) {
+			center[2] += sibling_index & index_t(4) ? size : -size;
+		}
+		return center;
 	}
 
-	void lockChildren(depth_t depth)
+	//
+	// Parent center
+	//
+
+	static constexpr Point3 parentCenter(Point3 child_center, node_size_t child_half_size,
+	                                     index_t child_index)
 	{
-		while (!tryLockChildren(depth))
-			;
+		child_center[0] -= child_index & index_t(1) ? child_half_size : -child_half_size;
+		child_center[1] -= child_index & index_t(2) ? child_half_size : -child_half_size;
+		child_center[2] -= child_index & index_t(4) ? child_half_size : -child_half_size;
+		return child_center;
 	}
 
-	bool lockIfLeaf(InnerNode const& node, depth_t depth)
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Leaf                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Implement
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                      Modified                                       |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Implement
+
+	//
+	// Set modified
+	//
+
+	void setModifiedRecurs(InnerNode& node, depth_t depth, depth_t min_depth)
 	{
-		do {
-			if (isParent(node)) {
-				return false;
+		setModified(node, true);
+
+		if (isLeaf(node) || depth == min_depth) {
+			return;
+		}
+
+		if (1 == depth) {
+			for (auto& child : leafChildren(node)) {
+				setModified(child, true);
 			}
-		} while (!tryLockChildren(depth));
-
-		if (isParent(node)) {
-			unlockChildren(depth);
-			return false;
-		}
-
-		return true;
-	}
-
-	void unlockChildren(depth_t depth)
-	{
-		children_locks_[depth].clear(std::memory_order_release);
-	}
-
-	//
-	// Leaf/inner lock
-	//
-
-	bool tryLockLeaves()
-	{
-		return !free_leaf_block_lock_.test_and_set(std::memory_order_acquire);
-	}
-
-	void lockLeaves()
-	{
-		while (!tryLockLeaves()) {
-		}
-	}
-
-	bool lockIfNonEmptyLeaves()
-	{
-		do {
-			if (free_leaf_blocks_.empty()) {
-				return false;
+		} else {
+			for (auto& child : innerChildren(node)) {
+				setModifiedRecurs(child, depth - 1, min_depth);
 			}
-		} while (!tryLockLeaves());
-
-		if (free_leaf_blocks_.empty()) {
-			unlockLeaves();
-			return false;
-		}
-		return true;
-	}
-
-	void unlockLeaves() { free_leaf_block_lock_.clear(std::memory_order_release); }
-
-	bool tryLockInner()
-	{
-		return !free_inner_block_lock_.test_and_set(std::memory_order_acquire);
-	}
-
-	void lockInner()
-	{
-		while (!tryLockInner()) {
 		}
 	}
-
-	bool lockIfNonEmptyInner()
-	{
-		do {
-			if (free_inner_blocks_.empty()) {
-				return false;
-			}
-		} while (!tryLockInner());
-
-		if (free_inner_blocks_.empty()) {
-			unlockInner();
-			return false;
-		}
-		return true;
-	}
-
-	void unlockInner() { free_inner_block_lock_.clear(std::memory_order_release); }
 
 	//
-	// Create children
+	// Set parents modified
+	//
+
+	void setModifiedParents(Node& node)
+	{
+		if (node.depth() >= rootDepth()) {
+			return;
+		}
+		setModifiedParentsRecurs(root(), rootDepth(), node.code());
+	}
+
+	// NOTE: Assumes code has depth higher then depth
+	void setModifiedParentsRecurs(InnerNode& node, depth_t depth, Code code)
+	{
+		setModified(node, true);
+		if (code.depth() < depth - 1) {
+			setModifiedParentsRecurs(innerChild(node, code.index(depth - 1)), depth - 1, code);
+		}
+	}
+
+	//
+	// Clear Children modified
+	//
+
+	void clearModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
+	{
+		if (!isModified(node)) {
+			// Already clear
+			return;
+		}
+
+		setModified(node, depth > max_depth);
+
+		if (isLeaf(node)) {
+			return;
+		}
+
+		if (1 == depth) {
+			for (auto& child : leafChildren(node)) {
+				setModified(child, false);
+			}
+		} else {
+			for (auto& child : innerChildren(node)) {
+				clearModifiedRecurs(child, depth - 1, max_depth);
+			}
+		}
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                      Propagate                                      |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Implement
+
+	void updateNodes(LeafNode& nodes) { derived().updateNode(nodes, nodes.modified); }
+
+	void updateNodes(InnerNode& nodes, depth_t const depth)
+	{
+		if (1 == depth) {
+			derived().updateNode(nodes, nodes.modified, leafChildrenBlock(nodes));
+		} else {
+			derived().updateNode(nodes, nodes.modified, innerChildrenBlock(nodes));
+		}
+
+		pruneNodes(nodes, nodes.modified, depth);
+	}
+
+	template <bool KeepModified>
+	void updateModifiedNodesRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
+	{
+		if (isLeaf(node)) {
+			if (depth <= max_depth) {
+				derived().updateNode(node);
+				if constexpr (!KeepModified) {
+					setModified(node, false);
+				}
+			}
+			return;
+		}
+
+		if (1 == depth) {
+			for (auto& child : leafChildrenBlock(node)) {
+				if (isAnyModified(child)) {
+					updateNode(child);
+					if constexpr (!KeepModified) {
+						setModified(child, false);
+					}
+				}
+			}
+		} else {
+			for (auto& child : innerChildren(node)) {
+				if (isModified(child)) {
+					updateModifiedNodesRecurs<KeepModified>(child, depth - 1, max_depth);
+				}
+			}
+		}
+
+		if (depth <= max_depth) {
+			updateNode(node, depth);
+			if constexpr (!KeepModified) {
+				setModified(node, false);
+			}
+		}
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Prune                                        |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Add comments
+
+	// If all children are the same as the parent they can be pruned
+	// NOTE: Only call with nodes that have children
+	static bool isNodeCollapsible(InnerNode const& node, depth_t depth) noexcept
+	{
+		return 1 == depth ? all_of(leafChildren(node),
+		                           [node](LeafNode const& child) { return node == child; })
+		                  : all_of(innerChildren(node), [node](LeafNode const& child) {
+			                    return isLeaf(child) && node == child;
+		                    });
+	}
+
+	// NOTE: Only call with nodes that have children
+	bool pruneNode(InnerNode& node, depth_t depth)
+	{
+		return isNodeCollapsible(node, depth) ? deleteChildren(node, depth), true : false;
+	}
+
+	bool pruneRecurs(InnerNode& node, depth_t depth)
+	{
+		if (isLeaf(node)) {
+			return true;
+		}
+
+		if (1 == depth) {
+			return pruneNode(node, depth);
+		}
+
+		bool prunable = all_of(innerChildren(node), [this, depth](InnerNode& child) {
+			return pruneRecurs(child, depth - 1);
+		});
+
+		return !prunable || pruneNode(node, depth);
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                 Create/delete nodes                                 |
+	|                                                                                     |
+	**************************************************************************************/
+
+	//
+	// Create
 	//
 
 	inline void allocateLeafChildren(InnerNode& node)
@@ -3228,7 +3248,7 @@ class OctreeBase
 	}
 
 	//
-	// Delete children
+	// Delete
 	//
 
 	inline void deallocateLeafChildren(InnerNode& node)
@@ -3368,253 +3388,106 @@ class OctreeBase
 	}
 
 	//
-	// Get children
+	// (Un)lock children
 	//
 
-	static constexpr LeafNodeBlock& leafChildren(InnerNode const& node)
+	bool tryLockChildren(depth_t depth)
 	{
-		return *node.leaf_children;
+		return !children_locks_[depth].test_and_set(std::memory_order_acquire);
 	}
 
-	static constexpr InnerNodeBlock& innerChildren(InnerNode const& node)
+	void lockChildren(depth_t depth)
 	{
-		return *node.inner_children;
+		while (!tryLockChildren(depth))
+			;
 	}
 
-	static constexpr LeafNode& leafChildren(InnerNode const& node, index_t index)
+	bool lockIfLeaf(InnerNode const& node, depth_t depth)
 	{
-		return leafChildren(node)[index];
-	}
-
-	static constexpr InnerNode& innerChildren(InnerNode const& node, index_t index)
-	{
-		return innerChildren(node)[index];
-	}
-
-	static constexpr LeafNode& children(InnerNode const& node, index_t index, depth_t depth)
-	{
-		return 1 == depth ? leafChildren(node, index) : innerChildren(node, index);
-	}
-
-	//
-	// Get child center
-	//
-
-	static constexpr Point3 childCenter(Point3 parent_center, resolution_t child_half_size,
-	                                    index_t child_index)
-	{
-		parent_center[0] += child_index & index_t(1) ? child_half_size : -child_half_size;
-		parent_center[1] += child_index & index_t(2) ? child_half_size : -child_half_size;
-		parent_center[2] += child_index & index_t(4) ? child_half_size : -child_half_size;
-		return parent_center;
-	}
-
-	//
-	// Get sibling center
-	//
-
-	static constexpr Point3 siblingCenter(Point3 center, resolution_t half_size,
-	                                      index_t index, index_t sibling_index)
-	{
-		index_t const temp = index ^ sibling_index;
-		resolution_t const size = 2 * half_size;
-		if (temp & index_t(1)) {
-			center[0] += sibling_index & index_t(1) ? size : -size;
-		}
-		if (temp & index_t(2)) {
-			center[1] += sibling_index & index_t(2) ? size : -size;
-		}
-		if (temp & index_t(4)) {
-			center[2] += sibling_index & index_t(4) ? size : -size;
-		}
-		return center;
-	}
-
-	//
-	// Get parent center
-	//
-
-	static constexpr Point3 parentCenter(Point3 child_center, resolution_t child_half_size,
-	                                     index_t child_index)
-	{
-		child_center[0] -= child_index & index_t(1) ? child_half_size : -child_half_size;
-		child_center[1] -= child_index & index_t(2) ? child_half_size : -child_half_size;
-		child_center[2] -= child_index & index_t(4) ? child_half_size : -child_half_size;
-		return child_center;
-	}
-
-	//
-	// Is node collapsible
-	//
-
-	// If all children are the same as the parent they can be pruned
-	// NOTE: Only call with nodes that have children
-	static bool isNodeCollapsible(InnerNode const& node, depth_t depth) noexcept
-	{
-		return 1 == depth ? all_of(leafChildren(node),
-		                           [node](LeafNode const& child) { return node == child; })
-		                  : all_of(innerChildren(node), [node](LeafNode const& child) {
-			                    return isLeaf(child) && node == child;
-		                    });
-	}
-
-	//
-	// Update nodes
-	//
-
-	void updateNodes(LeafNode& nodes) { derived().updateNode(nodes, nodes.modified); }
-
-	void updateNodes(InnerNode& nodes, depth_t const depth)
-	{
-		if (1 == depth) {
-			derived().updateNode(nodes, nodes.modified, leafChildrenBlock(nodes));
-		} else {
-			derived().updateNode(nodes, nodes.modified, innerChildrenBlock(nodes));
-		}
-
-		pruneNodes(nodes, nodes.modified, depth);
-	}
-
-	template <bool KeepModified>
-	void updateModifiedNodesRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
-	{
-		if (isLeaf(node)) {
-			if (depth <= max_depth) {
-				derived().updateNode(node);
-				if constexpr (!KeepModified) {
-					setModified(node, false);
-				}
+		do {
+			if (isParent(node)) {
+				return false;
 			}
-			return;
+		} while (!tryLockChildren(depth));
+
+		if (isParent(node)) {
+			unlockChildren(depth);
+			return false;
 		}
 
-		if (1 == depth) {
-			for (auto& child : leafChildrenBlock(node)) {
-				if (isAnyModified(child)) {
-					updateNode(child);
-					if constexpr (!KeepModified) {
-						setModified(child, false);
-					}
-				}
-			}
-		} else {
-			for (auto& child : innerChildren(node)) {
-				if (isModified(child)) {
-					updateModifiedNodesRecurs<KeepModified>(child, depth - 1, max_depth);
-				}
-			}
-		}
-
-		if (depth <= max_depth) {
-			updateNode(node, depth);
-			if constexpr (!KeepModified) {
-				setModified(node, false);
-			}
-		}
+		return true;
 	}
 
-	//
-	// Set parents modified
-	//
-
-	void setModifiedParents(Node& node)
+	void unlockChildren(depth_t depth)
 	{
-		if (node.depth() >= rootDepth()) {
-			return;
-		}
-		setModifiedParentsRecurs(root(), rootDepth(), node.code());
-	}
-
-	// NOTE: Assumes code has depth higher then depth
-	void setModifiedParentsRecurs(InnerNode& node, depth_t depth, Code code)
-	{
-		setModified(node, true);
-		if (code.depth() < depth - 1) {
-			setModifiedParentsRecurs(innerChild(node, code.index(depth - 1)), depth - 1, code);
-		}
+		children_locks_[depth].clear(std::memory_order_release);
 	}
 
 	//
-	// Set modified
+	// Leaf/inner lock
 	//
 
-	void setModifiedRecurs(InnerNode& node, depth_t depth, depth_t min_depth)
+	bool tryLockLeaves()
 	{
-		setModified(node, true);
+		return !free_leaf_block_lock_.test_and_set(std::memory_order_acquire);
+	}
 
-		if (isLeaf(node) || depth == min_depth) {
-			return;
+	void lockLeaves()
+	{
+		while (!tryLockLeaves()) {
 		}
+	}
 
-		if (1 == depth) {
-			for (auto& child : leafChildren(node)) {
-				setModified(child, true);
+	bool lockIfNonEmptyLeaves()
+	{
+		do {
+			if (free_leaf_blocks_.empty()) {
+				return false;
 			}
-		} else {
-			for (auto& child : innerChildren(node)) {
-				setModifiedRecurs(child, depth - 1, min_depth);
-			}
+		} while (!tryLockLeaves());
+
+		if (free_leaf_blocks_.empty()) {
+			unlockLeaves();
+			return false;
 		}
+		return true;
 	}
 
-	//
-	// Clear Children modified
-	//
+	void unlockLeaves() { free_leaf_block_lock_.clear(std::memory_order_release); }
 
-	void clearModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
+	bool tryLockInner()
 	{
-		if (!isModified(node)) {
-			// Already clear
-			return;
-		}
-
-		setModified(node, depth > max_depth);
-
-		if (isLeaf(node)) {
-			return;
-		}
-
-		if (1 == depth) {
-			for (auto& child : leafChildren(node)) {
-				setModified(child, false);
-			}
-		} else {
-			for (auto& child : innerChildren(node)) {
-				clearModifiedRecurs(child, depth - 1, max_depth);
-			}
-		}
+		return !free_inner_block_lock_.test_and_set(std::memory_order_acquire);
 	}
 
-	//
-	// Prune
-	//
-
-	// NOTE: Only call with nodes that have children
-	bool pruneNode(InnerNode& node, depth_t depth)
+	void lockInner()
 	{
-		return isNodeCollapsible(node, depth) ? deleteChildren(node, depth), true : false;
+		while (!tryLockInner()) {
+		}
 	}
 
-	bool pruneRecurs(InnerNode& node, depth_t depth)
+	bool lockIfNonEmptyInner()
 	{
-		if (isLeaf(node)) {
-			return true;
+		do {
+			if (free_inner_blocks_.empty()) {
+				return false;
+			}
+		} while (!tryLockInner());
+
+		if (free_inner_blocks_.empty()) {
+			unlockInner();
+			return false;
 		}
-
-		if (1 == depth) {
-			return pruneNode(node, depth);
-		}
-
-		bool prunable = all_of(innerChildren(node), [this, depth](InnerNode& child) {
-			return pruneRecurs(child, depth - 1);
-		});
-
-		return !prunable || pruneNode(node, depth);
+		return true;
 	}
 
-	//
-	// Input/output (read/write)
-	//
+	void unlockInner() { free_inner_block_lock_.clear(std::memory_order_release); }
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                         I/O                                         |
+	|                                                                                     |
+	**************************************************************************************/
 
 	struct NodeAndIndices {
 		std::reference_wrapper<LeafNode> node;

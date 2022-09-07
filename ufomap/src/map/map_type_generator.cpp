@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 
 	generateMapType(path, name, attributes);
 
-	printGoodbye();
+	printGoodbye(path, name, attributes);
 
 	return 0;
 }

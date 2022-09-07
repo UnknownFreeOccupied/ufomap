@@ -49,7 +49,7 @@
 #include <ufo/map/occupancy/occupancy_node.h>
 #include <ufo/map/octree/node.h>
 #include <ufo/map/point.h>
-#include <ufo/map/predicate/occupancy.h>
+#include <ufo/map/occupancy/occupancy_predicate.h>
 #include <ufo/map/predicate/satisfies.h>
 #include <ufo/map/types.h>
 #include <ufo/math/logit.h>

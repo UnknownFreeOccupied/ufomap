@@ -48,7 +48,7 @@
 #include <ufo/geometry/point.h>
 #include <ufo/map/code/code.h>
 #include <ufo/map/octree/node.h>
-#include <ufo/map/predicate/octree.h>
+#include <ufo/map/octree/octree_predicate.h>
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/types.h>
 

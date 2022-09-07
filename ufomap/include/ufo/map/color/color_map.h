@@ -44,7 +44,7 @@
 
 // UFO
 #include <ufo/map/color/color_node.h>
-#include <ufo/map/predicate/color.h>
+#include <ufo/map/color/color_predicate.h>
 
 // STL
 #include <iostream>

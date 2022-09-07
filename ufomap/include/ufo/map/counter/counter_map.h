@@ -45,7 +45,7 @@
 // UFO
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/map/counter/counter_node.h>
-#include <ufo/map/predicate/counter.h>
+#include <ufo/map/counter/counter_predicate.h>
 
 // STL
 #include <cstdint>

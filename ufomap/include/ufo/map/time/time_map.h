@@ -43,8 +43,8 @@
 #define UFO_MAP_TIME_MAP_BASE_H
 
 // UFO
-#include <ufo/map/predicate/time.h>
 #include <ufo/map/time/time_node.h>
+#include <ufo/map/time/time_predicate.h>
 #include <ufo/map/types.h>
 
 // STL
