@@ -39,29 +39,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_INDICATORS_H
-#define UFO_MAP_OCCUPANCY_INDICATORS_H
+#ifndef UFO_MAP_HIT_MISS_NODE_H
+#define UFO_MAP_HIT_MISS_NODE_H
 
 // STL
+#include <array>
 #include <cstdint>
+#include <type_traits>
 
 namespace ufo::map
 {
-struct OccupancyIndicators {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	uint8_t is_leaf : 1;
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	uint8_t modified : 1;
-
-	// Indicates whether this node or any of its children contains unknown space
-	uint8_t contains_unknown : 1;
-	// Indicates whether this node or any of its children contains free space
-	uint8_t contains_free : 1;
-	// Indicates whether this node or any of its children contains occupied space
-	uint8_t contains_occupied : 1;
+template <bool Single = false>
+struct HitMissNode {
+	std::conditional_t<Single, counter_t, std::array<counter_t, 8>> hit;
+	std::conditional_t<Single, counter_t, std::array<counter_t, 8>> miss;
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_INDICATORS_H
+#endif  // UFO_MAP_HIT_MISS_NODE_H

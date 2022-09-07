@@ -39,64 +39,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCTREE_OCTREE_INDICATORS_H
-#define UFO_MAP_OCTREE_OCTREE_INDICATORS_H
+#ifndef UFO_MAP_PREDICATE_DISTANCE_H
+#define UFO_MAP_PREDICATE_DISTANCE_H
 
-// STL
-#include <cstdint>
-#include <limits>
-
-namespace ufo::map
+namespace ufo::map::predicate
 {
-struct OctreeIndicators {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	uint8_t is_leaf : 1;
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	uint8_t modified : 1;
-};
 
-struct OctreeIndicatorBlock {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	uint8_t is_leaf;
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	uint8_t modified;
+}
 
-	constexpr bool isLeaf(std::size_t const index) const
-	{
-		return (is_leaf >> index) & uint8_t(1);
-	}
-
-	constexpr bool isModified(std::size_t const index) const
-	{
-		return (modified >> index) & uint8_t(1);
-	}
-
-	constexpr void setLeaf(bool const value) const
-	{
-		is_leaf = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
-	}
-
-	constexpr void setLeaf(std::size_t const index, bool const value) const
-	{
-		is_leaf = (is_leaf & ~(uint8_t(1) << index)) |
-		          (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
-	}
-
-	constexpr void setModified(bool const value) const
-	{
-		modified = value ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
-	}
-
-	constexpr void setModified(std::size_t const index, bool const value) const
-	{
-		modified = (modified & ~(uint8_t(1) << index)) |
-		           (uint8_t(value ? uint8_t(1) : uint8_t(0)) << index);
-	}
-};
-}  // namespace ufo::map
-
-#endif  // UFO_MAP_OCTREE_OCTREE_INDICATORS_H
+#endif  // UFO_MAP_PREDICATE_DISTANCE_H

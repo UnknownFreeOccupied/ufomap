@@ -49,14 +49,14 @@
 #include <immintrin.h>
 
 #include <cstddef>
+#include <map>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace ufo::map
 {
-using key_t = uint32_t;
-
 /*!
  * @brief A key represent an octree index at a specified depth
  *
@@ -232,10 +232,12 @@ class Key
 	depth_t depth_ = 0;
 };
 
-using KeySet = std::unordered_set<Key, Key::Hash>;
+using KeySet = std::set<Key>;
+using KeyUnorderedSet = std::unordered_set<Key, Key::Hash>;
 template <typename T>
-using KeyMap = std::unordered_map<Key, T, Key::Hash>;
-
+using KeyMap = std::map<Key, T>;
+template <typename T>
+using KeyUnorderedMap = std::unordered_map<Key, T, Key::Hash>;
 using KeyRay = std::vector<Key>;
 }  // namespace ufo::map
 

@@ -45,13 +45,11 @@
 // UFO
 #include <ufo/map/color/color.h>
 #include <ufo/map/semantic/semantic.h>
+#include <ufo/map/types.h>
 #include <ufo/math/vector3.h>
-
-// STL
 
 namespace ufo::map
 {
-using coord_t = float;
 using Point3 = math::Vector3<coord_t>;
 
 struct Point3Color : public Point3, public RGBColor {

@@ -100,6 +100,24 @@ struct is_pair<std::pair<T, U>> : std::true_type {
 
 template <class T>
 inline constexpr bool is_pair_v = is_pair<T>::value;
+
+//
+// Base of template
+//
+
+template <template <typename...> class Base, typename Derived>
+struct is_base_of_template_impl {
+	template <typename... Ts>
+	static constexpr std::true_type test(Base<Ts...> const*);
+	static constexpr std::false_type test(...);
+	using type = decltype(test(std::declval<Derived*>()));
+};
+
+template <template <typename...> class Base, typename Derived>
+using is_base_of_template = typename is_base_of_template_impl<Base, Derived>::type;
+
+template <template <typename...> class Base, typename Derived>
+inline constexpr bool is_base_of_template_v = is_base_of_template<Base, Derived>::value;
 }  // namespace ufo::util
 
 #endif  // UFO_UTIL_TYPE_TRAITS

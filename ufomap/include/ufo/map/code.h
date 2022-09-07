@@ -49,6 +49,11 @@
 // STL
 #include <immintrin.h>
 
+#include <map>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+
 namespace ufo::map
 {
 /*!
@@ -62,8 +67,6 @@ namespace ufo::map
 class Code
 {
  public:
-	using code_t = uint64_t;
-
 	constexpr Code() = default;
 
 	constexpr Code(code_t code, depth_t depth = 0)
@@ -286,10 +289,12 @@ class Code
 	depth_t depth_ = 0;
 };
 
-// using CodeUnorderedSet = std::unordered_set<Code, Code::Hash>;
-// template <typename T>
-// using CodeMap = std::unordered_map<Code, T, Code::Hash>;
-// using CodeRay = std::vector<Code>;
+using CodeSet = std::set<Code>;
+using CodeUnorderedSet = std::unordered_set<Code, Code::Hash>;
+template <typename T>
+using CodeMap = std::map<Code, T>;
+template <typename T>
+using CodeUnorderedMap = std::unordered_map<Code, T, Code::Hash>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_CODE_H

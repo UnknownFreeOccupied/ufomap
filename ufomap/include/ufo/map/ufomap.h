@@ -96,6 +96,8 @@ enum MapType : mt_t {
 	SURFEL    = mt_t(1) << 4U,
 	DISTANCE  = mt_t(1) << 5U,
 	INTENSITY = mt_t(1) << 6U,
+	COUNTER   = mt_t(1) << 7U,
+	HIT_MISS  = mt_t(1) << 8U,
 	// Half resolution (/single) below
 	HR_OCCUPANCY = (mt_t(1) << 63U) | OCCUPANCY,
 	HR_TIME      = (mt_t(1) << 62U) | TIME,
@@ -104,6 +106,8 @@ enum MapType : mt_t {
 	HR_SURFEL    = (mt_t(1) << 59U) | SURFEL,
 	HR_DISTANCE  = (mt_t(1) << 58U) | DISTANCE,
 	HR_INTENSITY = (mt_t(1) << 57U) | INTENSITY,
+	HR_COUNTER   = (mt_t(1) << 56U) | COUNTER,
+	HR_HIT_MISS  = (mt_t(1) << 55U) | HIT_MISS,
 	// clang-format on
 };
 
@@ -115,19 +119,27 @@ template <mt_t MapType, bool ReuseNodes = false, bool LockLess = false>
 class UFOMap
     : public OctreeMapBase<
           // clang-format off
+					// These should be ordered based on size
           OctreeNodeBase<cond_node_t<MapType, SEMANTIC,  HR_SEMANTIC,  SemanticNode>,
                          cond_node_t<MapType, SURFEL,    HR_SURFEL,    SurfelNode>,
                          cond_node_t<MapType, DISTANCE,  HR_DISTANCE,  DistanceNode>,
+												 cond_node_t<MapType, HIT_MISS,  HR_HIT_MISS,  HitMissNode>,
+												 cond_node_t<MapType, COUNTER,   HR_COUNTER,   CounterNode>,
                          cond_node_t<MapType, TIME,      HR_TIME,      TimeNode>,
+												 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
                          cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
                          cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
           ReuseNodes, LockLess,
+					// Order does not matter
           cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
           cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,
           cond_map_base<MapType & COLOR,     COLOR,     ColorMapBase>::template type,
           cond_map_base<MapType & SEMANTIC,  SEMANTIC,  SemanticMapBase>::template type,
           cond_map_base<MapType & SURFEL,    SURFEL,    SurfelMapBase>::template type,
-          cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type
+          cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type,
+          cond_map_base<MapType & INTENSITY, INTENSITY, IntensityMapBase>::template type,
+          cond_map_base<MapType & COUNTER,   COUNTER,   CounterMapBase>::template type,
+          cond_map_base<MapType & HIT_MISS,  HIT_MISS,  HitMissMapBase>::template type
           // clang-format on
           >
 {
@@ -137,7 +149,10 @@ class UFOMap
 	    OctreeNodeBase<cond_node_t<MapType, SEMANTIC,  HR_SEMANTIC,  SemanticNode>,
 	                   cond_node_t<MapType, SURFEL,    HR_SURFEL,    SurfelNode>,
 	                   cond_node_t<MapType, DISTANCE,  HR_DISTANCE,  DistanceNode>,
-	                   cond_node_t<MapType, TIME,      HR_TIME,      TimeNode>,
+										 cond_node_t<MapType, HIT_MISS,  HR_HIT_MISS,  HitMissNode>,
+										 cond_node_t<MapType, COUNTER,   HR_COUNTER,   CounterNode>,
+										 cond_node_t<MapType, TIME,      HR_TIME,      TimeNode>,
+										 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
 	                   cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
 	                   cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
 	    ReuseNodes, LockLess,
@@ -146,7 +161,10 @@ class UFOMap
 	    cond_map_base<MapType & COLOR,     COLOR,     ColorMapBase>::template type,
 	    cond_map_base<MapType & SEMANTIC,  SEMANTIC,  SemanticMapBase>::template type,
 	    cond_map_base<MapType & SURFEL,    SURFEL,    SurfelMapBase>::template type,
-	    cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type
+	    cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type,
+			cond_map_base<MapType & INTENSITY, INTENSITY, IntensityMapBase>::template type,
+			cond_map_base<MapType & COUNTER,   COUNTER,   CounterMapBase>::template type,
+			cond_map_base<MapType & HIT_MISS,  HIT_MISS,  HitMissMapBase>::template type
 	    // clang-format on
 	    >;
 
@@ -204,6 +222,8 @@ using SemanticMap  = UFOMap<SEMANTIC>;
 using SurfelMap    = UFOMap<SURFEL>;
 using DistanceMap  = UFOMap<DISTANCE>;
 using IntensityMap = UFOMap<INTENSITY>;
+using CounterMap   = UFOMap<COUNTER>;
+using HitMissMap   = UFOMap<HIT_MISS>;
 // clang-format on
 }  // namespace ufo::map
 

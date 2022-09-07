@@ -39,12 +39,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_PREDICATE_SIGNED_DISTANCE_H
-#define UFO_MAP_PREDICATE_SIGNED_DISTANCE_H
+#ifndef UFO_MAP_EXAMPLE_NODE_H
+#define UFO_MAP_EXAMPLE_NODE_H
 
-namespace ufo::map::predicate
+// STL
+#include <array>
+#include <type_traits>
+
+namespace ufo::map
 {
+template <bool Single = false>
+struct ExampleNode {
+	ATTRIBUTE
+};
+}  // namespace ufo::map
 
-}
-
-#endif  // UFO_MAP_PREDICATE_SIGNED_DISTANCE_H
+#endif  // UFO_MAP_EXAMPLE_NODE_H

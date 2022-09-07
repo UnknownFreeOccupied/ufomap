@@ -39,22 +39,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_CODE_NODE_HANDLE_H
-#define UFO_MAP_CODE_NODE_HANDLE_H
+#ifndef UFO_MAP_COUNTER_NODE_H
+#define UFO_MAP_COUNTER_NODE_H
+
+// STL
+#include <array>
+#include <cstdint>
+#include <type_traits>
 
 namespace ufo::map
 {
-template <typename Value, typename NodeAlloc>
-class NodeHandle
-{
-};
+template <bool Single = false>
+struct CounterNode {
+	using counter_t = uint32_t;
 
-template <typename Iterator, typename NodeHandle>
-struct NodeInsertReturn {
-	Iterator position = Iterator();
-	bool inserted = false;
-	NodeHandle node;
+	std::conditional_t<Single, counter_t, std::array<counter_t, 8>> counter;
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_CODE_NODE_HANDLE_H
+#endif  // UFO_MAP_COUNTER_NODE_H

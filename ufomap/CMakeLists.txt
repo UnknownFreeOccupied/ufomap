@@ -53,7 +53,9 @@ set(HEADER_LIST
 )
 
 set(SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/map/code.cpp"
 	"${PROJECT_SOURCE_DIR}/src/map/io.cpp"
+	"${PROJECT_SOURCE_DIR}/src/map/key.cpp"
 )
 
 find_package(PkgConfig REQUIRED)

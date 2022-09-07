@@ -44,45 +44,27 @@
 
 // STL
 #include <cstdint>
-#include <utility>
 
 namespace ufo::map
 {
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
-enum class PropagationCriteria { MIN, MAX, MEAN };
+enum class PropagationCriteria { MIN, MAX, MEAN, SUM };
 
-using depth_t = uint8_t;
-using time_step_t = uint32_t;
-
-// TODO: New types
-// using coord_t = float;
-// using resolution_t = double;
-// using index_t = uint_fast8_t;
-// using index_field_t = uint8_t;
-// using depth_t = uint_fast8_t;
-// using key_t = uint_fast32_t;
-// using code_t = uint_fast64_t;
-// using occupancy_t = float;
-// using time_t = float;
-// using color_t = uint8_t;
-// using semantic_label_t = uint32_t;
-// using semantic_value_t = float;
-// using semantic_container_t = ...;
-
-// Check if
-template <template <typename...> class Base, typename Derived>
-struct is_base_of_template_impl {
-	template <typename... Ts>
-	static constexpr std::true_type test(Base<Ts...> const*);
-	static constexpr std::false_type test(...);
-	using type = decltype(test(std::declval<Derived*>()));
-};
-
-template <template <typename...> class Base, typename Derived>
-using is_base_of_template = typename is_base_of_template_impl<Base, Derived>::type;
-
-template <template <typename...> class Base, typename Derived>
-inline constexpr bool is_base_of_template_v = is_base_of_template<Base, Derived>::value;
+using coord_t = float;
+using node_size_t = double;
+using index_t = uint_fast8_t;
+using index_field_t = uint8_t;
+using depth_t = uint_fast8_t;
+using key_t = uint_fast32_t;
+using code_t = uint_fast64_t;
+using occupancy_t = uint8_t;
+using time_t = float;
+using color_t = uint8_t;
+using semantic_label_t = uint32_t;
+using semantic_value_t = float;
+using semantic_container_t = ...;
+using intensity_t = float;
+using counter_t = uint32_t;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TYPES_H

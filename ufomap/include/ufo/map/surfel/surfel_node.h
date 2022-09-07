@@ -46,8 +46,10 @@
 #include <ufo/map/surfel/surfel.h>
 
 // STL
+#include <array>
 #include <cstdint>
 #include <memory>
+#include <type_traits>
 
 namespace ufo::map
 {
