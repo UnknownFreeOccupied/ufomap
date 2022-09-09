@@ -58,18 +58,19 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Node, bool ReuseNodes, bool LockLess, template <class> class... Bases>
+template <class Node, bool ReuseNodes, bool LockLess, bool KeepCount,
+          template <class> class... Bases>
 class OctreeMapBase
-    : public OctreeBase<OctreeMapBase<Node, ReuseNodes, LockLess, Bases...>, Node,
-                        ReuseNodes, LockLess>,
-      public Bases<OctreeMapBase<Node, ReuseNodes, LockLess, Bases...>>...
+    : public OctreeBase<OctreeMapBase<Node, ReuseNodes, LockLess, KeepCount, Bases...>,
+                        Node, ReuseNodes, LockLess, KeepCount>,
+      public Bases<OctreeMapBase<Node, ReuseNodes, LockLess, KeepCount, Bases...>>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMapBase, Node, ReuseNodes, LockLess>;
+	using Octree = OctreeBase<OctreeMapBase, Node, ReuseNodes, LockLess, KeepCount>;
 	using typename Octree::LeafNode;
 
 	//
@@ -88,8 +89,9 @@ class OctreeMapBase
 	// Constructors
 	//
 
-	OctreeMapBase(resolution_t res = 0.1, depth_t depth_levels = 16, bool auto_prune = true)
-	    : Octree(res, depth_levels, auto_prune)
+	OctreeMapBase(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16,
+	              bool auto_prune = true)
+	    : Octree(leaf_node_size, depth_levels, auto_prune)
 	{
 		initRoot();
 	}
@@ -112,10 +114,11 @@ class OctreeMapBase
 		readFromOtherMap(other);
 	}
 
-	template <class Node2, bool ReuseNodes2, bool LockLess2,
+	template <class Node2, bool ReuseNodes2, bool LockLess2, bool KeepCount2,
 	          template <class> class... Bases2>
-	OctreeMapBase(OctreeMapBase<Node2, ReuseNodes2, LockLess2, Bases2...> const& other)
-	    : Octree(other.resolution(), other.depthLevels(), other.automaticPruning())
+	OctreeMapBase(
+	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, KeepCount2, Bases2...> const& other)
+	    : Octree(other), Bases<OctreeMapBase>(other)...
 	{
 		readFromOtherMap(other);
 	}
@@ -133,9 +136,9 @@ class OctreeMapBase
 	}
 
 	template <class Node2, bool ReuseNodes2, bool LockLess2,
-	          template <class> class... Bases2>
+	          bool KeepCount2m template <class> class... Bases2>
 	OctreeMapBase& operator=(
-	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, Bases2...> const& rhs)
+	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, KeepCount2, Bases2...> const& rhs)
 	{
 		Octree::operator=(rhs);
 		(Bases<OctreeMapBase>::operator=(rhs), ...);

@@ -51,8 +51,8 @@ namespace ufo::map
 {
 template <bool Single = false>
 struct HitMissNode {
-	std::conditional_t<Single, counter_t, std::array<counter_t, 8>> hit;
-	std::conditional_t<Single, counter_t, std::array<counter_t, 8>> miss;
+	std::conditional_t<Single, count_t, std::array<count_t, 8>> hit;
+	std::conditional_t<Single, count_t, std::array<count_t, 8>> miss;
 };
 }  // namespace ufo::map
 

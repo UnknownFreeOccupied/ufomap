@@ -85,26 +85,26 @@ struct OctreeLeafNode : Data {
 	// Is leaf
 	//
 
-	constexpr index_field_t leaf() const noexcept { return leaf_; }
+	constexpr index_field_t isLeaf() const noexcept { return leaf_; }
 
-	constexpr index_field_t leaf(index_field_t indices) const noexcept
+	constexpr index_field_t isLeaf(index_field_t indices) const noexcept
 	{
 		return leaf_ & indices;
 	}
 
-	constexpr bool leafIndex(index_t index) const noexcept
+	constexpr bool isLeafIndex(index_t index) const noexcept
 	{
 		return (leaf_ >> index) & index_t(1);
 	}
 
-	constexpr bool allLeaf() const noexcept
+	constexpr bool isAllLeaf() const noexcept
 	{
 		return std::numeric_limits<index_field_t>::max() == leaf_;
 	}
 
-	constexpr bool anyLeaf() const noexcept { return 0 != leaf_; }
+	constexpr bool isAnyLeaf() const noexcept { return 0 != leaf_; }
 
-	constexpr bool noneLeaf() const noexcept { return 0 == leaf_; }
+	constexpr bool isNoneLeaf() const noexcept { return 0 == leaf_; }
 
 	//
 	// Set leaf

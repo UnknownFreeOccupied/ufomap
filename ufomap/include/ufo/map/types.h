@@ -64,7 +64,7 @@ using semantic_label_t = uint32_t;
 using semantic_value_t = float;
 using semantic_container_t = ...;
 using intensity_t = float;
-using counter_t = uint32_t;
+using count_t = uint32_t;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TYPES_H
