@@ -58,19 +58,19 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Node, bool ReuseNodes, bool LockLess, bool KeepCount,
+template <class Node, bool ReuseNodes, bool LockLess, bool CountNodes,
           template <class> class... Bases>
 class OctreeMapBase
-    : public OctreeBase<OctreeMapBase<Node, ReuseNodes, LockLess, KeepCount, Bases...>,
-                        Node, ReuseNodes, LockLess, KeepCount>,
-      public Bases<OctreeMapBase<Node, ReuseNodes, LockLess, KeepCount, Bases...>>...
+    : public OctreeBase<OctreeMapBase<Node, ReuseNodes, LockLess, CountNodes, Bases...>,
+                        Node, ReuseNodes, LockLess, CountNodes>,
+      public Bases<OctreeMapBase<Node, ReuseNodes, LockLess, CountNodes, Bases...>>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMapBase, Node, ReuseNodes, LockLess, KeepCount>;
+	using Octree = OctreeBase<OctreeMapBase, Node, ReuseNodes, LockLess, CountNodes>;
 	using typename Octree::LeafNode;
 
 	//
@@ -114,10 +114,10 @@ class OctreeMapBase
 		readFromOtherMap(other);
 	}
 
-	template <class Node2, bool ReuseNodes2, bool LockLess2, bool KeepCount2,
+	template <class Node2, bool ReuseNodes2, bool LockLess2, bool CountNodes2,
 	          template <class> class... Bases2>
 	OctreeMapBase(
-	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, KeepCount2, Bases2...> const& other)
+	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, CountNodes2, Bases2...> const& other)
 	    : Octree(other), Bases<OctreeMapBase>(other)...
 	{
 		readFromOtherMap(other);
@@ -136,9 +136,9 @@ class OctreeMapBase
 	}
 
 	template <class Node2, bool ReuseNodes2, bool LockLess2,
-	          bool KeepCount2m template <class> class... Bases2>
+	          bool CountNodes2m template <class> class... Bases2>
 	OctreeMapBase& operator=(
-	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, KeepCount2, Bases2...> const& rhs)
+	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, CountNodes2, Bases2...> const& rhs)
 	{
 		Octree::operator=(rhs);
 		(Bases<OctreeMapBase>::operator=(rhs), ...);

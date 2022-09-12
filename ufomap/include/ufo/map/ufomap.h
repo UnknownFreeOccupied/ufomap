@@ -116,7 +116,7 @@ enum MapType : mt_t {
 //
 
 template <mt_t MapType, bool ReuseNodes = false, bool LockLess = false,
-          bool KeepCount = true>
+          bool CountNodes = true>
 class UFOMap
     : public OctreeMapBase<
           // clang-format off
@@ -130,7 +130,7 @@ class UFOMap
 												 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
                          cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
                          cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
-          ReuseNodes, LockLess, KeepCount,
+          ReuseNodes, LockLess, CountNodes,
 					// Order does not matter
           cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
           cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,
@@ -156,7 +156,7 @@ class UFOMap
 										 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
 	                   cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
 	                   cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
-	    ReuseNodes, LockLess, KeepCount
+	    ReuseNodes, LockLess, CountNodes
 	    cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
 	    cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,
 	    cond_map_base<MapType & COLOR,     COLOR,     ColorMapBase>::template type,
@@ -189,8 +189,8 @@ class UFOMap
 
 	UFOMap(UFOMap const& other) = default;
 
-	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool KeepCount2>
-	UFOMap(UFOMap<MapType2, ReuseNodes2, LockLess2, KeepCount2> const& other) : Base(other)
+	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool CountNodes2>
+	UFOMap(UFOMap<MapType2, ReuseNodes2, LockLess2, CountNodes2> const& other) : Base(other)
 	{
 	}
 
@@ -202,8 +202,8 @@ class UFOMap
 
 	UFOMap& operator=(UFOMap const& rhs) = default;
 
-	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool KeepCount2>
-	UFOMap& operator=(UFOMap<MapType2, ReuseNodes2, LockLess2, KeepCount2> const& rhs)
+	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool CountNodes2>
+	UFOMap& operator=(UFOMap<MapType2, ReuseNodes2, LockLess2, CountNodes2> const& rhs)
 	{
 		Base::operator=(rhs);
 		return *this;

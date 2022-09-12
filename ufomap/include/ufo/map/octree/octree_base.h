@@ -79,7 +79,7 @@ namespace ufo::map
 {
 // Utilizing curiously recurring template pattern (CRTP)
 template <class Derived, class DataType, bool ReuseNodes = false, bool LockLess = false,
-          bool KeepCount = true>
+          bool CountNodes = true>
 class OctreeBase
 {
  private:
@@ -2649,9 +2649,9 @@ class OctreeBase
 	}
 
 	template <class Derived2, class DataType2, bool ReuseNodes2, bool LockLess2,
-	          bool KeepCount2>
+	          bool CountNodes2>
 	OctreeBase(
-	    OctreeBase<Derived2, DataType2, ReuseNodes2, LockLess2, KeepCount2> const& other)
+	    OctreeBase<Derived2, DataType2, ReuseNodes2, LockLess2, CountNodes2> const& other)
 	    : depth_levels_(other.depth_levels_),
 	      max_value_(other.max_value_),
 	      node_size_(other.node_size_),
@@ -2720,9 +2720,9 @@ class OctreeBase
 	}
 
 	template <class Derived2, class DataType2, bool ReuseNodes2, bool LockLess2,
-	          bool KeepCount2>
+	          bool CountNodes2>
 	OctreeBase& operator=(
-	    OctreeBase<Derived2, DataType2, ReuseNodes2, LockLess2, KeepCount2> const& rhs)
+	    OctreeBase<Derived2, DataType2, ReuseNodes2, LockLess2, CountNodes2> const& rhs)
 	{
 		// TODO: Should this clear?
 		clear(rhs.nodeSize(), rhs.depthLevels());
@@ -2771,10 +2771,11 @@ class OctreeBase
 
 	// TODO: Add comments
 
-	template <class BinaryFunction, class UnaryFunction,
+	template <class NodeType, class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
-	void apply(Node node, BinaryFunction f, UnaryFunction f2, bool const propagate)
+	void apply(NodeType const& node, BinaryFunction f, UnaryFunction f2,
+	           bool const propagate)
 	{
 		if (leaf(node)) {
 			f(leafNode(node), node.index());
@@ -2783,9 +2784,7 @@ class OctreeBase
 		}
 
 		if (!modified(node)) {
-			// Update all parents
 			setModifiedParents(node);
-
 			setModified(leafNode(node), ...);
 		}
 
