@@ -63,6 +63,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <deque>
 #include <fstream>
 #include <functional>
@@ -215,7 +216,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr node_size_t volume() const noexcept
 	{
-		auto s = size();
+		auto const s = size();
 		return s * s * s;
 	}
 
@@ -278,8 +279,8 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isWithin(coord_t x, coord_t y, coord_t z) const
 	{
-		auto max = nodeSize(rootDepth() - 1);
-		auto min = -max;
+		auto const max = nodeSize(rootDepth() - 1);
+		auto const min = -max;
 		return min <= x && min <= y && min <= z && max >= x && max >= y && max >= z;
 	}
 
@@ -2408,12 +2409,12 @@ class OctreeBase
 		depth_levels_ = depth_levels;
 		max_value_ = std::pow(2, depth_levels - 1);
 
-		std::generate(std::begin(node_size_), std::end(node_size_),
-		              [n = leaf_node_size]() mutable {
-			              auto const c = n;
-			              n *= 2.0;
-			              return c;
-		              });
+		// For increased precision
+		node_size_[0] = leaf_node_size;
+		int const s = node_size_.size();
+		for (int i = 1; s != i; ++i) {
+			node_size_[i] = std::ldexp(leaf_node_size, i);
+		}
 
 		std::transform(std::begin(node_size_), std::end(node_size_),
 		               std::begin(node_size_factor_), [](auto n) { return 1.0 / n; });
