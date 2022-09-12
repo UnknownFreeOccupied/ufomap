@@ -79,7 +79,15 @@ struct OctreeLeafNode : Data {
 		} else {
 			resetModified();
 		}
+
+		Data::fill(other, index);
 	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible() const { return isAllLeaf() && Data::isCollapsible(); }
 
 	//
 	// Is leaf
@@ -94,7 +102,7 @@ struct OctreeLeafNode : Data {
 
 	constexpr bool isLeafIndex(index_t index) const noexcept
 	{
-		return (leaf_ >> index) & index_t(1);
+		return (leaf_ >> index) & index_field_t(1);
 	}
 
 	constexpr bool isAllLeaf() const noexcept
@@ -107,6 +115,28 @@ struct OctreeLeafNode : Data {
 	constexpr bool isNoneLeaf() const noexcept { return 0 == leaf_; }
 
 	//
+	// Is parent
+	//
+
+	constexpr index_field_t isParent() const noexcept { return ~isLeaf(); }
+
+	constexpr index_field_t isParent(index_field_t indices) const noexcept
+	{
+		return ~isLeaf(indices);
+	}
+
+	constexpr bool isParentIndex(index_t index) const noexcept
+	{
+		return !isLeafIndex(index);
+	}
+
+	constexpr bool isAllParent() const noexcept { return isNoneLeaf(); }
+
+	constexpr bool isAnyParent() const noexcept { return !isAllLeaf(); }
+
+	constexpr bool isNoneParent() const noexcept { return !isAnyLeaf(); }
+
+	//
 	// Set leaf
 	//
 
@@ -114,7 +144,10 @@ struct OctreeLeafNode : Data {
 
 	constexpr void setLeaf(index_field_t indices) noexcept { leaf_ |= indices; }
 
-	constexpr void setLeafIndex(index_t index) noexcept { leaf_ |= index_t(1) << index; }
+	constexpr void setLeafIndex(index_t index) noexcept
+	{
+		leaf_ |= index_field_t(1) << index;
+	}
 
 	//
 	// Reset leaf
@@ -126,33 +159,33 @@ struct OctreeLeafNode : Data {
 
 	constexpr void resetLeafIndex(index_t index) noexcept
 	{
-		leaf_ &= ~(index_t(1) << index);
+		leaf_ &= ~(index_field_t(1) << index);
 	}
 
 	//
 	// Is modified
 	//
 
-	constexpr index_field_t modified() const noexcept { return modified_; }
+	constexpr index_field_t isModified() const noexcept { return modified_; }
 
-	constexpr index_field_t modified(index_field_t indices) const noexcept
+	constexpr index_field_t isModified(index_field_t indices) const noexcept
 	{
 		return modified_ & indices;
 	}
 
-	constexpr bool modifiedIndex(index_t index) const noexcept
+	constexpr bool isModifiedIndex(index_t index) const noexcept
 	{
-		return (modified_ >> index) & index_t(1);
+		return (modified_ >> index) & index_field_t(1);
 	}
 
-	constexpr bool allModified() const noexcept
+	constexpr bool isAllModified() const noexcept
 	{
 		return std::numeric_limits<index_field_t>::max() == modified_;
 	}
 
-	constexpr bool anyModified() const noexcept { return 0 != modified_; }
+	constexpr bool isAnyModified() const noexcept { return 0 != modified_; }
 
-	constexpr bool noneModified() const noexcept { return 0 == modified_; }
+	constexpr bool isNoneModified() const noexcept { return 0 == modified_; }
 
 	//
 	// Set modified
@@ -170,7 +203,7 @@ struct OctreeLeafNode : Data {
 
 	constexpr void setModifiedIndex(index_t index) noexcept
 	{
-		modified_ |= index_t(1) << index;
+		modified_ |= index_field_t(1) << index;
 	}
 
 	//
@@ -186,7 +219,7 @@ struct OctreeLeafNode : Data {
 
 	constexpr void resetModifiedIndex(index_t index) noexcept
 	{
-		modified_ &= ~(index_t(1) << index);
+		modified_ &= ~(index_field_t(1) << index);
 	}
 
  private:

@@ -47,11 +47,15 @@
 
 namespace ufo::map
 {
-template <std::uint64_t Num>
+template <mt_t Num>
 struct EmptyNode {
 	constexpr bool operator==(EmptyNode) const noexcept { return true; }
 
 	constexpr bool operator!=(EmptyNode) const noexcept { return false; }
+
+	constexpr void fill(EmptyNode const&, index_t) const noexcept {}
+
+	[[nodiscard]] constexpr bool isCollapsible() const noexcept { return true; }
 };
 }  // namespace ufo::map
 

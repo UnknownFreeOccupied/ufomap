@@ -54,9 +54,6 @@ namespace ufo::map
 template <typename T = float,
           typename std::enable_if_t<std::is_floating_point_v<T>>* = nullptr>
 struct Surfel {
-	template <typename T2>
-	friend class Surfel<T2>;
-
 	using scalar_t = T;
 
 	constexpr Surfel() = default;
@@ -64,31 +61,9 @@ struct Surfel {
 	constexpr Surfel(math::Vector3<scalar_t> point) : num_points_(1), sum_(point) {}
 
 	template <class InputIt>
-	constexpr Surfel(InputIt first, InputIt last) : num_points_(std::distance(first, last))
+	constexpr Surfel(InputIt first, InputIt last)
 	{
-		if (first == last) {
-			return;
-		}
-
-		for (; first != last; ++first) {
-			sum_ += *first;
-
-			sum_squares_[0] = (*first)[0] * (*first)[0];
-			sum_squares_[1] = (*first)[0] * (*first)[1];
-			sum_squares_[2] = (*first)[0] * (*first)[2];
-			sum_squares_[3] = (*first)[1] * (*first)[1];
-			sum_squares_[4] = (*first)[1] * (*first)[2];
-			sum_squares_[5] = (*first)[2] * (*first)[2];
-		}
-
-		scalar_t n = scalar_t(1) / scalar_t(num_points_);
-
-		sum_squares_[0] -= sum_[0] * sum_[0] * n;
-		sum_squares_[1] -= sum_[0] * sum_[1] * n;
-		sum_squares_[2] -= sum_[0] * sum_[2] * n;
-		sum_squares_[3] -= sum_[1] * sum_[1] * n;
-		sum_squares_[4] -= sum_[1] * sum_[2] * n;
-		sum_squares_[5] -= sum_[2] * sum_[2] * n;
+		addPoint(first, last);
 	}
 
 	constexpr Surfel(std::initializer_list<math::Vector3<scalar_t>> points)
@@ -98,28 +73,9 @@ struct Surfel {
 
 	constexpr Surfel(Surfel const& other) = default;
 
-	template <typename T2>
-	constexpr Surfel(Surfel<T2> const& other)
-	    : num_points_(other.num_points_),
-	      sum_(other.sum_),
-	      sum_squares_{other.sum_squares_[0], other.sum_squares_[1], other.sum_squares_[2],
-	                   other.sum_squares_[3], other.sum_squares_[4], other.sum_squares_[5]}
-	{
-	}
-
 	constexpr Surfel(Surfel&& other) = default;
 
 	constexpr Surfel& operator=(Surfel const& rhs) = default;
-
-	template <typename T2>
-	constexpr Surfel& operator=(Surfel<T2> const& rhs)
-	{
-		num_points_ = rhs.num_points_;
-		sum_ = other.sum_;
-		for (std::size_t i = 0; sum_squares_.size() != i; ++i) {
-			sum_squares_[i] = rhs.sum_squares_[i];
-		}
-	}
 
 	constexpr Surfel& operator=(Surfel&& rhs) = default;
 
@@ -155,26 +111,34 @@ struct Surfel {
 
 	constexpr void addSurfel(Surfel const& other)
 	{
-		if (0 == num_points_) {
+		auto const n = num_points_;
+		if (0 == n) {
 			num_points_ = other.num_points_;
 			sum_ = other.sum_;
 			sum_squares_ = other.sum_squares_;
 		} else {
-			scalar_t const n = num_points_;
-			scalar_t const n_o = other.num_points_;
+			math::Vector3<double> s = sum_;
+			math::Vector3<double> s_o = other.sum_;
+			auto const n_o = other.num_points_;
 
-			auto const alpha = scalar_t(1) / (n * n_o * (n + n_o));
-			auto const beta = (sum_ * n_o) - (other.sum_ * n);
+			auto const alpha = n * n_o * (n + n_o);
+			auto const beta = (s * n_o) - (s_o * n);
 
-			num_points_ += other.num_points_;
-			sum_ += other.sum_;
+			sum_squares_[0] =
+			    sum_squares_[0] + (other.sum_squares_[0] + beta[0] * beta[0] / alpha);
+			sum_squares_[1] =
+			    sum_squares_[1] + (other.sum_squares_[1] + beta[0] * beta[1] / alpha);
+			sum_squares_[2] =
+			    sum_squares_[2] + (other.sum_squares_[2] + beta[0] * beta[2] / alpha);
+			sum_squares_[3] =
+			    sum_squares_[3] + (other.sum_squares_[3] + beta[1] * beta[1] / alpha);
+			sum_squares_[4] =
+			    sum_squares_[4] + (other.sum_squares_[4] + beta[1] * beta[2] / alpha);
+			sum_squares_[5] =
+			    sum_squares_[5] + (other.sum_squares_[5] + beta[2] * beta[2] / alpha);
 
-			sum_squares_[0] += other.sum_squares_[0] + alpha * beta[0] * beta[0];
-			sum_squares_[1] += other.sum_squares_[1] + alpha * beta[0] * beta[1];
-			sum_squares_[2] += other.sum_squares_[2] + alpha * beta[0] * beta[2];
-			sum_squares_[3] += other.sum_squares_[3] + alpha * beta[1] * beta[1];
-			sum_squares_[4] += other.sum_squares_[4] + alpha * beta[1] * beta[2];
-			sum_squares_[5] += other.sum_squares_[5] + alpha * beta[2] * beta[2];
+			sum_ = s + s_o;
+			num_points_ += n_o;
 		}
 	}
 
@@ -196,94 +160,121 @@ struct Surfel {
 
 	constexpr void removeSurfel(Surfel const& other)
 	{
+		// FIXME: Update with double precision
 		if (other.num_points_ >= num_points_) {
 			clear();
 			return;
 		}
 
-		num_points_ -= other.num_points_;
 		sum_ -= other.sum_;
+		num_points_ -= other.num_points_;
 
-		scalar_t const n = num_points_;
-		scalar_t const n_o = other.num_points_;
+		auto const n = num_points_;
+		auto const n_o = other.num_points_;
 
-		auto const& alpha = scalar_t(1) / (n * n_o * (n + n_o));
-		auto const& beta = (sum_ * n_o) - (other.sum_ * n);
+		auto const alpha = n * n_o * (n + n_o);
+		auto const beta = (sum_ * n_o) - (other.sum_ * n);
 
-		sum_squares_[0] -= other.sum_squares_[0] - alpha * beta[0] * beta[0];
-		sum_squares_[1] -= other.sum_squares_[1] - alpha * beta[0] * beta[1];
-		sum_squares_[2] -= other.sum_squares_[2] - alpha * beta[0] * beta[2];
-		sum_squares_[3] -= other.sum_squares_[3] - alpha * beta[1] * beta[1];
-		sum_squares_[4] -= other.sum_squares_[4] - alpha * beta[1] * beta[2];
-		sum_squares_[5] -= other.sum_squares_[5] - alpha * beta[2] * beta[2];
+		sum_squares_[0] -= other.sum_squares_[0] - beta[0] * beta[0] / alpha;
+		sum_squares_[1] -= other.sum_squares_[1] - beta[0] * beta[1] / alpha;
+		sum_squares_[2] -= other.sum_squares_[2] - beta[0] * beta[2] / alpha;
+		sum_squares_[3] -= other.sum_squares_[3] - beta[1] * beta[1] / alpha;
+		sum_squares_[4] -= other.sum_squares_[4] - beta[1] * beta[2] / alpha;
+		sum_squares_[5] -= other.sum_squares_[5] - beta[2] * beta[2] / alpha;
 	}
 
 	//
 	// Add point
 	//
 
-	constexpr void addPoint(math::Vector3<scalar_t> point)
+	constexpr void addPoint(math::Vector3<double> point)
 	{
-		switch (num_points_) {
-			case 0:
-				num_points_ = 1;
-				sum_ = point;
-				return;
-			case 1:
-				++num_points_;
-				sum_ += point;
-			default:
-				scalar_t const n = num_points_;
+		auto const n = num_points_;
 
-				auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
-				auto const beta = (sum_ - (point * n));
-
-				++num_points_;
-				sum_ += point;
-
-				sum_squares_[0] += alpha * beta[0] * beta[0];
-				sum_squares_[1] += alpha * beta[0] * beta[1];
-				sum_squares_[2] += alpha * beta[0] * beta[2];
-				sum_squares_[3] += alpha * beta[1] * beta[1];
-				sum_squares_[4] += alpha * beta[1] * beta[2];
-				sum_squares_[5] += alpha * beta[2] * beta[2];
-				break;
+		if (0 == n) {
+			num_points_ = 1;
+			sum_ = point;
+			return;
 		}
+
+		math::Vector3<double> s = sum_;
+		auto const alpha = n * (n + 1);
+		auto const beta = (s - (point * n));
+
+		sum_squares_[0] = sum_squares_[0] + (beta[0] * beta[0] / alpha);
+		sum_squares_[1] = sum_squares_[1] + (beta[0] * beta[1] / alpha);
+		sum_squares_[2] = sum_squares_[2] + (beta[0] * beta[2] / alpha);
+		sum_squares_[3] = sum_squares_[3] + (beta[1] * beta[1] / alpha);
+		sum_squares_[4] = sum_squares_[4] + (beta[1] * beta[2] / alpha);
+		sum_squares_[5] = sum_squares_[5] + (beta[2] * beta[2] / alpha);
+
+		sum_ = s + point;
+		++num_points_;
 	}
 
 	template <class InputIt>
 	constexpr void addPoint(InputIt first, InputIt last)
 	{
+		if (first == last) {
+			return;
+		}
+
+		math::Vector3<double> s;
+		std::array<double, 6> ss{0, 0, 0, 0, 0, 0};
+		uint32_t n = 0;
+
+		for (; first != last; ++first) {
+			math::Vector3<double> const p = *first;
+			ss[0] += p[0] * p[0];
+			ss[1] += p[0] * p[1];
+			ss[2] += p[0] * p[2];
+			ss[3] += p[1] * p[1];
+			ss[4] += p[1] * p[2];
+			ss[5] += p[2] * p[2];
+
+			s += p;
+			++n;
+		}
+
+		if (1 == n) {
+			addPoint(s);
+			return;
+		}
+
+		ss[0] -= s[0] * s[0] / n;
+		ss[1] -= s[0] * s[1] / n;
+		ss[2] -= s[0] * s[2] / n;
+		ss[3] -= s[1] * s[1] / n;
+		ss[4] -= s[1] * s[2] / n;
+		ss[5] -= s[2] * s[2] / n;
+
 		if (empty()) {
-			// FIXME: Make into a function
-			if (first == last) {
-				return;
+			if (1 != n) {
+				sum_squares_[0] = ss[0];
+				sum_squares_[1] = ss[1];
+				sum_squares_[2] = ss[2];
+				sum_squares_[3] = ss[3];
+				sum_squares_[4] = ss[4];
+				sum_squares_[5] = ss[5];
 			}
-
-			num_points_ = std::distance(first, last);
-
-			for (; first != last; ++first) {
-				sum_ += *first;
-
-				sum_squares_[0] = (*first)[0] * (*first)[0];
-				sum_squares_[1] = (*first)[0] * (*first)[1];
-				sum_squares_[2] = (*first)[0] * (*first)[2];
-				sum_squares_[3] = (*first)[1] * (*first)[1];
-				sum_squares_[4] = (*first)[1] * (*first)[2];
-				sum_squares_[5] = (*first)[2] * (*first)[2];
-			}
-
-			scalar_t n = scalar_t(1) / scalar_t(num_points_);
-
-			sum_squares_[0] -= sum_[0] * sum_[0] * n;
-			sum_squares_[1] -= sum_[0] * sum_[1] * n;
-			sum_squares_[2] -= sum_[0] * sum_[2] * n;
-			sum_squares_[3] -= sum_[1] * sum_[1] * n;
-			sum_squares_[4] -= sum_[1] * sum_[2] * n;
-			sum_squares_[5] -= sum_[2] * sum_[2] * n;
+			sum_ = s;
+			num_points_ = n;
 		} else {
-			// FIXME: Improve
-			std::for_each(first, last, [this](auto&& p) { addPoint(p); });
+			math::Vector3<double> const s_c = sum_;
+			auto const n_c = num_points_;
+
+			auto const alpha = n_c * n * (n_c + n);
+			auto const beta = (s_c * n) - (s * n_c);
+
+			sum_squares_[0] = sum_squares_[0] + (ss[0] + beta[0] * beta[0] / alpha);
+			sum_squares_[1] = sum_squares_[1] + (ss[1] + beta[0] * beta[1] / alpha);
+			sum_squares_[2] = sum_squares_[2] + (ss[2] + beta[0] * beta[2] / alpha);
+			sum_squares_[3] = sum_squares_[3] + (ss[3] + beta[1] * beta[1] / alpha);
+			sum_squares_[4] = sum_squares_[4] + (ss[4] + beta[1] * beta[2] / alpha);
+			sum_squares_[5] = sum_squares_[5] + (ss[5] + beta[2] * beta[2] / alpha);
+
+			sum_ = s_c + s;
+			num_points_ += n;
 		}
 	}
 
@@ -296,29 +287,30 @@ struct Surfel {
 	// Remove point
 	//
 
-	constexpr void removePoint(math::Vector3<scalar_t> point)
+	constexpr void removePoint(math::Vector3<double> point)
 	{
-		switch (num_points_) {
+		auto const n = num_points_;
+
+		switch (n) {
 			case 0:
 				return;
 			case 1:
 				clear();
 				return;
 			default:
-				--num_points_;
-				sum_ -= point;
-
-				scalar_t const n = num_points_;
-
-				auto const alpha = scalar_t(1) / (n * (n + scalar_t(1)));
+				// FIXME: Update with double precision
+				auto const alpha = n * (n + 1);
 				auto const beta = (sum_ - (point * n));
 
-				sum_squares_[0] -= alpha * beta[0] * beta[0];
-				sum_squares_[1] -= alpha * beta[0] * beta[1];
-				sum_squares_[2] -= alpha * beta[0] * beta[2];
-				sum_squares_[3] -= alpha * beta[1] * beta[1];
-				sum_squares_[4] -= alpha * beta[1] * beta[2];
-				sum_squares_[5] -= alpha * beta[2] * beta[2];
+				sum_squares_[0] -= beta[0] * beta[0] / alpha;
+				sum_squares_[1] -= beta[0] * beta[1] / alpha;
+				sum_squares_[2] -= beta[0] * beta[2] / alpha;
+				sum_squares_[3] -= beta[1] * beta[1] / alpha;
+				sum_squares_[4] -= beta[1] * beta[2] / alpha;
+				sum_squares_[5] -= beta[2] * beta[2] / alpha;
+
+				sum_ -= point;
+				--num_points_;
 		}
 	}
 
@@ -326,7 +318,7 @@ struct Surfel {
 	constexpr void removePoint(InputIt first, InputIt last)
 	{
 		// FIXME: Improve
-		std::for_each(first, last, [this](auto&& p) { removePoint(p); });
+		std::for_each(first, last, [this](auto const& p) { removePoint(p); });
 	}
 
 	constexpr void removePoint(std::initializer_list<math::Vector3<scalar_t>> points)
@@ -349,46 +341,47 @@ struct Surfel {
 	// Get mean
 	//
 
-	constexpr math::Vector3<scalar_t> getMean() const
-	{
-		return sum_ / scalar_t(num_points_);
-	}
+	constexpr math::Vector3<scalar_t> getMean() const { return sum_ / num_points_; }
 
 	//
 	// Get normal
 	//
 
-	constexpr math::Vector3<scalar_t> getNormal() const
+	constexpr math::Vector3<double> getNormal() const
 	{
-		return getEigenVectors()[0].normalize();
+		return getEigenVectors(getSymmetricCovariance())[0].normalize();
 	}
 
-	constexpr scalar_t getPlanarity() const
+	//
+	// Get planarity
+	//
+
+	constexpr double getPlanarity() const
 	{
-		auto const e = getEigenValues();  // FIXME: Normalized?
-		return scalar_t(2) * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
+		auto const e = getEigenValues();
+		return 2 * (e[1] - e[0]) / (e[0] + e[1] + e[2]);
 	}
 
 	//
 	// Get covariance
 	//
 
-	constexpr std::array<std::array<scalar_t, 3>, 3> getCovariance() const
+	constexpr std::array<std::array<double, 3>, 3> getCovariance() const
 	{
 		using as = std::array<scalar_t, 3>;
 		using cov = std::array<as, 3>;
 
-		scalar_t const f = scalar_t(1) / (scalar_t(num_points_) - scalar_t(1));
-		return cov{as{f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2]},
-		           as{f * sum_squares_[1], f * sum_squares_[3], f * sum_squares_[4]},
-		           as{f * sum_squares_[2], f * sum_squares_[4], f * sum_squares_[5]}};
+		double const n = num_points_ - 1;
+		return cov{as{sum_squares_[0] / n, sum_squares_[1] / n, sum_squares_[2] / n},
+		           as{sum_squares_[1] / n, sum_squares_[3] / n, sum_squares_[4] / n},
+		           as{sum_squares_[2] / n, sum_squares_[4] / n, sum_squares_[5] / n}};
 	}
 
 	//
 	// Get eigenvalues
 	//
 
-	constexpr math::Vector3<scalar_t> getEigenValues() const
+	constexpr math::Vector3<double> getEigenValues() const
 	{
 		return getEigenValues(getSymmetricCovariance());
 	}
@@ -397,9 +390,13 @@ struct Surfel {
 	// Get eigen vectors
 	//
 
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors() const
+	constexpr std::array<math::Vector3<double>, 3> getEigenVectors() const
 	{
-		return getEigenVector(getSymmetricCovariance());
+		auto eigen_vectors = getEigenVectors(getSymmetricCovariance());
+		for (auto& v : eigen_vectors) {
+			v.normalize();  // FIXME: Needed?
+		}
+		return eigen_vectors;
 	}
 
 	//
@@ -425,168 +422,86 @@ struct Surfel {
 	// Get symmetric convariance
 	//
 
-	constexpr std::array<scalar_t, 6> getSymmetricCovariance() const
+	constexpr std::array<double, 6> getSymmetricCovariance() const
 	{
-		scalar_t const f = scalar_t(1) / (scalar_t(num_points_) - scalar_t(1));
-		return {f * sum_squares_[0], f * sum_squares_[1], f * sum_squares_[2],
-		        f * sum_squares_[3], f * sum_squares_[4], f * sum_squares_[5]};
+		double const n = num_points_ - 1;
+		return {sum_squares_[0] / n, sum_squares_[1] / n, sum_squares_[2] / n,
+		        sum_squares_[3] / n, sum_squares_[4] / n, sum_squares_[5] / n};
 	}
 
 	//
 	// Get eigen values
 	//
 
-	constexpr math::Vector3<scalar_t> getEigenValues(
-	    std::array<std::array<scalar_t, 3>, 3> const& m) const
+	constexpr math::Vector3<double> getEigenValues(std::array<double, 6> const& sym_m) const
 	{
-		auto const x_1 = m[0][0] * m[0][0] + m[1][1] * m[1][1] + m[2][2] * m[2][2] -
-		                 m[0][0] * m[1][1] - m[0][0] * m[2][2] - m[1][1] * m[2][2] +
-		                 3 * (m[1][0] * m[1][0] + m[0][2] * m[0][2] + m[2][1] * m[2][1]);
+		double const a = sym_m[0];
+		double const b = sym_m[3];
+		double const c = sym_m[5];
+		double const d = sym_m[1];
+		double const e = sym_m[4];
+		double const f = sym_m[2];
 
-		auto const x_2 = -(2 * m[0][0] - m[1][1] - m[2][2]) *
-		                     (2 * m[1][1] - m[0][0] - m[2][2]) *
-		                     (2 * m[2][2] - m[0][0] - m[1][1]) +
-		                 9 * ((2 * m[2][2] - m[0][0] - m[1][1]) * (m[1][0] * m[1][0]) +
-		                      (2 * m[1][1] - m[0][0] - m[2][2]) * (m[0][2] * m[0][2]) +
-		                      (2 * m[0][0] - m[1][1] - m[2][2]) * (m[2][1] * m[2][1])) -
-		                 54 * (m[0][1] * m[1][2] * m[0][2]);
+		double const x_1 =
+		    a * a + b * b + c * c - a * b - a * c - b * c + 3 * (d * d + f * f + e * e);
 
-		auto const phi = 0 != x_2
-		                     ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - (x_2 * x_2)) / x_2)
-		                     : scalar_t(M_PI) / 2;
+		double const x_2 = -(2 * a - b - c) * (2 * b - a - c) * (2 * c - a - b) +
+		                   9 * ((2 * c - a - b) * (d * d) + (2 * b - a - c) * (f * f) +
+		                        (2 * a - b - c) * (e * e)) -
+		                   54 * (d * e * f);
 
-		math::Vector3<scalar_t> e{
-		    (m[0][0] + m[1][1] + m[2][2] - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
-		    (m[0][0] + m[1][1] + m[2][2] +
-		     2 * std::sqrt(x_1) * std::cos((phi - scalar_t(M_PI)) / 3)) /
-		        3,
-		    (m[0][0] + m[1][1] + m[2][2] +
-		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
-		        3};
+		double const phi =
+		    0 < x_2
+		        ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2)
+		        : (0 > x_2
+		               ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - x_2 * x_2) / x_2) + M_PI
+		               : M_PI_2);
 
-		if (e[0] > e[1]) {
-			std::swap(e[0], e[1]);
-		}
-		if (e[0] > e[2]) {
-			std::swap(e[0], e[2]);
-		}
-		if (e[1] > e[2]) {
-			std::swap(e[1], e[2]);
-		}
-
-		return e;
-	}
-
-	constexpr math::Vector3<scalar_t> getEigenValues(
-	    std::array<scalar_t, 6> const& sym_m) const
-	{
-		auto const x_1 =
-		    sym_m[0] * sym_m[0] + sym_m[3] * sym_m[3] + sym_m[5] * sym_m[5] -
-		    sym_m[0] * sym_m[3] - sym_m[0] * sym_m[5] - sym_m[3] * sym_m[5] +
-		    3 * (sym_m[1] * sym_m[1] + sym_m[2] * sym_m[2] + sym_m[4] * sym_m[4]);
-
-		auto const x_2 = -(2 * sym_m[0] - sym_m[3] - sym_m[5]) *
-		                     (2 * sym_m[3] - sym_m[0] - sym_m[5]) *
-		                     (2 * sym_m[5] - sym_m[0] - sym_m[3]) +
-		                 9 * ((2 * sym_m[5] - sym_m[0] - sym_m[3]) * (sym_m[1] * sym_m[1]) +
-		                      (2 * sym_m[3] - sym_m[0] - sym_m[5]) * (sym_m[2] * sym_m[2]) +
-		                      (2 * sym_m[0] - sym_m[3] - sym_m[5]) * (sym_m[4] * sym_m[4])) -
-		                 54 * (sym_m[1] * sym_m[4] * sym_m[2]);
-
-		auto const phi = 0 != x_2
-		                     ? std::atan(std::sqrt(4 * x_1 * x_1 * x_1 - (x_2 * x_2)) / x_2)
-		                     : scalar_t(M_PI) / 2;
-
-		math::Vector3<scalar_t> e(
-		    (sym_m[0] + sym_m[3] + sym_m[5] - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
-		    (sym_m[0] + sym_m[3] + sym_m[5] +
-		     2 * std::sqrt(x_1) * std::cos((phi - scalar_t(M_PI)) / 3)) /
-		        3,
-		    (sym_m[0] + sym_m[3] + sym_m[5] +
-		     2 * std::sqrt(x_1) * std::cos((phi + scalar_t(M_PI)) / 3)) /
-		        3);
-
-		if (e[0] > e[1]) {
-			std::swap(e[0], e[1]);
-		}
-		if (e[0] > e[2]) {
-			std::swap(e[0], e[2]);
-		}
-		if (e[1] > e[2]) {
-			std::swap(e[1], e[2]);
-		}
-
-		return e;
+		return math::Vector3<double>(
+		    (a + b + c - 2 * std::sqrt(x_1) * std::cos(phi / 3)) / 3,
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi + M_PI) / 3)) / 3,
+		    (a + b + c + 2 * std::sqrt(x_1) * std::cos((phi - M_PI) / 3)) / 3);
 	}
 
 	//
 	// Get eigen vectors
 	//
 
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
-	    std::array<std::array<scalar_t, 3>, 3> const& m) const
-	{
-		return getEigenVectors(m, getEigenValues(m));
-	}
-
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
-	    std::array<scalar_t, 6> const& sym_m) const
+	constexpr std::array<math::Vector3<double>, 3> getEigenVectors(
+	    std::array<double, 6> const& sym_m) const
 	{
 		return getEigenVectors(sym_m, getEigenValues(sym_m));
 	}
 
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
-	    std::array<std::array<scalar_t, 3>, 3> const& m,
-	    math::Vector3<scalar_t> const& eigen_values) const
+	constexpr std::array<math::Vector3<double>, 3> getEigenVectors(
+	    std::array<double, 6> const& sym_m, math::Vector3<double> const& eigen_values) const
 	{
 		// FIXME: Make sure denominator is not zero
 
-		auto const m_1 = (m[1][0] * (m[2][2] - eigen_values[0]) - m[1][2] * m[2][0]) /
-		                 (m[2][0] * (m[1][1] - eigen_values[0]) - m[1][0] * m[2][1]);
+		double const a = sym_m[0];
+		double const b = sym_m[3];
+		double const c = sym_m[5];
+		double const d = sym_m[1];
+		double const e = sym_m[4];
+		double const f = 0 == sym_m[2] ? std::numeric_limits<float>::epsilon() : sym_m[2];
 
-		auto const m_2 = (m[1][0] * (m[2][2] - eigen_values[1]) - m[1][2] * m[2][0]) /
-		                 (m[2][0] * (m[1][1] - eigen_values[1]) - m[1][0] * m[2][1]);
+		double const l_1 = eigen_values[0];
+		double const l_2 = eigen_values[1];
+		double const l_3 = eigen_values[2];
 
-		auto const m_3 = (m[1][0] * (m[2][2] - eigen_values[2]) - m[1][2] * m[2][0]) /
-		                 (m[2][0] * (m[1][1] - eigen_values[2]) - m[1][0] * m[2][1]);
+		double const m_1 = (d * (c - l_1) - e * f) / (f * (b - l_1) - d * e);
+		double const m_2 = (d * (c - l_2) - e * f) / (f * (b - l_2) - d * e);
+		double const m_3 = (d * (c - l_3) - e * f) / (f * (b - l_3) - d * e);
 
-		return {math::Vector3<scalar_t>((eigen_values[0] - m[2][2] - m[2][1] * m_1) / m[2][0],
-		                                m_1, 1),
-		        math::Vector3<scalar_t>((eigen_values[1] - m[2][2] - m[2][1] * m_2) / m[2][0],
-		                                m_2, 1),
-		        math::Vector3<scalar_t>((eigen_values[2] - m[2][2] - m[2][1] * m_3) / m[2][0],
-		                                m_3, 1)};
-	}
-
-	constexpr std::array<math::Vector3<scalar_t>, 3> getEigenVectors(
-	    std::array<scalar_t, 6> const& sym_m,
-	    math::Vector3<scalar_t> const& eigen_values) const
-	{
-		// FIXME: Make sure denominator is not zero
-
-		auto const m_1 = (sym_m[1] * (sym_m[5] - eigen_values[0]) - sym_m[4] * sym_m[2]) /
-		                 (sym_m[2] * (sym_m[3] - eigen_values[0]) - sym_m[1] * sym_m[4]);
-
-		auto const m_2 = (sym_m[1] * (sym_m[5] - eigen_values[1]) - sym_m[4] * sym_m[2]) /
-		                 (sym_m[2] * (sym_m[3] - eigen_values[1]) - sym_m[1] * sym_m[4]);
-
-		auto const m_3 = (sym_m[1] * (sym_m[5] - eigen_values[2]) - sym_m[4] * sym_m[2]) /
-		                 (sym_m[2] * (sym_m[3] - eigen_values[2]) - sym_m[1] * sym_m[4]);
-
-		return {math::Vector3<scalar_t>(
-		            (eigen_values[0] - sym_m[5] - sym_m[4] * m_1) / sym_m[2], m_1, 1),
-		        math::Vector3<scalar_t>(
-		            (eigen_values[1] - sym_m[5] - sym_m[4] * m_2) / sym_m[2], m_2, 1),
-		        math::Vector3<scalar_t>(
-		            (eigen_values[2] - sym_m[5] - sym_m[4] * m_3) / sym_m[2], m_3, 1)};
+		return {math::Vector3<double>((l_1 - c - e * m_1) / f, m_1, 1),
+		        math::Vector3<double>((l_2 - c - e * m_2) / f, m_2, 1),
+		        math::Vector3<double>((l_3 - c - e * m_3) / f, m_3, 1)};
 	}
 
  private:
-	uint32_t num_points_ = 0;
-	math::Vector3<scalar_t> sum_;
 	std::array<scalar_t, 6> sum_squares_ = {0, 0, 0, 0, 0, 0};
-	// FIXME: Save planarity?
-	// FIXME: Save first view position or normal?
+	math::Vector3<scalar_t> sum_;
+	uint32_t num_points_ = 0;
 };
 }  // namespace ufo::map
 

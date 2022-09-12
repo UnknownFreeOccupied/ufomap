@@ -60,6 +60,8 @@ struct OctreeNodeBase : Nodes... {
 	{
 		(Nodes::fill(other, index), ...);
 	}
+
+	[[nodiscard]] bool isCollapsible() const { return (Nodes::isCollapsible() && ...); }
 };
 }  // namespace ufo::map
 
