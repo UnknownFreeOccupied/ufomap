@@ -376,7 +376,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isLeaf(Node node) const
 	{
-		return leafNode(node).leafIndex(node.index());
+		return isPureLeaf(node) || innerNode(node).isLeafIndex(node.index());
 	}
 
 	/*!
@@ -388,7 +388,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] bool isLeaf(Code code) const
 	{
-		return leafNode(code).leafIndex(node.index());
+		return isPureLeaf(node) || innerNode(code).isLeafIndex(code.index());
 	}
 
 	/*!
@@ -499,25 +499,29 @@ class OctreeBase
 
 	[[nodiscard]] constexpr bool isModified(Node node) const
 	{
-		return isModified(leafNode(node));
+		return leafNode(node).isModifiedIndex(node.index());
 	}
 
 	[[nodiscard]] constexpr bool isModified(Code code) const
 	{
-		return isModified(leafNode(code));
+		auto [n, d] = nodeAndDepth(code);
+		return n->isModifiedIndex(code.index(d));
 	}
 
-	[[nodiscard]] constexpr bool isModified(Key key) const { return modified(code(key)); }
+	[[nodiscard]] constexpr bool isModified(Key key) const
+	{
+		return isModified(toCode(key));
+	}
 
 	[[nodiscard]] constexpr bool isModified(Point3 coord, depth_t depth = 0) const
 	{
-		return isModified(code(coord, depth));
+		return isModified(toCode(coord, depth));
 	}
 
 	[[nodiscard]] constexpr bool isModified(coord_t x, coord_t y, coord_t z,
 	                                        depth_t depth = 0) const
 	{
-		return isModified(code(x, y, z, depth));
+		return isModified(toCode(x, y, z, depth));
 	}
 
 	//
@@ -527,49 +531,54 @@ class OctreeBase
 	void setModified(depth_t min_depth = 0)
 	{
 		if (rootDepth() >= min_depth) {
-			setModifiedRecurs(root(), rootDepth(), min_depth);
+			setModified(root(), rootIndex(), rootDepth(), min_depth);
 		}
 	}
 
 	void setModified(Node node, depth_t min_depth = 0)
 	{
-		if (node.depth() >= min_depth) {
-			if (0 == node.depth()) {
-				setModified(leafNode(node), true);
-			} else {
-				setModifiedRecurs(innerNode(node), node.depth(), min_depth);
-			}
-			setModifiedParentsRecurs(root(), rootDepth(), node.code());
+		if (rootDepth() < min_depth) {
+			return;
+		} else if (node.depth() < min_depth) {
+			setModifiedParents(node.code().toDepth(min_depth - 1));
+			return;
+		} else if (isPureLeaf(node)) {
+			leafNode(node).setModifiedIndex(node.index());
 		} else {
-			setModifiedParentsRecurs(root(), rootDepth(), node.code().toDepth(min_depth));
+			setModified(innerNode(node), node.index(), node.depth(), min_depth);
 		}
+		setModifiedParents(node.code().toDepth(min_depth));
 	}
 
 	void setModified(Code code, depth_t min_depth = 0)
 	{
-		if (code.depth() >= min_depth) {
-			if (0 == code.depth()) {
-				setModified(leafNode(code), true);
-			} else {
-				setModifiedRecurs(innerNode(code), code.depth(), min_depth);
-			}
-			setModifiedParentsRecurs(root(), rootDepth(), code);
+		if (rootDepth() < min_depth) {
+			return;
+		} else if (code.depth() < min_depth) {
+			setModifiedParents(code.toDepth(min_depth - 1));
+			return;
+		} else if (isPureLeaf(code)) {
+			createLeafNode(code).setModifiedIndex(code.index());
 		} else {
-			setModifiedParentsRecurs(root(), rootDepth(), code.toDepth(min_depth));
+			setModified(createInnerNode(code), code.index(), code.depth(), min_depth);
 		}
+		setModifiedParents(code.toDepth(min_depth));
 	}
 
-	void setModified(Key key, depth_t min_depth = 0) { setModified(code(key), min_depth); }
-
-	void setModified(Point3 coord, depth_t depth = 0, depth_t min_depth = 0)
+	void setModified(Key key, depth_t min_depth = 0)
 	{
-		setModified(code(coord, depth), min_depth);
+		setModified(toCode(key), min_depth);
 	}
 
-	void setModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
-	                 depth_t min_depth = 0)
+	void setModified(Point3 coord, depth_t min_depth = 0, depth_t depth = 0)
 	{
-		setModified(code(x, y, z, depth), min_depth);
+		setModified(toCode(coord, depth), min_depth);
+	}
+
+	void setModified(coord_t x, coord_t y, coord_t z, depth_t min_depth = 0,
+	                 depth_t depth = 0)
+	{
+		setModified(toCode(x, y, z, depth), min_depth);
 	}
 
 	//
@@ -578,42 +587,42 @@ class OctreeBase
 
 	void resetModified(depth_t max_depth = maxDepthLevels())
 	{
-		resetModifiedRecurs(root(), rootDepth(), max_depth);
+		resetModified(root(), rootIndex(), rootDepth(), max_depth);
 	}
 
 	void resetModified(Node node, depth_t max_depth = maxDepthLevels())
 	{
-		if (leaf(node)) {
+		if (isLeaf(node)) {
 			leafNode(node).resetModifiedIndex(node.index());
 		} else {
-			resetModifiedRecurs(innerNode(node), node.depth(), max_depth);
+			resetModified(innerNode(node), node.index(), node.depth(), max_depth);
 		}
 	}
 
 	void resetModified(Code code, depth_t max_depth = maxDepthLevels())
 	{
-		if (0 == code.depth()) {
-			setModified(leafNode(code), false);
+		if (isPureLeaf(code)) {
+			leafNode(code).resetModifiedIndex(code.index());
 		} else {
-			resetModifiedRecurs(innerNode(code), code.depth(), max_depth);
+			resetModified(innerNode(code), code.index(), code.depth(), max_depth);
 		}
 	}
 
 	void resetModified(Key key, depth_t max_depth = maxDepthLevels())
 	{
-		resetModified(code(key), max_depth);
+		resetModified(toCode(key), max_depth);
 	}
 
 	void resetModified(Point3 coord, depth_t depth = 0,
 	                   depth_t max_depth = maxDepthLevels())
 	{
-		resetModified(code(coord, depth), max_depth);
+		resetModified(toCode(coord, depth), max_depth);
 	}
 
 	void resetModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
 	                   depth_t max_depth = maxDepthLevels())
 	{
-		resetModified(code(x, y, z, depth), max_depth);
+		resetModified(toCode(x, y, z, depth), max_depth);
 	}
 
 	//
@@ -628,8 +637,8 @@ class OctreeBase
 	void propagateModified(Node node, bool keep_modified = false,
 	                       depth_t max_depth = maxDepthLevels())
 	{
-		if (0 == node.depth()) {
-			// TODO: What to do?
+		if (isPureLeaf(node)) {
+			propagateModified(leafNode(node), node.index(), keep_modified);
 		} else {
 			propagateModified(innerNode(node), node.index() node.depth(), keep_modified,
 			                  max_depth);
@@ -639,8 +648,8 @@ class OctreeBase
 	void propagateModified(Code code, bool keep_modified = false,
 	                       depth_t max_depth = maxDepthLevels())
 	{
-		if (0 == code.depth()) {
-			// TODO: What to do?
+		if (isPureLeaf(code)) {
+			propagateModified(leafNode(code), code.index(), keep_modified);
 		} else {
 			propagateModified(innerNode(code), code.index() code.depth(), keep_modified,
 			                  max_depth);
@@ -650,19 +659,19 @@ class OctreeBase
 	void propagateModified(Key key, bool keep_modified = false,
 	                       depth_t max_depth = maxDepthLevels())
 	{
-		propagateModified(code(key), keep_modified, max_depth);
+		propagateModified(toCode(key), keep_modified, max_depth);
 	}
 
 	void propagateModified(Point3 coord, depth_t depth = 0, bool keep_modified = false,
 	                       depth_t max_depth = maxDepthLevels())
 	{
-		propagateModified(code(coord, depth), depth, keep_modified, max_depth);
+		propagateModified(toCode(coord, depth), depth, keep_modified, max_depth);
 	}
 
 	void propagateModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0,
 	                       bool keep_modified = false, depth_t max_depth = maxDepthLevels())
 	{
-		propagateModified(code(x, y, z, depth), keep_modified, max_depth);
+		propagateModified(toCode(x, y, z, depth), keep_modified, max_depth);
 	}
 
 	/**************************************************************************************
@@ -679,16 +688,16 @@ class OctreeBase
 
 	[[nodiscard]] bool isRoot(Code code) const { return rootCode() == code; }
 
-	[[nodiscard]] bool isRoot(Key key) const { return isRoot(code(key)); }
+	[[nodiscard]] bool isRoot(Key key) const { return isRoot(toCode(key)); }
 
 	[[nodiscard]] bool isRoot(Point3 coord, depth_t depth = 0) const
 	{
-		return isRoot(code(coord, depth));
+		return isRoot(toCode(coord, depth));
 	}
 
 	[[nodiscard]] bool isRoot(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
-		return isRoot(code(x, y, z, depth));
+		return isRoot(toCode(x, y, z, depth));
 	}
 
 	//
@@ -2596,6 +2605,30 @@ class OctreeBase
 	}
 
 	//
+	// Create node
+	//
+
+	[[nodiscard]] LeafNode const& createLeafNode(Code code) const
+	{
+		// TODO: Implement
+	}
+
+	[[nodiscard]] LeafNode& createLeafNode(Code code)
+	{
+		// TODO: Implement
+	}
+
+	[[nodiscard]] InnerNode const& createInnerNode(Code code) const
+	{
+		// TODO: Implement
+	}
+
+	[[nodiscard]] InnerNode& createInnerNode(Code code)
+	{
+		// TODO: Implement
+	}
+
+	//
 	// Get children
 	//
 
@@ -3027,9 +3060,21 @@ class OctreeBase
 	// Set modified
 	//
 
+	void setModified(InnerNode& node, index_t index, depth_t depth, depth_t min_depth)
+	{
+		node.setModifiedIndex(index);
+
+		if (min_depth < depth) {
+			if (1 == depth) {
+				leafChild(node, index).setModified();
+			} else {
+				setModifiedRecurs(innerChild(node, index), depth - 1, min_depth);
+			}
+		}
+	}
+
 	void setModifiedRecurs(InnerNode& node, depth_t depth, depth_t min_depth)
 	{
-		// TODO: What happens if node is root?
 		node.setModified();
 
 		if (node.isAllLeaf() || depth == min_depth) {
@@ -3051,22 +3096,34 @@ class OctreeBase
 	}
 
 	//
+	// Reset modified
+	//
+
+	void resetModified(InnerNode& node, index_t index, depth_t depth, depth_t max_depth)
+	{
+		// TODO: Implement
+	}
+
+	void resetModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
+	{
+		// TODO: Implement
+	}
+
+	//
 	// Set parents modified
 	//
 
-	void setModifiedParents(Node& node)
+	void setModifiedParents(Code code)
 	{
-		if (node.depth() >= rootDepth()) {
-			return;
-		}
-		setModifiedParentsRecurs(root(), rootIndex(), rootDepth(), node.code());
+		setModifiedParentsRecurs(root(), rootDepth(), code);
 	}
 
 	// NOTE: Assumes code has depth higher then depth
-	void setModifiedParentsRecurs(InnerNode& node, index_t index, depth_t depth, Code code)
+	void setModifiedParentsRecurs(InnerNode& node, depth_t depth, Code code)
 	{
+		auto index = code.index(depth);
 		node.setModifiedIndex(index);
-		if (code.depth() < depth - 1) {
+		if (code.depth() < depth - 1 && node.isParentIndex(index)) {
 			setModifiedParentsRecurs(innerChild(node, index), code.index(depth - 1), depth - 1,
 			                         code);
 		}
@@ -3125,9 +3182,31 @@ class OctreeBase
 		prune(node, indices, depth);
 	}
 
-	void propagateModified()
+	void propagateModified(LeafNode& node, index_t index, bool keep_modified)
 	{
-		// TODO: Implement
+		if (!keep_modified) {
+			node.resetModifiedIndex(index);
+		}
+	}
+
+	void propagateModified(InnerNode& node, index_t index, depth_t depth,
+	                       bool keep_modified, depth_t max_depth)
+	{
+		if (!node.isModifiedIndex(index)) {
+			return;  // Nothing modified here
+		}
+
+		if (1 == depth) {
+			if (!keep_modified) {
+				leafChild(node, index).resetModified();
+			}
+		} else {
+			if (keep_modified) {
+				propagateModifiedRecurs<true>(innerChild(node, index), depth - 1, max_depth);
+			} else {
+				propagateModifiedRecurs<false>(innerChild(node, index), depth - 1, max_depth);
+			}
+		}
 	}
 
 	template <bool KeepModified>

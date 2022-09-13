@@ -130,6 +130,7 @@ class UFOMap
 												 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
                          cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
                          cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
+					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY>, void>,
           ReuseNodes, LockLess, CountNodes,
 					// Order does not matter
           cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
@@ -156,6 +157,7 @@ class UFOMap
 										 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
 	                   cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
 	                   cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
+			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY>, void>,
 	    ReuseNodes, LockLess, CountNodes
 	    cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
 	    cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,

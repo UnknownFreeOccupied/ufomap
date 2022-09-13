@@ -58,19 +58,22 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Node, bool ReuseNodes, bool LockLess, bool CountNodes,
+template <class Data, class InnerData, bool ReuseNodes, bool LockLess, bool CountNodes,
           template <class> class... Bases>
 class OctreeMapBase
-    : public OctreeBase<OctreeMapBase<Node, ReuseNodes, LockLess, CountNodes, Bases...>,
-                        Node, ReuseNodes, LockLess, CountNodes>,
-      public Bases<OctreeMapBase<Node, ReuseNodes, LockLess, CountNodes, Bases...>>...
+    : public OctreeBase<
+          OctreeMapBase<Data, InnerData, ReuseNodes, LockLess, CountNodes, Bases...>,
+          Data, InnerData, ReuseNodes, LockLess, CountNodes>,
+      public Bases<
+          OctreeMapBase<Data, InnerData, ReuseNodes, LockLess, CountNodes, Bases...>>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMapBase, Node, ReuseNodes, LockLess, CountNodes>;
+	using Octree =
+	    OctreeBase<OctreeMapBase, Data, InnerData, ReuseNodes, LockLess, CountNodes>;
 	using typename Octree::LeafNode;
 
 	//
@@ -114,10 +117,10 @@ class OctreeMapBase
 		readFromOtherMap(other);
 	}
 
-	template <class Node2, bool ReuseNodes2, bool LockLess2, bool CountNodes2,
-	          template <class> class... Bases2>
-	OctreeMapBase(
-	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, CountNodes2, Bases2...> const& other)
+	template <class Data2, class InnerData2, bool ReuseNodes2, bool LockLess2,
+	          bool CountNodes2, template <class> class... Bases2>
+	OctreeMapBase(OctreeMapBase<Data2, InnerData2, ReuseNodes2, LockLess2, CountNodes2,
+	                            Bases2...> const& other)
 	    : Octree(other), Bases<OctreeMapBase>(other)...
 	{
 		readFromOtherMap(other);
@@ -135,10 +138,10 @@ class OctreeMapBase
 		return *this;
 	}
 
-	template <class Node2, bool ReuseNodes2, bool LockLess2,
+	template <class Data2, class InnerData2, bool ReuseNodes2, bool LockLess2,
 	          bool CountNodes2m template <class> class... Bases2>
-	OctreeMapBase& operator=(
-	    OctreeMapBase<Node2, ReuseNodes2, LockLess2, CountNodes2, Bases2...> const& rhs)
+	OctreeMapBase& operator=(OctreeMapBase<Data2, InnerData2, ReuseNodes2, LockLess2,
+	                                       CountNodes2, Bases2...> const& rhs)
 	{
 		Octree::operator=(rhs);
 		(Bases<OctreeMapBase>::operator=(rhs), ...);
