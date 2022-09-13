@@ -79,8 +79,8 @@
 namespace ufo::map
 {
 // Utilizing curiously recurring template pattern (CRTP)
-template <class Derived, class DataType, template <class> class InnerNodeType,
-          bool ReuseNodes = false, bool LockLess = false, bool CountNodes = true>
+template <class Derived, class Data, class InnerData = void, bool ReuseNodes = false,
+          bool LockLess = false, bool CountNodes = true>
 class OctreeBase
 {
  private:
@@ -89,8 +89,8 @@ class OctreeBase
 	// Maximum number of depth levels
 	static constexpr depth_t MAX_DEPTH_LEVELS = 22;
 
-	using LeafNode = OctreeLeafNode<DataType>;
-	using InnerNode = InnerNodeType<LeafNode>;
+	using LeafNode = OctreeLeafNode<Data>;
+	using InnerNode = OctreeInnerNode<LeafNode, InnerData>;
 	using typename InnerNode::InnerNodeBlock;
 	using typename InnerNode::LeafNodeBlock;
 
@@ -3114,15 +3114,6 @@ class OctreeBase
 	// TODO: Add comments
 
 	template <bool KeepModified>
-	void updateNode(LeafNode& node, index_field_t indices)
-	{
-		derived().updateNode(node, indices);
-		if constexpr (!KeepModified) {
-			node.resetModified();
-		}
-	}
-
-	template <bool KeepModified>
 	void updateNode(InnerNode& node, index_field_t indices, depth_t const depth)
 	{
 		if (1 == depth) {
@@ -3132,10 +3123,6 @@ class OctreeBase
 		}
 
 		prune(node, indices, depth);
-
-		if constexpr (!KeepModified) {
-			node.resetModified();
-		}
 	}
 
 	void propagateModified()
@@ -3146,29 +3133,38 @@ class OctreeBase
 	template <bool KeepModified>
 	void propagateModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
 	{
-		index_field_t modified_leaf = node.isModified() & node.isLeaf();
 		index_field_t modified_parent = node.isModified() & node.isParent();
 
-		if (modified_parent) {
+		if (index_field_t(0) == modified_parent) {
+			if constexpr (!KeepModified) {
+				node.resetModified();
+			}
+			return;
+		}
+
+		if (1 == depth) {
+			if constexpr (!KeepModified) {
+				for (index_t index = 0; 8 != index; ++index) {
+					if (index_field_t(0) == (modified_parent >> index) & index_field_t(1)) {
+						continue;
+					}
+					leafChild(node, index).resetModified();
+				}
+			}
+		} else {
 			for (index_t index = 0; 8 != index; ++index) {
 				if (index_field_t(0) == (modified_parent >> index) & index_field_t(1)) {
 					continue;
 				}
-				if (1 == depth) {
-					updateNode<KeepModified>(leafChild(node, index), child.modified);
-				} else {
-					propagateModifiedRecurs<KeepModified>(innerChild(node, index), depth - 1,
-					                                      max_depth);
-				}
+				propagateModifiedRecurs<KeepModified>(innerChild(node, index), depth - 1,
+				                                      max_depth);
 			}
 		}
 
 		if (depth <= max_depth) {
-			if (modified_leaf) {
-				updateNode<KeepModified>(node, modified_leaf);
-			}
-			if (modified_parent) {
-				updateNode<KeepModified>(node, modified_parent, depth);
+			updateNode<KeepModified>(node, modified_parent, depth);
+			if constexpr (!KeepModified) {
+				node.resetModified();
 			}
 		}
 	}
@@ -3189,15 +3185,15 @@ class OctreeBase
 	{
 		index_field_t collapsible = 0;
 		for (index_t index = 0; 8 != index; ++index) {
-			if (index_field_t(0) == (indices >> index) & index_field_t(1)) {
+			if (0 == (indices >> index) & index_field_t(1)) {
 				continue;
 			}
 			if (1 == depth) {
-				if (leafChild(node, index).isCollapsible()) {
+				if (leafChild(node, index).isCollapsible(node, index)) {
 					collapsible |= index_field_t(1) << index;
 				}
 			} else {
-				if (innerChild(node, index).isCollapsible()) {
+				if (innerChild(node, index).isCollapsible(node, index)) {
 					collapsible |= index_field_t(1) << index;
 				}
 			}
@@ -3206,7 +3202,7 @@ class OctreeBase
 	}
 
 	// NOTE: Only call with nodes that have children
-	[[nodiscard]] index_field_t prune(InnerNode& node, index_field_t indices, depth_t depth)
+	index_field_t prune(InnerNode& node, index_field_t indices, depth_t depth)
 	{
 		indices = isCollapsible(node, indices, depth);
 		if (indices) {
@@ -3215,31 +3211,29 @@ class OctreeBase
 		return indices;
 	}
 
-	[[nodiscard]] index_field_t pruneRecurs(InnerNode& node, depth_t depth)
+	index_field_t pruneRecurs(InnerNode& node, depth_t depth)
 	{
-		// TODO: Implement
-
 		if (node.isAllLeaf()) {
 			return node.isLeaf();
 		}
 
 		if (1 == depth) {
-			return prune(node, )
+			return node.isLeaf() | prune(node, node.isParent(), depth);
 		}
 
-		if (isLeaf(node)) {
-			return true;
+		index_field_t prunable = 0;
+		for (index_t index = 0; 8 != index; ++index) {
+			if (node.isLeafIndex(index)) {
+				continue;
+			}
+
+			auto& child = innerChild(node, index);
+			if (child.isParent() == pruneRecurs(child, depth - 1)) {
+				prunable |= index_field_t(1) << index;
+			}
 		}
 
-		if (1 == depth) {
-			return pruneNode(node, depth);
-		}
-
-		bool prunable = all_of(innerChildren(node), [this, depth](InnerNode& child) {
-			return pruneRecurs(child, depth - 1);
-		});
-
-		return !prunable || pruneNode(node, depth);
+		return node.isLeaf() | (0 == prunable ? prunable : prune(node, prunable, depth));
 	}
 
 	/**************************************************************************************

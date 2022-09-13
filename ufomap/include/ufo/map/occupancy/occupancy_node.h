@@ -43,6 +43,7 @@
 #define UFO_MAP_OCCUPANCY_NODE_H
 
 // UFO
+#include <ufo/algorithm/algorithm.h>
 #include <ufo/map/color/color_node.h>
 #include <ufo/map/octree/octree_node.h>
 #include <ufo/map/semantic/semantic_node.h>
@@ -61,16 +62,60 @@ struct OccupancyNode {
 	using occupancy_t = uint8_t;
 
 	// Data
-	std::array<occupancy_t, 8> occupancy;
+	std::conditional_t<Single, occupancy_t, std::array<occupancy_t, 8>> occupancy;
 
+	//
+	// Fill
+	//
+
+	void fill(OccupancyNode const other, index_t const index)
+	{
+		if constexpr (Single) {
+			occupancy = other.occupancy;
+		} else {
+			occupancy.fill(other.occupancy[index]);
+		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] bool isCollapsible(OccupancyNode const parent, index_t const index) const
+	{
+		if constexpr (Single) {
+			return parent.occupancy == occupancy;
+		} else {
+			return all_of(occupancy, [p = parent.occupancy[index]](auto x) { return p == x; });
+		}
+	}
+};
+
+template <bool Single>
+struct ContainsOccupancy {
 	// Indicators
 	uint8_t contains_unknown;
 	uint8_t contains_free;
 	uint8_t contains_occupied;
 
-	bool operator==(OccupancyNode const& rhs) const { return occupancy == rhs.occupancy; }
+	//
+	// Fill
+	//
 
-	bool operator!=(OccupancyNode const& rhs) const { return !(*this == rhs); }
+	void fill(ContainsOccupancy const parent, index_t const index)
+	{
+		// TODO: Implement
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] bool isCollapsible(ContainsOccupancy const parent,
+	                                 index_t const index) const
+	{
+		// TODO: Implement
+	}
 
 	constexpr occupancy_t getOccupancy(std::size_t const index) const
 	{
@@ -82,6 +127,81 @@ struct OccupancyNode {
 	constexpr void setOccupancy(std::size_t const index, occupancy_t const value)
 	{
 		occupancy[index] = value;
+	}
+
+	constexpr bool containsUnknown(std::size_t const index) const
+	{
+		return (contains_unknown >> index) & uint8_t(1);
+	}
+
+	constexpr bool containsFree(std::size_t const index) const
+	{
+		return (contains_free >> index) & uint8_t(1);
+	}
+
+	constexpr bool containsOccupied(std::size_t const index) const
+	{
+		return (contains_occupied >> index) & uint8_t(1);
+	}
+
+	constexpr void setContainsUnknown(bool const contains) const
+	{
+		contains_unknown = contains ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
+	}
+
+	constexpr void setContainsUnknown(std::size_t const index, bool const contains) const
+	{
+		contains_unknown = (contains_unknown & ~(uint8_t(1) << index)) |
+		                   (uint8_t(contains ? uint8_t(1) : uint8_t(0)) << index);
+	}
+
+	constexpr void setContainsFree(bool const contains) const
+	{
+		contains_free = contains ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
+	}
+
+	constexpr void setContainsFree(std::size_t const index, bool const contains) const
+	{
+		contains_free = (contains_free & ~(uint8_t(1) << index)) |
+		                (uint8_t(contains ? uint8_t(1) : uint8_t(0)) << index);
+	}
+
+	constexpr void setContainsOccupied(bool const contains) const
+	{
+		contains_occupied = contains ? std::numeric_limits<uint8_t>::max() : uint8_t(0);
+	}
+
+	constexpr void setContainsOccupied(std::size_t const index, bool const contains) const
+	{
+		contains_occupied = (contains_occupied & ~(uint8_t(1) << index)) |
+		                    (uint8_t(contains ? uint8_t(1) : uint8_t(0)) << index);
+	}
+};
+
+template <>
+struct ContainsOccupancy<true> {
+	// Indicators
+	uint8_t contains_unknown : 1;
+	uint8_t contains_free : 1;
+	uint8_t contains_occupied : 1;
+
+	//
+	// Fill
+	//
+
+	void fill(ContainsOccupancy const parent, index_t const index)
+	{
+		// TODO: Implement
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] bool isCollapsible(ContainsOccupancy const parent,
+	                                 index_t const index) const
+	{
+		// TODO: Implement
 	}
 
 	constexpr bool containsUnknown(std::size_t const index) const

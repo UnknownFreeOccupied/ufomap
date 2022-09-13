@@ -49,19 +49,24 @@ namespace ufo::map
 {
 template <typename... Nodes>
 struct OctreeNodeBase : Nodes... {
-	bool operator==(OctreeNodeBase const& rhs) const
+	//
+	// Fill
+	//
+
+	void fill(OctreeNodeBase const& parent, index_t const index)
 	{
-		return (Nodes::operator==(rhs) && ...);
+		(Nodes::fill(parent, index), ...);
 	}
 
-	bool operator!=(OctreeNodeBase const& rhs) const { return !(*this == rhs); }
+	//
+	// Is collapsible
+	//
 
-	void fill(OctreeNodeBase const& other, index_t const index)
+	[[nodiscard]] bool isCollapsible(OctreeNodeBase const& parent,
+	                                 index_t const index) const
 	{
-		(Nodes::fill(other, index), ...);
+		return (Nodes::isCollapsible(parent, index) && ...);
 	}
-
-	[[nodiscard]] bool isCollapsible() const { return (Nodes::isCollapsible() && ...); }
 };
 }  // namespace ufo::map
 

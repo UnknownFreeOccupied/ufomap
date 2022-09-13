@@ -55,12 +55,9 @@ namespace ufo::map
 {
 template <class Data>
 struct OctreeLeafNode : Data {
-	bool operator==(OctreeLeafNode const& rhs) const
-	{
-		return static_cast<Data const&>(rhs) == static_cast<Data const&>(*this);
-	}
-
-	bool operator!=(OctreeLeafNode const& rhs) const { return !(*this == rhs); }
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	index_field_t modified;
 
 	//
 	// Fill
@@ -68,13 +65,7 @@ struct OctreeLeafNode : Data {
 
 	void fill(OctreeLeafNode const& other, index_t index)
 	{
-		if (index_field_t(1) & (other.leaf_ >> index)) {
-			setLeaf();
-		} else {
-			resetLeaf();
-		}
-
-		if (index_field_t(1) & (other.modified_ >> index)) {
+		if (index_field_t(1) & (other.modified >> index)) {
 			setModified();
 		} else {
 			resetModified();
@@ -87,32 +78,124 @@ struct OctreeLeafNode : Data {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible() const { return isAllLeaf() && Data::isCollapsible(); }
+	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
+	                                           index_t index) const
+	{
+		return Data::isCollapsible(parent, index);
+	}
+
+	//
+	// Is modified
+	//
+
+	constexpr index_field_t isModified() const noexcept { return modified; }
+
+	constexpr index_field_t isModified(index_field_t indices) const noexcept
+	{
+		return modified & indices;
+	}
+
+	constexpr bool isModifiedIndex(index_t index) const noexcept
+	{
+		return (modified >> index) & index_field_t(1);
+	}
+
+	constexpr bool isAllModified() const noexcept
+	{
+		return std::numeric_limits<index_field_t>::max() == modified;
+	}
+
+	constexpr bool isAnyModified() const noexcept { return 0 != modified; }
+
+	constexpr bool isNoneModified() const noexcept { return 0 == modified; }
+
+	//
+	// Set modified
+	//
+
+	constexpr void setModified() noexcept
+	{
+		modified = std::numeric_limits<index_field_t>::max();
+	}
+
+	constexpr void setModified(index_field_t index_field) noexcept
+	{
+		modified |= index_field;
+	}
+
+	constexpr void setModifiedIndex(index_t index) noexcept
+	{
+		modified |= index_field_t(1) << index;
+	}
+
+	//
+	// Reset modified
+	//
+
+	constexpr void resetModified() noexcept { modified = 0; }
+
+	constexpr void resetModified(index_field_t index_field) noexcept
+	{
+		modified &= ~index_field;
+	}
+
+	constexpr void resetModifiedIndex(index_t index) noexcept
+	{
+		modified &= ~(index_field_t(1) << index);
+	}
+};
+
+struct Leaf {
+	// Indicates whether this is a leaf node (has no children) or not. If true then the
+	// children are not valid and should not be accessed
+	index_field_t leaf;
+
+	//
+	// Fill
+	//
+
+	void fill(Leaf const other, index_t const index)
+	{
+		if (index_field_t(1) & (other.leaf >> index)) {
+			setLeaf();
+		} else {
+			resetLeaf();
+		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(Leaf const, index_t const) const
+	{
+		return isAllLeaf();
+	}
 
 	//
 	// Is leaf
 	//
 
-	constexpr index_field_t isLeaf() const noexcept { return leaf_; }
+	constexpr index_field_t isLeaf() const noexcept { return leaf; }
 
 	constexpr index_field_t isLeaf(index_field_t indices) const noexcept
 	{
-		return leaf_ & indices;
+		return leaf & indices;
 	}
 
 	constexpr bool isLeafIndex(index_t index) const noexcept
 	{
-		return (leaf_ >> index) & index_field_t(1);
+		return (leaf >> index) & index_field_t(1);
 	}
 
 	constexpr bool isAllLeaf() const noexcept
 	{
-		return std::numeric_limits<index_field_t>::max() == leaf_;
+		return std::numeric_limits<index_field_t>::max() == leaf;
 	}
 
-	constexpr bool isAnyLeaf() const noexcept { return 0 != leaf_; }
+	constexpr bool isAnyLeaf() const noexcept { return 0 != leaf; }
 
-	constexpr bool isNoneLeaf() const noexcept { return 0 == leaf_; }
+	constexpr bool isNoneLeaf() const noexcept { return 0 == leaf; }
 
 	//
 	// Is parent
@@ -140,99 +223,31 @@ struct OctreeLeafNode : Data {
 	// Set leaf
 	//
 
-	constexpr void setLeaf() noexcept { leaf_ = std::numeric_limits<index_field_t>::max(); }
+	constexpr void setLeaf() noexcept { leaf = std::numeric_limits<index_field_t>::max(); }
 
-	constexpr void setLeaf(index_field_t indices) noexcept { leaf_ |= indices; }
+	constexpr void setLeaf(index_field_t indices) noexcept { leaf |= indices; }
 
 	constexpr void setLeafIndex(index_t index) noexcept
 	{
-		leaf_ |= index_field_t(1) << index;
+		leaf |= index_field_t(1) << index;
 	}
 
 	//
 	// Reset leaf
 	//
 
-	constexpr void resetLeaf() noexcept { leaf_ = 0; }
+	constexpr void resetLeaf() noexcept { leaf = 0; }
 
-	constexpr void resetLeaf(index_field_t indices) noexcept { leaf_ &= ~indices; }
+	constexpr void resetLeaf(index_field_t indices) noexcept { leaf &= ~indices; }
 
 	constexpr void resetLeafIndex(index_t index) noexcept
 	{
-		leaf_ &= ~(index_field_t(1) << index);
+		leaf &= ~(index_field_t(1) << index);
 	}
-
-	//
-	// Is modified
-	//
-
-	constexpr index_field_t isModified() const noexcept { return modified_; }
-
-	constexpr index_field_t isModified(index_field_t indices) const noexcept
-	{
-		return modified_ & indices;
-	}
-
-	constexpr bool isModifiedIndex(index_t index) const noexcept
-	{
-		return (modified_ >> index) & index_field_t(1);
-	}
-
-	constexpr bool isAllModified() const noexcept
-	{
-		return std::numeric_limits<index_field_t>::max() == modified_;
-	}
-
-	constexpr bool isAnyModified() const noexcept { return 0 != modified_; }
-
-	constexpr bool isNoneModified() const noexcept { return 0 == modified_; }
-
-	//
-	// Set modified
-	//
-
-	constexpr void setModified() noexcept
-	{
-		modified_ = std::numeric_limits<index_field_t>::max();
-	}
-
-	constexpr void setModified(index_field_t index_field) noexcept
-	{
-		modified_ |= index_field;
-	}
-
-	constexpr void setModifiedIndex(index_t index) noexcept
-	{
-		modified_ |= index_field_t(1) << index;
-	}
-
-	//
-	// Reset modified
-	//
-
-	constexpr void resetModified() noexcept { modified_ = 0; }
-
-	constexpr void resetModified(index_field_t index_field) noexcept
-	{
-		modified_ &= ~index_field;
-	}
-
-	constexpr void resetModifiedIndex(index_t index) noexcept
-	{
-		modified_ &= ~(index_field_t(1) << index);
-	}
-
- private:
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	index_field_t leaf_;
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	index_field_t modified_;
 };
 
-template <class LeafNode>
-struct OctreeInnerNode : LeafNode {
+template <class LeafNode, class InnerData>
+struct OctreeInnerNode : LeafNode, Leaf, InnerData {
 	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
 	using LeafNodeBlock = std::array<LeafNode, 8>;
 
@@ -241,6 +256,60 @@ struct OctreeInnerNode : LeafNode {
 		InnerNodeBlock* inner_children = nullptr;
 		LeafNodeBlock* leaf_children;
 	};
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeInnerNode const& other, index_t index)
+	{
+		LeafNode::fill(other, index);
+		Leaf::fill(other, index);
+		InnerData::fill(other, index);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(OctreeInnerNode const& parent,
+	                                           index_t index) const
+	{
+		return Leaf::isCollapsible(parent, index) && LeafNode::isCollapsible(parent, index) &&
+		       InnerData::isCollapsible(parent, index);
+	}
+};
+
+template <class LeafNode>
+struct OctreeInnerNode<LeafNode, void> : LeafNode, Leaf {
+	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
+	using LeafNodeBlock = std::array<LeafNode, 8>;
+
+	// Pointer to children
+	union {
+		InnerNodeBlock* inner_children = nullptr;
+		LeafNodeBlock* leaf_children;
+	};
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeInnerNode const& other, index_t index)
+	{
+		Leaf::fill(other, index);
+		LeafNode::fill(other, index);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(OctreeInnerNode const& parent,
+	                                           index_t index) const
+	{
+		return Leaf::isCollapsible(parent, index) && LeafNode::isCollapsible(parent, index);
+	}
 };
 }  // namespace ufo::map
 
