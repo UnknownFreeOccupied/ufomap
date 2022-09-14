@@ -176,7 +176,7 @@ class UFOMap
 	// Constructors
 	//
 
-	UFOMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16,
+	UFOMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 17,
 	       bool auto_prune = true)
 	    : Base(leaf_node_size, depth_levels, auto_prune)
 	{

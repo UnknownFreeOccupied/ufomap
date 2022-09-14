@@ -59,33 +59,37 @@ class ColorMapBase
 	// Get color
 	//
 
-	constexpr RGBColor getColor(Node node) const
+	[[nodiscard]] constexpr RGBColor color(Node node) const
 	{
-		return getColor(derived().getLeafNode(node), node.index());
+		return color(derived().leafNode(node), node.index());
 	}
 
-	constexpr RGBColor getColor(Code code) const
+	[[nodiscard]] constexpr RGBColor color(Code code) const
 	{
-		return getColor(derived().getLeafNode(code), node.index());
+		return color(derived().leafNode(code), node.index());
 	}
 
-	constexpr RGBColor getColor(Key key) const { return getColor(Derived::toCode(key)); }
-
-	constexpr RGBColor getColor(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] constexpr RGBColor color(Key key) const
 	{
-		return getColor(derived().toCode(coord, depth));
+		return color(Derived::toCode(key));
 	}
 
-	constexpr RGBColor getColor(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	[[nodiscard]] constexpr RGBColor color(Point3 coord, depth_t depth = 0) const
 	{
-		return getColor(derived().toCode(x, y, z, depth));
+		return color(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] constexpr RGBColor color(coord_t x, coord_t y, coord_t z,
+	                                       depth_t depth = 0) const
+	{
+		return color(derived().toCode(x, y, z, depth));
 	}
 
 	//
 	// Set color
 	//
 
-	constexpr void setColor(Node& node, RGBColor color, bool propagate = true)
+	constexpr void setColor(Node node, RGBColor color, bool propagate = true)
 	{
 		derived().apply(
 		    node,
@@ -126,7 +130,7 @@ class ColorMapBase
 	// Clear color
 	//
 
-	constexpr void clearColor(Node& node, bool propagate = true)
+	constexpr void clearColor(Node node, bool propagate = true)
 	{
 		derived().apply(
 		    node,
@@ -147,7 +151,7 @@ class ColorMapBase
 		clearColor(Derived::toCode(key), propagate);
 	}
 
-	constexpr void setColor(Point3 coord, bool propagate = true, depth_t depth = 0)
+	constexpr void clearColor(Point3 coord, bool propagate = true, depth_t depth = 0)
 	{
 		clearColor(derived().toCode(coord, depth), propagate);
 	}
@@ -163,9 +167,12 @@ class ColorMapBase
 	// Derived
 	//
 
-	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
+	[[nodiscard]] constexpr Derived& derived() { return *static_cast<Derived*>(this); }
 
-	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
+	[[nodiscard]] constexpr Derived const& derived() const
+	{
+		return *static_cast<Derived const*>(this);
+	}
 
 	//
 	// Initilize root
@@ -220,11 +227,6 @@ class ColorMapBase
 	//
 	// Update node
 	//
-
-	template <bool Single>
-	constexpr void updateNode(ColorNode<Single>&, index_field_t const) noexcept
-	{
-	}
 
 	template <bool Single, class T>
 	void updateNode(ColorNode<Single>& node, index_field_t const indices, T const& children)
