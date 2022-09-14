@@ -185,10 +185,10 @@ class ColorMapBase
 	//
 
 	template <bool Single>
-	static constexpr RGBColor getColor(ColorNode<Single> const& node,
-	                                   index_t const index) noexcept
+	static constexpr RGBColor color(ColorNode<Single> const& node,
+	                                index_t const index) noexcept
 	{
-		return node.getColor(index);
+		return node.colorIndex(index);
 	}
 
 	//
@@ -221,7 +221,7 @@ class ColorMapBase
 	template <bool Single>
 	static constexpr void clearColor(ColorNode<Single>& node, index_t const index) noexcept
 	{
-		setColor(node, index, RGBColor());
+		setColorIndex(node, index, RGBColor());
 	}
 
 	//
@@ -231,32 +231,34 @@ class ColorMapBase
 	template <bool Single, class T>
 	void updateNode(ColorNode<Single>& node, index_field_t const indices, T const& children)
 	{
-		std::array<color_t, children.size()> reds;
-		std::array<color_t, children.size()> greens;
-		std::array<color_t, children.size()> blues;
 		if constexpr (Single) {
+			std::array<color_t, children.size()> red;
+			std::array<color_t, children.size()> green;
+			std::array<color_t, children.size()> blue;
 			for (std::size_t i = 0; children.size() != i; ++i) {
-				reds[i] = getRed(children[i], 0);
-				greens[i] = getGreen(children[i], 0);
-				blues[i] = getBlues(children[i], 0);
+				red[i] = children[i].red;
+				green[i] = children[i].green;
+				blue[i] = children[i].blue;
 			}
-			node.setRed(average(std::cbegin(reds), std::cend(reds)));
-			node.setGreen(average(std::cbegin(greens), std::cend(greens)));
-			node.setBlue(average(std::cbegin(blues), std::cend(blues)));
+			node.red = average(red);
+			node.green = average(green);
+			node.blue = average(blue);
 		} else {
 			for (index_t index = 0; children.size() != index; ++index) {
-				if ((indices >> index) & index_field_t(1)) {
-					for (std::size_t i = 0; children.size() != i; ++i) {
-						reds[i] = getRed(children[index], i);
-						greens[i] = getGreen(children[index], i);
-						blues[i] = getBlue(children[index], i);
-					}
-					node.setRed(index, average(std::cbegin(reds), std::cend(reds)));
-					node.setGreen(index, average(std::cbegin(greens), std::cend(greens)));
-					node.setBlue(index, average(std::cbegin(blues), std::cend(blues)));
+				if (0 == (indices >> index) & index_field_t(1)) {
+					continue;
 				}
+				node.red[index] = average(children[index].red);
+				node.green[index] = average(children[index].green);
+				node.blue[index] = average(children[index].blue);
 			}
 		}
+	}
+
+	template <class Container>
+	static constexpr color_t average(Container const& c)
+	{
+		return average(std::cbegin(c), std::cend(c));
 	}
 
 	template <class InputIt>

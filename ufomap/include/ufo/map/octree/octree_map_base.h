@@ -74,7 +74,6 @@ class OctreeMapBase
 
 	using Octree =
 	    OctreeBase<OctreeMapBase, Data, InnerData, ReuseNodes, LockLess, CountNodes>;
-	using typename Octree::LeafNode;
 
 	//
 	// Friends
@@ -185,13 +184,8 @@ class OctreeMapBase
 	// Update node
 	//
 
-	void updateNode(LeafNode& node, index_field_t const indices)
-	{
-		(Bases<OctreeMapBase>::updateNode(node, indices), ...);
-	}
-
-	template <class T>
-	void updateNode(LeafNode& node, index_field_t const indices, T const& children)
+	template <class NodeT, class T>
+	void updateNode(NodeT& node, index_field_t const indices, T const& children)
 	{
 		(Bases<OctreeMapBase>::updateNode(node, indices, children), ...);
 	}

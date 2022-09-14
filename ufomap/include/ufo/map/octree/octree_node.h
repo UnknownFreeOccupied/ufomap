@@ -154,9 +154,9 @@ struct Leaf {
 	// Fill
 	//
 
-	void fill(Leaf const other, index_t const index)
+	void fill(Leaf const parent, index_t const index)
 	{
-		if (index_field_t(1) & (other.leaf >> index)) {
+		if (index_field_t(1) & (parent.leaf >> index)) {
 			setLeaf();
 		} else {
 			resetLeaf();

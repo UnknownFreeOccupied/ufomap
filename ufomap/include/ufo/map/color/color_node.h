@@ -43,6 +43,7 @@
 #define UFO_MAP_COLOR_NODE_H
 
 // UFO
+#include <ufo/algorithm/algorithm.h>
 #include <ufo/map/color/color.h>
 
 // STL
@@ -57,14 +58,40 @@ struct ColorNode {
 	std::conditional_t<Single, color_t, std::array<color_t, 8>> green;
 	std::conditional_t<Single, color_t, std::array<color_t, 8>> blue;
 
-	bool operator==(ColorNode const rhs) const
+	//
+	// Fill
+	//
+
+	void fill(ColorNode const parent, index_t const index)
 	{
-		return red == rhs.red && green == rhs.green && blue == rhs.blue;
+		if constexpr (Single) {
+			red = other.red;
+			green = other.green;
+			blue = other.blue;
+		} else {
+			red.fill(other.red[index]);
+			green.fill(other.green[index]);
+			blue.fill(other.blue[index]);
+		}
 	}
 
-	bool operator!=(ColorNode const rhs) const { return !(*this == rhs); }
+	//
+	// Is collapsible
+	//
 
-	constexpr RGBColor getColor(index_t const index) const
+	[[nodiscard]] constexpr bool isCollapsible(ColorNode const parent,
+	                                           index_t const index) const
+	{
+		if constexpr (Single) {
+			return red == parent.red && green == parent.green && blue == parent.blue;
+		} else {
+			return all_of(red, [r = parent.red[index]](auto const c) { return c == r; }) &&
+			       all_of(green, [g = parent.green[index]](auto const c) { return c == g; }) &&
+			       all_of(blue, [b = parent.blue[index]](auto const c) { return c == b; });
+		}
+	}
+
+	constexpr RGBColor colorIndex(index_t const index) const
 	{
 		if constexpr (Single) {
 			return RGBColor(red, green, blue);
@@ -73,7 +100,7 @@ struct ColorNode {
 		}
 	}
 
-	constexpr color_t getRed(index_t const index) const
+	constexpr color_t redIndex(index_t const index) const
 	{
 		if constexpr (Single) {
 			return red;
@@ -82,7 +109,7 @@ struct ColorNode {
 		}
 	}
 
-	constexpr color_t getGreen(index_t const index) const
+	constexpr color_t greenIndex(index_t const index) const
 	{
 		if constexpr (Single) {
 			return green;
@@ -91,7 +118,7 @@ struct ColorNode {
 		}
 	}
 
-	constexpr color_t getBlue(index_t const index) const
+	constexpr color_t blueIndex(index_t const index) const
 	{
 		if constexpr (Single) {
 			return blue;
@@ -113,7 +140,7 @@ struct ColorNode {
 		}
 	}
 
-	constexpr void setColor(std::size_t const index, RGBColor const value)
+	constexpr void setColorIndex(index_t const index, RGBColor const value)
 	{
 		if constexpr (Single) {
 			red = value.red;
@@ -135,7 +162,7 @@ struct ColorNode {
 		}
 	}
 
-	constexpr void setRed(std::size_t const index, color_t const value)
+	constexpr void setRedIndex(index_t const index, color_t const value)
 	{
 		if constexpr (Single) {
 			red = value;
@@ -153,7 +180,7 @@ struct ColorNode {
 		}
 	}
 
-	constexpr void setGreen(std::size_t const index, color_t const value)
+	constexpr void setGreenIndex(index_t const index, color_t const value)
 	{
 		if constexpr (Single) {
 			green = value;
@@ -171,7 +198,7 @@ struct ColorNode {
 		}
 	}
 
-	constexpr void setBlue(std::size_t const index, color_t const value)
+	constexpr void setBlueIndex(index_t const index, color_t const value)
 	{
 		if constexpr (Single) {
 			blue = value;
