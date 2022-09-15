@@ -91,7 +91,7 @@ class ColorMapBase
 	// Set color
 	//
 
-	constexpr void setColor(Node& node, RGBColor color, bool propagate = true)
+	constexpr void setColor(Node node, RGBColor color, bool propagate = true)
 	{
 		derived().apply(
 		    node, [this, &color](LeafNode& node) { setColor(node, color); }, propagate);
@@ -122,7 +122,7 @@ class ColorMapBase
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void setColor(ExecutionPolicy policy, Node& node, RGBColor color,
+	constexpr void setColor(ExecutionPolicy policy, Node node, RGBColor color,
 	                        bool propagate = true)
 	{
 		derived().apply(
@@ -168,7 +168,7 @@ class ColorMapBase
 	// Clear color
 	//
 
-	constexpr void clearColor(Node& node, bool propagate = true)
+	constexpr void clearColor(Node node, bool propagate = true)
 	{
 		derived().apply(
 		    node, [this](LeafNode& node) { clearColor(node); }, propagate);
@@ -198,7 +198,7 @@ class ColorMapBase
 
 	template <class ExecutionPolicy, typename = std::enable_if_t<std::is_execution_policy_v<
 	                                     std::decay_t<ExecutionPolicy>>>>
-	constexpr void clearColor(ExecutionPolicy policy, Node& node, bool propagate = true)
+	constexpr void clearColor(ExecutionPolicy policy, Node node, bool propagate = true)
 	{
 		derived().apply(
 		    policy, node, [this](LeafNode& node) { clearColor(node); }, propagate);
