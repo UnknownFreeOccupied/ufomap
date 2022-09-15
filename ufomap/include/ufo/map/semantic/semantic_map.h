@@ -1067,14 +1067,14 @@ class SemanticMapBase
 	// Input/output (read/write)
 	//
 
-	static constexpr DataIdentifier getDataIdentifier() noexcept
+	static constexpr DataIdentifier dataIdentifier() noexcept
 	{
 		return DataIdentifier::SEMANTIC;
 	}
 
 	static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
-		return getDataIdentifier() == identifier;
+		return dataIdentifier() == identifier;
 	}
 
 	void readNodes(std::istream& in_stream, std::vector<LeafNode*> const& nodes)

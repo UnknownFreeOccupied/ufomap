@@ -613,8 +613,7 @@ class OctreeBase
 		resetModified(toCode(key), max_depth);
 	}
 
-	void resetModified(Point coord, depth_t depth = 0,
-	                   depth_t max_depth = maxDepthLevels())
+	void resetModified(Point coord, depth_t depth = 0, depth_t max_depth = maxDepthLevels())
 	{
 		resetModified(toCode(coord, depth), max_depth);
 	}
@@ -1409,7 +1408,7 @@ class OctreeBase
 	[[nodiscard]] constexpr Point toCoord(Key key) const noexcept
 	{
 		return Point(toCoord(key[0], key.depth()), toCoord(key[1], key.depth()),
-		              toCoord(key[2], key.depth()));
+		             toCoord(key[2], key.depth()));
 	}
 
 	/*!
@@ -1431,8 +1430,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr std::optional<Point> toCoordChecked(Key key) const noexcept
 	{
-		return rootDepth() >= key.depth() ? std::optional<Point>(toCoord(key))
-		                                  : std::nullopt;
+		return rootDepth() >= key.depth() ? std::optional<Point>(toCoord(key)) : std::nullopt;
 	}
 
 	/**************************************************************************************
@@ -2169,7 +2167,7 @@ class OctreeBase
 
 		auto nodes = nodes(in);
 
-		derived().readNodes(in, std::begin(nodes), std::end(nodes), header.compressed);
+		derived().readNodes(in, std::begin(nodes), nodes.size(), header.compressed);
 
 		if (propagate) {
 			propagate();
@@ -2214,7 +2212,7 @@ class OctreeBase
 	{
 		auto [tree_structure, nodes] =
 		    data(predicate::Leaf(min_depth) && std::forward<Predicates>(predicates));
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
+		write(out, tree_structure, std::cbegin(nodes), nodes.size(), compress,
 		      compression_acceleration_level, compression_level);
 	}
 
@@ -2237,7 +2235,7 @@ class OctreeBase
 	                               int compression_level = 0)
 	{
 		auto [tree_structure, nodes] = modifiedData<true>();
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
+		write(out, tree_structure, std::cbegin(nodes), nodes.size(), compress,
 		      compression_acceleration_level, compression_level);
 	}
 
@@ -2259,7 +2257,7 @@ class OctreeBase
 	                           int compression_level = 0)
 	{
 		auto [tree_structure, nodes] = modifiedData<false>();
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
+		write(out, tree_structure, std::cbegin(nodes), nodes.size(), compress,
 		      compression_acceleration_level, compression_level);
 	}
 
@@ -2994,8 +2992,8 @@ class OctreeBase
 	//
 
 	[[nodiscard]] static constexpr Point childCenter(Point parent_center,
-	                                                  node_size_t child_half_size,
-	                                                  index_t child_index)
+	                                                 node_size_t child_half_size,
+	                                                 index_t child_index)
 	{
 		parent_center[0] += child_index & index_t(1) ? child_half_size : -child_half_size;
 		parent_center[1] += child_index & index_t(2) ? child_half_size : -child_half_size;
@@ -3007,10 +3005,8 @@ class OctreeBase
 	// Sibling center
 	//
 
-	[[nodiscard]] static constexpr Point siblingCenter(Point center,
-	                                                    node_size_t half_size,
-	                                                    index_t index,
-	                                                    index_t sibling_index)
+	[[nodiscard]] static constexpr Point siblingCenter(Point center, node_size_t half_size,
+	                                                   index_t index, index_t sibling_index)
 	{
 		index_t const temp = index ^ sibling_index;
 		node_size_t const size = 2 * half_size;
@@ -3031,8 +3027,8 @@ class OctreeBase
 	//
 
 	[[nodiscard]] static constexpr Point parentCenter(Point child_center,
-	                                                   node_size_t child_half_size,
-	                                                   index_t child_index)
+	                                                  node_size_t child_half_size,
+	                                                  index_t child_index)
 	{
 		child_center[0] -= child_index & index_t(1) ? child_half_size : -child_half_size;
 		child_center[1] -= child_index & index_t(2) ? child_half_size : -child_half_size;
@@ -4113,13 +4109,13 @@ class OctreeBase
 
 	template <class InputIt>
 	void write(std::ostream& out, std::vector<std::uint8_t> const& tree_structure,
-	           InputIt first, InputIt last, bool compress,
+	           InputIt first, std::size_t num_nodes, bool compress,
 	           int compression_acceleration_level, int compression_level) const
 	{
 		writeHeader(out, fileOptions(compress));
 		writeTreeStructure(out, tree_structure);
-		writeNumNodes(out, std::distance(first, last));
-		writeNodes(out, first, last, compress, compression_acceleration_level,
+		writeNumNodes(out, num_nodes);
+		writeNodes(out, first, num_nodes, compress, compression_acceleration_level,
 		           compression_level);
 	}
 
@@ -4137,11 +4133,11 @@ class OctreeBase
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
-	                int const compression_acceleration_level,
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes,
+	                bool const compress, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		derived().writeNodes(out, first, last, compress, compression_acceleration_level,
+		derived().writeNodes(out, first, num_nodes, compress, compression_acceleration_level,
 		                     compression_level);
 	}
 

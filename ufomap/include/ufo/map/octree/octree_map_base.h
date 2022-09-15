@@ -194,8 +194,9 @@ class OctreeMapBase
 	// Input/output (read/write)
 	//
 
-	template <class InputIt>
-	void readNodes(std::istream& in, InputIt first, InputIt last, bool const compressed)
+	template <class OutputIt>
+	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes,
+	               bool const compressed)
 	{
 		auto cur_pos = in.tellg();
 		in.seekg(0, std::ios_base::end);
@@ -208,7 +209,7 @@ class OctreeMapBase
 			in.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
 			in.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if (!(readNodes<Bases<OctreeMapBase>>(in, first, last, identifier, data_size,
+			if (!(readNodes<Bases<OctreeMapBase>>(in, first, num_nodes, identifier, data_size,
 			                                      compressed) ||
 			      ...)) {
 				// Skip forward
@@ -218,11 +219,11 @@ class OctreeMapBase
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
-	                int const compression_acceleration_level,
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes,
+	                bool const compress, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		(writeNodes<Bases<OctreeMapBase>>(out, first, last, compress,
+		(writeNodes<Bases<OctreeMapBase>>(out, first, num_nodes, compress,
 		                                  compression_acceleration_level, compression_level),
 		 ...);
 	}
@@ -232,8 +233,8 @@ class OctreeMapBase
 	// Input/output (read/write)
 	//
 
-	template <class Base, class InputIt>
-	bool readNodes(std::istream& in, InputIt first, InputIt last,
+	template <class Base, class OutputIt>
+	bool readNodes(std::istream& in, OutputIt first, std::size_t num_nodes,
 	               DataIdentifier const identifier, uint64_t const data_size,
 	               bool const compressed)
 	{
@@ -247,21 +248,21 @@ class OctreeMapBase
 			data_stream.exceptions(std::stringstream::failbit | std::stringstream::badbit);
 			data_stream.imbue(std::locale());
 
-			uint64_t compressed_data_size = 0;
+			std::uint64_t compressed_data_size = 0;
 
 			decompressData(in, data_stream, data_size, compressed_data_size);
 
-			Base::readNodes(data_stream, first, last);
+			Base::readNodes(data_stream, first, num_nodes);
 		} else {
-			Base::readNodes(in, first, last);
+			Base::readNodes(in, first, num_nodes);
 		}
 
 		return true;
 	}
 
 	template <class Base, class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
-	                int const compression_acceleration_level,
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes,
+	                bool const compress, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
 		constexpr DataIdentifier identifier = Base::dataIdentifier();
@@ -277,9 +278,9 @@ class OctreeMapBase
 			buf.exceptions(std::stringstream::failbit | std::stringstream::badbit);
 			buf.imbue(std::locale());
 
-			Base::writeNodes(buf, first, last);
+			Base::writeNodes(buf, first, num_nodes);
 
-			uint64_t size = buf.tellp();
+			std::uint64_t size = buf.tellp();
 			out.write(reinterpret_cast<char const*>(&size), sizeof(size));
 			compressData(buf, out, size, compression_acceleration_level, compression_level);
 		} else {
@@ -287,7 +288,7 @@ class OctreeMapBase
 			auto size_pos = out.tellp();
 			out.write(reinterpret_cast<char const*>(&size), sizeof(size));
 
-			Base::writeNodes(out, first, last);
+			Base::writeNodes(out, first, num_nodes);
 
 			size = out.tellp() - size_pos - sizeof(size);
 			out.seekp(size_pos);

@@ -51,12 +51,18 @@
 
 namespace ufo::map
 {
-template <bool Single = false>
+template <std::size_t N = 8>
 struct ColorNode {
 	// Data
-	std::conditional_t<Single, color_t, std::array<color_t, 8>> red;
-	std::conditional_t<Single, color_t, std::array<color_t, 8>> green;
-	std::conditional_t<Single, color_t, std::array<color_t, 8>> blue;
+	std::array<color_t, N> red;
+	std::array<color_t, N> green;
+	std::array<color_t, N> blue;
+
+	//
+	// Size
+	//
+
+	[[nodiscard]] static constexpr std::size_t colorSize() { return N; }
 
 	//
 	// Fill
@@ -64,14 +70,14 @@ struct ColorNode {
 
 	void fill(ColorNode const parent, index_t const index)
 	{
-		if constexpr (Single) {
-			red = other.red;
-			green = other.green;
-			blue = other.blue;
+		if constexpr (1 == N) {
+			red = parent.red;
+			green = parent.green;
+			blue = parent.blue;
 		} else {
-			red.fill(other.red[index]);
-			green.fill(other.green[index]);
-			blue.fill(other.blue[index]);
+			red.fill(parent.red[index]);
+			green.fill(parent.green[index]);
+			blue.fill(parent.blue[index]);
 		}
 	}
 
@@ -82,7 +88,7 @@ struct ColorNode {
 	[[nodiscard]] constexpr bool isCollapsible(ColorNode const parent,
 	                                           index_t const index) const
 	{
-		if constexpr (Single) {
+		if constexpr (1 == N) {
 			return red == parent.red && green == parent.green && blue == parent.blue;
 		} else {
 			return all_of(red, [r = parent.red[index]](auto const c) { return c == r; }) &&
@@ -97,8 +103,8 @@ struct ColorNode {
 
 	constexpr Color colorIndex(index_t const index) const
 	{
-		if constexpr (Single) {
-			return Color(red, green, blue);
+		if constexpr (1 == N) {
+			return Color(red[0], green[0], blue[0]);
 		} else {
 			return Color(red[index], green[index], blue[index]);
 		}
@@ -110,20 +116,14 @@ struct ColorNode {
 
 	void setColor(Color const value)
 	{
-		if constexpr (Single) {
-			red = value.red;
-			green = value.green;
-			blue = value.blue;
-		} else {
-			red.fill(value.red);
-			green.fill(value.green);
-			blue.fill(value.blue);
-		}
+		red.fill(value.red);
+		green.fill(value.green);
+		blue.fill(value.blue);
 	}
 
-	constexpr void setColorIndex(index_t const index, Color const value)
+	void setColorIndex(index_t const index, Color const value)
 	{
-		if constexpr (Single) {
+		if constexpr (1 == N) {
 			setColor(value);
 		} else {
 			red[index] = value.red;
@@ -138,15 +138,9 @@ struct ColorNode {
 
 	void clearColor()
 	{
-		if constexpr (Single) {
-			red = 0;
-			green = 0;
-			blue = 0;
-		} else {
-			red.fill(0);
-			green.fill(0);
-			blue.fill(0);
-		}
+		red.fill(0);
+		green.fill(0);
+		blue.fill(0);
 	}
 
 	void clearColorIndex(index_t const index)

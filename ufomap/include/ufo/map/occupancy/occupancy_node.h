@@ -57,20 +57,24 @@
 
 namespace ufo::map
 {
-template <bool Single = false>
+template <std::size_t N = 8>
 struct OccupancyNode {
-	using occupancy_t = uint8_t;
-
 	// Data
-	std::conditional_t<Single, occupancy_t, std::array<occupancy_t, 8>> occupancy;
+	std::array<occupancy_t, N> occupancy;
+
+	//
+	// Size
+	//
+
+	[[nodiscard]] static constexpr std::size_t occupancySize() { return N; }
 
 	//
 	// Fill
 	//
 
-	void fill(OccupancyNode const other, index_t const index)
+	void fill(OccupancyNode const parent, index_t const index)
 	{
-		if constexpr (Single) {
+		if constexpr (1 == N) {
 			occupancy = other.occupancy;
 		} else {
 			occupancy.fill(other.occupancy[index]);
@@ -83,15 +87,44 @@ struct OccupancyNode {
 
 	[[nodiscard]] bool isCollapsible(OccupancyNode const parent, index_t const index) const
 	{
-		if constexpr (Single) {
-			return parent.occupancy == occupancy;
+		if constexpr (1 == N) {
+			return occupancy == parent.occupancy;
 		} else {
-			return all_of(occupancy, [p = parent.occupancy[index]](auto x) { return p == x; });
+			return all_of(occupancy,
+			              [p = parent.occupancy[index]](auto const x) { return x == p; });
+		}
+	}
+
+	//
+	// Get occupancy
+	//
+
+	constexpr occupancy_t occupancyIndex(index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return occupancy[0];
+		} else {
+			return occupancy[index];
+		}
+	}
+
+	//
+	// Set occupancy
+	//
+
+	void setOccupancy(occupancy_t const value) { occupancy.fill(value); }
+
+	void setOccupancyIndex(index_t const index, occupancy_t const value)
+	{
+		if constexpr (1 == N) {
+			setOccupancy(value);
+		} else {
+			occupancy[index] = value;
 		}
 	}
 };
 
-template <bool Single>
+template <std::size_t N>
 struct ContainsOccupancy {
 	// Indicators
 	uint8_t contains_unknown;
@@ -179,7 +212,7 @@ struct ContainsOccupancy {
 };
 
 template <>
-struct ContainsOccupancy<true> {
+struct ContainsOccupancy<1> {
 	// Indicators
 	uint8_t contains_unknown : 1;
 	uint8_t contains_free : 1;

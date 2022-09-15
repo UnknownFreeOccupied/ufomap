@@ -237,14 +237,14 @@ class DistanceMapBase
 	// Input/output (read/write)
 	//
 
-	static constexpr DataIdentifier getDataIdentifier() noexcept
+	static constexpr DataIdentifier dataIdentifier() noexcept
 	{
 		return DataIdentifier::DISTANCE;
 	}
 
 	static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
-		return getDataIdentifier() == identifier;
+		return dataIdentifier() == identifier;
 	}
 
 	template <class InputIt>

@@ -69,7 +69,7 @@ namespace ufo::map
 using mt_t = std::uint64_t;
 
 template <mt_t MT, mt_t T, mt_t HRT, template <class> class Node>
-using cond_node_t = std::conditional_t<MT & T, Node<MT ^ T & HRT>, EmptyNode<T>>;
+using cond_node_t = std::conditional_t<MT & T, Node<MT ^ T & HRT ? 1 : 8>, EmptyNode<T>>;
 
 template <bool C, mt_t T, template <typename...> typename MapBase>
 struct cond_map_base {
@@ -130,7 +130,7 @@ class UFOMap
 												 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
                          cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
                          cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
-					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY>, void>,
+					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY ? 1 : 8>, void>,
           ReuseNodes, LockLess, CountNodes,
 					// Order does not matter
           cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
@@ -157,7 +157,7 @@ class UFOMap
 										 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
 	                   cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
 	                   cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
-			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY>, void>,
+			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY ? 1 : 8>, void>,
 	    ReuseNodes, LockLess, CountNodes
 	    cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
 	    cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,

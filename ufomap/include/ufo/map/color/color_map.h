@@ -208,21 +208,21 @@ class ColorMapBase
 	// Update node
 	//
 
-	template <bool Single, class T>
-	void updateNode(ColorNode<Single>& node, index_field_t const indices, T const& children)
+	template <std::size_t N, class T>
+	void updateNode(ColorNode<N>& node, index_field_t const indices, T const& children)
 	{
-		if constexpr (Single) {
+		if constexpr (1 == N) {
 			std::array<color_t, children.size()> red;
 			std::array<color_t, children.size()> green;
 			std::array<color_t, children.size()> blue;
 			for (std::size_t i = 0; children.size() != i; ++i) {
-				red[i] = children[i].red;
-				green[i] = children[i].green;
-				blue[i] = children[i].blue;
+				red[i] = children[i].red[0];
+				green[i] = children[i].green[0];
+				blue[i] = children[i].blue[0];
 			}
-			node.red = average(red);
-			node.green = average(green);
-			node.blue = average(blue);
+			node.red[0] = average(red);
+			node.green[0] = average(green);
+			node.blue[0] = average(blue);
 		} else {
 			for (index_t index = 0; children.size() != index; ++index) {
 				if ((indices >> index) & index_field_t(1)) {
@@ -261,56 +261,59 @@ class ColorMapBase
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr uint8_t isSingle() noexcept
+	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
 		using typename std::iterator_traits<InputIt>::value_type;
 		using typename value_type::node_type;
-		if constexpr (std::is_base_of_v(ColorNode<true>, node_type)) {
-			return 1;
-		} else {
-			return 0;
-		}
+		return node_type::colorSize();
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, OutputIt last)
+	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
 	{
-		uint8_t single;
-		in.read(reinterpret_cast<char*>(&single), sizeof(single));
-
-		std::size_t num_nodes = 3 * std::distance(first, last);
-		if (!single) {
-			num_nodes *= 8;
-		}
+		uint8_t n;
+		in.read(reinterpret_cast<char*>(&n), sizeof(n));
+		std::size_t const s = 3 * n;
+		num_nodes *= s;
 
 		auto data = std::make_unique<color_t[]>(num_nodes);
 		in.read(reinterpret_cast<char*>(data.get()),
 		        num_nodes * sizeof(typename decltype(data)::element_type));
 
 		auto const d = data.get();
-		if constexpr (isSingle<OutputIt>()) {
-			if (single) {
-				for (std::size_t i = 0; first != last; ++first, i += 3) {
-					first->node.red = *(d + i);
-					first->node.green = *(d + i + 1);
-					first->node.blue = *(d + i + 2);
+		if constexpr (1 == numData<OutputIt>()) {
+			if (1 == n) {
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 3) {
+					first->node.red[0] = *(d + i);
+					first->node.green[0] = *(d + i + 1);
+					first->node.blue[0] = *(d + i + 2);
 				}
 			} else {
-				for (std::size_t i = 0; first != last; ++first, i += 24) {
-					first->node.red = average(d + i, d + i + 8);
-					first->node.green = average(d + i + 8, d + i + 16);
-					first->node.blue = average(d + i + 16, d + i + 24);
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 24) {
+					first->node.red[0] = average(d + i, d + i + 8);
+					first->node.green[0] = average(d + i + 8, d + i + 16);
+					first->node.blue[0] = average(d + i + 16, d + i + 24);
 				}
 			}
 		} else {
-			if (single) {
-				for (std::size_t i = 0; first != last; ++first, i += 3) {
-					first->node.red.fill(*(d + i));
-					first->node.green.fill(*(d + i + 1));
-					first->node.blue.fill(*(d + i + 2));
+			if (1 == n) {
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 3) {
+					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+						first->node.red.fill(*(d + i));
+						first->node.green.fill(*(d + i + 1));
+						first->node.blue.fill(*(d + i + 2));
+					} else {
+						for (std::size_t index = 0; first->node.red.size() != index; ++index) {
+							if ((first.index_field >> index) & index_field_t(1)) {
+								first->node.red[index] = *(d + i);
+								first->node.green[index] = *(d + i + 1);
+								first->node.blue[index] = *(d + i + 2);
+							}
+						}
+					}
 				}
 			} else {
-				for (std::size_t i = 0; first != last; ++first, i += 24) {
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 24) {
 					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
 						std::copy(d + i, d + i + 8, first->node.red.data());
 						std::copy(d + i + 8, d + i + 16, first->node.green.data());
@@ -330,33 +333,22 @@ class ColorMapBase
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last)
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
 	{
-		constexpr uint8_t const single = isSingle<InputIt>();
-		out.write(reinterpret_cast<char const*>(&single), sizeof(single));
-
-		std::size_t num_nodes = 3 * std::distance(first, last);
-		if constexpr (!single) {
-			num_nodes *= 8;
-		}
+		constexpr uint8_t const n = numData<InputIt>();
+		constexpr std::size_t const s = 3 * n;
+		num_nodes *= s;
 
 		auto data = std::make_unique<color_t[]>(num_nodes);
 		auto d = data.get();
-		if constexpr (single) {
-			for (std::size_t i = 0; first != last; ++first, i += 3) {
-				*(d + i) = first->node.red;
-				*(d + i + 1) = first->node.green;
-				*(d + i + 2) = first->node.blue;
-			}
-		} else {
-			for (std::size_t i = 0; first != last; ++first, i += 24) {
-				std::copy(std::cbegin(first->node.red), std::cend(first->node.red), d + i);
-				std::copy(std::cbegin(first->node.green), std::cend(first->node.green),
-				          d + i + 8);
-				std::copy(std::cbegin(first->node.blue), std::cend(first->node.blue), d + i + 16);
-			}
+		for (std::size_t i = 0; i != num_nodes; ++first, i += s) {
+			std::copy(std::cbegin(first->node.red), std::cend(first->node.red), d + i);
+			std::copy(std::cbegin(first->node.green), std::cend(first->node.green), d + i + n);
+			std::copy(std::cbegin(first->node.blue), std::cend(first->node.blue),
+			          d + i + (2 * n));
 		}
 
+		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}

@@ -47,7 +47,7 @@
 
 namespace ufo::map
 {
-template <mt_t Num>
+template <std::size_t N>
 struct EmptyNode {
 	constexpr void fill(EmptyNode const, index_t const) const noexcept {}
 

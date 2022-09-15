@@ -66,11 +66,13 @@ namespace ufo::map
  */
 class Code
 {
+	// TODO: Save depth in the most/least (depending on how to order) significant 5 bits
+	// TODO: Save depth by just checking first set bit position
  public:
 	constexpr Code() = default;
 
 	constexpr Code(code_t code, depth_t depth = 0)
-	    : code_((code >> depth) << depth), depth_(depth)
+	    : code_((code >> (3 * depth)) << (3 * depth)), depth_(depth)
 	{
 	}
 
@@ -124,11 +126,7 @@ class Code
 	 * @param depth The depth of the code
 	 * @return Code The code at the specified depth
 	 */
-	constexpr Code toDepth(depth_t depth) const
-	{
-		code_t temp = 3 * depth;
-		return Code((code_ >> temp) << temp, depth);
-	}
+	constexpr Code toDepth(depth_t depth) const { return Code(code_, depth); }
 
 	/*!
 	 * @brief Converts a key to a code

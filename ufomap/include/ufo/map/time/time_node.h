@@ -43,45 +43,75 @@
 #define UFO_MAP_TIME_NODE_H
 
 // UFO
+#include <ufo/algorithm/algorithm.h>
 #include <ufo/map/types.h>
 
 // STL
 #include <array>
-#include <type_traits>
 
 namespace ufo::map
 {
-template <bool Single>
+template <std::size_t N>
 struct TimeNode {
 	// Data
-	std::conditional_t<Single, time_t, std::array<time_t, 8>> time;
+	std::array<time_t, N> time;
 
-	bool operator==(TimeNode const& rhs) const { return time == rhs.time; }
+	//
+	// Size
+	//
 
-	bool operator!=(TimeNode const& rhs) const { return !(*this == rhs); }
+	[[nodiscard]] static constexpr std::size_t timeSize() { return N; }
 
-	constexpr time_t getTime(index_t const index) const
+	//
+	// Fill
+	//
+
+	void fill(TimeNode const parent, index_t const index)
 	{
-		if constexpr (Single) {
-			return time;
+		if constexpr (1 == N) {
+			time = parent.time;
+		} else {
+			time.fill(parent.time[index]);
+		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(TimeNode const parent,
+	                                           index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return time == parent.time;
+		} else {
+			return all_of(time, [t = parent.time[index]](auto const e) { return e == t; });
+		}
+	}
+
+	//
+	// Get time
+	//
+
+	constexpr time_t timeIndex(index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return time[0];
 		} else {
 			return time[index];
 		}
 	}
 
-	void setTime(time_t const value)
-	{
-		if constexpr (Single) {
-			time = value;
-		} else {
-			time.fill(value);
-		}
-	}
+	//
+	// Set time
+	//
 
-	constexpr void setTime(index_t const index, time_t const value)
+	void setTime(time_t const value) { time.fill(value); }
+
+	void setTimeIndex(index_t const index, time_t const value)
 	{
-		if constexpr (Single) {
-			time = value;
+		if constexpr (1 == N) {
+			setTime(value);
 		} else {
 			time[index] = value;
 		}

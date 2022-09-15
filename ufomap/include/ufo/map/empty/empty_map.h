@@ -77,23 +77,23 @@ class EmptyMap
 	// Input/ouput (read/write)
 	//
 
-	static constexpr DataIdentifier getDataIdentifier() noexcept
+	static constexpr DataIdentifier dataIdentifier() noexcept
 	{
 		return DataIdentifier::NO_DATA;
 	}
 
 	static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
-		return getDataIdentifier() == identifier;
+		return dataIdentifier() == identifier;
 	}
 
-	template <class InputIt>
-	static constexpr void readNodes(std::istream&, InputIt, InputIt, std::size_t) noexcept
+	template <class OutputIt>
+	static constexpr void readNodes(std::istream&, OutputIt, std::size_t) noexcept
 	{
 	}
 
 	template <class InputIt>
-	static constexpr void writeNodes(std::ostream&, InputIt, InputIt, std::size_t) noexcept
+	static constexpr void writeNodes(std::ostream&, InputIt, std::size_t) noexcept
 	{
 	}
 };
