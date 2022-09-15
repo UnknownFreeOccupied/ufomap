@@ -54,11 +54,10 @@
 namespace ufomap_ros::rviz_plugins
 {
 static inline constexpr auto color_lut = [] {
-	std::array<float, std::numeric_limits<ufo::map::RGBColorType>::max() + 1> color_lut =
-	    {};
+	std::array<float, std::numeric_limits<ufo::map::color_t>::max() + 1> color_lut = {};
 	for (size_t i = 0; i != color_lut.size(); ++i) {
 		color_lut[i] = static_cast<double>(i) /
-		               static_cast<double>(std::numeric_limits<ufo::map::RGBColorType>::max());
+		               static_cast<double>(std::numeric_limits<ufo::map::color_t>::max());
 	}
 	return color_lut;
 }();

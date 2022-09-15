@@ -104,7 +104,7 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	std::optional<sensor_msgs::PointCloud2ConstIterator<uint32_t>> iter_value;
 
 	// Create optional iteraters if wanted and available
-	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
+	if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 		if (rgb_field) {
 			iter_rgb.emplace(cloud_in, rgb_field->name);
 		}
@@ -130,7 +130,7 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 			cloud_out[index].y = iter_x[1];
 			cloud_out[index].z = iter_x[2];
 
-			if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
+			if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 				if (rgb_field) {
 					cloud_out[index].red = (*iter_rgb)[0];
 					cloud_out[index].green = (*iter_rgb)[1];
@@ -145,7 +145,7 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 		}
 
 		// Increment optional iterators
-		if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
+		if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 			if (rgb_field) {
 				++(*iter_rgb);
 			}
@@ -169,7 +169,7 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
               sensor_msgs::PointCloud2& cloud_out)
 {
 	sensor_msgs::PointCloud2Modifier cloud_out_modifier(cloud_out);
-	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P> &&
+	if constexpr (std::is_base_of_v<ufo::map::Color, P> &&
 	              std::is_base_of_v<ufo::map::SemanticPair, P>) {
 		// clang-format off
 		cloud_out_modifier.setPointCloud2Fields(6, 
@@ -180,7 +180,7 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 														"label", 1, sensor_msgs::PointField::UINT32,
 														"value", 1, sensor_msgs::PointField::UINT32);
 		// clang-format on
-	} else if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
+	} else if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 		cloud_out_modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
 	} else if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
 		// clang-format off
@@ -203,7 +203,7 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 	std::optional<sensor_msgs::PointCloud2Iterator<uint32_t>> iter_value;
 
 	// Create optional iterators
-	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
+	if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 		iter_rgb.emplace(cloud_out, "rgb");
 	}
 	if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
@@ -216,7 +216,7 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 		iter_x[1] = point.y;
 		iter_x[2] = point.z;
 		++iter_x;
-		if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
+		if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 			(*iter_rgb)[0] = point.red;
 			(*iter_rgb)[1] = point.green;
 			(*iter_rgb)[2] = point.blue;

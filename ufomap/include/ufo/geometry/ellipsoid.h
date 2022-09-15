@@ -52,7 +52,7 @@ struct Ellipsoid {
 
 	constexpr Ellipsoid() noexcept = default;
 
-	constexpr Ellipsoid(Point const& center, Point const& radius) noexcept
+	constexpr Ellipsoid(Point center, Point radius) noexcept
 	    : center(center), radius(radius)
 	{
 	}

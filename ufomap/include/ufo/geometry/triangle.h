@@ -51,18 +51,14 @@ struct Triangle {
 
 	constexpr Triangle() noexcept = default;
 
-	constexpr Triangle(Point const& point_1, Point const& point_2,
-	                   Point const& point_3) noexcept
+	constexpr Triangle(Point point_1, Point point_2, Point point_3) noexcept
 	    : points{point_1, point_2, point_3}
 	{
 	}
 
 	bool operator==(Triangle const& rhs) const noexcept { return rhs.points == points; }
 
-	bool operator!=(Triangle const& rhs) const noexcept
-	{
-		return !(*this == rhs);
-	}
+	bool operator!=(Triangle const& rhs) const noexcept { return !(*this == rhs); }
 
 	constexpr Point min() const noexcept
 	{

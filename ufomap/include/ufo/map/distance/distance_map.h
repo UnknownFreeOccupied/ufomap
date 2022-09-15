@@ -75,7 +75,7 @@ class DistanceMapBase
 
 	distance_t getDistance(Key key) const { return getDistance(Derived::toCode(key)); }
 
-	distance_t getDistance(Point3 coord, depth_t depth = 0) const
+	distance_t getDistance(Point coord, depth_t depth = 0) const
 	{
 		return getDistance(derived().toCode(coord, depth));
 	}
@@ -108,7 +108,7 @@ class DistanceMapBase
 		setDistance(Derived::toCode(key), time_step, propagate);
 	}
 
-	void setDistance(Point3 coord, distance_t time_step, bool propagate = true,
+	void setDistance(Point coord, distance_t time_step, bool propagate = true,
 	                 depth_t depth = 0)
 	{
 		setDistance(derived().toCode(coord, depth), time_step, propagate);

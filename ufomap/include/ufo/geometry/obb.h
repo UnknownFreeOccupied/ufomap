@@ -58,19 +58,17 @@ struct OBB {
 
 	constexpr OBB() noexcept = default;
 
-	constexpr OBB(Point const& center, Point const& half_size) noexcept
+	constexpr OBB(Point center, Point half_size) noexcept
 	    : center(center), half_size(half_size)
 	{
 	}
 
-	constexpr OBB(Point const& center, Point const& half_size,
-	              math::Quaternionf const& rotation) noexcept
+	constexpr OBB(Point center, Point half_size, math::Quaternionf const& rotation) noexcept
 	    : center(center), half_size(half_size), rotation(rotation)
 	{
 	}
 
-	constexpr OBB(Point const& center, Point const& half_size,
-	              Point const& rotation) noexcept
+	constexpr OBB(Point center, Point half_size, Point rotation) noexcept
 	    : center(center),
 	      half_size(half_size),
 	      rotation(rotation[0], rotation[1], rotation[2])

@@ -52,8 +52,7 @@ struct Sphere {
 
 	constexpr Sphere() noexcept = default;
 
-	constexpr Sphere(Point const& center, float radius) noexcept
-	    : center(center), radius(radius)
+	constexpr Sphere(Point center, float radius) noexcept : center(center), radius(radius)
 	{
 	}
 

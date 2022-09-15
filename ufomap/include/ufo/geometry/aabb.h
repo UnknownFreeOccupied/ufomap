@@ -59,13 +59,12 @@ struct AABB {
 
 	constexpr AABB() noexcept = default;
 
-	constexpr AABB(Point const& center, float half_size) noexcept
+	constexpr AABB(Point center, float half_size) noexcept
 	    : center(center), half_size(half_size, half_size, half_size)
 	{
 	}
 
-	constexpr AABB(Point const& min, Point const& max) noexcept
-	    : half_size((max - min) / 2.0)
+	constexpr AABB(Point min, Point max) noexcept : half_size((max - min) / 2.0)
 	{
 		center = min + half_size;
 	}

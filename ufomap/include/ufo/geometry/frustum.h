@@ -62,8 +62,8 @@ struct Frustum {
 
 	constexpr Frustum() noexcept = default;
 
-	constexpr Frustum(Point const& pos, Point const& target, Point const& up,
-	                  float vertical_angle, float horizontal_angle, float near_distance,
+	constexpr Frustum(Point pos, Point target, Point up, float vertical_angle,
+	                  float horizontal_angle, float near_distance,
 	                  float far_distance) noexcept
 	    : position(pos),
 	      target(target),

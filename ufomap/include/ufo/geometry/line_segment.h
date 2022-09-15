@@ -52,10 +52,7 @@ struct LineSegment {
 
 	constexpr LineSegment() noexcept = default;
 
-	constexpr LineSegment(Point const& start, Point const& end) noexcept
-	    : start(start), end(end)
-	{
-	}
+	constexpr LineSegment(Point start, Point end) noexcept : start(start), end(end) {}
 
 	constexpr bool operator==(LineSegment const& rhs) const noexcept
 	{

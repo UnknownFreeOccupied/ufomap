@@ -242,7 +242,7 @@ struct BV {
 	constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	constexpr BV(geometry::AAEBB const& aaebb) noexcept : aaebb_(aaebb) {}
+	constexpr BV(geometry::AAEBB aaebb) noexcept : aaebb_(aaebb) {}
 
  protected:
 	// The AAEBB for the node
@@ -272,17 +272,14 @@ struct NodeBV : public Node, public BV {
 	}
 
  protected:
-	constexpr NodeBV(void* data, Code code, geometry::AAEBB const& aaebb) noexcept
+	constexpr NodeBV(void* data, Code code, geometry::AAEBB aaebb) noexcept
 	    : Node(data, code), BV(aaebb)
 	{
 	}
 
-	constexpr NodeBV(Node node, geometry::AAEBB const& aaebb) noexcept
-	    : Node(node), BV(aaebb)
-	{
-	}
+	constexpr NodeBV(Node node, geometry::AAEBB aaebb) noexcept : Node(node), BV(aaebb) {}
 
-	constexpr NodeBV(Node&& node, geometry::AAEBB const& aaebb) noexcept
+	constexpr NodeBV(Node&& node, geometry::AAEBB aaebb) noexcept
 	    : Node(std::forward<Node>(node)), BV(aaebb)
 	{
 	}
@@ -362,19 +359,18 @@ struct NodeWParentBV : public Node, public BV {
 	constexpr NodeWParentBV() = default;
 
  protected:
-	constexpr NodeWParentBV(void* data, Code code, geometry::AAEBB const& aaebb,
+	constexpr NodeWParentBV(void* data, Code code, geometry::AAEBB aaebb,
 	                        void* parent) noexcept
 	    : Node(data, code), BV(aaebb), data_parent_(parent)
 	{
 	}
 
-	constexpr NodeWParentBV(Node node, geometry::AAEBB const& aaebb, void* parent) noexcept
+	constexpr NodeWParentBV(Node node, geometry::AAEBB aaebb, void* parent) noexcept
 	    : Node(node), BV(aaebb), data_parent_(parent)
 	{
 	}
 
-	constexpr NodeWParentBV(Node&& node, geometry::AAEBB const& aaebb,
-	                        void* parent) noexcept
+	constexpr NodeWParentBV(Node&& node, geometry::AAEBB aaebb, void* parent) noexcept
 	    : Node(std::forward<Node>(node)), BV(aaebb), data_parent_(parent)
 	{
 	}
@@ -395,20 +391,19 @@ struct NodeWParentsBV : public Node, public BV {
 	constexpr NodeWParentsBV() = default;
 
  protected:
-	constexpr NodeWParentsBV(void* data, Code code, geometry::AAEBB const& aaebb,
+	constexpr NodeWParentsBV(void* data, Code code, geometry::AAEBB aaebb,
 	                         parents_t const& parents) noexcept
 	    : Node(data, code), BV(aaebb), data_parents_(parents)
 	{
 	}
 
-	constexpr NodeWParentsBV(Node node, geometry::AAEBB const& aaebb,
+	constexpr NodeWParentsBV(Node node, geometry::AAEBB aaebb,
 	                         parents_t const& parents) noexcept
 	    : Node(node), BV(aaebb), data_parents_(parents)
 	{
 	}
 
-	constexpr NodeWParentsBV(Node&& node, geometry::AAEBB const& aaebb,
-	                         parents_t parents) noexcept
+	constexpr NodeWParentsBV(Node&& node, geometry::AAEBB aaebb, parents_t parents) noexcept
 	    : Node(std::forward<Node>(node)), BV(aaebb), data_parents_(parents)
 	{
 	}

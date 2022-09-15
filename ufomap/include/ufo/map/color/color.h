@@ -42,104 +42,40 @@
 #ifndef UFO_MAP_COLOR_H
 #define UFO_MAP_COLOR_H
 
-// STL
-#include <cmath>
-#include <cstdint>
-#include <initializer_list>
-#include <iostream>
-#include <type_traits>
-#include <utility>
-#include <vector>
+// UFO
+#include <ufo/map/types.h>
 
 namespace ufo::map
 {
-using RGBColorType = uint8_t;
-
 /*!
- * @brief RGB color
+ * @brief Color
  *
  */
-struct RGBColor {
-	RGBColorType red = 0;
-	RGBColorType green = 0;
-	RGBColorType blue = 0;
+struct Color {
+	color_t red = 0;
+	color_t green = 0;
+	color_t blue = 0;
 
-	constexpr RGBColor() = default;
+	constexpr Color() = default;
 
-	constexpr RGBColor(RGBColorType red, RGBColorType green, RGBColorType blue)
+	constexpr Color(color_t red, color_t green, color_t blue)
 	    : red(red), green(green), blue(blue)
 	{
 	}
 
-	constexpr bool operator==(RGBColor const& rhs) const
+	constexpr bool operator==(Color const rhs) const
 	{
 		return rhs.red == red && rhs.green == green && rhs.blue == blue;
 	}
 
-	constexpr bool operator!=(RGBColor const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Color const rhs) const { return !(*this == rhs); }
 
-	[[nodiscard]] constexpr bool set() const { return 0 != red || 0 != green || 0 != blue; }
+	[[nodiscard]] constexpr bool isSet() const
+	{
+		return 0 != red || 0 != green || 0 != blue;
+	}
 
 	constexpr void clear() { red = green = blue = 0; }
-
-	template <class InputIt>
-	static constexpr RGBColor average(InputIt first, InputIt last)
-	{
-		if constexpr (std::is_base_of_v<RGBColor,
-		                                typename std::iterator_traits<InputIt>::value_type>) {
-			unsigned r = 0;
-			unsigned g = 0;
-			unsigned b = 0;
-			unsigned num = 0;
-			for (; first != last; ++first) {
-				if (!first->set()) {
-					continue;
-				}
-
-				r += first->red;
-				g += first->green;
-				b += first->blue;
-				++num;
-			}
-			return 0 == num ? RGBColor() : RGBColor(r / num, g / num, b / num);
-		} else if constexpr (std::is_base_of_v<
-		                         std::pair<RGBColor, double>,
-		                         typename std::iterator_traits<InputIt>::value_type>) {
-			unsigned r = 0;
-			unsigned g = 0;
-			unsigned b = 0;
-			double weight = 0;
-			for (; first != last; ++first) {
-				if (!first->first.set()) {
-					continue;
-				}
-
-				r += first->first.red * first->second;
-				g += first->first.green * first->second;
-				b += first->first.blue * first->second;
-				weight += first->second;
-			}
-			return 0 == weight ? RGBColor() : RGBColor(r / weight, g / weight, b / weight);
-
-		} else {
-			static_assert(
-			    std::is_base_of_v<RGBColor,
-			                      typename std::iterator_traits<InputIt>::value_type> ||
-			    std::is_base_of_v<std::pair<RGBColor, double>,
-			                      typename std::iterator_traits<InputIt>::value_type>);
-		}
-	}
-
-	static constexpr RGBColor average(std::initializer_list<RGBColor> colors)
-	{
-		return average(std::cbegin(colors), std::cend(colors));
-	}
-
-	static constexpr RGBColor average(
-	    std::initializer_list<std::pair<RGBColor, double>> colors)
-	{
-		return average(std::cbegin(colors), std::cend(colors));
-	}
 };
 
 }  // namespace ufo::map

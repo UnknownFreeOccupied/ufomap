@@ -108,7 +108,7 @@ class SemanticMapBase
 		return getSemantics(derived().toCode(key));
 	}
 
-	[[nodiscard]] semantic_container_type const& getSemantics(Point3 coord,
+	[[nodiscard]] semantic_container_type const& getSemantics(Point coord,
 	                                                          depth_t depth = 0) const
 	{
 		return getSemantics(derived().toCode(coord, depth));
@@ -147,7 +147,7 @@ class SemanticMapBase
 		setSemantics(derived().toCode(key), semantics, propagate);
 	}
 
-	void setSemantics(Point3 coord, semantic_container_type const& semantics,
+	void setSemantics(Point coord, semantic_container_type const& semantics,
 	                  bool propagate = true, depth_t depth = 0)
 	{
 		setSemantics(derived().toCode(coord, depth), semantics, propagate);
@@ -188,7 +188,7 @@ class SemanticMapBase
 		insertSemantics(derived().toCode(key), label, value, propagate);
 	}
 
-	void insertSemantics(Point3 coord, semantic_label_type label, semantic_value_type value,
+	void insertSemantics(Point coord, semantic_label_type label, semantic_value_type value,
 	                     bool propagate = true, depth_t depth = 0)
 	{
 		insertSemantics(derived().toCode(coord, depth), label, value, propagate);
@@ -216,7 +216,7 @@ class SemanticMapBase
 		insertSemantics(derived().toCode(key), semantic, propagate);
 	}
 
-	void insertSemantics(Point3 coord, SemanticPair semantic, bool propagate = true,
+	void insertSemantics(Point coord, SemanticPair semantic, bool propagate = true,
 	                     depth_t depth = 0)
 	{
 		insertSemantics(derived().toCode(coord, depth), semantic, propagate);
@@ -258,7 +258,7 @@ class SemanticMapBase
 	}
 
 	template <class InputIt>
-	void insertSemantics(Point3 coord, InputIt first, InputIt last, bool propagate = true,
+	void insertSemantics(Point coord, InputIt first, InputIt last, bool propagate = true,
 	                     depth_t depth = 0)
 	{
 		insertSemantics(derived().toCode(coord, depth), first, last, propagate);
@@ -284,7 +284,7 @@ class SemanticMapBase
 		insertSemantics(derived().toCode(key), ilist, propagate);
 	}
 
-	void insertSemantics(Point3 coord, std::initializer_list<SemanticPair> ilist,
+	void insertSemantics(Point coord, std::initializer_list<SemanticPair> ilist,
 	                     bool propagate = true, depth_t depth = 0)
 	{
 		insertSemantics(derived().toCode(coord, depth), ilist, propagate);
@@ -329,7 +329,7 @@ class SemanticMapBase
 		insertOrAssignSemantics(derived().toCode(key), label, value, propagate);
 	}
 
-	void insertOrAssignSemantics(Point3 coord, semantic_label_type label,
+	void insertOrAssignSemantics(Point coord, semantic_label_type label,
 	                             semantic_value_type value, bool propagate = true,
 	                             depth_t depth = 0)
 	{
@@ -358,7 +358,7 @@ class SemanticMapBase
 		insertOrAssignSemantics(derived().toCode(key), semantic, propagate);
 	}
 
-	void insertOrAssignSemantics(Point3 coord, SemanticPair semantic, bool propagate = true,
+	void insertOrAssignSemantics(Point coord, SemanticPair semantic, bool propagate = true,
 	                             depth_t depth = 0)
 	{
 		insertOrAssignSemantics(derived().toCode(coord, depth), semantic, propagate);
@@ -391,7 +391,7 @@ class SemanticMapBase
 		increaseSemantics(derived().toCode(key), inc, propagate);
 	}
 
-	void increaseSemantics(Point3 coord, semantic_value_type inc, bool propagate = true,
+	void increaseSemantics(Point coord, semantic_value_type inc, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		increaseSemantics(derived().toCode(coord, depth), inc, propagate);
@@ -434,7 +434,7 @@ class SemanticMapBase
 		increaseSemantics(derived().toCode(key), label, inc, init_value, propagate);
 	}
 
-	void increaseSemantics(Point3 coord, semantic_label_type label, semantic_value_type inc,
+	void increaseSemantics(Point coord, semantic_label_type label, semantic_value_type inc,
 	                       semantic_value_type init_value = getSemanticValueMin(),
 	                       bool propagate = true, depth_t depth = 0)
 	{
@@ -471,7 +471,7 @@ class SemanticMapBase
 		decreaseSemantics(derived().toCode(key), dec, propagate);
 	}
 
-	void decreaseSemantics(Point3 coord, semantic_value_type dec, bool propagate = true,
+	void decreaseSemantics(Point coord, semantic_value_type dec, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		decreaseSemantics(derived().toCode(coord, depth), dec, propagate);
@@ -514,7 +514,7 @@ class SemanticMapBase
 		decreaseSemantics(derived().toCode(key), label, dec, init_value, propagate);
 	}
 
-	void decreaseSemantics(Point3 coord, semantic_label_type label, semantic_value_type dec,
+	void decreaseSemantics(Point coord, semantic_label_type label, semantic_value_type dec,
 	                       semantic_value_type init_value = getSemanticValueMin(),
 	                       bool propagate = true, depth_t depth = 0)
 	{
@@ -568,7 +568,7 @@ class SemanticMapBase
 		changeSemanticLabel(derived().toCode(key), old_label, new_label, propagate);
 	}
 
-	void changeSemanticLabel(Point3 coord, semantic_label_type old_label,
+	void changeSemanticLabel(Point coord, semantic_label_type old_label,
 	                         semantic_label_type new_label, bool propagate = true,
 	                         depth_t depth = 0)
 	{
@@ -611,7 +611,7 @@ class SemanticMapBase
 		deleteSemanticLabel(derived().toCode(key), label, propagate);
 	}
 
-	void deleteSemanticLabel(Point3 coord, semantic_label_type label, bool propagate = true,
+	void deleteSemanticLabel(Point coord, semantic_label_type label, bool propagate = true,
 	                         depth_t depth = 0)
 	{
 		deleteSemanticLabel(derived().toCode(coord, depth), label, propagate);
@@ -649,7 +649,7 @@ class SemanticMapBase
 		clearSemantics(derived().toCode(key), propagate);
 	}
 
-	void clearSemantics(Point3 coord, bool propagate = true, depth_t depth = 0)
+	void clearSemantics(Point coord, bool propagate = true, depth_t depth = 0)
 	{
 		clearSemantics(derived().toCode(coord, depth), propagate);
 	}
@@ -691,7 +691,7 @@ class SemanticMapBase
 	}
 
 	template <class Pred>
-	void eraseSemanticsIf(Point3 coord, Pred pred, bool propagate = true, depth_t depth = 0)
+	void eraseSemanticsIf(Point coord, Pred pred, bool propagate = true, depth_t depth = 0)
 	{
 		eraseSemanticsIf(derived().toCode(coord, depth), pred, propagate);
 	}

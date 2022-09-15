@@ -118,16 +118,17 @@ class Integrator
 
 			// Update color
 			if constexpr (is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
-			              std::is_base_of_v<RGBColor, P>) {
-				RGBColor avg_color = RGBColor::average(first_point_it, last_point_it);
+			              std::is_base_of_v<Color, P>) {
+				// TODO: Implement
+				Color avg_color = Color::average(first_point_it, last_point_it);
 
 				if (avg_color.set()) {
 					double total_logit = logit + prob;
 					double weight = prob / total_logit;
-					map.setColor(node,
-					             RGBColor::average(
-					                 {{avg_color, weight}, {map.getColor(node), 1.0 - weight}}),
-					             false);  // TODO: Update
+					map.setColor(
+					    node,
+					    Color::average({{avg_color, weight}, {map.getColor(node), 1.0 - weight}}),
+					    false);  // TODO: Update
 				}
 			}
 
@@ -220,7 +221,7 @@ class Integrator
 	 * @param propagate Whether to update the inner nodes of the map.
 	 */
 	template <class Map, class P>
-	void insertPointCloud(Map& map, PointCloudT<P> const& cloud, Point3 const sensor_origin,
+	void insertPointCloud(Map& map, PointCloudT<P> const& cloud, Point const sensor_origin,
 	                      bool const propagate = true) const
 	{
 		// Get current state
@@ -262,7 +263,7 @@ class Integrator
 	 * @param propagate Whether to update the inner nodes of the map.
 	 */
 	template <class Map, class P>
-	void insertPointCloud(Map& map, PointCloudT<P> cloud, Point3 const sensor_origin,
+	void insertPointCloud(Map& map, PointCloudT<P> cloud, Point const sensor_origin,
 	                      math::Pose6f frame_origin, bool const propagate = true) const
 	{
 		applyTransform(cloud, frame_origin);

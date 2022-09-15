@@ -80,7 +80,7 @@ class SurfelMapBase
 
 	Surfel getSurfel(Key key) const { return getSurfel(Derived::toCode(key)); }
 
-	Surfel getSurfel(Point3 coord, depth_t depth = 0) const
+	Surfel getSurfel(Point coord, depth_t depth = 0) const
 	{
 		return getSurfel(derived().toCode(coord, depth));
 	}
@@ -106,7 +106,7 @@ class SurfelMapBase
 
 	[[nodiscard]] bool hasSurfel(Key key) const { return hasSurfel(Derived::toCode(key)); }
 
-	[[nodiscard]] bool hasSurfel(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] bool hasSurfel(Point coord, depth_t depth = 0) const
 	{
 		return hasSurfel(derived().toCode(coord, depth));
 	}
@@ -135,7 +135,7 @@ class SurfelMapBase
 		return getNumSurfelPoints(derived().toCode(key));
 	}
 
-	[[nodiscard]] std::size_t getNumSurfelPoints(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] std::size_t getNumSurfelPoints(Point coord, depth_t depth = 0) const
 	{
 		return getNumSurfelPoints(derived().toCode(coord, depth));
 	}
@@ -171,7 +171,7 @@ class SurfelMapBase
 		setSurfel(derived().toCode(key), surfel, propagate);
 	}
 
-	void setSurfel(Point3 coord, Surfel const& surfel, depth_t depth = 0,
+	void setSurfel(Point coord, Surfel const& surfel, depth_t depth = 0,
 	               bool propagate = true)
 	{
 		setSurfel(derived().toCode(coord, depth), surfel, propagate);
@@ -225,7 +225,7 @@ class SurfelMapBase
 		insertSurfel(derived().toCode(key), surfel, propagate);
 	}
 
-	void insertSurfel(Point3 coord, Surfel const& surfel, depth_t depth = 0,
+	void insertSurfel(Point coord, Surfel const& surfel, depth_t depth = 0,
 	                  bool propagate = true)
 	{
 		insertSurfel(derived().toCode(coord, depth), surfel, propagate);
@@ -279,7 +279,7 @@ class SurfelMapBase
 		eraseSurfel(derived().toCode(key), surfel, propagate);
 	}
 
-	void eraseSurfel(Point3 coord, Surfel const& surfel, depth_t depth = 0,
+	void eraseSurfel(Point coord, Surfel const& surfel, depth_t depth = 0,
 	                 bool propagate = true)
 	{
 		eraseSurfel(derived().toCode(coord, depth), surfel, propagate);
@@ -295,7 +295,7 @@ class SurfelMapBase
 	// Insert surfel point
 	//
 
-	void insertSurfelPoint(Point3 point, depth_t depth = 0, bool propagate = true)
+	void insertSurfelPoint(Point point, depth_t depth = 0, bool propagate = true)
 	{
 		derived().apply(
 		    derived().toCode(point, depth),
@@ -306,7 +306,7 @@ class SurfelMapBase
 	void insertSurfelPoint(InputIt first, InputIt last, depth_t depth = 0,
 	                       bool propagate = true)
 	{
-		std::vector<std::pair<Code, Point3>> codes;
+		std::vector<std::pair<Code, Point>> codes;
 		codes.reserve(std::distance(first, last));
 
 		for (; first != last; ++first) {
@@ -316,7 +316,7 @@ class SurfelMapBase
 		std::sort(std::begin(codes), std::end(codes),
 		          [](auto&& a, auto&& b) { return a.first < b.first; });
 
-		std::vector<Point3> points;
+		std::vector<Point> points;
 		for (auto it = std::cbegin(codes); it != std::cend(codes);) {
 			auto it_end = std::find_if(std::next(it), std::cend(codes),
 			                           [it](auto&& v) { return it->first != v.first; });
@@ -344,7 +344,7 @@ class SurfelMapBase
 		}
 	}
 
-	void insertSurfelPoint(std::initializer_list<Point3> points, depth_t depth = 0,
+	void insertSurfelPoint(std::initializer_list<Point> points, depth_t depth = 0,
 	                       bool propagate = true)
 	{
 		insertSurfelPoint(std::begin(points), std::end(points), depth, propagate);
@@ -354,7 +354,7 @@ class SurfelMapBase
 	// Erase surfel point
 	//
 
-	void eraseSurfelPoint(Point3 point, depth_t depth = 0, bool propagate = true)
+	void eraseSurfelPoint(Point point, depth_t depth = 0, bool propagate = true)
 	{
 		derived().apply(
 		    derived().toCode(point, depth),
@@ -368,7 +368,7 @@ class SurfelMapBase
 	void eraseSurfelPoint(InputIt first, InputIt last, depth_t depth = 0,
 	                      bool propagate = true)
 	{
-		std::vector<std::pair<Code, Point3>> codes;
+		std::vector<std::pair<Code, Point>> codes;
 		codes.reserve(std::distance(first, last));
 
 		for (; first != last; ++first) {
@@ -378,7 +378,7 @@ class SurfelMapBase
 		std::sort(std::begin(codes), std::end(codes),
 		          [](auto&& a, auto&& b) { return a.first < b.first; });
 
-		std::vector<Point3> points;
+		std::vector<Point> points;
 		for (auto it = std::cbegin(codes); it != std::cend(codes);) {
 			auto it_end = std::find_if(std::next(it), std::cend(codes),
 			                           [it](auto&& v) { return it->first != v.first; });
@@ -406,7 +406,7 @@ class SurfelMapBase
 		}
 	}
 
-	void eraseSurfelPoint(std::initializer_list<Point3> points, depth_t depth = 0,
+	void eraseSurfelPoint(std::initializer_list<Point> points, depth_t depth = 0,
 	                      bool propagate = true)
 	{
 		eraseSurfelPoint(std::begin(points), std::end(points), depth, propagate);
@@ -435,7 +435,7 @@ class SurfelMapBase
 		clearSurfel(derived().toCode(key), propagate);
 	}
 
-	void clearSurfel(Point3 coord, depth_t depth = 0, bool propagate = true)
+	void clearSurfel(Point coord, depth_t depth = 0, bool propagate = true)
 	{
 		clearSurfel(derived().toCode(coord, depth), propagate);
 	}
@@ -606,7 +606,7 @@ class SurfelMapBase
 	//
 
 	template <bool Single>
-	static void insertSurfelPoint(SurfelNode<Single>& node, Point3 point)
+	static void insertSurfelPoint(SurfelNode<Single>& node, Point point)
 	{
 		// TODO: Implement
 		getSurfel(node).addPoint(point);
@@ -614,7 +614,7 @@ class SurfelMapBase
 
 	template <bool Single>
 	static void insertSurfelPoint(SurfelNode<Single>& node, index_t const index,
-	                              Point3 point)
+	                              Point point)
 	{
 		// TODO: Implement
 	}
@@ -638,7 +638,7 @@ class SurfelMapBase
 	//
 
 	template <bool Single>
-	static void eraseSurfelPoint(SurfelNode<Single>& node, Point3 point)
+	static void eraseSurfelPoint(SurfelNode<Single>& node, Point point)
 	{
 		// TODO: Implement
 		getSurfel(node).removePoint(point);
@@ -646,7 +646,7 @@ class SurfelMapBase
 
 	template <bool Single>
 	static void eraseSurfelPoint(SurfelNode<Single>& node, index_t const index,
-	                             Point3 point)
+	                             Point point)
 	{
 		// TODO: Implement
 	}

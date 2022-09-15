@@ -75,7 +75,7 @@ class CounterMapBase
 
 	counter_t getCounter(Key key) const { return getCounter(Derived::toCode(key)); }
 
-	counter_t getCounter(Point3 coord, depth_t depth = 0) const
+	counter_t getCounter(Point coord, depth_t depth = 0) const
 	{
 		return getCounter(derived().toCode(coord, depth));
 	}
@@ -108,7 +108,7 @@ class CounterMapBase
 		setCounter(Derived::toCode(key), counter, propagate);
 	}
 
-	void setCounter(Point3 coord, counter_t counter, bool propagate = true,
+	void setCounter(Point coord, counter_t counter, bool propagate = true,
 	                depth_t depth = 0)
 	{
 		setCounter(derived().toCode(coord, depth), counter, propagate);

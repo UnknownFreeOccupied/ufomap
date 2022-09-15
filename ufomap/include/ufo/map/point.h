@@ -50,90 +50,170 @@
 
 namespace ufo::map
 {
-using Point3 = math::Vector3<coord_t>;
+using Point = math::Vector3<coord_t>;
 
-struct Point3Color : public Point3, public RGBColor {
-	constexpr Point3Color() = default;
+// TODO: What to do with this?
+struct Intensity {
+	intensity_t intensity = 0;
 
-	constexpr Point3Color(Point3 const& point, RGBColor const& color = RGBColor())
-	    : Point3(point), RGBColor(color)
+	constexpr Intensity() = default;
+
+	constexpr Intensity(intensity_t intensity) : intensity(intensity) {}
+};
+
+struct PointColor : Point, Color {
+	constexpr PointColor() = default;
+
+	constexpr PointColor(Point point, Color const& color = Color())
+	    : Point(point), Color(color)
 	{
 	}
 
-	constexpr Point3Color(Point3 const& point, RGBColorType red, RGBColorType green,
-	                      RGBColorType blue)
-	    : Point3(point), RGBColor(red, green, blue)
+	constexpr PointColor(Point point, color_t red, color_t green, color_t blue)
+	    : Point(point), Color(red, green, blue)
 	{
 	}
 
-	constexpr Point3Color(coord_t x, coord_t y, coord_t z,
-	                      RGBColor const& color = RGBColor())
-	    : Point3(x, y, z), RGBColor(color)
+	constexpr PointColor(coord_t x, coord_t y, coord_t z, Color const& color = Color())
+	    : Point(x, y, z), Color(color)
 	{
 	}
 
-	constexpr Point3Color(coord_t x, coord_t y, coord_t z, RGBColorType red,
-	                      RGBColorType green, RGBColorType blue)
-	    : Point3(x, y, z), RGBColor(red, green, blue)
+	constexpr PointColor(coord_t x, coord_t y, coord_t z, color_t red, color_t green,
+	                     color_t blue)
+	    : Point(x, y, z), Color(red, green, blue)
 	{
 	}
 };
 
-struct Point3Semantic : public Point3, public SemanticPair {
-	constexpr Point3Semantic() = default;
+struct PointSemantic : Point, Semantic {
+	constexpr PointSemantic() = default;
 
-	constexpr Point3Semantic(Point3 const& point,
-	                         SemanticPair const& semantic = SemanticPair())
-	    : Point3(point), SemanticPair(semantic)
+	constexpr PointSemantic(Point point, Semantic const& semantic = Semantic())
+	    : Point(point), Semantic(semantic)
 	{
 	}
 
-	constexpr Point3Semantic(Point3 const& point, semantic_label_t label = 0,
-	                         semantic_value_t value = 0)
-	    : Point3(point), SemanticPair(label, value)
+	constexpr PointSemantic(Point point, semantic_label_t label = 0,
+	                        semantic_value_t value = 0)
+	    : Point(point), Semantic(label, value)
 	{
 	}
 
-	constexpr Point3Semantic(coord_t x, coord_t y, coord_t z,
-	                         SemanticPair const& semantic = SemanticPair())
-	    : Point3(x, y, z), SemanticPair(semantic)
+	constexpr PointSemantic(coord_t x, coord_t y, coord_t z,
+	                        Semantic const& semantic = Semantic())
+	    : Point(x, y, z), Semantic(semantic)
 	{
 	}
 
-	constexpr Point3Semantic(coord_t x, coord_t y, coord_t z, semantic_label_t label = 0,
-	                         semantic_value_t value = 0)
-	    : Point3(x, y, z), SemanticPair(label, value)
+	constexpr PointSemantic(coord_t x, coord_t y, coord_t z, semantic_label_t label = 0,
+	                        semantic_value_t value = 0)
+	    : Point(x, y, z), Semantic(label, value)
 	{
 	}
 };
 
-struct Point3ColorSemantic : public Point3Color, public SemanticPair {
-	constexpr Point3ColorSemantic() = default;
+struct PointIntensity : Point, Intensity {
+	constexpr PointIntensity() = default;
 
-	constexpr Point3ColorSemantic(Point3 const& point, RGBColor const& color = RGBColor(),
-	                              SemanticPair const& semantic = SemanticPair())
-	    : Point3Color(point, color), SemanticPair(semantic)
+	constexpr PointIntensity(Point point, intensity_t intensity = 0)
+	    : Point(point), Intensity(intensity)
+	{
+	}
+};
+
+struct PointColorSemantic : PointColor, Semantic {
+	constexpr PointColorSemantic() = default;
+
+	constexpr PointColorSemantic(Point point, Color const& color = Color(),
+	                             Semantic const& semantic = Semantic())
+	    : PointColor(point, color), Semantic(semantic)
 	{
 	}
 
-	constexpr Point3ColorSemantic(Point3 const& point, RGBColorType red, RGBColorType green,
-	                              RGBColorType blue, semantic_label_t label = 0,
-	                              semantic_value_t value = 0)
-	    : Point3Color(point, red, green, blue), SemanticPair(label, value)
+	constexpr PointColorSemantic(Point point, color_t red, color_t green, color_t blue,
+	                             semantic_label_t label = 0, semantic_value_t value = 0)
+	    : PointColor(point, red, green, blue), Semantic(label, value)
 	{
 	}
 
-	constexpr Point3ColorSemantic(coord_t x, coord_t y, coord_t z,
-	                              RGBColor const& color = RGBColor(),
-	                              SemanticPair const& semantic = SemanticPair())
-	    : Point3Color(x, y, z, color), SemanticPair(semantic)
+	constexpr PointColorSemantic(coord_t x, coord_t y, coord_t z,
+	                             Color const& color = Color(),
+	                             Semantic const& semantic = Semantic())
+	    : PointColor(x, y, z, color), Semantic(semantic)
 	{
 	}
 
-	constexpr Point3ColorSemantic(coord_t x, coord_t y, coord_t z, RGBColorType red,
-	                              RGBColorType green, RGBColorType blue,
-	                              semantic_label_t label = 0, semantic_value_t value = 0)
-	    : Point3Color(x, y, z, red, green, blue), SemanticPair(label, value)
+	constexpr PointColorSemantic(coord_t x, coord_t y, coord_t z, color_t red,
+	                             color_t green, color_t blue, semantic_label_t label = 0,
+	                             semantic_value_t value = 0)
+	    : PointColor(x, y, z, red, green, blue), Semantic(label, value)
+	{
+	}
+};
+
+struct PointColorIntensity : PointColor, Intensity {
+	constexpr PointColorIntensity() = default;
+
+	constexpr PointColorIntensity(Point point, Color const& color = Color(),
+	                              intensity_t intensity = 0)
+	    : PointColor(point, color), Intensity(intensity)
+	{
+	}
+
+	constexpr PointColorIntensity(Point point, color_t red, color_t green, color_t blue,
+	                              intensity_t intensity = 0)
+	    : PointColor(point, red, green, blue), Intensity(intensity)
+	{
+	}
+
+	constexpr PointColorIntensity(coord_t x, coord_t y, coord_t z,
+	                              Color const& color = Color(), intensity_t intensity = 0)
+	    : PointColor(x, y, z, color), Intensity(intensity)
+	{
+	}
+
+	constexpr PointColorIntensity(coord_t x, coord_t y, coord_t z, color_t red,
+	                              color_t green, color_t blue, intensity_t intensity = 0)
+	    : PointColor(x, y, z, red, green, blue), Intensity(intensity)
+	{
+	}
+};
+
+struct PointColorSemanticIntensity : PointColorSemantic, Intensity {
+	constexpr PointColorSemanticIntensity() = default;
+
+	constexpr PointColorSemanticIntensity(Point point, Color const& color = Color(),
+	                                      Semantic const& semantic = Semantic(),
+	                                      intensity_t intensity = 0)
+	    : PointColor(point, color), Semantic(semantic), Intensity(intensity)
+	{
+	}
+
+	constexpr PointColorSemanticIntensity(Point point, color_t red, color_t green,
+	                                      color_t blue, semantic_label_t label = 0,
+	                                      semantic_value_t value = 0,
+	                                      intensity_t intensity = 0)
+	    : PointColor(point, red, green, blue), Semantic(label, value), Intensity(intensity)
+	{
+	}
+
+	constexpr PointColorSemanticIntensity(coord_t x, coord_t y, coord_t z,
+	                                      Color const& color = Color(),
+	                                      Semantic const& semantic = Semantic(),
+	                                      intensity_t intensity = 0)
+	    : PointColor(x, y, z, color), Semantic(semantic), Intensity(intensity)
+	{
+	}
+
+	constexpr PointColorSemanticIntensity(coord_t x, coord_t y, coord_t z, color_t red,
+	                                      color_t green, color_t blue,
+	                                      semantic_label_t label = 0,
+	                                      semantic_value_t value = 0,
+	                                      intensity_t intensity = 0)
+	    : PointColor(x, y, z, red, green, blue),
+	      Semantic(label, value),
+	      Intensity(intensity)
 	{
 	}
 };

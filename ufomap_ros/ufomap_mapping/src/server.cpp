@@ -146,7 +146,7 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 			    //     return;
 			    //   }
 
-			    //   ufo::map::Point3 r(robot_radius_, robot_radius_, robot_height_ / 2.0);
+			    //   ufo::map::Point r(robot_radius_, robot_radius_, robot_height_ / 2.0);
 			    //   ufo::geometry::AABB aabb(transform.translation() - r,
 			    //                            transform.translation() + r);
 			    //   map.setValueVolume(aabb, map.getClampingThresMin(), clearing_depth_);

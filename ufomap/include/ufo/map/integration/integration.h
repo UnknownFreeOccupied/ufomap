@@ -250,7 +250,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 
 template <class Map, class P, class DepthFunction>
 IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
-                                       Point3 const sensor_origin, double const max_range,
+                                       Point const sensor_origin, double const max_range,
                                        DepthFunction depth_function)
 {
 	return toIntegrationCloud(
@@ -261,7 +261,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 		    p *= max_range;
 		    return p;
 	    },
-	    [sensor_origin, max_sqrt = max_range * max_range](Point3 const p) {
+	    [sensor_origin, max_sqrt = max_range * max_range](Point const p) {
 		    return sensor_origin.squaredDistance(p) <= max_sqrt;
 	    },
 	    depth_function);
@@ -269,7 +269,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 
 template <class Map, class P>
 IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& cloud,
-                                       Point3 const sensor_origin, double const max_range,
+                                       Point const sensor_origin, double const max_range,
                                        depth_t const depth = 0)
 {
 	return toIntegrationCloud(map, cloud, sensor_origin, max_range,
@@ -278,7 +278,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 
 template <class Map, class P>
 Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
-                 Point3 const sensor_origin, bool const only_valid = false,
+                 Point const sensor_origin, bool const only_valid = false,
                  depth_t const depth = 0)
 {
 	CodeUnorderedSet indices;
@@ -301,7 +301,7 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
 
 template <class Map, class P>
 Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
-                         Point3 const sensor_origin, bool const only_valid = false,
+                         Point const sensor_origin, bool const only_valid = false,
                          depth_t const depth = 0)
 {
 	Key const origin = map.toKey(sensor_origin, depth);
@@ -329,7 +329,7 @@ Misses getMissesDiscrete(Map const& map, IntegrationCloud<P> const& cloud,
 
 template <class Map, class P>
 Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
-                             Point3 const sensor_origin, bool const only_valid = false,
+                             Point const sensor_origin, bool const only_valid = false,
                              depth_t depth = 0)
 {
 	Misses misses;

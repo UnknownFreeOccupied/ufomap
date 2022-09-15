@@ -53,7 +53,7 @@ struct Capsule {
 
 	constexpr Capsule() noexcept = default;
 
-	constexpr Capsule(Point const& start, Point const& end, float radius) noexcept
+	constexpr Capsule(Point start, Point end, float radius) noexcept
 	    : start(start), end(end), radius(radius)
 	{
 	}

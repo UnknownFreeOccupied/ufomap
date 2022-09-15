@@ -63,7 +63,7 @@ constexpr Point closestPoint(AABB const& a, Point b) noexcept
 // AAEBB
 //
 
-constexpr Point closestPoint(AAEBB const& a, Point b) noexcept
+constexpr Point closestPoint(AAEBB a, Point b) noexcept
 {
 	return b.clamp(a.min(), a.max());
 }
@@ -72,8 +72,7 @@ constexpr Point closestPoint(AAEBB const& a, Point b) noexcept
 // Line segment
 //
 
-constexpr Point closestPoint(LineSegment const& line_segement,
-                             Point const& point) noexcept
+constexpr Point closestPoint(LineSegment const& line_segement, Point point) noexcept
 {
 	Point direction = line_segement.end - line_segement.start;
 	float t = Point::dot(point - line_segement.start, direction) /
@@ -85,7 +84,7 @@ constexpr Point closestPoint(LineSegment const& line_segement,
 // OBB
 //
 
-constexpr Point closestPoint(OBB const& obb, Point const& point) noexcept
+constexpr Point closestPoint(OBB const& obb, Point point) noexcept
 {
 	Point result = obb.center;
 	Point dir = point - obb.center;
@@ -112,7 +111,7 @@ constexpr Point closestPoint(OBB const& obb, Point const& point) noexcept
 // Plane
 //
 
-constexpr Point closestPoint(Plane const& plane, Point const& point) noexcept
+constexpr Point closestPoint(Plane const& plane, Point point) noexcept
 {
 	float distance = Point::dot(plane.normal, point) - plane.distance;
 	return point - plane.normal * distance;
@@ -122,7 +121,7 @@ constexpr Point closestPoint(Plane const& plane, Point const& point) noexcept
 // Ray
 //
 
-constexpr Point closestPoint(Ray const& ray, Point const& point) noexcept
+constexpr Point closestPoint(Ray const& ray, Point point) noexcept
 {
 	float t = Point::dot(point - ray.origin, ray.direction);
 	return ray.origin + ray.direction * std::max(t, 0.0f);
@@ -132,7 +131,7 @@ constexpr Point closestPoint(Ray const& ray, Point const& point) noexcept
 // Sphere
 //
 
-constexpr Point closestPoint(Sphere const& sphere, Point const& point) noexcept
+constexpr Point closestPoint(Sphere const& sphere, Point point) noexcept
 {
 	Point sphere_to_point = point - sphere.center;
 	sphere_to_point.normalize();

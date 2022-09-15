@@ -242,7 +242,7 @@ class OctreeBase
 	/*!
 	 * @return The center of the octree.
 	 */
-	[[nodiscard]] Point3 center() const { return Point3(0, 0, 0); }
+	[[nodiscard]] Point center() const { return Point(0, 0, 0); }
 
 	//
 	// Bounding volume
@@ -266,7 +266,7 @@ class OctreeBase
 	 * @param coord The coordinate.
 	 * @return Whether the coordinate is within the octree bounds.
 	 */
-	[[nodiscard]] constexpr bool isWithin(Point3 coord) const
+	[[nodiscard]] constexpr bool isWithin(Point coord) const
 	{
 		return isWithin(coord.x, coord.y, coord.z);
 	}
@@ -343,7 +343,7 @@ class OctreeBase
 	 * @param depth The depth of the node to check.
 	 * @return Whether the node is a pure leaf node.
 	 */
-	[[nodiscard]] static constexpr bool isPureLeaf(Point3 coord, depth_t depth = 0) noexcept
+	[[nodiscard]] static constexpr bool isPureLeaf(Point coord, depth_t depth = 0) noexcept
 	{
 		return 0 == depth;
 	}
@@ -410,7 +410,7 @@ class OctreeBase
 	 * @param depth The depth of the node to check.
 	 * @return Whether the node is a leaf node.
 	 */
-	[[nodiscard]] bool isLeaf(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] bool isLeaf(Point coord, depth_t depth = 0) const
 	{
 		return isPureLeaf(coord, depth) || isLeaf(toCode(coord, depth));
 	}
@@ -466,7 +466,7 @@ class OctreeBase
 	 * @param depth The depth of the node to check.
 	 * @return Whether the node is a parent.
 	 */
-	[[nodiscard]] constexpr bool isParent(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] constexpr bool isParent(Point coord, depth_t depth = 0) const
 	{
 		return !isLeaf(coord, depth);
 	}
@@ -513,7 +513,7 @@ class OctreeBase
 		return isModified(toCode(key));
 	}
 
-	[[nodiscard]] constexpr bool isModified(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] constexpr bool isModified(Point coord, depth_t depth = 0) const
 	{
 		return isModified(toCode(coord, depth));
 	}
@@ -570,7 +570,7 @@ class OctreeBase
 		setModified(toCode(key), min_depth);
 	}
 
-	void setModified(Point3 coord, depth_t min_depth = 0, depth_t depth = 0)
+	void setModified(Point coord, depth_t min_depth = 0, depth_t depth = 0)
 	{
 		setModified(toCode(coord, depth), min_depth);
 	}
@@ -613,7 +613,7 @@ class OctreeBase
 		resetModified(toCode(key), max_depth);
 	}
 
-	void resetModified(Point3 coord, depth_t depth = 0,
+	void resetModified(Point coord, depth_t depth = 0,
 	                   depth_t max_depth = maxDepthLevels())
 	{
 		resetModified(toCode(coord, depth), max_depth);
@@ -662,7 +662,7 @@ class OctreeBase
 		propagateModified(toCode(key), keep_modified, max_depth);
 	}
 
-	void propagateModified(Point3 coord, depth_t depth = 0, bool keep_modified = false,
+	void propagateModified(Point coord, depth_t depth = 0, bool keep_modified = false,
 	                       depth_t max_depth = maxDepthLevels())
 	{
 		propagateModified(toCode(coord, depth), depth, keep_modified, max_depth);
@@ -690,7 +690,7 @@ class OctreeBase
 
 	[[nodiscard]] bool isRoot(Key key) const { return isRoot(toCode(key)); }
 
-	[[nodiscard]] bool isRoot(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] bool isRoot(Point coord, depth_t depth = 0) const
 	{
 		return isRoot(toCode(coord, depth));
 	}
@@ -770,7 +770,7 @@ class OctreeBase
 	 *
 	 * @return The center of the root node.
 	 */
-	[[nodiscard]] constexpr Point3 rootCenter() const noexcept { return center(); }
+	[[nodiscard]] constexpr Point rootCenter() const noexcept { return center(); }
 
 	//
 	// Bounding volume
@@ -820,7 +820,7 @@ class OctreeBase
 	 * @return The center of the node.
 	 */
 	template <class NodeType>
-	[[nodiscard]] Point3 nodeCenter(NodeType const& node) const
+	[[nodiscard]] Point nodeCenter(NodeType const& node) const
 	{
 		if constexpr (std::is_same_v<NodeBV, NodeType>) {
 			return node.center();
@@ -902,7 +902,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The node.
 	 */
-	[[nodiscard]] Node findNode(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] Node findNode(Point coord, depth_t depth = 0) const
 	{
 		return findNode(toCode(coord, depth));
 	}
@@ -978,7 +978,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The node.
 	 */
-	[[nodiscard]] std::optional<Node> findNodeChecked(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] std::optional<Node> findNodeChecked(Point coord, depth_t depth = 0) const
 	{
 		if (auto code = toCodeChecked(coord, depth)) {
 			return std::optional<Node>(*code);
@@ -1005,7 +1005,7 @@ class OctreeBase
 	[[nodiscard]] std::optional<Node> findNodeChecked(coord_t x, coord_t y, coord_t z,
 	                                                  depth_t depth = 0) const
 	{
-		return findNodeChecked(Point3(x, y, z), depth);
+		return findNodeChecked(Point(x, y, z), depth);
 	}
 
 	//
@@ -1062,7 +1062,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The node.
 	 */
-	[[nodiscard]] Node operator()(Point3 coord, depth_t depth = 0) const
+	[[nodiscard]] Node operator()(Point coord, depth_t depth = 0) const
 	{
 		return findNode(coord, depth);
 	}
@@ -1121,7 +1121,7 @@ class OctreeBase
 
 	Node createNode(Key key) { return createNode(toCode(key)); }
 
-	Node createNode(Point3 coord, depth_t depth = 0)
+	Node createNode(Point coord, depth_t depth = 0)
 	{
 		return createNode(toCode(coord, depth));
 	}
@@ -1141,7 +1141,7 @@ class OctreeBase
 		// TODO: Implement
 	}
 
-	std::optional<Node> createNodeChecked(Point3 coord, depth_t depth = 0)
+	std::optional<Node> createNodeChecked(Point coord, depth_t depth = 0)
 	{
 		// TODO: Implement
 	}
@@ -1274,7 +1274,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The code corresponding to the coordinate at the specific depth.
 	 */
-	[[nodiscard]] constexpr Code toCode(Point3 coord, depth_t depth = 0) const noexcept
+	[[nodiscard]] constexpr Code toCode(Point coord, depth_t depth = 0) const noexcept
 	{
 		return toCode(toKey(coord, depth));
 	}
@@ -1300,7 +1300,7 @@ class OctreeBase
 	 * @return The code corresponding to the coordinate at the specific depth.
 	 */
 	[[nodiscard]] constexpr std::optional<Code> toCodeChecked(
-	    Point3 coord, depth_t depth = 0) const noexcept
+	    Point coord, depth_t depth = 0) const noexcept
 	{
 		std::optional<key_t> key = toKeyChecked(coord, depth);
 		return key ? std::optional<Code>(toCode(*key)) : std::nullopt;
@@ -1316,7 +1316,7 @@ class OctreeBase
 	[[nodiscard]] constexpr std::optional<Code> toCodeChecked(
 	    coord_t x, coord_t y, coord_t z, depth_t depth = 0) const noexcept
 	{
-		return toCodeChecked(Point3(x, y, z), depth);
+		return toCodeChecked(Point(x, y, z), depth);
 	}
 
 	//
@@ -1338,7 +1338,7 @@ class OctreeBase
 	 * @param depth The depth.
 	 * @return The corresponding key.
 	 */
-	[[nodiscard]] constexpr Key toKey(Point3 coord, depth_t depth = 0) const noexcept
+	[[nodiscard]] constexpr Key toKey(Point coord, depth_t depth = 0) const noexcept
 	{
 		return Key(toKey(coord.x, depth), toKey(coord.y, depth), toKey(coord.z, depth),
 		           depth);
@@ -1365,7 +1365,7 @@ class OctreeBase
 	 * @return The corresponding key.
 	 */
 	[[nodiscard]] constexpr std::optional<Key> toKeyChecked(
-	    Point3 coord, depth_t depth = 0) const noexcept
+	    Point coord, depth_t depth = 0) const noexcept
 	{
 		return rootDepth() >= depth && isWithin(coord)
 		           ? std::optional<Key>(toKey(coord, depth))
@@ -1382,7 +1382,7 @@ class OctreeBase
 	[[nodiscard]] constexpr std::optional<Key> toKeyChecked(
 	    coord_t x, coord_t y, coord_t z, depth_t depth = 0) const noexcept
 	{
-		return toKeyChecked(Point3(x, y, z), depth);
+		return toKeyChecked(Point(x, y, z), depth);
 	}
 
 	//
@@ -1395,7 +1395,7 @@ class OctreeBase
 	 * @param code The code.
 	 * @return The corresponding coordinate.
 	 */
-	[[nodiscard]] constexpr Point3 toCoord(Code code) const noexcept
+	[[nodiscard]] constexpr Point toCoord(Code code) const noexcept
 	{
 		return toCoord(toKey(code));
 	}
@@ -1406,9 +1406,9 @@ class OctreeBase
 	 * @param key The key.
 	 * @return The corresponding coordinate.
 	 */
-	[[nodiscard]] constexpr Point3 toCoord(Key key) const noexcept
+	[[nodiscard]] constexpr Point toCoord(Key key) const noexcept
 	{
-		return Point3(toCoord(key[0], key.depth()), toCoord(key[1], key.depth()),
+		return Point(toCoord(key[0], key.depth()), toCoord(key[1], key.depth()),
 		              toCoord(key[2], key.depth()));
 	}
 
@@ -1418,7 +1418,7 @@ class OctreeBase
 	 * @param Code The code.
 	 * @return The corresponding coordinate.
 	 */
-	[[nodiscard]] constexpr std::optional<Point3> toCoordChecked(Code code) const noexcept
+	[[nodiscard]] constexpr std::optional<Point> toCoordChecked(Code code) const noexcept
 	{
 		return toCoordChecked(toKey(code));
 	}
@@ -1429,9 +1429,9 @@ class OctreeBase
 	 * @param key The key.
 	 * @return The corresponding coordinate.
 	 */
-	[[nodiscard]] constexpr std::optional<Point3> toCoordChecked(Key key) const noexcept
+	[[nodiscard]] constexpr std::optional<Point> toCoordChecked(Key key) const noexcept
 	{
-		return rootDepth() >= key.depth() ? std::optional<Point3>(toCoord(key))
+		return rootDepth() >= key.depth() ? std::optional<Point>(toCoord(key))
 		                                  : std::nullopt;
 	}
 
@@ -1482,7 +1482,7 @@ class OctreeBase
 	}
 
 	template <class UnaryFunction>
-	void traverse(Point3 coord, depth_t depth, UnaryFunction f) const
+	void traverse(Point coord, depth_t depth, UnaryFunction f) const
 	{
 		traverse(code(coord, depth), f);
 	}
@@ -1531,7 +1531,7 @@ class OctreeBase
 	}
 
 	template <class Predicates>
-	Query<const_query_iterator> query(Point3 coord, depth_t depth,
+	Query<const_query_iterator> query(Point coord, depth_t depth,
 	                                  Predicates&& predicates) const
 	{
 		return query(code(coord, depth), std::forward<Predicates>(predicates));
@@ -1579,7 +1579,7 @@ class OctreeBase
 	}
 
 	template <class Predicates>
-	Query<const_bounding_volume_query_iterator> queryBV(Point3 coord, depth_t depth,
+	Query<const_bounding_volume_query_iterator> queryBV(Point coord, depth_t depth,
 	                                                    Predicates&& predicates) const
 	{
 		return queryBV(code(coord, depth), std::forward<Predicates>(predicates));
@@ -1636,7 +1636,7 @@ class OctreeBase
 	}
 
 	template <class Geometry, class Predicates>
-	Query<const_query_nearest_iterator> queryNearest(Point3 coord, depth_t depth,
+	Query<const_query_nearest_iterator> queryNearest(Point coord, depth_t depth,
 	                                                 Geometry&& geometry,
 	                                                 Predicates&& predicates) const
 	{
@@ -1700,7 +1700,7 @@ class OctreeBase
 	}
 
 	template <class Predicates, class OutputIt>
-	OutputIt query(Point3 coord, depth_t depth, Predicates&& predicates,
+	OutputIt query(Point coord, depth_t depth, Predicates&& predicates,
 	               OutputIt d_first) const
 	{
 		return query(code(coord, depth), std::forward<Predicates>(predicates), d_first);
@@ -1776,7 +1776,7 @@ class OctreeBase
 	}
 
 	template <class Predicates, class OutputIt>
-	OutputIt queryK(Point3 coord, depth_t depth, std::size_t k, Predicates&& predicates,
+	OutputIt queryK(Point coord, depth_t depth, std::size_t k, Predicates&& predicates,
 	                OutputIt d_first) const
 	{
 		return queryK(code(coord, depth), k, std::forward<Predicates>(predicates), d_first);
@@ -1825,7 +1825,7 @@ class OctreeBase
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
-	OutputIt queryNearest(Point3 coord, depth_t depth, Geometry&& geometry,
+	OutputIt queryNearest(Point coord, depth_t depth, Geometry&& geometry,
 	                      Predicates&& predicates, OutputIt d_first,
 	                      double epsilon = 0.0) const
 	{
@@ -1893,7 +1893,7 @@ class OctreeBase
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
-	OutputIt queryNearestK(Point3 coord, depth_t depth, std::size_t k, Geometry&& geometry,
+	OutputIt queryNearestK(Point coord, depth_t depth, std::size_t k, Geometry&& geometry,
 	                       Predicates&& predicates, OutputIt d_first,
 	                       double epsilon = 0.0) const
 	{
@@ -1955,7 +1955,7 @@ class OctreeBase
 	}
 
 	template <class Predicates>
-	const_query_iterator beginQuery(Point3 coord, depth_t depth,
+	const_query_iterator beginQuery(Point coord, depth_t depth,
 	                                Predicates&& predicates) const
 	{
 		return beginQuery(code(coord, depth), std::forward<Predicates>(predicates));
@@ -2005,7 +2005,7 @@ class OctreeBase
 	}
 
 	template <class Predicates>
-	const_bounding_volume_query_iterator beginQueryBV(Point3 coord, depth_t depth,
+	const_bounding_volume_query_iterator beginQueryBV(Point coord, depth_t depth,
 	                                                  Predicates&& predicates) const
 	{
 		return beginQueryBV(code(coord, depth), std::forward<Predicates>(predicates));
@@ -2063,7 +2063,7 @@ class OctreeBase
 	}
 
 	template <class Geometry, class Predicates>
-	const_query_nearest_iterator beginQueryNearest(Point3 coord, depth_t depth,
+	const_query_nearest_iterator beginQueryNearest(Point coord, depth_t depth,
 	                                               Geometry&& geometry,
 	                                               Predicates&& predicates,
 	                                               double epsilon = 0.0) const
@@ -2099,7 +2099,7 @@ class OctreeBase
 
 	const_iterator begin(Key key) const { return begin(code(key)); }
 
-	const_iterator begin(Point3 coord, depth_t depth) const
+	const_iterator begin(Point coord, depth_t depth) const
 	{
 		return begin(code(coord, depth));
 	}
@@ -2128,7 +2128,7 @@ class OctreeBase
 
 	const_iterator beginBV(Key key) const { return beginBV(code(key)); }
 
-	const_iterator beginBV(Point3 coord, depth_t depth) const
+	const_iterator beginBV(Point coord, depth_t depth) const
 	{
 		return beginBV(code(coord, depth));
 	}
@@ -2993,7 +2993,7 @@ class OctreeBase
 	// Child center
 	//
 
-	[[nodiscard]] static constexpr Point3 childCenter(Point3 parent_center,
+	[[nodiscard]] static constexpr Point childCenter(Point parent_center,
 	                                                  node_size_t child_half_size,
 	                                                  index_t child_index)
 	{
@@ -3007,7 +3007,7 @@ class OctreeBase
 	// Sibling center
 	//
 
-	[[nodiscard]] static constexpr Point3 siblingCenter(Point3 center,
+	[[nodiscard]] static constexpr Point siblingCenter(Point center,
 	                                                    node_size_t half_size,
 	                                                    index_t index,
 	                                                    index_t sibling_index)
@@ -3030,7 +3030,7 @@ class OctreeBase
 	// Parent center
 	//
 
-	[[nodiscard]] static constexpr Point3 parentCenter(Point3 child_center,
+	[[nodiscard]] static constexpr Point parentCenter(Point child_center,
 	                                                   node_size_t child_half_size,
 	                                                   index_t child_index)
 	{

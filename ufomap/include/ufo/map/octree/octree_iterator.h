@@ -108,9 +108,9 @@ class IteratorBase
 	}
 
 	template <class NodeType>
-	constexpr std::size_t indexAtDepth(NodeType const& node) const
+	constexpr std::size_t index(NodeType const& node) const
 	{
-		return code(node).indexAtDepth(depth(node));
+		return code(node).index(depth(node));
 	}
 
 	template <class NodeType>
@@ -120,15 +120,15 @@ class IteratorBase
 	}
 
 	template <class NodeType>
-	constexpr NodeType child(NodeType const& node, unsigned int idx) const
+	constexpr NodeType child(NodeType const& node, index_t child_index) const
 	{
-		return tree_->getNodeChild(node, idx);
+		return tree_->nodeChild(node, child_index);
 	}
 
 	template <class NodeType>
-	constexpr NodeType sibling(NodeType const& node, unsigned int idx) const
+	constexpr NodeType sibling(NodeType const& node, index_t sibling_index) const
 	{
-		return tree_->getNodeSibling(node, idx);
+		return tree_->nodeSibling(node, sibling_index);
 	}
 
 	template <class NodeType, class Predicates>
@@ -455,7 +455,7 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
  private:
 	float squaredDistance(NodeBV const& node) const
 	{
-		return geometry::squaredDistance(node.getBoundingVolume(), geometry_);
+		return geometry::squaredDistance(node.boundingVolume(), geometry_);
 	}
 
 	void init(NodeBV const& node)

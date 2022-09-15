@@ -46,9 +46,7 @@
 #include <ufo/container/range.h>
 #include <ufo/container/range_map.h>
 #include <ufo/container/range_set.h>
-
-// STL
-#include <cstdint>
+#include <ufo/map/types.h>
 
 namespace ufo::map
 {
@@ -63,47 +61,27 @@ using semantic_value_range_set_t = container::RangeSet<semantic_value_t>;
 
 using semantic_range_map_t = container::RangeMap<semantic_label_t, semantic_value_t>;
 
-// template <typename LabelType = semantic_label_t, typename ValueType = semantic_value_t>
-struct SemanticPair {
+struct Semantic {
 	semantic_label_t label = 0;
 	semantic_value_t value = 0;
 
-	constexpr SemanticPair() = default;
+	constexpr Semantic() = default;
 
-	constexpr SemanticPair(semantic_label_t label, semantic_value_t value = 0)
+	constexpr Semantic(semantic_label_t label, semantic_value_t value = 0)
 	    : label(label), value(value)
 	{
 	}
 
-	constexpr bool operator==(SemanticPair const& rhs) const
+	constexpr bool operator==(Semantic rhs) const
 	{
 		return label == rhs.label && value == rhs.value;
 	}
 
-	constexpr bool operator!=(SemanticPair const& rhs) const { return !(*this == rhs); }
-};
+	constexpr bool operator!=(Semantic rhs) const { return !(*this == rhs); }
 
-struct SemanticPair {
-	semantic_label_t label = 0;
-	semantic_value_t value = 0;
-
-	constexpr SemanticPair() = default;
-
-	constexpr SemanticPair(semantic_label_t label, semantic_value_t value = 0)
-	    : label(label), value(value)
+	friend std::ostream& operator<<(std::ostream& out, Semantic s)
 	{
-	}
-
-	constexpr bool operator==(SemanticPair const rhs) const
-	{
-		return label == rhs.label && value == rhs.value;
-	}
-
-	constexpr bool operator!=(SemanticPair const rhs) const { return !(*this == rhs); }
-
-	friend std::ostream& operator<<(std::ostream& out, SemanticPair const sp)
-	{
-		return out << sp.label << ": " << sp.value;
+		return out << s.label << ": " << s.value;
 	}
 };
 }  // namespace ufo::map

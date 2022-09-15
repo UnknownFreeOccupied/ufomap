@@ -82,7 +82,7 @@ class TimerObject
 
 	bool isTiming() const { return !time_.empty(); }
 
-	std::optional<double> getCurrentTiming() const
+	std::optional<double> currentTiming() const
 	{
 		if (!isTiming()) {
 			return std::nullopt;
@@ -90,11 +90,11 @@ class TimerObject
 		return Duration(std::chrono::high_resolution_clock::now() - time_.front()).count();
 	}
 
-	double getLast() const { return last_; }
+	double last() const { return last_; }
 
-	std::size_t getNumSamples() const { return samples_; }
+	std::size_t numSamples() const { return samples_; }
 
-	double getTotal() const { return total_time_; }
+	double total() const { return total_time_; }
 
 	std::optional<double> min() const
 	{
@@ -112,11 +112,11 @@ class TimerObject
 		return max_time_;
 	}
 
-	double getMean() const { return mean_time_; }
+	double mean() const { return mean_time_; }
 
-	std::optional<double> getVariance() const { return getSampleVariance(); }
+	std::optional<double> variance() const { return sampleVariance(); }
 
-	std::optional<double> getSampleVariance() const
+	std::optional<double> sampleVariance() const
 	{
 		if (2 > samples_) {
 			return std::nullopt;
@@ -124,7 +124,7 @@ class TimerObject
 		return variance_time_ / (samples_ - 1);
 	}
 
-	std::optional<double> getPopulationVariance() const
+	std::optional<double> populationVariance() const
 	{
 		if (2 > samples_) {
 			return std::nullopt;
@@ -162,77 +162,77 @@ class Timing
 
 	bool isTiming(std::string const& tag) const { return timers_.at(tag).isTiming(); }
 
-	double getTotalWithCurrentSeconds(std::string const& tag) const
+	double totalWithCurrentSeconds(std::string const& tag) const
 	{
-		return getTotalSeconds(tag) + getCurrentTimingSeconds(tag);
+		return totalSeconds(tag) + currentTimingSeconds(tag);
 	}
 
-	double getTotalWithCurrentMilliseconds(std::string const& tag) const
+	double totalWithCurrentMilliseconds(std::string const& tag) const
 	{
-		return getTotalMilliseconds(tag) + getCurrentTimingMilliseconds(tag);
+		return totalMilliseconds(tag) + currentTimingMilliseconds(tag);
 	}
 
-	double getTotalWithCurrentMicroseconds(std::string const& tag) const
+	double totalWithCurrentMicroseconds(std::string const& tag) const
 	{
-		return getTotalMicroseconds(tag) + getCurrentTimingMicroseconds(tag);
+		return totalMicroseconds(tag) + currentTimingMicroseconds(tag);
 	}
 
-	double getCurrentTimingSeconds(std::string const& tag) const
+	double currentTimingSeconds(std::string const& tag) const
 	{
-		auto ct = timers_.at(tag).getCurrentTiming();
+		auto ct = timers_.at(tag).currentTiming();
 		if (!ct) {
 			return -1;
 		}
 		return *ct / 1000000000.0;
 	}
 
-	double getCurrentTimingMilliseconds(std::string const& tag) const
+	double currentTimingMilliseconds(std::string const& tag) const
 	{
-		auto ct = timers_.at(tag).getCurrentTiming();
+		auto ct = timers_.at(tag).currentTiming();
 		if (!ct) {
 			return -1;
 		}
 		return *ct / 1000000.0;
 	}
 
-	double getCurrentTimingMicroseconds(std::string const& tag) const
+	double currentTimingMicroseconds(std::string const& tag) const
 	{
-		auto ct = timers_.at(tag).getCurrentTiming();
+		auto ct = timers_.at(tag).currentTiming();
 		if (!ct) {
 			return -1;
 		}
 		return *ct / 1000.0;
 	}
 
-	double getLastSeconds(std::string const& tag) const
+	double lastSeconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getLast() / 1000000000.0;
+		return timers_.at(tag).last() / 1000000000.0;
 	}
-	double getLastMilliseconds(std::string const& tag) const
+	double lastMilliseconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getLast() / 1000000.0;
+		return timers_.at(tag).last() / 1000000.0;
 	}
-	double getLastMicroseconds(std::string const& tag) const
+	double lastMicroseconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getLast() / 1000.0;
-	}
-
-	std::size_t getNumSamples(std::string const& tag) const
-	{
-		return timers_.at(tag).getNumSamples();
+		return timers_.at(tag).last() / 1000.0;
 	}
 
-	double getTotalSeconds(std::string const& tag) const
+	std::size_t numSamples(std::string const& tag) const
 	{
-		return timers_.at(tag).getTotal() / 1000000000.0;
+		return timers_.at(tag).numSamples();
 	}
-	double getTotalMilliseconds(std::string const& tag) const
+
+	double totalSeconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getTotal() / 1000000.0;
+		return timers_.at(tag).total() / 1000000000.0;
 	}
-	double getTotalMicroseconds(std::string const& tag) const
+	double totalMilliseconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getTotal() / 1000.0;
+		return timers_.at(tag).total() / 1000000.0;
+	}
+	double totalMicroseconds(std::string const& tag) const
+	{
+		return timers_.at(tag).total() / 1000.0;
 	}
 
 	double minSeconds(std::string const& tag) const
@@ -285,45 +285,45 @@ class Timing
 		return *max / 1000.0;
 	}
 
-	double getMeanSeconds(std::string const& tag) const
+	double meanSeconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getMean() / 1000000000.0;
+		return timers_.at(tag).mean() / 1000000000.0;
 	}
-	double getMeanMilliseconds(std::string const& tag) const
+	double meanMilliseconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getMean() / 1000000.0;
+		return timers_.at(tag).mean() / 1000000.0;
 	}
-	double getMeanMicroseconds(std::string const& tag) const
+	double meanMicroseconds(std::string const& tag) const
 	{
-		return timers_.at(tag).getMean() / 1000.0;
+		return timers_.at(tag).mean() / 1000.0;
 	}
 
-	double getStdSeconds(std::string const& tag) const
+	double stdSeconds(std::string const& tag) const
 	{
-		auto variance = timers_.at(tag).getVariance();
+		auto variance = timers_.at(tag).variance();
 		if (!variance) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return std::sqrt(*variance) / 1000000000.0;
 	}
-	double getStdMilliseconds(std::string const& tag) const
+	double stdMilliseconds(std::string const& tag) const
 	{
-		auto variance = timers_.at(tag).getVariance();
+		auto variance = timers_.at(tag).variance();
 		if (!variance) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return std::sqrt(*variance) / 1000000.0;
 	}
-	double getStdMicroseconds(std::string const& tag) const
+	double stdMicroseconds(std::string const& tag) const
 	{
-		auto variance = timers_.at(tag).getVariance();
+		auto variance = timers_.at(tag).variance();
 		if (!variance) {
 			return std::numeric_limits<double>::quiet_NaN();
 		}
 		return std::sqrt(*variance) / 1000.0;
 	}
 
-	std::vector<std::string> getTags() const
+	std::vector<std::string> tags() const
 	{
 		std::vector<std::string> tags;
 		tags.reserve(timers_.size());

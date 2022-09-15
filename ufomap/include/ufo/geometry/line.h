@@ -56,7 +56,7 @@ struct Line {
 
 	constexpr Line() noexcept = default;
 
-	// constexpr Line(Point const& origin, Point const& direction) noexcept
+	// constexpr Line(Point origin, Point direction) noexcept
 	//     : origin(origin), direction(direction.normalized())
 	// {
 	// }

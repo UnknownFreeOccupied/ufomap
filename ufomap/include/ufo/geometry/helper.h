@@ -89,7 +89,7 @@ constexpr bool intersectsLine(AABB const& aabb, Ray const& ray, float t_near,
 	return true;
 }
 
-constexpr bool intersectsLine(AAEBB const& aaebb, Ray const& ray, float t_near,
+constexpr bool intersectsLine(AAEBB aaebb, Ray const& ray, float t_near,
                               float t_far) noexcept
 {
 	Point min = aaebb.min();
@@ -137,7 +137,7 @@ constexpr float classify(AABB const& aabb, Plane const& plane) noexcept
 	return d - r;
 }
 
-constexpr float classify(AAEBB const& aaebb, Plane const& plane) noexcept
+constexpr float classify(AAEBB aaebb, Plane const& plane) noexcept
 {
 	float r = std::abs(aaebb.half_size * plane.normal.x) +
 	          std::abs(aaebb.half_size * plane.normal.y) +
@@ -171,8 +171,7 @@ constexpr float classify(AAEBB const& aaebb, Plane const& plane) noexcept
 // Get interval
 //
 
-constexpr std::pair<float, float> getInterval(AABB const& aabb,
-                                              Point const& axis) noexcept
+constexpr std::pair<float, float> getInterval(AABB const& aabb, Point axis) noexcept
 {
 	Point i = aabb.min();
 	Point a = aabb.max();
@@ -193,8 +192,7 @@ constexpr std::pair<float, float> getInterval(AABB const& aabb,
 	return result;
 }
 
-constexpr std::pair<float, float> getInterval(AAEBB const& aaebb,
-                                              Point const& axis) noexcept
+constexpr std::pair<float, float> getInterval(AAEBB aaebb, Point axis) noexcept
 {
 	Point i = aaebb.min();
 	Point a = aaebb.max();
@@ -215,7 +213,7 @@ constexpr std::pair<float, float> getInterval(AAEBB const& aaebb,
 	return result;
 }
 
-constexpr std::pair<float, float> getInterval(OBB const& obb, Point const& axis) noexcept
+constexpr std::pair<float, float> getInterval(OBB const& obb, Point axis) noexcept
 {
 	Point vertex[8];
 
@@ -256,23 +254,21 @@ constexpr std::pair<float, float> getInterval(OBB const& obb, Point const& axis)
 // Overlap on axis
 //
 
-constexpr bool overlapOnAxis(AABB const& aabb, OBB const& obb, Point const& axis) noexcept
+constexpr bool overlapOnAxis(AABB const& aabb, OBB const& obb, Point axis) noexcept
 {
 	auto [a_min, a_max] = getInterval(aabb, axis);
 	auto [b_min, b_max] = getInterval(obb, axis);
 	return ((b_min <= a_max) && (a_min <= b_max));
 }
 
-constexpr bool overlapOnAxis(AAEBB const& aaebb, OBB const& obb,
-                             Point const& axis) noexcept
+constexpr bool overlapOnAxis(AAEBB aaebb, OBB const& obb, Point axis) noexcept
 {
 	auto [a_min, a_max] = getInterval(aaebb, axis);
 	auto [b_min, b_max] = getInterval(obb, axis);
 	return ((b_min <= a_max) && (a_min <= b_max));
 }
 
-constexpr bool overlapOnAxis(OBB const& obb_1, OBB const& obb_2,
-                             Point const& axis) noexcept
+constexpr bool overlapOnAxis(OBB const& obb_1, OBB const& obb_2, Point axis) noexcept
 {
 	auto [a_min, a_max] = getInterval(obb_1, axis);
 	auto [b_min, b_max] = getInterval(obb_2, axis);

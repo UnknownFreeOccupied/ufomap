@@ -75,7 +75,7 @@ class TimeMapBase
 
 	time_t getTime(Key key) const { return getTime(Derived::toCode(key)); }
 
-	time_t getTime(Point3 coord, depth_t depth = 0) const
+	time_t getTime(Point coord, depth_t depth = 0) const
 	{
 		return getTime(derived().toCode(coord, depth));
 	}
@@ -114,7 +114,7 @@ class TimeMapBase
 		setTime(Derived::toCode(key), time, propagate);
 	}
 
-	void setTime(Point3 coord, time_t time, bool propagate = true, depth_t depth = 0)
+	void setTime(Point coord, time_t time, bool propagate = true, depth_t depth = 0)
 	{
 		setTime(derived().toCode(coord, depth), time, propagate);
 	}

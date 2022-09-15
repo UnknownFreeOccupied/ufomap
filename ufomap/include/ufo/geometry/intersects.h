@@ -56,7 +56,7 @@ namespace ufo::geometry
 // Point
 //
 
-constexpr bool intersects(Point const& point, AABB const& aabb) noexcept
+constexpr bool intersects(Point point, AABB const& aabb) noexcept
 {
 	Point min = aabb.min();
 	Point max = aabb.max();
@@ -64,7 +64,7 @@ constexpr bool intersects(Point const& point, AABB const& aabb) noexcept
 	       max.y >= point.y && max.z >= point.z;
 }
 
-constexpr bool intersects(Point const& point, AAEBB const& aaebb) noexcept
+constexpr bool intersects(Point point, AAEBB aaebb) noexcept
 {
 	Point min = aaebb.min();
 	Point max = aaebb.max();
@@ -72,7 +72,7 @@ constexpr bool intersects(Point const& point, AAEBB const& aaebb) noexcept
 	       max.y >= point.y && max.z >= point.z;
 }
 
-constexpr bool intersects(Point const& point, Frustum const& frustum) noexcept
+constexpr bool intersects(Point point, Frustum const& frustum) noexcept
 {
 	for (std::size_t i = 0; i < 6; ++i) {
 		const Point& normal = frustum[i].normal;
@@ -85,7 +85,7 @@ constexpr bool intersects(Point const& point, Frustum const& frustum) noexcept
 	return true;
 }
 
-constexpr bool intersects(Point const& point, LineSegment const& line_segment) noexcept
+constexpr bool intersects(Point point, LineSegment const& line_segment) noexcept
 {
 	Point closest_point = closestPoint(line_segment, point);
 	float distance_squared = (closest_point - point).squaredNorm();
@@ -94,7 +94,7 @@ constexpr bool intersects(Point const& point, LineSegment const& line_segment) n
 	return 0 == distance_squared;
 }
 
-constexpr bool intersects(Point const& point, OBB const& obb) noexcept
+constexpr bool intersects(Point point, OBB const& obb) noexcept
 {
 	// FIXME: Implement look earlier. THIS IS WRONG!
 	Point dir = point - obb.center;
@@ -114,18 +114,18 @@ constexpr bool intersects(Point const& point, OBB const& obb) noexcept
 	return true;
 }
 
-constexpr bool intersects(Point const& point, Plane const& plane) noexcept
+constexpr bool intersects(Point point, Plane const& plane) noexcept
 {
 	return Point::dot(point, plane.normal) - plane.distance;
 }
 
-constexpr bool intersects(Point const& point_1, Point const& point_2) noexcept
+constexpr bool intersects(Point point_1, Point point_2) noexcept
 {
 	// FIXME: Almost equal?
 	return point_1 == point_2;
 }
 
-constexpr bool intersects(Point const& point, Ray const& ray) noexcept
+constexpr bool intersects(Point point, Ray const& ray) noexcept
 {
 	if (ray.origin == point) {
 		return true;
@@ -137,7 +137,7 @@ constexpr bool intersects(Point const& point, Ray const& ray) noexcept
 	return 1.0 == Point::dot(direction, ray.direction);
 }
 
-constexpr bool intersects(Point const& point, Sphere const& sphere) noexcept
+constexpr bool intersects(Point point, Sphere const& sphere) noexcept
 {
 	return (point - sphere.center).squaredNorm() < (sphere.radius * sphere.radius);
 }
@@ -154,7 +154,7 @@ constexpr bool intersects(Sphere const& sphere, AABB const& aabb) noexcept
 	return distance_squared < radius_squared;
 }
 
-constexpr bool intersects(Sphere const& sphere, AAEBB const& aaebb) noexcept
+constexpr bool intersects(Sphere const& sphere, AAEBB aaebb) noexcept
 {
 	Point closest_point = closestPoint(aaebb, sphere.center);
 	float distance_squared = (sphere.center - closest_point).squaredNorm();
@@ -196,7 +196,7 @@ constexpr bool intersects(Sphere const& sphere, Plane const& plane) noexcept
 	return distance_squared < (sphere.radius * sphere.radius);
 }
 
-constexpr bool intersects(Sphere const& sphere, Point const& point) noexcept
+constexpr bool intersects(Sphere const& sphere, Point point) noexcept
 {
 	return intersects(point, sphere);
 }
@@ -231,7 +231,7 @@ constexpr bool intersects(AABB const& aabb_1, AABB const& aabb_2) noexcept
 	       min_2.x <= max_1.x && min_2.y <= max_1.y && min_2.z <= max_1.z;
 }
 
-constexpr bool intersects(AABB const& aabb, AAEBB const& aaebb) noexcept
+constexpr bool intersects(AABB const& aabb, AAEBB aaebb) noexcept
 {
 	Point min_1 = aabb.min();
 	Point max_1 = aabb.max();
@@ -290,7 +290,7 @@ constexpr bool intersects(AABB const& aabb, Plane const& plane) noexcept
 	return std::abs(distance) <= p_len;
 }
 
-constexpr bool intersects(AABB const& aabb, Point const& point) noexcept
+constexpr bool intersects(AABB const& aabb, Point point) noexcept
 {
 	return intersects(point, aabb);
 }
@@ -310,12 +310,12 @@ constexpr bool intersects(AABB const& aabb, Sphere const& sphere) noexcept
 // AAEBB
 //
 
-constexpr bool intersects(AAEBB const& aaebb, AABB const& aabb) noexcept
+constexpr bool intersects(AAEBB aaebb, AABB const& aabb) noexcept
 {
 	return intersects(aabb, aaebb);
 }
 
-constexpr bool intersects(AAEBB const& aaebb_1, AAEBB const& aaebb_2) noexcept
+constexpr bool intersects(AAEBB aaebb_1, AAEBB aaebb_2) noexcept
 {
 	Point min_1 = aaebb_1.min();
 	Point max_1 = aaebb_1.max();
@@ -325,14 +325,14 @@ constexpr bool intersects(AAEBB const& aaebb_1, AAEBB const& aaebb_2) noexcept
 	       min_2.x <= max_1.x && min_2.y <= max_1.y && min_2.z <= max_1.z;
 }
 
-constexpr bool intersects(AAEBB const& aaebb, Frustum const& frustum) noexcept
+constexpr bool intersects(AAEBB aaebb, Frustum const& frustum) noexcept
 {
 	return 0 <= classify(aaebb, frustum.bottom) && 0 <= classify(aaebb, frustum.far) &&
 	       0 <= classify(aaebb, frustum.left) && 0 <= classify(aaebb, frustum.near) &&
 	       0 <= classify(aaebb, frustum.right) && 0 <= classify(aaebb, frustum.top);
 }
 
-constexpr bool intersects(AAEBB const& aaebb, LineSegment const& line_segment) noexcept
+constexpr bool intersects(AAEBB aaebb, LineSegment const& line_segment) noexcept
 {
 	Ray ray;
 	ray.origin = line_segment.start;
@@ -342,7 +342,7 @@ constexpr bool intersects(AAEBB const& aaebb, LineSegment const& line_segment) n
 	return intersectsLine(aaebb, ray, 0.0, length);
 }
 
-inline bool intersects(AAEBB const& aaebb, OBB const& obb) noexcept
+inline bool intersects(AAEBB aaebb, OBB const& obb) noexcept
 {
 	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
 
@@ -365,7 +365,7 @@ inline bool intersects(AAEBB const& aaebb, OBB const& obb) noexcept
 	});
 }
 
-constexpr bool intersects(AAEBB const& aaebb, Plane const& plane) noexcept
+constexpr bool intersects(AAEBB aaebb, Plane const& plane) noexcept
 {
 	float p_len = aaebb.half_size * std::abs(plane.normal.x) +
 	              aaebb.half_size * std::abs(plane.normal.y) +
@@ -374,23 +374,23 @@ constexpr bool intersects(AAEBB const& aaebb, Plane const& plane) noexcept
 	return std::abs(distance) <= p_len;
 }
 
-constexpr bool intersects(AAEBB const& aaebb, Point const& point) noexcept
+constexpr bool intersects(AAEBB aaebb, Point point) noexcept
 {
 	return intersects(point, aaebb);
 }
 
-constexpr bool intersects(AAEBB const& aaebb, Ray const& ray) noexcept
+constexpr bool intersects(AAEBB aaebb, Ray const& ray) noexcept
 {
 	// FIXME: infinity or max?
 	return intersectsLine(aaebb, ray, 0.0, std::numeric_limits<float>::infinity());
 }
 
-constexpr bool intersects(AAEBB const& aaebb, Sphere const& sphere) noexcept
+constexpr bool intersects(AAEBB aaebb, Sphere const& sphere) noexcept
 {
 	return intersects(sphere, aaebb);
 }
 
-constexpr bool intersects(AAEBB const& aaebb, Triangle triangle) noexcept
+constexpr bool intersects(AAEBB aaebb, Triangle triangle) noexcept
 {
 	for (auto& point : triangle.points) {
 		point -= aaebb.center;
@@ -447,7 +447,7 @@ inline bool intersects(OBB const& obb, AABB const& aabb) noexcept
 	return intersects(aabb, obb);
 }
 
-inline bool intersects(OBB const& obb, AAEBB const& aaebb) noexcept
+inline bool intersects(OBB const& obb, AAEBB aaebb) noexcept
 {
 	return intersects(aaebb, obb);
 }
@@ -566,7 +566,7 @@ constexpr bool intersects(OBB const& obb, Plane const& plane) noexcept
 	return std::abs(distance) <= p_len;
 }
 
-constexpr bool intersects(OBB const& obb, Point const& point) noexcept
+constexpr bool intersects(OBB const& obb, Point point) noexcept
 {
 	return intersects(point, obb);
 }
@@ -629,7 +629,7 @@ constexpr bool intersects(Frustum const& frustum, AABB const& aabb) noexcept
 	return intersects(aabb, frustum);
 }
 
-constexpr bool intersects(Frustum const& frustum, AAEBB const& aaebb) noexcept
+constexpr bool intersects(Frustum const& frustum, AAEBB aaebb) noexcept
 {
 	return intersects(aaebb, frustum);
 }
@@ -656,7 +656,7 @@ constexpr bool intersects(Frustum const& frustum, AAEBB const& aaebb) noexcept
 // TODO: Implement
 // }
 
-constexpr bool intersects(Frustum const& frustum, Point const& point) noexcept
+constexpr bool intersects(Frustum const& frustum, Point point) noexcept
 {
 	return intersects(point, frustum);
 }
@@ -680,7 +680,7 @@ constexpr bool intersects(LineSegment const& line_segment, AABB const& aabb) noe
 	return intersects(aabb, line_segment);
 }
 
-constexpr bool intersects(LineSegment const& line_segment, AAEBB const& aaebb) noexcept
+constexpr bool intersects(LineSegment const& line_segment, AAEBB aaebb) noexcept
 {
 	return intersects(aaebb, line_segment);
 }
@@ -721,7 +721,7 @@ constexpr bool intersects(LineSegment const& line_segment, Plane const& plane) n
 	return t >= 0.0 && t <= 1.0;
 }
 
-constexpr bool intersects(LineSegment const& line_segment, Point const& point) noexcept
+constexpr bool intersects(LineSegment const& line_segment, Point point) noexcept
 {
 	return intersects(point, line_segment);
 }
@@ -745,7 +745,7 @@ constexpr bool intersects(Plane const& plane, AABB const& aabb) noexcept
 	return intersects(aabb, plane);
 }
 
-constexpr bool intersects(Plane const& plane, AAEBB const& aaebb) noexcept
+constexpr bool intersects(Plane const& plane, AAEBB aaebb) noexcept
 {
 	return intersects(aaebb, plane);
 }
@@ -773,7 +773,7 @@ constexpr bool intersects(Plane const& plane_1, Plane const& plane_2) noexcept
 	return 0 != Point::dot(d, d);
 }
 
-constexpr bool intersects(Plane const& plane, Point const& point) noexcept
+constexpr bool intersects(Plane const& plane, Point point) noexcept
 {
 	return intersects(point, plane);
 }
@@ -803,7 +803,7 @@ constexpr bool intersects(Ray const& ray, AABB const& aabb) noexcept
 	return intersects(aabb, ray);
 }
 
-constexpr bool intersects(Ray const& ray, AAEBB const& aaebb) noexcept
+constexpr bool intersects(Ray const& ray, AAEBB aaebb) noexcept
 {
 	return intersects(aaebb, ray);
 }
@@ -828,7 +828,7 @@ constexpr bool intersects(Ray const& ray, Plane const& plane) noexcept
 	return intersects(plane, ray);
 }
 
-constexpr bool intersects(Ray const& ray, Point const& point) noexcept
+constexpr bool intersects(Ray const& ray, Point point) noexcept
 {
 	return intersects(point, ray);
 }

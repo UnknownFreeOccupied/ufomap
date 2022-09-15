@@ -67,7 +67,7 @@ class Data
  public:
 	Data();
 
-	void addPosition(ufo::map::Point3 position)
+	void addPosition(ufo::map::Point position)
 	{
 		position_.emplace_back(position.x, position.y, position.z);
 
@@ -87,7 +87,7 @@ class Data
 		max_time_step_ = std::max(max_time_step_, time_step);
 	}
 
-	void addColor(ufo::map::RGBColor color)
+	void addColor(ufo::map::Color color)
 	{
 		color_.emplace_back(color_lut[color.blue], color_lut[color.green],
 		                    color_lut[color.red], 1.0f);
@@ -109,9 +109,9 @@ class Data
 	                                          Filter const& filter, double size,
 	                                          Heatmap const& heatmap) const;
 
-	ufo::map::Point3 minPosition() const { return min_position_; }
+	ufo::map::Point minPosition() const { return min_position_; }
 
-	ufo::map::Point3 maxPosition() const { return max_position_; }
+	ufo::map::Point maxPosition() const { return max_position_; }
 
 	ufo::map::time_step_t minTimeStep() const { return min_time_step_; }
 
@@ -132,8 +132,8 @@ class Data
 	std::vector<Ogre::ColourValue> color_;
 	std::vector<std::vector<ufo::map::SemanticPair>> semantics_;
 
-	ufo::map::Point3 min_position_;
-	ufo::map::Point3 max_position_;
+	ufo::map::Point min_position_;
+	ufo::map::Point max_position_;
 
 	ufo::map::time_step_t min_time_step_;
 	ufo::map::time_step_t max_time_step_;

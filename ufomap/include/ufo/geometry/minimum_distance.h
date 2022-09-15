@@ -110,7 +110,7 @@ constexpr float distance(AABB const& a, AABB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(AABB const& a, AAEBB const& b) noexcept
+constexpr float squaredDistance(AABB const& a, AAEBB b) noexcept
 {
 	Point a_min = a.min();
 	Point a_max = a.max();
@@ -144,7 +144,7 @@ constexpr float squaredDistance(AABB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(AABB const& a, AAEBB const& b) noexcept
+constexpr float distance(AABB const& a, AAEBB b) noexcept
 {
 	return std::sqrt(squaredDistance(a, b));
 }
@@ -279,7 +279,7 @@ constexpr float distance(AABB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(AABB const& a, Point const& b) noexcept
+constexpr float squaredDistance(AABB const& a, Point b) noexcept
 {
 	return b.squaredDistance(Point::clamp(b, a.min(), a.max()));
 }
@@ -293,7 +293,7 @@ constexpr float squaredDistance(AABB const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(AABB const& a, Point const& b) noexcept
+constexpr float distance(AABB const& a, Point b) noexcept
 {
 	return std::sqrt(squaredDistance(a, b));
 }
@@ -373,7 +373,7 @@ constexpr float squaredDistance(AABB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(AAEBB const& a, AABB const& b) noexcept
+constexpr float squaredDistance(AAEBB a, AABB const& b) noexcept
 {
 	return squaredDistance(b, a);
 }
@@ -387,10 +387,7 @@ constexpr float squaredDistance(AAEBB const& a, AABB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(AAEBB const& a, AABB const& b) noexcept
-{
-	return distance(b, a);
-}
+constexpr float distance(AAEBB a, AABB const& b) noexcept { return distance(b, a); }
 
 /*!
  * @brief Computes the minimum squared distance between a and b.
@@ -402,7 +399,7 @@ constexpr float distance(AAEBB const& a, AABB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(AAEBB const& a, AAEBB const& b) noexcept
+constexpr float squaredDistance(AAEBB a, AAEBB b) noexcept
 {
 	// FIXME: Is this actually correct?
 	// Point a;
@@ -457,7 +454,7 @@ constexpr float squaredDistance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
+constexpr float distance(AAEBB a, AAEBB b) noexcept
 {
 	return std::sqrt(squaredDistance(a, b));
 }
@@ -472,7 +469,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(AAEBB const& a, Frustum const& b) noexcept
+// constexpr float squaredDistance(AAEBB a, Frustum const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -486,7 +483,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(AAEBB const& a, Frustum const& b) noexcept
+// constexpr float distance(AAEBB a, Frustum const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -502,7 +499,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(AAEBB const& a, LineSegment const& b) noexcept
+// constexpr float squaredDistance(AAEBB a, LineSegment const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -516,7 +513,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(AAEBB const& a, LineSegment const& b) noexcept
+// constexpr float distance(AAEBB a, LineSegment const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -532,7 +529,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(AAEBB const& a, OBB const& b) noexcept
+// constexpr float squaredDistance(AAEBB a, OBB const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -546,7 +543,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(AAEBB const& a, OBB const& b) noexcept
+// constexpr float distance(AAEBB a, OBB const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -562,7 +559,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(AAEBB const& a, Plane const& b) noexcept
+// constexpr float squaredDistance(AAEBB a, Plane const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -576,7 +573,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(AAEBB const& a, Plane const& b) noexcept
+// constexpr float distance(AAEBB a, Plane const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -592,7 +589,7 @@ constexpr float distance(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(AAEBB const& a, Point const& b) noexcept
+constexpr float squaredDistance(AAEBB a, Point b) noexcept
 {
 	return b.squaredDistance(Point::clamp(b, a.min(), a.max()));
 }
@@ -606,7 +603,7 @@ constexpr float squaredDistance(AAEBB const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(AAEBB const& a, Point const& b) noexcept
+constexpr float distance(AAEBB a, Point b) noexcept
 {
 	return b.distance(Point::clamp(b, a.min(), a.max()));
 }
@@ -621,7 +618,7 @@ constexpr float distance(AAEBB const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(AAEBB const& a, Ray const& b) noexcept
+// constexpr float squaredDistance(AAEBB a, Ray const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -635,7 +632,7 @@ constexpr float distance(AAEBB const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(AAEBB const& a, Ray const& b) noexcept
+// constexpr float distance(AAEBB a, Ray const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -650,7 +647,7 @@ constexpr float distance(AAEBB const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(AAEBB const& a, Sphere const& b) noexcept
+constexpr float distance(AAEBB a, Sphere const& b) noexcept
 {
 	return std::fdim(distance(a, b.center), b.radius);
 }
@@ -665,7 +662,7 @@ constexpr float distance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
+constexpr float squaredDistance(AAEBB a, Sphere const& b) noexcept
 {
 	// FIXME: Implement better
 	auto dist = distance(a, b);
@@ -717,7 +714,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Frustum const& a, AAEBB const& b) noexcept
+// constexpr float squaredDistance(Frustum const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -732,7 +729,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Frustum const& a, AAEBB const& b) noexcept
+// constexpr float distance(Frustum const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -868,7 +865,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Frustum const& a, Point const& b) noexcept
+// constexpr float squaredDistance(Frustum const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -882,7 +879,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Frustum const& a, Point const& b) noexcept
+// constexpr float distance(Frustum const& a, Point b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -993,7 +990,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(LineSegment const& a, AAEBB const& b) noexcept
+// constexpr float squaredDistance(LineSegment const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1008,7 +1005,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(LineSegment const& a, AAEBB const& b) noexcept
+// constexpr float distance(LineSegment const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -1145,7 +1142,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(LineSegment const& a, Point const& b) noexcept
+// constexpr float squaredDistance(LineSegment const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -1159,7 +1156,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(LineSegment const& a, Point const& b) noexcept
+// constexpr float distance(LineSegment const& a, Point b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -1270,7 +1267,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(OBB const& a, AAEBB const& b) noexcept
+// constexpr float squaredDistance(OBB const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1285,7 +1282,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(OBB const& a, AAEBB const& b) noexcept
+// constexpr float distance(OBB const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -1332,7 +1329,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(OBB const& a, AAEBB const& b) noexcept
+// constexpr float squaredDistance(OBB const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1423,7 +1420,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(OBB const& a, Point const& b) noexcept
+// constexpr float squaredDistance(OBB const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -1437,7 +1434,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(OBB const& a, Point const& b) noexcept
+// constexpr float distance(OBB const& a, Point b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -1548,7 +1545,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Plane const& a, AAEBB const& b) noexcept
+// constexpr float squaredDistance(Plane const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1563,7 +1560,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Plane const& a, AAEBB const& b) noexcept
+// constexpr float distance(Plane const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -1702,7 +1699,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Plane const& a, Point const& b) noexcept
+// constexpr float squaredDistance(Plane const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -1716,7 +1713,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Plane const& a, Point const& b) noexcept
+// constexpr float distance(Plane const& a, Point b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -1796,7 +1793,7 @@ constexpr float squaredDistance(AAEBB const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(Point const& a, AABB const& b) noexcept
+constexpr float squaredDistance(Point a, AABB const& b) noexcept
 {
 	return squaredDistance(b, a);
 }
@@ -1810,10 +1807,7 @@ constexpr float squaredDistance(Point const& a, AABB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(Point const& a, AABB const& b) noexcept
-{
-	return distance(b, a);
-}
+constexpr float distance(Point a, AABB const& b) noexcept { return distance(b, a); }
 
 /*!
  * @brief Computes the minimum squared distance between a and b.
@@ -1825,7 +1819,7 @@ constexpr float distance(Point const& a, AABB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(Point const& a, AAEBB const& b) noexcept
+constexpr float squaredDistance(Point a, AAEBB b) noexcept
 {
 	return squaredDistance(b, a);
 }
@@ -1839,10 +1833,7 @@ constexpr float squaredDistance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(Point const& a, AAEBB const& b) noexcept
-{
-	return distance(b, a);
-}
+constexpr float distance(Point a, AAEBB b) noexcept { return distance(b, a); }
 
 /*!
  * @brief Computes the minimum squared distance between a and b.
@@ -1854,7 +1845,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Point const& a, Frustum const& b) noexcept
+// constexpr float squaredDistance(Point a, Frustum const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1869,7 +1860,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Point const& a, Frustum const& b) noexcept
+// constexpr float distance(Point a, Frustum const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -1885,7 +1876,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Point const& a, LineSegment const& b) noexcept
+// constexpr float squaredDistance(Point a, LineSegment const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1900,7 +1891,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Point const& a, LineSegment const& b) noexcept
+// constexpr float distance(Point a, LineSegment const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -1916,7 +1907,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Point const& a, OBB const& b) noexcept
+// constexpr float squaredDistance(Point a, OBB const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1931,7 +1922,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Point const& a, OBB const& b) noexcept
+// constexpr float distance(Point a, OBB const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -1947,7 +1938,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Point const& a, Plane const& b) noexcept
+// constexpr float squaredDistance(Point a, Plane const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -1962,7 +1953,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Point const& a, Plane const& b) noexcept
+// constexpr float distance(Point a, Plane const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -1978,7 +1969,7 @@ constexpr float distance(Point const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(Point const& a, Point const& b) noexcept
+constexpr float squaredDistance(Point a, Point b) noexcept
 {
 	return a.squaredDistance(b);
 }
@@ -1992,10 +1983,7 @@ constexpr float squaredDistance(Point const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(Point const& a, Point const& b) noexcept
-{
-	return a.distance(b);
-}
+constexpr float distance(Point a, Point b) noexcept { return a.distance(b); }
 
 /*!
  * @brief Computes the minimum squared distance between a and b.
@@ -2007,7 +1995,7 @@ constexpr float distance(Point const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Point const& a, Ray const& b) noexcept
+// constexpr float squaredDistance(Point a, Ray const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -2021,7 +2009,7 @@ constexpr float distance(Point const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Point const& a, Ray const& b) noexcept
+// constexpr float distance(Point a, Ray const& b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(a, b);
@@ -2036,7 +2024,7 @@ constexpr float distance(Point const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(Point const& a, Sphere const& b) noexcept
+constexpr float distance(Point a, Sphere const& b) noexcept
 {
 	return std::fdim(a.distance(b.center), b.radius);
 }
@@ -2051,7 +2039,7 @@ constexpr float distance(Point const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
+constexpr float squaredDistance(Point a, Sphere const& b) noexcept
 {
 	auto dist = distance(a, b);
 	return dist * dist;
@@ -2102,7 +2090,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Ray const& a, AAEBB const& b) noexcept
+// constexpr float squaredDistance(Ray const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -2117,7 +2105,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Ray const& a, AAEBB const& b) noexcept
+// constexpr float distance(Ray const& a, AAEBB b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -2257,7 +2245,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-// constexpr float squaredDistance(Ray const& a, Point const& b) noexcept
+// constexpr float squaredDistance(Ray const& a, Point b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return squaredDistance(b, a);
@@ -2272,7 +2260,7 @@ constexpr float squaredDistance(Point const& a, Sphere const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-// constexpr float distance(Ray const& a, Point const& b) noexcept
+// constexpr float distance(Ray const& a, Point b) noexcept
 // {
 // 	// FIXME: Enable
 // 	return distance(b, a);
@@ -2382,7 +2370,7 @@ constexpr float distance(Sphere const& a, AABB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(Sphere const& a, AAEBB const& b) noexcept
+constexpr float squaredDistance(Sphere const& a, AAEBB b) noexcept
 {
 	return squaredDistance(b, a);
 }
@@ -2396,10 +2384,7 @@ constexpr float squaredDistance(Sphere const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
-{
-	return distance(b, a);
-}
+constexpr float distance(Sphere const& a, AAEBB b) noexcept { return distance(b, a); }
 
 /*!
  * @brief Computes the minimum squared distance between a and b.
@@ -2535,7 +2520,7 @@ constexpr float distance(Sphere const& a, AAEBB const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum squared distance between a and b.
  */
-constexpr float squaredDistance(Sphere const& a, Point const& b) noexcept
+constexpr float squaredDistance(Sphere const& a, Point b) noexcept
 {
 	return distance(b, a);
 }
@@ -2549,10 +2534,7 @@ constexpr float squaredDistance(Sphere const& a, Point const& b) noexcept
  * @param a,b Geometry objects.
  * @return The minimum distance between a and b.
  */
-constexpr float distance(Sphere const& a, Point const& b) noexcept
-{
-	return distance(b, a);
-}
+constexpr float distance(Sphere const& a, Point b) noexcept { return distance(b, a); }
 
 /*!
  * @brief Computes the minimum squared distance between a and b.

@@ -48,8 +48,8 @@
 
 struct Heatmap {
 	// Position
-	ufo::map::Point3 min_position;
-	ufo::map::Point3 max_position;
+	ufo::map::Point min_position;
+	ufo::map::Point max_position;
 
 	// Time step
 	ufo::map::time_step_t min_time_step;

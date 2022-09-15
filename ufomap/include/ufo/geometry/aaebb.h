@@ -52,7 +52,7 @@ struct AAEBB {
 
 	constexpr AAEBB() noexcept = default;
 
-	constexpr AAEBB(Point const& center, float half_size) noexcept
+	constexpr AAEBB(Point center, float half_size) noexcept
 	    : center(center), half_size(half_size)
 	{
 	}
@@ -63,12 +63,12 @@ struct AAEBB {
 	{
 	}
 
-	constexpr bool operator==(AAEBB const& rhs) const noexcept
+	constexpr bool operator==(AAEBB rhs) const noexcept
 	{
 		return rhs.center == center && rhs.half_size == half_size;
 	}
 
-	constexpr bool operator!=(AAEBB const& rhs) const noexcept { return !(*this == rhs); }
+	constexpr bool operator!=(AAEBB rhs) const noexcept { return !(*this == rhs); }
 
 	constexpr Point min() const noexcept { return center - half_size; }
 

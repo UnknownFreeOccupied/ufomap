@@ -54,12 +54,15 @@
 
 namespace ufo::map
 {
-template <class P = Point3>
+template <class P = Point>
 using PointCloudT = std::vector<P>;
-using PointCloud = PointCloudT<Point3>;
-using PointCloudColor = PointCloudT<Point3Color>;
-using PointCloudSemantic = PointCloudT<Point3Semantic>;
-using PointCloudColorSemantic = PointCloudT<Point3ColorSemantic>;
+using PointCloud = PointCloudT<Point>;
+using PointCloudColor = PointCloudT<PointColor>;
+using PointCloudSemantic = PointCloudT<PointSemantic>;
+using PointCloudIntensity = PointCloudT<PointIntensity>;
+using PointCloudColorSemantic = PointCloudT<PointColorSemantic>;
+using PointCloudColorIntensity = PointCloudT<PointColorIntensity>;
+using PointCloudColorSemanticIntensity = PointCloudT<PointColorSemanticIntensity>;
 
 /*!
  * @brief Transform each point in the point cloud
@@ -69,16 +72,15 @@ using PointCloudColorSemantic = PointCloudT<Point3ColorSemantic>;
 template <class InputIt, typename T>
 void applyTransform(InputIt first, InputIt last, math::Pose6<T> const& transform)
 {
-	std::for_each(
-	    first, last,
-	    [t = transform.translation, r = transform.rotation.getRotMatrix()](auto& p) {
-		    auto const x = p.x;
-		    auto const y = p.y;
-		    auto const z = p.z;
-		    p.x = r[0] * x + r[1] * y + r[2] * z + t.x;
-		    p.y = r[3] * x + r[4] * y + r[5] * z + t.y;
-		    p.z = r[6] * x + r[7] * y + r[8] * z + t.z;
-	    });
+	std::for_each(first, last,
+	              [t = transform.translation, r = transform.rotation.rotMatrix()](auto& p) {
+		              auto const x = p.x;
+		              auto const y = p.y;
+		              auto const z = p.z;
+		              p.x = r[0] * x + r[1] * y + r[2] * z + t.x;
+		              p.y = r[3] * x + r[4] * y + r[5] * z + t.y;
+		              p.z = r[6] * x + r[7] * y + r[8] * z + t.z;
+	              });
 }
 
 template <class P, typename T>

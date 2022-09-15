@@ -226,8 +226,8 @@ class OccupancyMapBase
 			return geometry::AABB();
 		}
 
-		Point3 min = derived().max();
-		Point3 max = derived().min();
+		Point min = derived().max();
+		Point max = derived().min();
 
 		auto pred = predicate::Leaf() && predicate::OccupancyStates(false, true, true) &&
 		            predicate::SatisfiesInner([this, &min, &max](auto const& node) {
@@ -286,7 +286,7 @@ class OccupancyMapBase
 		return getOccupancyState(derived().toCode(key));
 	}
 
-	OccupancyState getOccupancyState(Point3 coord, depth_t depth = 0) const
+	OccupancyState getOccupancyState(Point coord, depth_t depth = 0) const
 	{
 		return getOccupancyState(derived().toCode(coord, depth));
 	}
@@ -330,7 +330,7 @@ class OccupancyMapBase
 		return containsOccupancyState(derived().toCode(key), state);
 	}
 
-	bool containsOccupancyState(Point3 coord, OccupancyState state, depth_t depth = 0) const
+	bool containsOccupancyState(Point coord, OccupancyState state, depth_t depth = 0) const
 	{
 		return containsOccupancyState(derived().toCode(coord, depth), state);
 	}
@@ -357,7 +357,7 @@ class OccupancyMapBase
 
 	bool isUnknown(Key key) const { return isUnknown(derived().toCode(key)); }
 
-	bool isUnknown(Point3 coord, depth_t depth = 0) const
+	bool isUnknown(Point coord, depth_t depth = 0) const
 	{
 		return isUnknown(derived().toCode(coord, depth));
 	}
@@ -383,7 +383,7 @@ class OccupancyMapBase
 
 	bool isFree(Key key) const { return isFree(derived().toCode(key)); }
 
-	bool isFree(Point3 coord, depth_t depth = 0) const
+	bool isFree(Point coord, depth_t depth = 0) const
 	{
 		return isFree(derived().toCode(coord, depth));
 	}
@@ -409,7 +409,7 @@ class OccupancyMapBase
 
 	bool isOccupied(Key key) const { return isOccupied(derived().toCode(key)); }
 
-	bool isOccupied(Point3 coord, depth_t depth = 0) const
+	bool isOccupied(Point coord, depth_t depth = 0) const
 	{
 		return isOccupied(derived().toCode(coord, depth));
 	}
@@ -435,7 +435,7 @@ class OccupancyMapBase
 
 	bool containsUnknown(Key key) const { return containsUnknown(derived().toCode(key)); }
 
-	bool containsUnknown(Point3 coord, depth_t depth = 0) const
+	bool containsUnknown(Point coord, depth_t depth = 0) const
 	{
 		return containsUnknown(derived().toCode(coord, depth));
 	}
@@ -461,7 +461,7 @@ class OccupancyMapBase
 
 	bool containsFree(Key key) const { return containsFree(derived().toCode(key)); }
 
-	bool containsFree(Point3 coord, depth_t depth = 0) const
+	bool containsFree(Point coord, depth_t depth = 0) const
 	{
 		return containsFree(derived().toCode(coord, depth));
 	}
@@ -487,7 +487,7 @@ class OccupancyMapBase
 
 	bool containsOccupied(Key key) const { return containsOccupied(derived().toCode(key)); }
 
-	bool containsOccupied(Point3 coord, depth_t depth = 0) const
+	bool containsOccupied(Point coord, depth_t depth = 0) const
 	{
 		return containsOccupied(derived().toCode(coord, depth));
 	}
@@ -513,7 +513,7 @@ class OccupancyMapBase
 
 	occupancy_t getOccupancy(Key key) const { return getOccupancy(derived().toCode(key)); }
 
-	occupancy_t getOccupancy(Point3 coord, depth_t depth = 0) const
+	occupancy_t getOccupancy(Point coord, depth_t depth = 0) const
 	{
 		return getOccupancy(derived().toCode(coord, depth));
 	}
@@ -542,7 +542,7 @@ class OccupancyMapBase
 		return getOccupancyLogit(derived().toCode(key));
 	}
 
-	logit_t getOccupancyLogit(Point3 coord, depth_t depth = 0) const
+	logit_t getOccupancyLogit(Point coord, depth_t depth = 0) const
 	{
 		return getOccupancyLogit(derived().toCode(coord, depth));
 	}
@@ -573,7 +573,7 @@ class OccupancyMapBase
 		setOccupancy(derived().toCode(key), occupancy, propagate);
 	}
 
-	void setOccupancy(Point3 coord, occupancy_t occupancy, bool propagate = true,
+	void setOccupancy(Point coord, occupancy_t occupancy, bool propagate = true,
 	                  depth_t depth = 0)
 	{
 		setOccupancy(derived().toCode(coord, depth), occupancy, propagate);
@@ -614,7 +614,7 @@ class OccupancyMapBase
 		setOccupancyLogit(derived().toCode(key), logit, propagate);
 	}
 
-	void setOccupancyLogit(Point3 coord, logit_t logit, bool propagate = true,
+	void setOccupancyLogit(Point coord, logit_t logit, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		setOccupancyLogit(derived().toCode(coord, depth), logit, propagate);
@@ -655,7 +655,7 @@ class OccupancyMapBase
 		increaseOccupancyLogit(derived().toCode(key), inc, propagate);
 	}
 
-	void increaseOccupancyLogit(Point3 coord, logit_t inc, bool propagate = true,
+	void increaseOccupancyLogit(Point coord, logit_t inc, bool propagate = true,
 	                            depth_t depth = 0)
 	{
 		increaseOccupancyLogit(derived().toCode(coord, depth), inc, propagate);
@@ -696,7 +696,7 @@ class OccupancyMapBase
 		decreaseOccupancyLogit(derived().toCode(key), dec, propagate);
 	}
 
-	void decreaseOccupancyLogit(Point3 coord, logit_t dec, bool propagate = true,
+	void decreaseOccupancyLogit(Point coord, logit_t dec, bool propagate = true,
 	                            depth_t depth = 0)
 	{
 		decreaseOccupancyLogit(derived().toCode(coord, depth), dec, propagate);
@@ -727,7 +727,7 @@ class OccupancyMapBase
 		increaseOccupancy(derived().toCode(key), inc, propagate);
 	}
 
-	void increaseOccupancy(Point3 coord, occupancy_t inc, bool propagate = true,
+	void increaseOccupancy(Point coord, occupancy_t inc, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		increaseOccupancy(derived().toCode(coord, depth), inc, propagate);
@@ -758,7 +758,7 @@ class OccupancyMapBase
 		decreaseOccupancy(derived().toCode(key), dec, propagate);
 	}
 
-	void decreaseOccupancy(Point3 coord, occupancy_t dec, bool propagate = true,
+	void decreaseOccupancy(Point coord, occupancy_t dec, bool propagate = true,
 	                       depth_t depth = 0)
 	{
 		decreaseOccupancy(derived().toCode(coord, depth), dec, propagate);

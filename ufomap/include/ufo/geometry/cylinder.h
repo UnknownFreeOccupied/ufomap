@@ -53,7 +53,7 @@ struct Cylinder {
 
 	constexpr Cylinder() noexcept = default;
 
-	constexpr Cylinder(Point const& start, Point const& end, float radius) noexcept
+	constexpr Cylinder(Point start, Point end, float radius) noexcept
 	    : start(start), end(end), radius(radius)
 	{
 	}

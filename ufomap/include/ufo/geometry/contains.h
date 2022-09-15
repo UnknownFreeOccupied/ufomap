@@ -74,7 +74,7 @@ constexpr bool contains(AABB const& a, AABB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(AABB const& a, AAEBB const& b) noexcept
+constexpr bool contains(AABB const& a, AAEBB b) noexcept
 {
 	Point a_min = a.min();
 	Point a_max = a.max();
@@ -110,7 +110,7 @@ constexpr bool contains(AABB const& a, AAEBB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(AABB const& a, Point const& b) noexcept
+constexpr bool contains(AABB const& a, Point b) noexcept
 {
 	Point min = a.min();
 	Point max = a.max();
@@ -138,7 +138,7 @@ constexpr bool contains(AABB const& a, Point const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(AAEBB const& a, AABB const& b) noexcept
+constexpr bool contains(AAEBB a, AABB const& b) noexcept
 {
 	Point a_min = a.min();
 	Point a_max = a.max();
@@ -154,7 +154,7 @@ constexpr bool contains(AAEBB const& a, AABB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(AAEBB const& a, AAEBB const& b) noexcept
+constexpr bool contains(AAEBB a, AAEBB b) noexcept
 {
 	Point a_min = a.min();
 	Point a_max = a.max();
@@ -164,22 +164,22 @@ constexpr bool contains(AAEBB const& a, AAEBB const& b) noexcept
 	       a_max.x >= b_min.x && a_max.y >= b_min.y && a_max.z >= b_min.z;
 }
 
-// constexpr bool contains(AAEBB const& a, Frustum const& b) noexcept
+// constexpr bool contains(AAEBB a, Frustum const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(AAEBB const& a, LineSegment const& b) noexcept
+// constexpr bool contains(AAEBB a, LineSegment const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(AAEBB const& a, OBB const& b) noexcept
+// constexpr bool contains(AAEBB a, OBB const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(AAEBB const& a, Plane const& b) noexcept
+// constexpr bool contains(AAEBB a, Plane const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -190,7 +190,7 @@ constexpr bool contains(AAEBB const& a, AAEBB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(AAEBB const& a, Point const& b) noexcept
+constexpr bool contains(AAEBB a, Point b) noexcept
 {
 	Point min = a.min();
 	Point max = a.max();
@@ -198,12 +198,12 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 	       max.z >= b.z;
 }
 
-// constexpr bool contains(AAEBB const& a, Ray const& b) noexcept
+// constexpr bool contains(AAEBB a, Ray const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(AAEBB const& a, Sphere const& b) noexcept
+// constexpr bool contains(AAEBB a, Sphere const& b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -217,7 +217,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(Frustum const& a, AAEBB const& b) noexcept
+// constexpr bool contains(Frustum const& a, AAEBB b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -243,7 +243,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(Frustum const& a, Point const& b) noexcept
+// constexpr bool contains(Frustum const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -267,7 +267,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(LineSegment const& a, AAEBB const& b) noexcept
+// constexpr bool contains(LineSegment const& a, AAEBB b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -294,7 +294,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(LineSegment const& a, Point const& b) noexcept
+// constexpr bool contains(LineSegment const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -318,7 +318,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(OBB const& a, AAEBB const& b) noexcept
+// constexpr bool contains(OBB const& a, AAEBB b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -343,7 +343,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(OBB const& a, Point const& b) noexcept
+// constexpr bool contains(OBB const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -367,7 +367,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(Plane const& a, AAEBB const& b) noexcept
+// constexpr bool contains(Plane const& a, AAEBB b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -392,7 +392,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(Plane const& a, Point const& b) noexcept
+// constexpr bool contains(Plane const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -417,7 +417,7 @@ constexpr bool contains(AAEBB const& a, Point const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, AABB const& b) noexcept
+constexpr bool contains(Point a, AABB const& b) noexcept
 {
 	return a == b.center && 0 == b.half_size.x && 0 == b.half_size.y && 0 == b.half_size.z;
 }
@@ -428,7 +428,7 @@ constexpr bool contains(Point const& a, AABB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, AAEBB const& b) noexcept
+constexpr bool contains(Point a, AAEBB b) noexcept
 {
 	return a == b.center && 0 == b.half_size;
 }
@@ -439,7 +439,7 @@ constexpr bool contains(Point const& a, AAEBB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, Frustum const& b) noexcept
+constexpr bool contains(Point a, Frustum const& b) noexcept
 {
 	return false;  // FIXME: Check
 }
@@ -450,7 +450,7 @@ constexpr bool contains(Point const& a, Frustum const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, LineSegment const& b) noexcept
+constexpr bool contains(Point a, LineSegment const& b) noexcept
 {
 	return a == b.start && a == b.end;
 }
@@ -461,7 +461,7 @@ constexpr bool contains(Point const& a, LineSegment const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, OBB const& b) noexcept
+constexpr bool contains(Point a, OBB const& b) noexcept
 {
 	return a == b.center && 0 == b.half_size.x && 0 == b.half_size.y && 0 == b.half_size.z;
 }
@@ -472,7 +472,7 @@ constexpr bool contains(Point const& a, OBB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, Plane const& b) noexcept
+constexpr bool contains(Point a, Plane const& b) noexcept
 {
 	return false;  // FIXME: Check
 }
@@ -483,7 +483,7 @@ constexpr bool contains(Point const& a, Plane const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, Point const& b) noexcept { return a == b; }
+constexpr bool contains(Point a, Point b) noexcept { return a == b; }
 
 /*!
  * @brief Check if a contains b, that is b is within a.
@@ -491,7 +491,7 @@ constexpr bool contains(Point const& a, Point const& b) noexcept { return a == b
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, Ray const& b) noexcept { return false; }
+constexpr bool contains(Point a, Ray const& b) noexcept { return false; }
 
 /*!
  * @brief Check if a contains b, that is b is within a.
@@ -499,7 +499,7 @@ constexpr bool contains(Point const& a, Ray const& b) noexcept { return false; }
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Point const& a, Sphere const& b) noexcept
+constexpr bool contains(Point a, Sphere const& b) noexcept
 {
 	return 0 == b.radius && a == b.center;
 }
@@ -513,7 +513,7 @@ constexpr bool contains(Point const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(Ray const& a, AAEBB const& b) noexcept
+// constexpr bool contains(Ray const& a, AAEBB b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -538,7 +538,7 @@ constexpr bool contains(Point const& a, Sphere const& b) noexcept
 // 	// TODO: Implement
 // }
 
-// constexpr bool contains(Ray const& a, Point const& b) noexcept
+// constexpr bool contains(Ray const& a, Point b) noexcept
 // {
 // 	// TODO: Implement
 // }
@@ -563,7 +563,7 @@ constexpr bool contains(Point const& a, Sphere const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Sphere const& a, Point const& b) noexcept
+constexpr bool contains(Sphere const& a, Point b) noexcept
 {
 	return distance(a, b) <= a.radius;
 }
@@ -585,7 +585,7 @@ constexpr bool contains(Sphere const& a, AABB const& b) noexcept
  * @param a,b The two geometry object to check.
  * @return Whether a contains b.
  */
-constexpr bool contains(Sphere const& a, AAEBB const& b) noexcept
+constexpr bool contains(Sphere const& a, AAEBB b) noexcept
 {
 	return contains(a, b.min()) && contains(a, b.max());
 }

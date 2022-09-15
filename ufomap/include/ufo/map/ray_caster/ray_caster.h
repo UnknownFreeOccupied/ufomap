@@ -158,16 +158,16 @@ KeyRay computeRaySimple(Key origin, Key goal, double step_size_factor = 1.0)
 	return ray;
 }
 
-std::vector<Point3> computeRaySimple(Point3 origin, Point3 goal, double step_size)
+std::vector<Point> computeRaySimple(Point origin, Point goal, double step_size)
 {
-	Point3 dir = goal - origin;
+	Point dir = goal - origin;
 	double distance = dir.norm();
 	dir /= distance;
 
 	size_t num_steps = distance / step_size;
-	Point3 step = dir * step_size;
+	Point step = dir * step_size;
 
-	std::vector<Point3> ray{origin};
+	std::vector<Point> ray{origin};
 	ray.reserve(num_steps);
 	for (size_t i = 0; i != num_steps; ++i) {
 		origin += step;

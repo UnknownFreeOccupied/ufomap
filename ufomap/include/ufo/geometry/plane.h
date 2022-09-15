@@ -52,12 +52,12 @@ struct Plane {
 
 	constexpr Plane() noexcept = default;
 
-	constexpr Plane(Point const& normal, float distance) noexcept
+	constexpr Plane(Point normal, float distance) noexcept
 	    : normal(normal), distance(distance)
 	{
 	}
 
-	constexpr Plane(Point const& v_1, Point const& v_2, Point const& v_3) noexcept
+	constexpr Plane(Point v_1, Point v_2, Point v_3) noexcept
 	{
 		Point aux_1 = v_1 - v_2;
 		Point aux_2 = v_3 - v_2;

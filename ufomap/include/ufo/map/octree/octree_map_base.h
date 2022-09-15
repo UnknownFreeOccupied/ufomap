@@ -264,7 +264,7 @@ class OctreeMapBase
 	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		constexpr DataIdentifier identifier = Base::getDataIdentifier();
+		constexpr DataIdentifier identifier = Base::dataIdentifier();
 		if constexpr (DataIdentifier::NO_DATA == identifier) {
 			return;
 		}

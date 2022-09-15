@@ -56,7 +56,7 @@ struct Ray {
 
 	constexpr Ray() noexcept = default;
 
-	constexpr Ray(Point const& origin, Point const& direction) noexcept
+	constexpr Ray(Point origin, Point direction) noexcept
 	    : origin(origin), direction(direction.normalized())
 	{
 	}

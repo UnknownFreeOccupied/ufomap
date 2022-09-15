@@ -91,43 +91,24 @@ struct ColorNode {
 		}
 	}
 
-	constexpr RGBColor colorIndex(index_t const index) const
+	//
+	// Get color
+	//
+
+	constexpr Color colorIndex(index_t const index) const
 	{
 		if constexpr (Single) {
-			return RGBColor(red, green, blue);
+			return Color(red, green, blue);
 		} else {
-			return RGBColor(red[index], green[index], blue[index]);
+			return Color(red[index], green[index], blue[index]);
 		}
 	}
 
-	constexpr color_t redIndex(index_t const index) const
-	{
-		if constexpr (Single) {
-			return red;
-		} else {
-			return red[index];
-		}
-	}
+	//
+	// Set color
+	//
 
-	constexpr color_t greenIndex(index_t const index) const
-	{
-		if constexpr (Single) {
-			return green;
-		} else {
-			return green[index];
-		}
-	}
-
-	constexpr color_t blueIndex(index_t const index) const
-	{
-		if constexpr (Single) {
-			return blue;
-		} else {
-			return blue[index];
-		}
-	}
-
-	void setColor(RGBColor const value)
+	void setColor(Color const value)
 	{
 		if constexpr (Single) {
 			red = value.red;
@@ -140,12 +121,10 @@ struct ColorNode {
 		}
 	}
 
-	constexpr void setColorIndex(index_t const index, RGBColor const value)
+	constexpr void setColorIndex(index_t const index, Color const value)
 	{
 		if constexpr (Single) {
-			red = value.red;
-			green = value.green;
-			blue = value.blue;
+			setColor(value);
 		} else {
 			red[index] = value.red;
 			green[index] = value.green;
@@ -153,57 +132,31 @@ struct ColorNode {
 		}
 	}
 
-	void setRed(color_t const value)
+	//
+	// Clear color
+	//
+
+	void clearColor()
 	{
 		if constexpr (Single) {
-			red = value;
+			red = 0;
+			green = 0;
+			blue = 0;
 		} else {
-			red.fill(value);
+			red.fill(0);
+			green.fill(0);
+			blue.fill(0);
 		}
 	}
 
-	constexpr void setRedIndex(index_t const index, color_t const value)
+	void clearColorIndex(index_t const index)
 	{
 		if constexpr (Single) {
-			red = value;
+			clearColor();
 		} else {
-			red[index] = value;
-		}
-	}
-
-	void setGreen(color_t const value)
-	{
-		if constexpr (Single) {
-			green = value;
-		} else {
-			green.fill(value);
-		}
-	}
-
-	constexpr void setGreenIndex(index_t const index, color_t const value)
-	{
-		if constexpr (Single) {
-			green = value;
-		} else {
-			green[index] = value;
-		}
-	}
-
-	void setBlue(color_t const value)
-	{
-		if constexpr (Single) {
-			blue = value;
-		} else {
-			blue.fill(value);
-		}
-	}
-
-	constexpr void setBlueIndex(index_t const index, color_t const value)
-	{
-		if constexpr (Single) {
-			blue = value;
-		} else {
-			blue[index] = value;
+			red[index] = 0;
+			green[index] = 0;
+			blue[index] = 0;
 		}
 	}
 };
