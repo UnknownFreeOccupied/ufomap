@@ -34,5 +34,8 @@
 # VS Code
 .vscode/*
 
+# CLion
+.idea/*
+
 # Tests
 ufomap_tests/*
