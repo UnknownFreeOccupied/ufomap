@@ -112,12 +112,12 @@ class Integrator
 			map.increaseOccupancyLogit(node, prob, false);
 
 			// Update time step
-			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+			if constexpr (is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
 				map.setTimeStep(node, time_step, false);
 			}
 
 			// Update color
-			if constexpr (is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
+			if constexpr (is_base_of_template_v<ColorMap, std::decay_t<Map>> &&
 			              std::is_base_of_v<Color, P>) {
 				// TODO: Implement
 				Color avg_color = Color::average(first_point_it, last_point_it);
@@ -133,7 +133,7 @@ class Integrator
 			}
 
 			// Update semantics
-			if constexpr (is_base_of_template_v<SemanticMapBase, std::decay_t<Map>> &&
+			if constexpr (is_base_of_template_v<SemanticMap, std::decay_t<Map>> &&
 			              std::is_base_of_v<SemanticPair, P>) {
 				// FIXME: Implement correctly
 
@@ -175,7 +175,7 @@ class Integrator
 
 			map.decreaseOccupancyLogit(node, prob, false);
 
-			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+			if constexpr (is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
 				map.setTimeStep(node, time_step, false);
 			}
 		});

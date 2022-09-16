@@ -56,7 +56,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class TimeMapBase
+class TimeMap
 {
  public:
 	//
@@ -147,6 +147,37 @@ class TimeMapBase
 	}
 
  protected:
+	//
+	// Constructors
+	//
+
+	TimeMap() = default;
+
+	TimeMap(TimeMap const& other) = default;
+
+	TimeMap(TimeMap&& other) = default;
+
+	template <class Derived2>
+	TimeMap(TimeMap<Derived2> const& other)
+	    : prop_criteria_(other.timePropagationCriteria())
+	{
+	}
+
+	//
+	// Assignment operator
+	//
+
+	TimeMap& operator=(TimeMap const& rhs) = default;
+
+	TimeMap& operator=(TimeMap&& rhs) = default;
+
+	template <class Derived2>
+	TimeMap& operator=(TimeMap<Derived2> const& rhs)
+	{
+		prop_criteria_ = rhs.timePropagationCriteria();
+		return *this;
+	}
+
 	//
 	// Derived
 	//

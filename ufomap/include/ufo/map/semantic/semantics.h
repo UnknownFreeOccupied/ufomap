@@ -1394,7 +1394,7 @@ class Semantics
 	std::unique_ptr<value_type[]> values_;
 
 	template <class Derived, class LeafNode>
-	friend class SemanticMapBase;
+	friend class SemanticMap;
 };
 
 template <typename DataType, std::size_t ValueWidth>

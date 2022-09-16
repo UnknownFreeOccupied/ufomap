@@ -58,7 +58,7 @@
 namespace ufo::map
 {
 template <class Derived, class LeafNode>
-class SemanticMapBase
+class SemanticMap
 {
  public:
 	using semantic_container_type = typename LeafNode::semantic_container_type;

@@ -39,22 +39,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_COUNTER_NODE_H
-#define UFO_MAP_COUNTER_NODE_H
+#ifndef UFO_MAP_COUNT_NODE_H
+#define UFO_MAP_COUNT_NODE_H
+
+// UFO
+#include <ufo/map/types.h>
 
 // STL
 #include <array>
-#include <cstdint>
-#include <type_traits>
 
 namespace ufo::map
 {
-template <bool Single = false>
-struct CounterNode {
-	using counter_t = uint32_t;
-
-	std::conditional_t<Single, counter_t, std::array<counter_t, 8>> counter;
+template <std::size_t N = 8>
+struct CountNode {
+	std::array<count_t, N> count;
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_COUNTER_NODE_H
+#endif  // UFO_MAP_COUNT_NODE_H

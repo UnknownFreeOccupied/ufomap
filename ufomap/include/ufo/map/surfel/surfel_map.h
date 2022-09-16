@@ -58,7 +58,7 @@
 namespace ufo::map
 {
 template <class Derived, class LeafNode>
-class SurfelMapBase
+class SurfelMap
 {
  public:
 	using Surfel = typename LeafNode::surfel_type;
@@ -448,6 +448,35 @@ class SurfelMapBase
 
  protected:
 	//
+	// Constructors
+	//
+
+	SurfelMap() = default;
+
+	SurfelMap(SurfelMap const& other) = default;
+
+	SurfelMap(SurfelMap&& other) = default;
+
+	template <class Derived2>
+	SurfelMap(SurfelMap<Derived2> const& other)
+	{
+	}
+
+	//
+	// Assignment operator
+	//
+
+	SurfelMap& operator=(SurfelMap const& rhs) = default;
+
+	SurfelMap& operator=(SurfelMap&& rhs) = default;
+
+	template <class Derived2>
+	SurfelMap& operator=(SurfelMap<Derived2> const& rhs)
+	{
+		return *this;
+	}
+
+	//
 	// Derived
 	//
 
@@ -645,8 +674,7 @@ class SurfelMapBase
 	}
 
 	template <bool Single>
-	static void eraseSurfelPoint(SurfelNode<Single>& node, index_t const index,
-	                             Point point)
+	static void eraseSurfelPoint(SurfelNode<Single>& node, index_t const index, Point point)
 	{
 		// TODO: Implement
 	}
@@ -766,10 +794,6 @@ class SurfelMapBase
 		out_stream.write(reinterpret_cast<char const*>(data.get()),
 		                 num_nodes * sizeof(Surfel));
 	}
-
- protected:
-	//  Surfel depth
-	depth_t surfel_depth_ = 0;
 };
 }  // namespace ufo::map
 

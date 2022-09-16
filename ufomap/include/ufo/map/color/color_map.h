@@ -52,7 +52,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class ColorMapBase
+class ColorMap
 {
  public:
 	//
@@ -187,6 +187,35 @@ class ColorMapBase
 	}
 
  protected:
+	//
+	// Constructors
+	//
+
+	ColorMap() = default;
+
+	ColorMap(ColorMap const& other) = default;
+
+	ColorMap(ColorMap&& other) = default;
+
+	template <class Derived2>
+	ColorMap(ColorMap<Derived2> const& other)
+	{
+	}
+
+	//
+	// Assignment operator
+	//
+
+	ColorMap& operator=(ColorMap const& rhs) = default;
+
+	ColorMap& operator=(ColorMap&& rhs) = default;
+
+	template <class Derived2>
+	ColorMap& operator=(ColorMap<Derived2> const& rhs)
+	{
+		return *this;
+	}
+
 	//
 	// Derived
 	//

@@ -39,21 +39,59 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_HIT_MISS_NODE_H
-#define UFO_MAP_HIT_MISS_NODE_H
+#ifndef UFO_MAP_REFLECTION_NODE_H
+#define UFO_MAP_REFLECTION_NODE_H
+
+// UFO
+#include <ufo/map/types.h>
 
 // STL
 #include <array>
-#include <cstdint>
-#include <type_traits>
 
 namespace ufo::map
 {
-template <bool Single = false>
-struct HitMissNode {
-	std::conditional_t<Single, count_t, std::array<count_t, 8>> hit;
-	std::conditional_t<Single, count_t, std::array<count_t, 8>> miss;
+template <std::size_t N = 8>
+struct ReflectionNode {
+	// Data
+	std::array<count_t, N> hit;
+	std::array<count_t, N> miss;
+
+	//
+	// Size
+	//
+
+	[[nodiscard]] static constexpr std::size_t reflectionSize() { return N; }
+
+	//
+	// Fill
+	//
+
+	void fill(ReflectionNode const parent, index_t const index)
+	{
+		if constexpr (1 == N) {
+			hit = parent.hit;
+			miss = parent.miss;
+		} else {
+			hit.fill(parent.hit[index]);
+			miss.fill(parent.miss[index]);
+		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(ReflectionNode const parent,
+	                                           index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return hit == parent.hit && miss == parent.miss;
+		} else {
+			return all_of(hit, [p = parent.hit[index]](auto const e) { return e == p; }) &&
+			       all_of(miss, [p = parent.miss[index]](auto const e) { return e == p; });
+		}
+	}
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_HIT_MISS_NODE_H
+#endif  // UFO_MAP_REFLECTION_NODE_H

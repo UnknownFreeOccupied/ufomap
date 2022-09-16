@@ -71,14 +71,14 @@ using mt_t = std::uint64_t;
 template <mt_t MT, mt_t T, mt_t HRT, template <class> class Node>
 using cond_node_t = std::conditional_t<MT & T, Node<MT ^ T & HRT ? 1 : 8>, EmptyNode<T>>;
 
-template <bool C, mt_t T, template <typename...> typename MapBase>
+template <bool C, mt_t T, template <typename...> typename Map>
 struct cond_map_base {
 	template <typename... ts>
-	using type = MapBase<ts...>;
+	using type = Map<ts...>;
 };
 
-template <mt_t T, template <typename...> typename MapBase>
-struct cond_map_base<false, T, MapBase> {
+template <mt_t T, template <typename...> typename Map>
+struct cond_map_base<false, T, Map> {
 	template <typename... Ts>
 	using type = EmptyMap<T, Ts...>;
 };
@@ -89,25 +89,25 @@ struct cond_map_base<false, T, MapBase> {
 
 enum MapType : mt_t {
 	// clang-format off
-	OCCUPANCY = mt_t(1),
-	TIME      = mt_t(1) << 1U,
-	COLOR     = mt_t(1) << 2U,
-	SEMANTIC  = mt_t(1) << 3U,
-	SURFEL    = mt_t(1) << 4U,
-	DISTANCE  = mt_t(1) << 5U,
-	INTENSITY = mt_t(1) << 6U,
-	COUNT     = mt_t(1) << 7U,
-	HIT_MISS  = mt_t(1) << 8U,
+	OCCUPANCY   = mt_t(1),
+	TIME        = mt_t(1) << 1U,
+	COLOR       = mt_t(1) << 2U,
+	SEMANTIC    = mt_t(1) << 3U,
+	SURFEL      = mt_t(1) << 4U,
+	DISTANCE    = mt_t(1) << 5U,
+	INTENSITY   = mt_t(1) << 6U,
+	COUNT       = mt_t(1) << 7U,
+	REFLECTION  = mt_t(1) << 8U,
 	// Half resolution (/single) below
-	HR_OCCUPANCY = (mt_t(1) << 63U) | OCCUPANCY,
-	HR_TIME      = (mt_t(1) << 62U) | TIME,
-	HR_COLOR     = (mt_t(1) << 61U) | COLOR,
-	HR_SEMANTIC  = (mt_t(1) << 60U) | SEMANTIC,
-	HR_SURFEL    = (mt_t(1) << 59U) | SURFEL,
-	HR_DISTANCE  = (mt_t(1) << 58U) | DISTANCE,
-	HR_INTENSITY = (mt_t(1) << 57U) | INTENSITY,
-	HR_COUNT     = (mt_t(1) << 56U) | COUNT,
-	HR_HIT_MISS  = (mt_t(1) << 55U) | HIT_MISS,
+	HR_OCCUPANCY   = (mt_t(1) << 63U) | OCCUPANCY,
+	HR_TIME        = (mt_t(1) << 62U) | TIME,
+	HR_COLOR       = (mt_t(1) << 61U) | COLOR,
+	HR_SEMANTIC    = (mt_t(1) << 60U) | SEMANTIC,
+	HR_SURFEL      = (mt_t(1) << 59U) | SURFEL,
+	HR_DISTANCE    = (mt_t(1) << 58U) | DISTANCE,
+	HR_INTENSITY   = (mt_t(1) << 57U) | INTENSITY,
+	HR_COUNT       = (mt_t(1) << 56U) | COUNT,
+	HR_REFLECTION  = (mt_t(1) << 55U) | REFLECTION,
 	// clang-format on
 };
 
@@ -118,56 +118,56 @@ enum MapType : mt_t {
 template <mt_t MapType, bool ReuseNodes = false, bool LockLess = false,
           bool CountNodes = true>
 class UFOMap
-    : public OctreeMapBase<
+    : public OctreeMap<
           // clang-format off
 					// These should be ordered based on size
-          OctreeNodeBase<cond_node_t<MapType, SEMANTIC,  HR_SEMANTIC,  SemanticNode>,
-                         cond_node_t<MapType, SURFEL,    HR_SURFEL,    SurfelNode>,
-                         cond_node_t<MapType, DISTANCE,  HR_DISTANCE,  DistanceNode>,
-												 cond_node_t<MapType, HIT_MISS,  HR_HIT_MISS,  HitMissNode>,
-												 cond_node_t<MapType, COUNT,     HR_COUNT,     CountNode>,
-                         cond_node_t<MapType, TIME,      HR_TIME,      TimeNode>,
-												 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
-                         cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
-                         cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
+          OctreeNodeBase<cond_node_t<MapType, SEMANTIC,    HR_SEMANTIC,    SemanticNode>,
+                         cond_node_t<MapType, SURFEL,      HR_SURFEL,      SurfelNode>,
+                         cond_node_t<MapType, DISTANCE,    HR_DISTANCE,    DistanceNode>,
+												 cond_node_t<MapType, REFLECTION,  HR_REFLECTION,  ReflectionNode>,
+												 cond_node_t<MapType, COUNT,       HR_COUNT,       CountNode>,
+                         cond_node_t<MapType, TIME,        HR_TIME,        TimeNode>,
+												 cond_node_t<MapType, INTENSITY,   HR_INTENSITY,   IntensityNode>,
+                         cond_node_t<MapType, COLOR,       HR_COLOR,       ColorNode>,
+                         cond_node_t<MapType, OCCUPANCY,   HR_OCCUPANCY,   OccupancyNode>>,
 					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY ? 1 : 8>, void>,
           ReuseNodes, LockLess, CountNodes,
 					// Order does not matter
-          cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
-          cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,
-          cond_map_base<MapType & COLOR,     COLOR,     ColorMapBase>::template type,
-          cond_map_base<MapType & SEMANTIC,  SEMANTIC,  SemanticMapBase>::template type,
-          cond_map_base<MapType & SURFEL,    SURFEL,    SurfelMapBase>::template type,
-          cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type,
-          cond_map_base<MapType & INTENSITY, INTENSITY, IntensityMapBase>::template type,
-          cond_map_base<MapType & COUNT,     COUNT,     CountMapBase>::template type,
-          cond_map_base<MapType & HIT_MISS,  HIT_MISS,  HitMissMapBase>::template type
+          cond_map_base<MapType & OCCUPANCY,   OCCUPANCY,   OccupancyMap>::template type,
+          cond_map_base<MapType & TIME,        TIME,        TimeMap>::template type,
+          cond_map_base<MapType & COLOR,       COLOR,       ColorMap>::template type,
+          cond_map_base<MapType & SEMANTIC,    SEMANTIC,    SemanticMap>::template type,
+          cond_map_base<MapType & SURFEL,      SURFEL,      SurfelMap>::template type,
+          cond_map_base<MapType & DISTANCE,    DISTANCE,    DistanceMap>::template type,
+          cond_map_base<MapType & INTENSITY,   INTENSITY,   IntensityMap>::template type,
+          cond_map_base<MapType & COUNT,       COUNT,       CountMap>::template type,
+          cond_map_base<MapType & REFLECTION,  REFLECTION,  ReflectionMap>::template type
           // clang-format on
           >
 {
  private:
-	using Base = OctreeMapBase<
+	using Base = OctreeMap<
 	    // clang-format off
-	    OctreeNodeBase<cond_node_t<MapType, SEMANTIC,  HR_SEMANTIC,  SemanticNode>,
-	                   cond_node_t<MapType, SURFEL,    HR_SURFEL,    SurfelNode>,
-	                   cond_node_t<MapType, DISTANCE,  HR_DISTANCE,  DistanceNode>,
-										 cond_node_t<MapType, HIT_MISS,  HR_HIT_MISS,  HitMissNode>,
-										 cond_node_t<MapType, COUNT,     HR_COUNT,     CountNode>,
-										 cond_node_t<MapType, TIME,      HR_TIME,      TimeNode>,
-										 cond_node_t<MapType, INTENSITY, HR_INTENSITY, IntensityNode>,
-	                   cond_node_t<MapType, COLOR,     HR_COLOR,     ColorNode>,
-	                   cond_node_t<MapType, OCCUPANCY, HR_OCCUPANCY, OccupancyNode>>,
+	    OctreeNodeBase<cond_node_t<MapType, SEMANTIC,    HR_SEMANTIC,    SemanticNode>,
+	                   cond_node_t<MapType, SURFEL,      HR_SURFEL,      SurfelNode>,
+	                   cond_node_t<MapType, DISTANCE,    HR_DISTANCE,    DistanceNode>,
+										 cond_node_t<MapType, REFLECTION,  HR_REFLECTION,  ReflectionNode>,
+										 cond_node_t<MapType, COUNT,       HR_COUNT,       CountNode>,
+										 cond_node_t<MapType, TIME,        HR_TIME,        TimeNode>,
+										 cond_node_t<MapType, INTENSITY,   HR_INTENSITY,   IntensityNode>,
+	                   cond_node_t<MapType, COLOR,       HR_COLOR,       ColorNode>,
+	                   cond_node_t<MapType, OCCUPANCY,   HR_OCCUPANCY,   OccupancyNode>>,
 			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<MapType ^ OCCUPANCY & HR_OCCUPANCY ? 1 : 8>, void>,
 	    ReuseNodes, LockLess, CountNodes
-	    cond_map_base<MapType & OCCUPANCY, OCCUPANCY, OccupancyMapBase>::template type,
-	    cond_map_base<MapType & TIME,      TIME,      TimeMapBase>::template type,
-	    cond_map_base<MapType & COLOR,     COLOR,     ColorMapBase>::template type,
-	    cond_map_base<MapType & SEMANTIC,  SEMANTIC,  SemanticMapBase>::template type,
-	    cond_map_base<MapType & SURFEL,    SURFEL,    SurfelMapBase>::template type,
-	    cond_map_base<MapType & DISTANCE,  DISTANCE,  DistanceMapBase>::template type,
-			cond_map_base<MapType & INTENSITY, INTENSITY, IntensityMapBase>::template type,
-			cond_map_base<MapType & COUNT,     COUNT,     CountMapBase>::template type,
-			cond_map_base<MapType & HIT_MISS,  HIT_MISS,  HitMissMapBase>::template type
+	    cond_map_base<MapType & OCCUPANCY,   OCCUPANCY,   OccupancyMap>::template type,
+	    cond_map_base<MapType & TIME,        TIME,        TimeMap>::template type,
+	    cond_map_base<MapType & COLOR,       COLOR,       ColorMap>::template type,
+	    cond_map_base<MapType & SEMANTIC,    SEMANTIC,    SemanticMap>::template type,
+	    cond_map_base<MapType & SURFEL,      SURFEL,      SurfelMap>::template type,
+	    cond_map_base<MapType & DISTANCE,    DISTANCE,    DistanceMap>::template type,
+			cond_map_base<MapType & INTENSITY,   INTENSITY,   IntensityMap>::template type,
+			cond_map_base<MapType & COUNT,       COUNT,       CountMap>::template type,
+			cond_map_base<MapType & REFLECTION,  REFLECTION,  ReflectionMap>::template type
 	    // clang-format on
 	    >;
 
@@ -227,7 +227,7 @@ using SurfelMap    = UFOMap<SURFEL>;
 using DistanceMap  = UFOMap<DISTANCE>;
 using IntensityMap = UFOMap<INTENSITY>;
 using CountMap     = UFOMap<COUNT>;
-using HitMissMap   = UFOMap<HIT_MISS>;
+using HitMissMap   = UFOMap<REFLECTION>;
 // clang-format on
 }  // namespace ufo::map
 
