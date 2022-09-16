@@ -152,7 +152,7 @@ class Code
 	 * @param index The index of the key component
 	 * @return The key component value
 	 */
-	static Key::key_t toKey(Code const& code, std::size_t index)
+	static key_t toKey(Code const& code, std::size_t index)
 	{
 		return get3Bits(code.code_ >> index);
 	}
@@ -163,7 +163,7 @@ class Code
 	 * @param index The index of the key component
 	 * @return The key component value
 	 */
-	Key::key_t toKey(std::size_t index) const { return toKey(*this, index); }
+	key_t toKey(std::size_t index) const { return toKey(*this, index); }
 
 	/*!
 	 * @brief Get the index at a specific depth for this code.
@@ -171,13 +171,13 @@ class Code
 	 * @param depth The depth the index is requested for.
 	 * @return The index at the specified depth.
 	 */
-	constexpr std::size_t index(depth_t depth) const
+	constexpr index_t index(depth_t depth) const
 	{
 		return (code_ >> (code_t(3) * depth)) & code_t(0x7);
 	}
 
 	// TODO: Rename?
-	constexpr std::size_t index() const { return index(depth()); }
+	constexpr index_t index() const { return index(depth()); }
 
 	constexpr Code parent(depth_t parent_depth) const
 	{
