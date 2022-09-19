@@ -93,7 +93,7 @@ struct TimeNode {
 	// Get time
 	//
 
-	constexpr time_t timeIndex(index_t const index) const
+	[[nodiscard]] constexpr time_t timeIndex(index_t const index) const
 	{
 		if constexpr (1 == N) {
 			return time[0];

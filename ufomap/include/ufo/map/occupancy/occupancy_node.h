@@ -99,7 +99,7 @@ struct OccupancyNode {
 	// Get occupancy
 	//
 
-	constexpr occupancy_t occupancyIndex(index_t const index) const
+	[[nodiscard]] constexpr occupancy_t occupancyIndex(index_t const index) const
 	{
 		if constexpr (1 == N) {
 			return occupancy[0];

@@ -39,8 +39,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCCUPANCY_MAP_BASE_H
-#define UFO_MAP_OCCUPANCY_MAP_BASE_H
+#ifndef UFO_MAP_OCCUPANCY_MAP_H
+#define UFO_MAP_OCCUPANCY_MAP_H
 
 // UFO
 #include <ufo/geometry/aabb.h>
@@ -1073,4 +1073,4 @@ class OccupancyMap
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCCUPANCY_MAP_BASE_H
+#endif  // UFO_MAP_OCCUPANCY_MAP_H

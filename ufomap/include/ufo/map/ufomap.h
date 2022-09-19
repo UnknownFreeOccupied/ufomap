@@ -219,15 +219,15 @@ class UFOMap
 //
 
 // clang-format off
-using OccupancyMap = UFOMap<OCCUPANCY>;
-using TimeMap      = UFOMap<TIME>;
-using ColorMap     = UFOMap<COLOR>;
-using SemanticMap  = UFOMap<SEMANTIC>;
-using SurfelMap    = UFOMap<SURFEL>;
-using DistanceMap  = UFOMap<DISTANCE>;
-using IntensityMap = UFOMap<INTENSITY>;
-using CountMap     = UFOMap<COUNT>;
-using HitMissMap   = UFOMap<REFLECTION>;
+using OccupancyMap    = UFOMap<OCCUPANCY>;
+using TimeMap         = UFOMap<TIME>;
+using ColorMap        = UFOMap<COLOR>;
+using SemanticMap     = UFOMap<SEMANTIC>;
+using SurfelMap       = UFOMap<SURFEL>;
+using DistanceMap     = UFOMap<DISTANCE>;
+using IntensityMap    = UFOMap<INTENSITY>;
+using CountMap        = UFOMap<COUNT>;
+using ReflectionMap   = UFOMap<REFLECTION>;
 // clang-format on
 }  // namespace ufo::map
 

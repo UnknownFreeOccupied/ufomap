@@ -39,8 +39,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_COLOR_MAP_BASE_H
-#define UFO_MAP_COLOR_MAP_BASE_H
+#ifndef UFO_MAP_COLOR_MAP_H
+#define UFO_MAP_COLOR_MAP_H
 
 // UFO
 #include <ufo/map/color/color_node.h>
@@ -384,4 +384,4 @@ class ColorMap
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_COLOR_MAP_BASE_H
+#endif  // UFO_MAP_COLOR_MAP_H

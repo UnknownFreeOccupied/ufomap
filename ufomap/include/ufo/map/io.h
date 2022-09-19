@@ -62,7 +62,9 @@ enum struct DataIdentifier : std::uint8_t {
 	COLOR,
 	SEMANTIC,
 	SURFEL,
-	SIGNED_DISTANCE,
+	DISTANCE,
+	COUNT,
+	REFLECTION,
 };
 
 enum struct DataType : std::uint8_t {

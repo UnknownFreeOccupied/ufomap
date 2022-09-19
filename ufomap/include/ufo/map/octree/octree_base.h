@@ -2448,6 +2448,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr key_t toKey(coord_t coord, depth_t depth = 0) const noexcept
 	{
+		// FIXME: Make it possible to make a cloud of coordinates
 		key_t val = std::floor(node_size_factor_[0] * coord);
 		return ((val + max_value_) >> depth) << depth;
 	}
@@ -2487,11 +2488,10 @@ class OctreeBase
 		           : (std::floor(sub64(key, max_value_) / static_cast<coord_t>(1U << depth)) +
 		              coord_t(0.5)) *
 		                 nodeSize(depth);
-
-		// // FIXME: Check if correct
-		// return depth_levels_ == depth
+		//  FIXME: Look at
+		// return rootDepth() == depth
 		//            ? 0
-		//            : (((key >> depth) << depth) - max_value_) * node_size_;
+		//            : ((sub64(key, max_value_) >> depth) + coord_t(0.5)) * nodeSize(depth);
 	}
 
 	//

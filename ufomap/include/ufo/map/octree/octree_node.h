@@ -53,6 +53,29 @@
 
 namespace ufo::map
 {
+
+template <typename... Nodes>
+struct OctreeNode : Nodes... {
+	//
+	// Fill
+	//
+
+	void fill(OctreeNode const& parent, index_t const index)
+	{
+		(Nodes::fill(parent, index), ...);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] bool isCollapsible(OctreeNode const& parent,
+	                                 index_t const index) const
+	{
+		return (Nodes::isCollapsible(parent, index) && ...);
+	}
+};
+
 template <class Data>
 struct OctreeLeafNode : Data {
 	// Indicates whether this node has to be updated (get information from children and/or

@@ -25,7 +25,7 @@
  *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
- *     this software without specific prior written permission.
+ *     this software without specific prior written permissesion.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -53,8 +53,8 @@ namespace ufo::map
 template <std::size_t N = 8>
 struct ReflectionNode {
 	// Data
-	std::array<count_t, N> hit;
-	std::array<count_t, N> miss;
+	std::array<count_t, N> hits;
+	std::array<count_t, N> misses;
 
 	//
 	// Size
@@ -69,11 +69,11 @@ struct ReflectionNode {
 	void fill(ReflectionNode const parent, index_t const index)
 	{
 		if constexpr (1 == N) {
-			hit = parent.hit;
-			miss = parent.miss;
+			hits = parent.hits;
+			misses = parent.misses;
 		} else {
-			hit.fill(parent.hit[index]);
-			miss.fill(parent.miss[index]);
+			hits.fill(parent.hits[index]);
+			misses.fill(parent.misses[index]);
 		}
 	}
 
@@ -85,10 +85,66 @@ struct ReflectionNode {
 	                                           index_t const index) const
 	{
 		if constexpr (1 == N) {
-			return hit == parent.hit && miss == parent.miss;
+			return hits == parent.hits && misses == parent.misses;
 		} else {
-			return all_of(hit, [p = parent.hit[index]](auto const e) { return e == p; }) &&
-			       all_of(miss, [p = parent.miss[index]](auto const e) { return e == p; });
+			return all_of(hits, [p = parent.hits[index]](auto const e) { return e == p; }) &&
+			       all_of(misses, [p = parent.misses[index]](auto const e) { return e == p; });
+		}
+	}
+
+	//
+	// Get hits
+	//
+
+	[[nodiscard]] constexpr count_t hitsIndex(index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return hits[0];
+		} else {
+			return hits[index];
+		}
+	}
+
+	//
+	// Set hits
+	//
+
+	void setHits(count_t const value) { hits.fill(value); }
+
+	void setHitsIndex(index_t const index, count_t const value)
+	{
+		if constexpr (1 == N) {
+			setHits(value);
+		} else {
+			hits[index] = value;
+		}
+	}
+
+	//
+	// Get misses
+	//
+
+	[[nodiscard]] constexpr count_t missesIndex(index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return misses[0];
+		} else {
+			return misses[index];
+		}
+	}
+
+	//
+	// Set misses
+	//
+
+	void setMisses(count_t const value) { misses.fill(value); }
+
+	void setMissesIndex(index_t const index, count_t const value)
+	{
+		if constexpr (1 == N) {
+			setMisses(value);
+		} else {
+			misses[index] = value;
 		}
 	}
 };

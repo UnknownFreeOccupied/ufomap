@@ -39,8 +39,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TIME_MAP_BASE_H
-#define UFO_MAP_TIME_MAP_BASE_H
+#ifndef UFO_MAP_TIME_MAP_H
+#define UFO_MAP_TIME_MAP_H
 
 // UFO
 #include <ufo/map/time/time_node.h>
@@ -63,7 +63,7 @@ class TimeMap
 	// Get time
 	//
 
-	[[nodiscard]] constexpr time_t time(Node node) const noexcept
+	[[nodiscard]] constexpr time_t time(Node node) const
 	{
 		return derived().leafNode(node).timeIndex(node.index());
 	}
@@ -205,13 +205,13 @@ class TimeMap
 		if constexpr (1 == N) {
 			switch (prop_criteria_) {
 				case PropagationCriteria::MIN:
-					setTime(node, minTime(children));
+					node.time[0] = minTime(children);
 					break;
 				case PropagationCriteria::MAX:
-					setTime(node, maxTime(children));
+					node.time[0] = maxTime(children);
 					break;
 				case PropagationCriteria::MEAN:
-					setTime(node, averageTime(children));
+					node.time[0] = averageTime(children);
 					break;
 			}
 		} else {
@@ -219,13 +219,13 @@ class TimeMap
 				if ((indices >> index) & index_field_t(1)) {
 					switch (prop_criteria_) {
 						case PropagationCriteria::MIN:
-							setTime(node, index, minTime(children[index]));
+							node.time[index] = minTime(children[index]);
 							break;
 						case PropagationCriteria::MAX:
-							setTime(node, index, maxTime(children[index]));
+							node.time[index] = maxTime(children[index]);
 							break;
 						case PropagationCriteria::MEAN:
-							setTime(node, index, averageTime(children[index]));
+							node.time[index] = averageTime(children[index]);
 							break;
 					}
 				}
@@ -376,7 +376,7 @@ class TimeMap
 					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
 						first->node.time.fill(*(d + i));
 					} else {
-						for (std::size_t index = 0; first->node.red.size() != index; ++index) {
+						for (std::size_t index = 0; first->node.time.size() != index; ++index) {
 							if ((first.index_field >> index) & index_field_t(1)) {
 								first->node.time[index] = *(d + i);
 							}
@@ -422,4 +422,4 @@ class TimeMap
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_TIME_MAP_BASE_H
+#endif  // UFO_MAP_TIME_MAP_H
