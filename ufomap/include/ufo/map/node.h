@@ -288,22 +288,22 @@ struct NodeBV : public Node, public BV {
 	friend class OctreeBase;
 };
 
-struct NodeWParent : public Node {
+struct NodeP : public Node {
  public:
-	constexpr NodeWParent() = default;
+	constexpr NodeP() = default;
 
  protected:
-	constexpr NodeWParent(void* data, Code code, void* parent) noexcept
+	constexpr NodeP(void* data, Code code, void* parent = nullptr) noexcept
 	    : Node(data, code), data_parent_(parent)
 	{
 	}
 
-	constexpr NodeWParent(Node node, void* parent) noexcept
+	constexpr NodeP(Node node, void* parent = nullptr) noexcept
 	    : Node(node), data_parent_(parent)
 	{
 	}
 
-	constexpr NodeWParent(Node&& node, void* parent) noexcept
+	constexpr NodeP(Node&& node, void* parent = nullptr) noexcept
 	    : Node(std::forward<Node>(node)), data_parent_(parent)
 	{
 	}
@@ -317,29 +317,29 @@ struct NodeWParent : public Node {
 	friend class OctreeBase;
 };
 
-struct NodeWParents : public Node {
+struct NodePs : public Node {
  public:
 	using parents_t = std::vector<void*>;
 
-	constexpr NodeWParents() = default;
+	constexpr NodePs() = default;
 
  protected:
-	constexpr NodeWParents(void* data, Code code, parents_t const& parents) noexcept
+	constexpr NodePs(void* data, Code code, parents_t const& parents) noexcept
 	    : Node(data, code), data_parents_(parents)
 	{
 	}
 
-	constexpr NodeWParents(Node node, parents_t const& parents) noexcept
+	constexpr NodePs(Node node, parents_t const& parents) noexcept
 	    : Node(node), data_parents_(parents)
 	{
 	}
 
-	constexpr NodeWParents(Node&& node, parents_t parents) noexcept
+	constexpr NodePs(Node&& node, parents_t parents) noexcept
 	    : Node(std::forward<Node>(node)), data_parents_(parents)
 	{
 	}
 
-	constexpr NodeWParents() {}
+	constexpr NodePs() {}
 
 	constexpr void* parentsData() noexcept { return data_parents_; }
 
@@ -354,23 +354,22 @@ struct NodeWParents : public Node {
 	friend class OctreeBase;
 };
 
-struct NodeWParentBV : public Node, public BV {
+struct NodePBV : public Node, public BV {
  public:
-	constexpr NodeWParentBV() = default;
+	constexpr NodePBV() = default;
 
  protected:
-	constexpr NodeWParentBV(void* data, Code code, geometry::AAEBB aaebb,
-	                        void* parent) noexcept
+	constexpr NodePBV(void* data, Code code, geometry::AAEBB aaebb, void* parent) noexcept
 	    : Node(data, code), BV(aaebb), data_parent_(parent)
 	{
 	}
 
-	constexpr NodeWParentBV(Node node, geometry::AAEBB aaebb, void* parent) noexcept
+	constexpr NodePBV(Node node, geometry::AAEBB aaebb, void* parent) noexcept
 	    : Node(node), BV(aaebb), data_parent_(parent)
 	{
 	}
 
-	constexpr NodeWParentBV(Node&& node, geometry::AAEBB aaebb, void* parent) noexcept
+	constexpr NodePBV(Node&& node, geometry::AAEBB aaebb, void* parent) noexcept
 	    : Node(std::forward<Node>(node)), BV(aaebb), data_parent_(parent)
 	{
 	}
@@ -384,26 +383,25 @@ struct NodeWParentBV : public Node, public BV {
 	friend class OctreeBase;
 };
 
-struct NodeWParentsBV : public Node, public BV {
+struct NodePsBV : public Node, public BV {
  public:
 	using parents_t = std::vector<void*>;
 
-	constexpr NodeWParentsBV() = default;
+	constexpr NodePsBV() = default;
 
  protected:
-	constexpr NodeWParentsBV(void* data, Code code, geometry::AAEBB aaebb,
-	                         parents_t const& parents) noexcept
+	constexpr NodePsBV(void* data, Code code, geometry::AAEBB aaebb,
+	                   parents_t const& parents) noexcept
 	    : Node(data, code), BV(aaebb), data_parents_(parents)
 	{
 	}
 
-	constexpr NodeWParentsBV(Node node, geometry::AAEBB aaebb,
-	                         parents_t const& parents) noexcept
+	constexpr NodePsBV(Node node, geometry::AAEBB aaebb, parents_t const& parents) noexcept
 	    : Node(node), BV(aaebb), data_parents_(parents)
 	{
 	}
 
-	constexpr NodeWParentsBV(Node&& node, geometry::AAEBB aaebb, parents_t parents) noexcept
+	constexpr NodePsBV(Node&& node, geometry::AAEBB aaebb, parents_t parents) noexcept
 	    : Node(std::forward<Node>(node)), BV(aaebb), data_parents_(parents)
 	{
 	}
