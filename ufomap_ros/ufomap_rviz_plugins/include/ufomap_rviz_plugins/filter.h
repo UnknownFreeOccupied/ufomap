@@ -59,9 +59,9 @@ struct Filter {
 	uint8_t max_occupancy;
 
 	// Time step
-	bool filter_time_step;
-	ufo::map::time_step_t min_time_step;
-	ufo::map::time_step_t max_time_step;
+	bool filter_time;
+	ufo::map::time_t min_time;
+	ufo::map::time_t max_time;
 
 	// Semantics
 	bool filter_semantics;
@@ -79,9 +79,9 @@ struct Filter {
 		           (!filter_occupancy || (rhs.min_occupancy == min_occupancy &&
 		                                  rhs.max_occupancy == max_occupancy));
 
-		bool ts = rhs.filter_time_step == filter_time_step &&
-		          (!filter_time_step || (rhs.min_time_step == min_time_step &&
-		                                 rhs.max_time_step == max_time_step));
+		bool ts = rhs.filter_time == filter_time &&
+		          (!filter_time || (rhs.min_time == min_time &&
+		                                 rhs.max_time == max_time));
 
 		bool sem = rhs.filter_semantics == filter_semantics &&
 		           (!filter_semantics || (rhs.min_semantic_value == min_semantic_value &&

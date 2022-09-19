@@ -447,22 +447,24 @@ class ReflectionMap
 	void updateNode(ReflectionNode<N>& node, index_field_t const indices, T const& children)
 	{
 		if constexpr (1 == N) {
+			auto hits_fun = [](ReflectionNode<1> const node) { return node.hits[0]; };
+			auto misses_fun = [](ReflectionNode<1> const node) { return node.misses[0]; };
 			switch (prop_criteria_) {
 				case PropagationCriteria::MIN:
-					node.hits[0] = min(children, [](auto const& e) { return e.hits[0]; });
-					node.misses[0] = min(children, [](auto const& e) { return e.misses[0]; });
+					node.hits[0] = min(children, hits_fun);
+					node.misses[0] = min(children, misses_fun);
 					break;
 				case PropagationCriteria::MAX:
-					node.hits[0] = max(children, [](auto const& e) { return e.hits[0]; });
-					node.misses[0] = max(children, [](auto const& e) { return e.misses[0]; });
+					node.hits[0] = max(children, hits_fun);
+					node.misses[0] = max(children, misses_fun);
 					break;
 				case PropagationCriteria::MEAN:
-					node.hits[0] = average(children, [](auto const& e) { return e.hits[0]; });
-					node.misses[0] = average(children, [](auto const& e) { return e.misses[0]; });
+					node.hits[0] = mean(children, hits_fun);
+					node.misses[0] = mean(children, misses_fun);
 					break;
 				case PropagationCriteria::SUM:
-					node.hits[0] = sum(children, [](auto const& e) { return e.hits[0]; });
-					node.misses[0] = sum(children, [](auto const& e) { return e.misses[0]; });
+					node.hits[0] = sum(children, hits_fun);
+					node.misses[0] = sum(children, misses_fun);
 					break;
 			}
 		} else {
@@ -478,8 +480,8 @@ class ReflectionMap
 							node.misses[index] = max(children[index].misses);
 							break;
 						case PropagationCriteria::MEAN:
-							node.hits[index] = average(children[index].hits);
-							node.misses[index] = average(children[index].misses);
+							node.hits[index] = mean(children[index].hits);
+							node.misses[index] = mean(children[index].misses);
 							break;
 						case PropagationCriteria::SUM:
 							node.hits[index] = sum(children[index].hits);
@@ -489,114 +491,6 @@ class ReflectionMap
 				}
 			}
 		}
-	}
-
-	//
-	// Min
-	//
-
-	template <class C>
-	count_t min(C const x)
-	{
-		return min(std::cbegin(x), std::cend(x));
-	}
-
-	template <class InputIt>
-	count_t min(InputIt first, InputIt last)
-	{
-		count_t m = std::numeric_limits<count_t>::max();
-		for (; first != last; ++first) {
-			m = std::min(m, *first);
-		}
-		return m
-	}
-
-	template <class C, class UnaryFunction>
-	count_t min(C const& x, UnaryFunction f)
-	{
-		count_t m = std::numeric_limits<count_t>::max();
-		for (auto const& e : x) {
-			m = std::min(m, f(e));
-		}
-		return m;
-	}
-
-	//
-	// Max
-	//
-
-	template <class C>
-	count_t max(C const x)
-	{
-		return max(std::cbegin(x), std::cend(x));
-	}
-
-	template <class InputIt>
-	count_t max(InputIt first, InputIt last)
-	{
-		count_t m = std::numeric_limits<count_t>::lowest();
-		for (; first != last; ++first) {
-			m = std::max(m, *first);
-		}
-		return m
-	}
-
-	template <class C, class UnaryFunction>
-	count_t max(C const& x, UnaryFunction f)
-	{
-		count_t m = std::numeric_limits<count_t>::lowest();
-		for (auto const& e : x) {
-			m = std::max(m, f(e));
-		}
-		return m;
-	}
-
-	//
-	// Average
-	//
-
-	template <class C>
-	count_t average(C const x)
-	{
-		return average(std::cbegin(x), std::cend(x));
-	}
-
-	template <class InputIt>
-	count_t average(InputIt first, InputIt last)
-	{
-		return std::reduce(first, last, 0.0) / double(std::distance(first, last));
-	}
-
-	template <class C, class UnaryFunction>
-	count_t average(C const& x, UnaryFunction f)
-	{
-		return sum(x, f) / double(x.size());
-	}
-
-	//
-	// Sum
-	//
-
-	template <class C>
-	count_t sum(C const x)
-	{
-		return sum(std::cbegin(x), std::cend(x));
-	}
-
-	template <class InputIt>
-	count_t sum(InputIt first, InputIt last)
-	{
-		return std::reduce(first, last);
-	}
-
-	template <class C, class UnaryFunction>
-	count_t sum(C const& x, UnaryFunction f)
-	{
-		count_t s = 0;
-		for (auto const& e : x) {
-			s += f(e);
-		}
-		return s;
 	}
 
 	//
@@ -653,8 +547,8 @@ class ReflectionMap
 							first->node.misses[0] = max(d + i + 8, d + i + 16);
 							break;
 						case PropagationCriteria::MEAN:
-							first->node.hits[0] = average(d + i, d + i + 8);
-							first->node.misses[0] = average(d + i + 8, d + i + 16);
+							first->node.hits[0] = mean(d + i, d + i + 8);
+							first->node.misses[0] = mean(d + i + 8, d + i + 16);
 							break;
 						case PropagationCriteria::SUM:
 							first->node.hits[0] = sum(d + i, d + i + 8);

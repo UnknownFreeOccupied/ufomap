@@ -130,7 +130,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 		data.addOccupancy(map.getOccupancy(node) * 100);
 
 		if constexpr (ufo::map::is_base_of_template_v<ufo::map::TimeMap, Map>) {
-			data.addTimeStep(map.getTimeStep(node));
+			data.addTime(map.getTime(node));
 		}
 
 		if constexpr (ufo::map::is_base_of_template_v<ufo::map::ColorMap, Map>) {

@@ -51,15 +51,15 @@ Data::Data()
       max_position_(std::numeric_limits<Ogre::Real>::lowest(),
                     std::numeric_limits<Ogre::Real>::lowest(),
                     std::numeric_limits<Ogre::Real>::lowest()),
-      min_time_step_(std::numeric_limits<ufo::map::time_step_t>::max()),
-      max_time_step_(std::numeric_limits<ufo::map::time_step_t>::lowest())
+      min_time_(std::numeric_limits<ufo::map::time_t>::max()),
+      max_time_(std::numeric_limits<ufo::map::time_t>::lowest())
 {
 }
 
 void Data::swap(Data& other)
 {
 	occupancy_.swap(other.occupancy_);
-	time_step_.swap(other.time_step_);
+	time_.swap(other.time_);
 	color_.swap(other.color_);
 	semantics_.swap(other.semantics_);
 }
@@ -83,7 +83,7 @@ std::vector<Voxels::Voxel> Data::generateVoxels(RenderMode const& render,
 void Data::clear()
 {
 	occupancy_.clear();
-	time_step_.clear();
+	time_.clear();
 	color_.clear();
 	semantics_.clear();
 }
@@ -96,9 +96,9 @@ bool Data::includeVoxel(Filter const& filter, double size, size_t index) const
 		return false;
 	}
 
-	if (filter.filter_time_step && (time_step_.size() == position_.size()) &&
-	    (filter.min_time_step > time_step_[index] ||
-	     time_step_[index] > filter.max_time_step)) {
+	if (filter.filter_time && (time_.size() == position_.size()) &&
+	    (filter.min_time > time_[index] ||
+	     time_[index] > filter.max_time)) {
 		return false;
 	}
 
@@ -140,12 +140,12 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
 			                               heatmap.max_position.z, render.color_factor)
 			           : Heatmap::getColor(position_[index].z, render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
-		case ColoringMode::TIME_STEP_COLOR:
-			assert(position_.size() == time_step_.size());
+		case ColoringMode::time_COLOR:
+			assert(position_.size() == time_.size());
 			return render.normalized_value
-			           ? Heatmap::getColor(time_step_[index], heatmap.min_time_step,
-			                               heatmap.max_time_step, render.color_factor)
-			           : Heatmap::getColor(time_step_[index], render.min_normalized_value,
+			           ? Heatmap::getColor(time_[index], heatmap.min_time,
+			                               heatmap.max_time, render.color_factor)
+			           : Heatmap::getColor(time_[index], render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
 		case ColoringMode::OCCUPANCY_COLOR:
 			assert(position_.size() == occupancy_.size());

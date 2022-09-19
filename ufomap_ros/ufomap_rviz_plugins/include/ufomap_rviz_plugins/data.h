@@ -79,12 +79,12 @@ class Data
 
 	void addOccupancy(float occupancy) { occupancy_.emplace_back(occupancy); }
 
-	void addTimeStep(ufo::map::time_step_t time_step)
+	void addTime(ufo::map::time_t time)
 	{
-		time_step_.emplace_back(time_step);
+		time_.emplace_back(time);
 
-		min_time_step_ = std::min(min_time_step_, time_step);
-		max_time_step_ = std::max(max_time_step_, time_step);
+		min_time_ = std::min(min_time_, time);
+		max_time_ = std::max(max_time_, time);
 	}
 
 	void addColor(ufo::map::Color color)
@@ -113,9 +113,9 @@ class Data
 
 	ufo::map::Point maxPosition() const { return max_position_; }
 
-	ufo::map::time_step_t minTimeStep() const { return min_time_step_; }
+	ufo::map::time_t minTime() const { return min_time_; }
 
-	ufo::map::time_step_t maxTimeStep() const { return max_time_step_; }
+	ufo::map::time_t maxTime() const { return max_time_; }
 
 	void clear();
 
@@ -128,15 +128,15 @@ class Data
  private:
 	std::vector<Ogre::Vector3> position_;
 	std::vector<float> occupancy_;
-	std::vector<ufo::map::time_step_t> time_step_;
+	std::vector<ufo::map::time_t> time_;
 	std::vector<Ogre::ColourValue> color_;
 	std::vector<std::vector<ufo::map::SemanticPair>> semantics_;
 
 	ufo::map::Point min_position_;
 	ufo::map::Point max_position_;
 
-	ufo::map::time_step_t min_time_step_;
-	ufo::map::time_step_t max_time_step_;
+	ufo::map::time_t min_time_;
+	ufo::map::time_t max_time_;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

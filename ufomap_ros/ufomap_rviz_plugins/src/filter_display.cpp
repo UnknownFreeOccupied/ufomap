@@ -61,16 +61,16 @@ FilterDisplay::FilterDisplay(rviz::Property* parent, rviz::FrameManager* frame_m
 	max_occupancy_->setMax(100);
 
 	// Time step
-	filter_time_step_ =
+	filter_time_ =
 	    new rviz::BoolProperty("Time step", false, "Filter on time step", parent);
-	filter_time_step_->setDisableChildrenIfFalse(true);
-	min_time_step_ = new rviz::IntProperty("Min", 0, "Min time step", filter_time_step_);
-	max_time_step_ =
-	    new rviz::IntProperty("Max", std::pow(2, 24), "Max time step", filter_time_step_);
-	min_time_step_->setMin(0);
-	min_time_step_->setMax(std::pow(2, 24));
-	max_time_step_->setMin(0);
-	max_time_step_->setMax(std::pow(2, 24));
+	filter_time_->setDisableChildrenIfFalse(true);
+	min_time_ = new rviz::IntProperty("Min", 0, "Min time step", filter_time_);
+	max_time_ =
+	    new rviz::IntProperty("Max", std::pow(2, 24), "Max time step", filter_time_);
+	min_time_->setMin(0);
+	min_time_->setMax(std::pow(2, 24));
+	max_time_->setMin(0);
+	max_time_->setMax(std::pow(2, 24));
 
 	// Semantics
 	filter_semantics_ =
@@ -110,9 +110,9 @@ Filter FilterDisplay::getFilter() const
 	filter.min_occupancy = min_occupancy_->getInt();
 	filter.max_occupancy = max_occupancy_->getInt();
 
-	filter.filter_time_step = filter_time_step_->getBool();
-	filter.min_time_step = min_time_step_->getInt();
-	filter.max_time_step = max_time_step_->getInt();
+	filter.filter_time = filter_time_->getBool();
+	filter.min_time = min_time_->getInt();
+	filter.max_time = max_time_->getInt();
 
 	filter.filter_semantics = filter_semantics_->getBool();
 	// TODO: Add labels

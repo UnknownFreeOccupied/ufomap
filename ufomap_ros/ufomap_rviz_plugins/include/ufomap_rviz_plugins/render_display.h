@@ -67,13 +67,13 @@ class RenderDisplay
 	RenderDisplay(rviz::Property* parent, std::string name, RenderStyle default_style,
 	              ColoringMode default_coloring_mode, QColor default_color,
 	              float default_alpha, bool enabled, bool has_color, bool has_semantics,
-	              bool has_time_step);
+	              bool has_time);
 
 	bool isEnabled() const;
 
 	void enableVoxelColor(bool enable);
 
-	void enableTimeStep(bool enable);
+	void enableTime(bool enable);
 
 	void enableSemantics(bool enable);
 
@@ -84,7 +84,7 @@ class RenderDisplay
 
  private:
 	bool has_color_;
-	bool has_time_step_;
+	bool has_time_;
 	bool has_semantics_;
 
 	rviz::BoolProperty* should_render_;
@@ -95,8 +95,8 @@ class RenderDisplay
 	std::unordered_map<ColoringMode, rviz::FloatProperty*> color_normalize_min_value_;
 	std::unordered_map<ColoringMode, rviz::FloatProperty*> color_normalize_max_value_;
 	std::unordered_map<ColoringMode, rviz::FloatProperty*> color_factor_;
-	rviz::IntProperty* time_step_normalize_min_value_;
-	rviz::IntProperty* time_step_normalize_max_value_;
+	rviz::IntProperty* time_normalize_min_value_;
+	rviz::IntProperty* time_normalize_max_value_;
 
 	rviz::FloatProperty* alpha_;
 	rviz::FloatProperty* scale_;

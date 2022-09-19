@@ -63,7 +63,7 @@ using VoxelType = ufo::map::OccupancyState;
 
 enum class ColoringMode {
 	VOXEL_COLOR,
-	TIME_STEP_COLOR,
+	time_COLOR,
 	SEMANTIC_COLOR,
 	X_AXIS_COLOR,
 	Y_AXIS_COLOR,
@@ -102,7 +102,7 @@ static constexpr auto getStr(ColoringMode const& mode)
 	switch (mode) {
 		case ColoringMode::VOXEL_COLOR:
 			return "Voxel Color"sv;
-		case ColoringMode::TIME_STEP_COLOR:
+		case ColoringMode::time_COLOR:
 			return "Time Step Color"sv;
 		case ColoringMode::SEMANTIC_COLOR:
 			return "Semantic Color"sv;

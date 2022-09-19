@@ -42,21 +42,80 @@
 #ifndef UFO_MAP_INTENSITY_NODE_H
 #define UFO_MAP_INTENSITY_NODE_H
 
+// UFO
+#include <ufo/algorithm/algorithm.h>
+#include <ufo/map/types.h>
+
 // STL
 #include <array>
-#include <cstdint>
 
 namespace ufo::map
 {
-template <bool Single = false>
+template <std::size_t N>
 struct IntensityNode {
-	using intensity_type = float;
+	// Data
+	std::array<intensity_t, N> intensity;
 
-	std::conditional_t<Single, intensity_type, std::array<intensity_type, 8>> intensity;
+	//
+	// Size
+	//
 
-	bool operator==(IntensityNode const& rhs) const { return intensity == rhs.intensity; }
+	[[nodiscard]] static constexpr std::size_t intensitySize() { return N; }
 
-	bool operator!=(IntensityNode const& rhs) const { return !(*this == rhs); }
+	//
+	// Fill
+	//
+
+	void fill(IntensityNode const parent, index_t const index)
+	{
+		if constexpr (1 == N) {
+			intensity = parent.intensity;
+		} else {
+			intensity.fill(parent.intensity[index]);
+		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(IntensityNode const parent,
+	                                           index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return intensity == parent.intensity;
+		} else {
+			return all_of(intensity, [t = parent.intensity[index]](auto const e) { return e == t; });
+		}
+	}
+
+	//
+	// Get intensity
+	//
+
+	[[nodiscard]] constexpr intensity_t intensityIndex(index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return intensity[0];
+		} else {
+			return intensity[index];
+		}
+	}
+
+	//
+	// Set intensity
+	//
+
+	void setIntensity(intensity_t const value) { intensity.fill(value); }
+
+	void setIntensityIndex(index_t const index, intensity_t const value)
+	{
+		if constexpr (1 == N) {
+			setIntensity(value);
+		} else {
+			intensity[index] = value;
+		}
+	}
 };
 }  // namespace ufo::map
 

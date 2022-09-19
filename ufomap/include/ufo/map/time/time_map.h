@@ -43,6 +43,7 @@
 #define UFO_MAP_TIME_MAP_H
 
 // UFO
+#include <ufo/algorithm/algorithm.h>
 #include <ufo/map/time/time_node.h>
 #include <ufo/map/time/time_predicate.h>
 #include <ufo/map/types.h>
@@ -203,15 +204,19 @@ class TimeMap
 	void updateNode(TimeNode<N>& node, index_field_t const indices, T const& children)
 	{
 		if constexpr (1 == N) {
+			auto fun = [](TimeNode<1> const node) { return node.time[0]; };
 			switch (prop_criteria_) {
 				case PropagationCriteria::MIN:
-					node.time[0] = minTime(children);
+					node.time[0] = min(children, fun);
 					break;
 				case PropagationCriteria::MAX:
-					node.time[0] = maxTime(children);
+					node.time[0] = max(children, fun);
 					break;
 				case PropagationCriteria::MEAN:
-					node.time[0] = averageTime(children);
+					node.time[0] = mean(children, fun);
+					break;
+				case PropagationCriteria::SUM:
+					node.time[0] = sum(children, fun);
 					break;
 			}
 		} else {
@@ -219,100 +224,20 @@ class TimeMap
 				if ((indices >> index) & index_field_t(1)) {
 					switch (prop_criteria_) {
 						case PropagationCriteria::MIN:
-							node.time[index] = minTime(children[index]);
+							node.time[index] = min(children[index].time);
 							break;
 						case PropagationCriteria::MAX:
-							node.time[index] = maxTime(children[index]);
+							node.time[index] = max(children[index].time);
 							break;
 						case PropagationCriteria::MEAN:
-							node.time[index] = averageTime(children[index]);
+							node.time[index] = mean(children[index].time);
 							break;
+						case PropagationCriteria::SUM:
+							node.time[index] = sum(children[index].time);
 					}
 				}
 			}
 		}
-	}
-
-	//
-	// Min child time
-	//
-
-	template <class T>
-	[[nodiscard]] constexpr time_t minTime(T const& nodes) const
-	{
-		time_t min = std::numeric_limits<time_t>::max();
-		for (auto const& node : nodes) {
-			min = std::min(min, node.time[0]);
-		}
-		return min;
-	}
-
-	[[nodiscard]] constexpr time_t minTime(TimeNode<8> const& node) const
-	{
-		return minTime(std::cbegin(node.time), std::cend(node.time));
-	}
-
-	template <class InputIt>
-	[[nodiscard]] constexpr time_t minTime(InputIt first, InputIt last) const
-	{
-		time_t min = std::numeric_limits::max();
-		for (; first != last; ++first) {
-			min = std::min(min, *first);
-		}
-		return min;
-	}
-
-	//
-	// Max child time
-	//
-
-	template <class T>
-	[[nodiscard]] constexpr time_t maxTime(T const& nodes) const
-	{
-		time_t max = std::numeric_limits<time_t>::lowest();
-		for (auto const& node : nodes) {
-			max = std::max(max, node.time[0]);
-		}
-		return max;
-	}
-
-	[[nodiscard]] constexpr time_t maxTime(TimeNode<8> const& node) const
-	{
-		return maxTime(std::cbegin(node.time), std::cend(node.time));
-	}
-
-	template <class InputIt>
-	[[nodiscard]] constexpr time_t maxTime(InputIt first, InputIt last) const
-	{
-		time_t max = std::numeric_limits::lowest();
-		for (; first != last; ++first) {
-			max = std::max(max, *first);
-		}
-		return max;
-	}
-
-	//
-	// Average child time
-	//
-
-	template <class T>
-	[[nodiscard]] static constexpr time_t averageTime(T const& nodes)
-	{
-		return std::accumulate(
-		           std::cbegin(nodes), std::cend(nodes), 0.0,
-		           [](double cur, TimeNode<1> node) { return cur + node.time[0]; }) /
-		       double(nodes.size());
-	}
-
-	[[nodiscard]] static constexpr time_t averageTime(TimeNode<8> const& node)
-	{
-		return averageTime(std::cbegin(node.time), std::cend(node.time));
-	}
-
-	template <class InputIt>
-	[[nodiscard]] static constexpr time_t averageTime(InputIt first, InputIt last)
-	{
-		return std::reduce(first, last, 0.0) / double(std::distance(first, last));
 	}
 
 	//
@@ -359,13 +284,16 @@ class TimeMap
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
 					switch (prop_criteria) {
 						case PropagationCriteria::MIN:
-							first->node.time[0] = minTime(d + i, d + i + 8);
+							first->node.time[0] = min(d + i, d + i + 8);
 							break;
 						case PropagationCriteria::MAX:
-							first->node.time[0] = maxTime(d + i, d + i + 8);
+							first->node.time[0] = max(d + i, d + i + 8);
 							break;
 						case PropagationCriteria::MEAN:
-							first->node.time[0] = averageTime(d + i, d + i + 8);
+							first->node.time[0] = mean(d + i, d + i + 8);
+							break;
+						case PropagationCriteria::SUM:
+							first->node.time[0] = sum(d + i, d + i + 8);
 							break;
 					}
 				}

@@ -186,7 +186,7 @@ struct PointColorSemanticIntensity : PointColorSemantic, Intensity {
 	constexpr PointColorSemanticIntensity(Point point, Color const& color = Color(),
 	                                      Semantic const& semantic = Semantic(),
 	                                      intensity_t intensity = 0)
-	    : PointColor(point, color), Semantic(semantic), Intensity(intensity)
+	    : PointColorSemantic(point, color, semantic), Intensity(intensity)
 	{
 	}
 
@@ -194,7 +194,7 @@ struct PointColorSemanticIntensity : PointColorSemantic, Intensity {
 	                                      color_t blue, semantic_label_t label = 0,
 	                                      semantic_value_t value = 0,
 	                                      intensity_t intensity = 0)
-	    : PointColor(point, red, green, blue), Semantic(label, value), Intensity(intensity)
+	    : PointColorSemantic(point, red, green, blue, label, value), Intensity(intensity)
 	{
 	}
 
@@ -202,7 +202,7 @@ struct PointColorSemanticIntensity : PointColorSemantic, Intensity {
 	                                      Color const& color = Color(),
 	                                      Semantic const& semantic = Semantic(),
 	                                      intensity_t intensity = 0)
-	    : PointColor(x, y, z, color), Semantic(semantic), Intensity(intensity)
+	    : PointColorSemantic(x, y, z, color, semantic), Intensity(intensity)
 	{
 	}
 
@@ -211,9 +211,7 @@ struct PointColorSemanticIntensity : PointColorSemantic, Intensity {
 	                                      semantic_label_t label = 0,
 	                                      semantic_value_t value = 0,
 	                                      intensity_t intensity = 0)
-	    : PointColor(x, y, z, red, green, blue),
-	      Semantic(label, value),
-	      Intensity(intensity)
+	    : PointColorSemantic(x, y, z, red, green, blue, label, value), Intensity(intensity)
 	{
 	}
 };

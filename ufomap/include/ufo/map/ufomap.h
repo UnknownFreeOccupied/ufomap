@@ -43,15 +43,15 @@
 #define UFO_MAP_UFO_MAP_H
 
 // UFO
-#include <ufo/map/color/color_map_base.h>
-#include <ufo/map/distance/distance_map_base.h>
+#include <ufo/map/color/color_map.h>
+#include <ufo/map/distance/distance_map.h>
 #include <ufo/map/empty/empty_map.h>
 #include <ufo/map/io.h>
-#include <ufo/map/occupancy/occupancy_map_base.h>
-#include <ufo/map/octree/octree_map_base.h>
-#include <ufo/map/semantic/semantic_map_base.h>
-#include <ufo/map/surfel/surfel_map_base.h>
-#include <ufo/map/time/time_map_base.h>
+#include <ufo/map/occupancy/occupancy_map.h>
+#include <ufo/map/octree/octree_map.h>
+#include <ufo/map/semantic/semantic_map.h>
+#include <ufo/map/surfel/surfel_map.h>
+#include <ufo/map/time/time_map.h>
 
 // STL
 #include <cstdint>

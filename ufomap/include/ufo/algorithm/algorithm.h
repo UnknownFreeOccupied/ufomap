@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <cassert>
 #include <numeric>
+#include <type_traits>
 #include <vector>
 
 namespace ufo
@@ -122,17 +123,185 @@ void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
 }
 
 //
+// Min
+//
+
+template <class InputIt>
+[[nodiscard]] typename std::iterator_traits<InputIt>::value_type min(InputIt first,
+                                                                     InputIt last)
+{
+	using typename std::iterator_traits<InputIt>::value_type;
+	auto m = std::numeric_limits<value_type>::max();
+	while (; first != last; ++first) {
+		if (*first < m) {
+			m = *first;
+		}
+	}
+	return m;
+}
+
+template <class InputIt, class UnaryFunction>
+[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+min(InputIt first, InputIt last, UnaryFunction f)
+{
+	using typename std::iterator_traits<InputIt>::value_type;
+	auto m = std::numeric_limits<value_type>::max();
+	while (; first != last; ++first) {
+		auto const c = f(*first);
+		if (c < m) {
+			m = c;
+		}
+	}
+	return m;
+}
+
+template <class Container>
+[[nodiscard]] auto min(Container const& data)
+{
+	return min(std::cbegin(data), std::cend(data));
+}
+
+template <class Container, class UnaryFunction>
+[[nodiscard]] auto min(Container const& data, UnaryFunction f)
+{
+	return min(std::cbegin(data), std::cend(data), f);
+}
+
+//
+// Max
+//
+
+template <class InputIt>
+[[nodiscard]] typename std::iterator_traits<InputIt>::value_type max(InputIt first,
+                                                                     InputIt last)
+{
+	using typename std::iterator_traits<InputIt>::value_type;
+	auto m = std::numeric_limits<value_type>::lowest();
+	while (; first != last; ++first) {
+		if (*first > m) {
+			m = *first;
+		}
+	}
+	return m;
+}
+
+template <class InputIt, class UnaryFunction>
+[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+max(InputIt first, InputIt last, UnaryFunction f)
+{
+	using typename std::iterator_traits<InputIt>::value_type;
+	auto m = std::numeric_limits<value_type>::lowest();
+	while (; first != last; ++first) {
+		auto const c = f(*first);
+		if (c > m) {
+			m = c;
+		}
+	}
+	return m;
+}
+
+template <class Container>
+[[nodiscard]] auto max(Container const& data)
+{
+	return max(std::cbegin(data), std::cend(data));
+}
+
+template <class Container, class UnaryFunction>
+[[nodiscard]] auto max(Container const& data, UnaryFunction f)
+{
+	return max(std::cbegin(data), std::cend(data), f);
+}
+
+//
+// Sum
+//
+
+template <class InputIt>
+[[nodiscard]] typename std::iterator_traits<InputIt>::value_type sum(InputIt first,
+                                                                     InputIt last)
+{
+	return std::reduce(first, last);
+}
+
+template <class InputIt, class UnaryFunction>
+[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+sum(InputIt first, InputIt last, UnaryFunction f)
+{
+	using value_type =
+	    std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>;
+	value_type s{};
+	for (; first != last; ++first) {
+		s += f(*first);
+	}
+	return s;
+}
+
+template <class Container>
+[[nodiscard]] auto sum(Container const& data)
+{
+	return sum(std::cbegin(data), std::cend(data));
+}
+
+template <class Container, class UnaryFunction>
+[[nodiscard]] auto sum(Container const& data, UnaryFunction f)
+{
+	return sum(std::cbegin(data), std::cend(data), f);
+}
+
+//
+// Mean
+//
+
+template <class InputIt>
+[[nodiscard]] typename std::iterator_traits<InputIt>::value_type mean(InputIt first,
+                                                                      InputIt last)
+{
+	// TODO: Improve
+	double s = 0.0;
+	std::size_t num = 0;
+	for (; first != last; ++first, ++num) {
+		s += *first;
+	}
+	return s / num;
+}
+
+template <class InputIt, class UnaryFunction>
+[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+mean(InputIt first, InputIt last, UnaryFunction f)
+{
+	// TODO: Improve
+	double s = 0.0;
+	std::size_t num = 0;
+	for (; first != last; ++first, ++num) {
+		s += f(*first);
+	}
+	return s / num;
+}
+
+template <class Container>
+[[nodiscard]] auto mean(Container const& data)
+{
+	return mean(std::cbegin(data), std::cend(data));
+}
+
+template <class Container, class UnaryFunction>
+[[nodiscard]] auto mean(Container const& data, UnaryFunction f)
+{
+	return mean(std::cbegin(data), std::cend(data), f);
+}
+
+//
 // All of
 //
 
 template <class Container, class UnaryPredicate>
-bool all_of(Container&& data, UnaryPredicate p)
+bool all_of(Container const& data, UnaryPredicate p)
 {
 	return std::all_of(std::begin(data), std::end(data), p);
 }
 
 template <class ExecutionPolicy, class Container, class UnaryPredicate>
-bool all_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+bool all_of(ExecutionPolicy&& policy, Container const& data, UnaryPredicate p)
 {
 	return std::all_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                   std::end(data), p);
@@ -143,13 +312,13 @@ bool all_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
 //
 
 template <class Container, class UnaryPredicate>
-bool any_of(Container&& data, UnaryPredicate p)
+bool any_of(Container const& data, UnaryPredicate p)
 {
 	return std::any_of(std::begin(data), std::end(data), p);
 }
 
 template <class ExecutionPolicy, class Container, class UnaryPredicate>
-bool any_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+bool any_of(ExecutionPolicy&& policy, Container const& data, UnaryPredicate p)
 {
 	return std::any_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                   std::end(data), p);
@@ -160,13 +329,13 @@ bool any_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
 //
 
 template <class Container, class UnaryPredicate>
-bool none_of(Container&& data, UnaryPredicate p)
+bool none_of(Container const& data, UnaryPredicate p)
 {
 	return std::none_of(std::begin(data), std::end(data), p);
 }
 
 template <class ExecutionPolicy, class Container, class UnaryPredicate>
-bool none_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+bool none_of(ExecutionPolicy&& policy, Container const& data, UnaryPredicate p)
 {
 	return std::none_of(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                    std::end(data), p);
@@ -177,13 +346,13 @@ bool none_of(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
 //
 
 template <class Container, class UnaryFunction>
-UnaryFunction for_each(Container&& data, UnaryFunction f)
+UnaryFunction for_each(Container const& data, UnaryFunction f)
 {
 	return std::for_each(std::begin(data), std::end(data), f);
 }
 
 template <class ExecutionPolicy, class Container, class UnaryFunction>
-void for_each(ExecutionPolicy&& policy, Container&& data, UnaryFunction f)
+void for_each(ExecutionPolicy&& policy, Container const& data, UnaryFunction f)
 {
 	std::for_each(std::forward<ExecutionPolicy>(policy), std::begin(data), std::end(data),
 	              f);
@@ -195,14 +364,14 @@ void for_each(ExecutionPolicy&& policy, Container&& data, UnaryFunction f)
 
 // FIXME: Return type
 template <class Container, class Size, class UnaryFunction>
-auto for_each_n(Container&& first, Size n, UnaryFunction f)
+auto for_each_n(Container const& first, Size n, UnaryFunction f)
 {
 	return std::for_each_n(std::begin(first), n, f);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class Size, class UnaryFunction>
-auto for_each_n(ExecutionPolicy&& policy, Container&& first, Size n, UnaryFunction f)
+auto for_each_n(ExecutionPolicy&& policy, Container const& first, Size n, UnaryFunction f)
 {
 	return std::for_each_n(std::forward<ExecutionPolicy>(policy), std::begin(first), n, f);
 }
@@ -213,14 +382,14 @@ auto for_each_n(ExecutionPolicy&& policy, Container&& first, Size n, UnaryFuncti
 
 // FIXME: Return type
 template <class Container, class T>
-auto count(Container&& data, T const& value)
+auto count(Container const& data, T const& value)
 {
 	return std::count(std::begin(data), std::end(data), value);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class T>
-auto count(ExecutionPolicy&& policy, Container&& data, T const& value)
+auto count(ExecutionPolicy&& policy, Container const& data, T const& value)
 {
 	return std::count(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                  std::end(data), value);
@@ -232,14 +401,14 @@ auto count(ExecutionPolicy&& policy, Container&& data, T const& value)
 
 // FIXME: Return type
 template <class Container, class UnaryPredicate>
-auto count_if(Container&& data, UnaryPredicate p)
+auto count_if(Container const& data, UnaryPredicate p)
 {
 	return std::count_if(std::begin(data), std::end(data), p);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class UnaryPredicate>
-auto count_if(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+auto count_if(ExecutionPolicy&& policy, Container const& data, UnaryPredicate p)
 {
 	return std::count_if(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                     std::end(data), p);
@@ -295,14 +464,14 @@ auto mismatch(Container1&& data1, Container2&& data2)
 
 // FIXME: Return type
 template <class Container, class T>
-auto find(Container&& data, T const& value)
+auto find(Container const& data, T const& value)
 {
 	return std::find(std::begin(data), std::end(data), value);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class T>
-auto find(ExecutionPolicy&& policy, Container&& data, T const& value)
+auto find(ExecutionPolicy&& policy, Container const& data, T const& value)
 {
 	return std::find(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                 std::end(data), value);
@@ -314,14 +483,14 @@ auto find(ExecutionPolicy&& policy, Container&& data, T const& value)
 
 // FIXME: Return type
 template <class Container, class UnaryPredicate>
-auto find_if(Container&& data, UnaryPredicate p)
+auto find_if(Container const& data, UnaryPredicate p)
 {
 	return std::find_if(std::begin(data), std::end(data), p);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class UnaryPredicate>
-auto find_if(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
+auto find_if(ExecutionPolicy&& policy, Container const& data, UnaryPredicate p)
 {
 	return std::find_if(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                    std::end(data), p);
@@ -333,14 +502,14 @@ auto find_if(ExecutionPolicy&& policy, Container&& data, UnaryPredicate p)
 
 // FIXME: Return type
 template <class Container, class UnaryPredicate>
-auto find_if_not(Container&& data, UnaryPredicate q)
+auto find_if_not(Container const& data, UnaryPredicate q)
 {
 	return std::find_if_not(std::begin(data), std::end(data), q);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class UnaryPredicate>
-auto find_if_not(ExecutionPolicy&& policy, Container&& data, UnaryPredicate q)
+auto find_if_not(ExecutionPolicy&& policy, Container const& data, UnaryPredicate q)
 {
 	return std::find_if_not(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                        std::end(data), q);
@@ -428,14 +597,14 @@ auto find_first_of(ExecutionPolicy&& policy, Container1&& data, Container2&& s_d
 
 // FIXME: Return type
 template <class Container>
-auto adjacent_find(Container&& data)
+auto adjacent_find(Container const& data)
 {
 	return std::adjacent_find(std::begin(data), std::end(data));
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container>
-auto adjacent_find(ExecutionPolicy&& policy, Container&& data)
+auto adjacent_find(ExecutionPolicy&& policy, Container const& data)
 {
 	return std::adjacent_find(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                          std::end(data));
@@ -443,14 +612,14 @@ auto adjacent_find(ExecutionPolicy&& policy, Container&& data)
 
 // FIXME: Return type
 template <class Container, class BinaryPredicate>
-auto adjacent_find(Container&& data, BinaryPredicate p)
+auto adjacent_find(Container const& data, BinaryPredicate p)
 {
 	return std::adjacent_find(std::begin(data), std::end(data), p);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class BinaryPredicate>
-auto adjacent_find(ExecutionPolicy&& policy, Container&& data, BinaryPredicate p)
+auto adjacent_find(ExecutionPolicy&& policy, Container const& data, BinaryPredicate p)
 {
 	return std::adjacent_find(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                          std::end(data), p);
@@ -495,7 +664,7 @@ auto search(ExecutionPolicy&& policy, Container1&& data, Container2&& s_data,
 
 // FIXME: Return type
 template <class Container, class Searcher>
-auto search(Container&& data, Searcher const& searcher)
+auto search(Container const& data, Searcher const& searcher)
 {
 	return std::search(std::begin(data), std::end(data), searcher);
 }
@@ -506,14 +675,14 @@ auto search(Container&& data, Searcher const& searcher)
 
 // FIXME: Return type
 template <class Container, class Size, class T>
-auto search_n(Container&& data, Size count, T const& value)
+auto search_n(Container const& data, Size count, T const& value)
 {
 	return std::search_n(std::begin(data), std::end(data), count, value);
 }
 
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class Size, class T>
-auto search_n(ExecutionPolicy&& policy, Container&& data, Size count, T const& value)
+auto search_n(ExecutionPolicy&& policy, Container const& data, Size count, T const& value)
 {
 	return std::search_n(std::forward<ExecutionPolicy>(policy), std::begin(data),
 	                     std::end(data), count, value);
@@ -521,7 +690,7 @@ auto search_n(ExecutionPolicy&& policy, Container&& data, Size count, T const& v
 
 // FIXME: Return type
 template <class Container, class Size, class T, class BinaryPredicate>
-auto search_n(Container&& data, Size count, T const& value, BinaryPredicate p)
+auto search_n(Container const& data, Size count, T const& value, BinaryPredicate p)
 {
 	return std::search_n(std::begin(data), std::end(data), count, value, p);
 }
@@ -529,7 +698,7 @@ auto search_n(Container&& data, Size count, T const& value, BinaryPredicate p)
 // FIXME: Return type
 template <class ExecutionPolicy, class Container, class Size, class T,
           class BinaryPredicate>
-auto search_n(ExecutionPolicy&& policy, Container&& data, Size count, T const& value,
+auto search_n(ExecutionPolicy&& policy, Container const& data, Size count, T const& value,
               BinaryPredicate p)
 {
 	return std::search_n(std::forward<ExecutionPolicy>(policy), std::begin(data),

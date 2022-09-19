@@ -90,6 +90,7 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	if (!value_field) {
 		value_field = getField(cloud_in, "v");
 	}
+	auto intensity_field = getField(cloud_in, "intensity");
 
 	// There must be x,y,z values
 	if (!x_field || !y_field || !z_field) {  // FIXME: Need to check if the are consecutive?
@@ -101,7 +102,8 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud_in, "x");
 	std::optional<sensor_msgs::PointCloud2ConstIterator<uint8_t>> iter_rgb;
 	std::optional<sensor_msgs::PointCloud2ConstIterator<uint32_t>> iter_label;
-	std::optional<sensor_msgs::PointCloud2ConstIterator<uint32_t>> iter_value;
+	std::optional<sensor_msgs::PointCloud2ConstIterator<float>> iter_value;
+	std::optional<sensor_msgs::PointCloud2ConstIterator<float>> iter_intensity;
 
 	// Create optional iteraters if wanted and available
 	if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
@@ -109,12 +111,17 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 			iter_rgb.emplace(cloud_in, rgb_field->name);
 		}
 	}
-	if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+	if constexpr (std::is_base_of_v<ufo::map::Semantic, P>) {
 		if (label_field) {
 			iter_label.emplace(cloud_in, label_field->name);
 		}
 		if (value_field) {
 			iter_value.emplace(cloud_in, value_field->name);
+		}
+	}
+	if constexpr (std::is_base_of_v<ufo::map::Intensity, P>) {
+		if (intensity_field) {
+			iter_intensity.emplace(cloud_in, value_field->name);
 		}
 	}
 
@@ -131,31 +138,41 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 			cloud_out[index].z = iter_x[2];
 
 			if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
-				if (rgb_field) {
+				if (iter_rgb) {
 					cloud_out[index].red = (*iter_rgb)[0];
 					cloud_out[index].green = (*iter_rgb)[1];
 					cloud_out[index].blue = (*iter_rgb)[2];
 				}
 			}
-			if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+			if constexpr (std::is_base_of_v<ufo::map::Semantic, P>) {
 				cloud_out[index].label = iter_label ? *(*iter_label) : 0;
 				cloud_out[index].value = iter_value ? *(*iter_value) : 0;
+			}
+			if constexpr (std::is_base_of_v<ufo::map::Intensity, P>) {
+				if (intensity_field) {
+					cloud_out[index].intesity = *(*iter_intensity);
+				}
 			}
 			++index;
 		}
 
 		// Increment optional iterators
 		if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
-			if (rgb_field) {
+			if (iter_rgb) {
 				++(*iter_rgb);
 			}
 		}
-		if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+		if constexpr (std::is_base_of_v<ufo::map::Semantic, P>) {
 			if (iter_label) {
 				++(*iter_label);
 			}
 			if (iter_value) {
 				++(*iter_value);
+			}
+		}
+		if constexpr (std::is_base_of_v<ufo::map::Intensity, P>) {
+			if (iter_intensity) {
+				++(*iter_intensity);
 			}
 		}
 	}
@@ -170,7 +187,20 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 {
 	sensor_msgs::PointCloud2Modifier cloud_out_modifier(cloud_out);
 	if constexpr (std::is_base_of_v<ufo::map::Color, P> &&
-	              std::is_base_of_v<ufo::map::SemanticPair, P>) {
+	              std::is_base_of_v<ufo::map::Semantic, P> &&
+	              std::is_base_of_v<ufo::map::Intensity, P>) {
+		// clang-format off
+		cloud_out_modifier.setPointCloud2Fields(6, 
+														"x",         1, sensor_msgs::PointField::FLOAT32,
+														"y",         1, sensor_msgs::PointField::FLOAT32,
+														"z",         1, sensor_msgs::PointField::FLOAT32,
+														"rgb",       1, sensor_msgs::PointField::UINT32,
+														"label",     1, sensor_msgs::PointField::UINT32,
+														"value",     1, sensor_msgs::PointField::FLOAT32,
+														"intensity", 1, sensor_msgs::PointField::FLOAT32);
+		// clang-format on
+	} else if constexpr (std::is_base_of_v<ufo::map::Color, P> &&
+	                     std::is_base_of_v<ufo::map::Semantic, P>) {
 		// clang-format off
 		cloud_out_modifier.setPointCloud2Fields(6, 
 														"x",     1, sensor_msgs::PointField::FLOAT32,
@@ -178,18 +208,39 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 														"z",     1, sensor_msgs::PointField::FLOAT32,
 														"rgb",   1, sensor_msgs::PointField::UINT32,
 														"label", 1, sensor_msgs::PointField::UINT32,
-														"value", 1, sensor_msgs::PointField::UINT32);
+														"value", 1, sensor_msgs::PointField::FLOAT32);
+		// clang-format on
+	} else if constexpr (std::is_base_of_v<ufo::map::Color, P> &&
+	                     std::is_base_of_v<ufo::map::Intensity, P>) {
+		// clang-format off
+		cloud_out_modifier.setPointCloud2Fields(6, 
+														"x",         1, sensor_msgs::PointField::FLOAT32,
+														"y",         1, sensor_msgs::PointField::FLOAT32,
+														"z",         1, sensor_msgs::PointField::FLOAT32,
+														"rgb",       1, sensor_msgs::PointField::UINT32,
+														"intensity", 1, sensor_msgs::PointField::FLOAT32);
+		// clang-format on
+	} else if constexpr (std::is_base_of_v<ufo::map::Semantic, P> &&
+	                     std::is_base_of_v<ufo::map::Intensity, P>) {
+		// clang-format off
+		cloud_out_modifier.setPointCloud2Fields(6, 
+														"x",         1, sensor_msgs::PointField::FLOAT32,
+														"y",         1, sensor_msgs::PointField::FLOAT32,
+														"z",         1, sensor_msgs::PointField::FLOAT32,
+														"label",     1, sensor_msgs::PointField::UINT32,
+														"value",     1, sensor_msgs::PointField::FLOAT32,
+														"intensity", 1, sensor_msgs::PointField::FLOAT32);
 		// clang-format on
 	} else if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 		cloud_out_modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
-	} else if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+	} else if constexpr (std::is_base_of_v<ufo::map::Semantic, P>) {
 		// clang-format off
 			cloud_out_modifier.setPointCloud2Fields(5, 
                             "x",     1, sensor_msgs::PointField::FLOAT32,
                             "y",     1, sensor_msgs::PointField::FLOAT32,
                             "z",     1, sensor_msgs::PointField::FLOAT32,
                             "label", 1, sensor_msgs::PointField::UINT32,
-                            "value", 1, sensor_msgs::PointField::UINT32);
+                            "value", 1, sensor_msgs::PointField::FLOAT32);
 		// clang-format on
 	} else {
 		cloud_out_modifier.setPointCloud2FieldsByString(1, "xyz");
@@ -200,15 +251,19 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 	sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_out, "x");
 	std::optional<sensor_msgs::PointCloud2Iterator<uint8_t>> iter_rgb;
 	std::optional<sensor_msgs::PointCloud2Iterator<uint32_t>> iter_label;
-	std::optional<sensor_msgs::PointCloud2Iterator<uint32_t>> iter_value;
+	std::optional<sensor_msgs::PointCloud2Iterator<float>> iter_value;
+	std::optional<sensor_msgs::PointCloud2Iterator<float>> iter_intensity;
 
 	// Create optional iterators
 	if constexpr (std::is_base_of_v<ufo::map::Color, P>) {
 		iter_rgb.emplace(cloud_out, "rgb");
 	}
-	if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+	if constexpr (std::is_base_of_v<ufo::map::Semantic, P>) {
 		iter_label.emplace(cloud_out, "label");
 		iter_value.emplace(cloud_out, "value");
+	}
+	if constexpr (std::is_base_of_v<ufo::map::Intensity, P>) {
+		iter_intensity.emplace(cloud_out, "intensity");
 	}
 
 	for (auto const& point : cloud_in) {
@@ -222,11 +277,15 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 			(*iter_rgb)[2] = point.blue;
 			++(*iter_rgb);
 		}
-		if constexpr (std::is_base_of_v<ufo::map::SemanticPair, P>) {
+		if constexpr (std::is_base_of_v<ufo::map::Semantic, P>) {
 			*(*iter_label) = point.label;
 			*(*iter_value) = point.value;
 			++(*iter_label);
 			++(*iter_value);
+		}
+		if constexpr (std::is_base_of_v<ufo::map::Intensity, P>) {
+			*(*iter_intensity) = point.intensity;
+			++(*iter_intensity);
 		}
 	}
 }

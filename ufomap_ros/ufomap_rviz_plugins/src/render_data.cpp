@@ -69,10 +69,10 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 		            (filter.min_occupancy != voxels_filter_.min_occupancy ||
 		             filter.max_occupancy != voxels_filter_.max_occupancy));
 
-		bool ts = filter.filter_time_step != voxels_filter_.filter_time_step ||
-		          (filter.filter_time_step &&
-		           (filter.min_time_step != voxels_filter_.min_time_step ||
-		            filter.max_time_step != voxels_filter_.max_time_step));
+		bool ts = filter.filter_time != voxels_filter_.filter_time ||
+		          (filter.filter_time &&
+		           (filter.min_time != voxels_filter_.min_time ||
+		            filter.max_time != voxels_filter_.max_time));
 
 		bool sem = filter.filter_semantics != voxels_filter_.filter_semantics ||
 		           (filter.filter_semantics &&
@@ -102,7 +102,7 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 
 	if (!regenerate) {
 		switch (render_mode.coloring_mode) {
-			case ColoringMode::TIME_STEP_COLOR:
+			case ColoringMode::time_COLOR:
 			case ColoringMode::X_AXIS_COLOR:
 			case ColoringMode::Y_AXIS_COLOR:
 			case ColoringMode::Z_AXIS_COLOR:
@@ -123,12 +123,12 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 					double max_diff;
 
 					switch (render_mode.coloring_mode) {
-						case ColoringMode::TIME_STEP_COLOR:
-							new_diff = heatmap.max_time_step - heatmap.min_time_step;
-							min_diff = std::abs(static_cast<double>(voxels_heatmap_.min_time_step) -
-							                    static_cast<double>(heatmap.min_time_step));
-							max_diff = std::abs(static_cast<double>(voxels_heatmap_.max_time_step) -
-							                    static_cast<double>(heatmap.max_time_step));
+						case ColoringMode::time_COLOR:
+							new_diff = heatmap.max_time - heatmap.min_time;
+							min_diff = std::abs(static_cast<double>(voxels_heatmap_.min_time) -
+							                    static_cast<double>(heatmap.min_time));
+							max_diff = std::abs(static_cast<double>(voxels_heatmap_.max_time) -
+							                    static_cast<double>(heatmap.max_time));
 							break;
 						case ColoringMode::X_AXIS_COLOR:
 							new_diff = heatmap.max_position.x - heatmap.min_position.x;

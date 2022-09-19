@@ -42,21 +42,81 @@
 #ifndef UFO_MAP_DISTANCE_NODE_H
 #define UFO_MAP_DISTANCE_NODE_H
 
+// UFO
+#include <ufo/algorithm/algorithm.h>
+#include <ufo/map/types.h>
+
 // STL
 #include <array>
-#include <cstdint>
 
 namespace ufo::map
 {
-template <bool Single = false>
+template <std::size_t N = 8>
 struct DistanceNode {
-	using distance_type = float;
+	// Data
+	std::array<distance_t, N> distance;
 
-	std::conditional_t<Single, distance_type, std::array<distance_type, 8>> distance;
+	//
+	// Size
+	//
 
-	bool operator==(DistanceNode const& rhs) const { return distance == rhs.distance; }
+	[[nodiscard]] static constexpr std::size_t distanceSize() { return N; }
 
-	bool operator!=(DistanceNode const& rhs) const { return !(*this == rhs); }
+	//
+	// Fill
+	//
+
+	void fill(DistanceNode const parent, index_t const index)
+	{
+		if constexpr (1 == N) {
+			distance = parent.distance;
+		} else {
+			distance.fill(parent.distance[index]);
+		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(DistanceNode const parent,
+	                                           index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return distance == parent.distance;
+		} else {
+			return all_of(distance,
+			              [d = parent.distance[index]](auto const e) { return e == t; });
+		}
+	}
+
+	//
+	// Get distance
+	//
+
+	[[nodiscard]] constexpr distance_t distanceIndex(index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return time[0];
+		} else {
+			return time[index];
+		}
+	}
+
+	//
+	// Set distance
+	//
+
+	void setDistance(distance_t const value) { distance.fill(value); }
+
+	void setDistanceIndex(index_t const index, distance_t const value)
+	{
+		if constexpr (1 == N) {
+			setDistance(value);
+		} else {
+			distance[index] = value;
+		}
+	}
 };
 }  // namespace ufo::map
 

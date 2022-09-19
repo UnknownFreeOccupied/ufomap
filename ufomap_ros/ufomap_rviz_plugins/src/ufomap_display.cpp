@@ -445,14 +445,14 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 		}
 	}
 
-	ufo::map::time_step_t min_allowed_ts;
-	ufo::map::time_step_t max_allowed_ts;
-	if (filter.filter_time_step) {
-		min_allowed_ts = filter.min_time_step;
-		max_allowed_ts = filter.max_time_step;
+	ufo::map::time_t min_allowed_ts;
+	ufo::map::time_t max_allowed_ts;
+	if (filter.filter_time) {
+		min_allowed_ts = filter.min_time;
+		max_allowed_ts = filter.max_time;
 	} else {
-		min_allowed_ts = std::numeric_limits<ufo::map::time_step_t>::lowest();
-		max_allowed_ts = std::numeric_limits<ufo::map::time_step_t>::max();
+		min_allowed_ts = std::numeric_limits<ufo::map::time_t>::lowest();
+		max_allowed_ts = std::numeric_limits<ufo::map::time_t>::max();
 	}
 
 	std::array<Heatmap, 3> heatmap;
@@ -462,8 +462,8 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 			heatmap[s].min_position[i] = std::numeric_limits<PosType>::max();
 			heatmap[s].max_position[i] = std::numeric_limits<PosType>::lowest();
 		}
-		heatmap[s].min_time_step = std::numeric_limits<ufo::map::time_step_t>::max();
-		heatmap[s].max_time_step = std::numeric_limits<ufo::map::time_step_t>::lowest();
+		heatmap[s].min_time = std::numeric_limits<ufo::map::time_t>::max();
+		heatmap[s].max_time = std::numeric_limits<ufo::map::time_t>::lowest();
 
 		for (auto const& [_, obj] : objects_[s]) {
 			ufo::geometry::Point min_cur_pos;
@@ -473,25 +473,25 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 				min_cur_pos[i] = std::numeric_limits<PosType>::max();
 				max_cur_pos[i] = std::numeric_limits<PosType>::lowest();
 			}
-			ufo::map::time_step_t min_cur_time_step =
-			    std::numeric_limits<ufo::map::time_step_t>::max();
-			ufo::map::time_step_t max_cur_time_step =
-			    std::numeric_limits<ufo::map::time_step_t>::lowest();
+			ufo::map::time_t min_cur_time =
+			    std::numeric_limits<ufo::map::time_t>::max();
+			ufo::map::time_t max_cur_time =
+			    std::numeric_limits<ufo::map::time_t>::lowest();
 
 			for (auto const& [_, data] : obj.transformed_voxels_) {
 				auto min_pos = data.minPosition();
 				auto max_pos = data.maxPosition();
-				auto min_ts = data.minTimeStep();
-				auto max_ts = data.maxTimeStep();
+				auto min_ts = data.minTime();
+				auto max_ts = data.maxTime();
 				for (size_t i = 0; 3 != i; ++i) {
 					min_cur_pos[i] = std::min(min_cur_pos[i], min_pos[i]);
 					max_cur_pos[i] = std::max(max_cur_pos[i], max_pos[i]);
 				}
-				min_cur_time_step = std::min(min_cur_time_step, min_ts);
-				max_cur_time_step = std::max(max_cur_time_step, max_ts);
+				min_cur_time = std::min(min_cur_time, min_ts);
+				max_cur_time = std::max(max_cur_time, max_ts);
 			}
 
-			if (min_cur_time_step > max_allowed_ts || max_cur_time_step < min_allowed_ts) {
+			if (min_cur_time > max_allowed_ts || max_cur_time < min_allowed_ts) {
 				continue;
 			}
 
@@ -505,8 +505,8 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 				heatmap[s].min_position[i] = std::min(heatmap[s].min_position[i], min_cur_pos[i]);
 				heatmap[s].max_position[i] = std::max(heatmap[s].max_position[i], max_cur_pos[i]);
 			}
-			heatmap[s].min_time_step = std::min(heatmap[s].min_time_step, min_cur_time_step);
-			heatmap[s].max_time_step = std::max(heatmap[s].max_time_step, max_cur_time_step);
+			heatmap[s].min_time = std::min(heatmap[s].min_time, min_cur_time);
+			heatmap[s].max_time = std::max(heatmap[s].max_time, max_cur_time);
 		}
 
 		for (size_t i = 0; 3 != i; ++i) {
@@ -515,8 +515,8 @@ std::array<Heatmap, 3> UFOMapDisplay::getHeatmap(Filter const& filter) const
 			heatmap[s].max_position[i] =
 			    std::min(heatmap[s].max_position[i], max_allowed_pos[i]);
 		}
-		heatmap[s].min_time_step = std::max(heatmap[s].min_time_step, min_allowed_ts);
-		heatmap[s].max_time_step = std::min(heatmap[s].max_time_step, max_allowed_ts);
+		heatmap[s].min_time = std::max(heatmap[s].min_time, min_allowed_ts);
+		heatmap[s].max_time = std::min(heatmap[s].max_time, max_allowed_ts);
 	}
 
 	return heatmap;

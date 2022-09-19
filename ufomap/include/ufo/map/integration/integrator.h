@@ -84,7 +84,7 @@ class Integrator
 	{
 		// Get current state
 		auto const occupancy_prob_hit = getOccupancyProbHit();
-		auto const time_step = getTimeStep();
+		auto const time = getTime();
 
 		auto prob = map.toOccupancyChangeLogit(
 		    occupancy_prob_hit);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
@@ -113,7 +113,7 @@ class Integrator
 
 			// Update time step
 			if constexpr (is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
-				map.setTimeStep(node, time_step, false);
+				map.setTime(node, time, false);
 			}
 
 			// Update color
@@ -154,7 +154,7 @@ class Integrator
 		});
 
 		// FIXME: Increment time step
-		time_step_ += time_step_auto_inc_;
+		time_ += time_auto_inc_;
 	}
 
 	//
@@ -166,17 +166,17 @@ class Integrator
 	{
 		// Get current state
 		auto const occupancy_prob_miss = getOccupancyProbMiss();
-		auto const time_step = getTimeStep();
+		auto const time = getTime();
 
 		auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss);
 
-		for_each(misses, [&map, prob, time_step](auto code) {
+		for_each(misses, [&map, prob, time](auto code) {
 			auto node = map.createNode(code);
 
 			map.decreaseOccupancyLogit(node, prob, false);
 
 			if constexpr (is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
-				map.setTimeStep(node, time_step, false);
+				map.setTime(node, time, false);
 			}
 		});
 	}
@@ -327,22 +327,22 @@ class Integrator
 	/*!
 	 * @return The time step.
 	 */
-	[[nodiscard]] constexpr time_step_t getTimeStep() const noexcept { return time_step_; }
+	[[nodiscard]] constexpr time_t getTime() const noexcept { return time_; }
 
 	/*!
 	 * @return Whether the time step is automatically incremented.
 	 */
-	[[nodiscard]] constexpr bool isTimeStepAutoInc() const noexcept
+	[[nodiscard]] constexpr bool isTimeAutoInc() const noexcept
 	{
-		return 0 != time_step_auto_inc_;
+		return 0 != time_auto_inc_;
 	}
 
 	/*!
 	 * @return The automatic increment step.
 	 */
-	[[nodiscard]] constexpr int getTimeStepAutoInc() const noexcept
+	[[nodiscard]] constexpr int getTimeAutoInc() const noexcept
 	{
-		return time_step_auto_inc_;
+		return time_auto_inc_;
 	}
 
 	/*!
@@ -382,9 +382,9 @@ class Integrator
 		occupancy_prob_miss_ = prob;
 	}
 
-	constexpr void setTimeStep(time_step_t time_step) noexcept { time_step_ = time_step; }
+	constexpr void setTime(time_t time) noexcept { time_ = time; }
 
-	constexpr void setTimeStepAutoInc(int inc) noexcept { time_step_auto_inc_ = inc; }
+	constexpr void setTimeAutoInc(int inc) noexcept { time_auto_inc_ = inc; }
 
 	constexpr void setSemanticValueHit(semantic_value_t value) noexcept
 	{
@@ -417,8 +417,8 @@ class Integrator
 	float occupancy_prob_miss_ = 0.4;
 
 	// Time step specific
-	mutable time_step_t time_step_ = 1;
-	int time_step_auto_inc_ = 1;
+	mutable time_t time_ = 1;
+	int time_auto_inc_ = 1;
 
 	// Semantic specific
 	semantic_value_t semantic_value_hit_ = 2;

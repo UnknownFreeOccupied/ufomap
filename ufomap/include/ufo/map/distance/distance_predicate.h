@@ -39,12 +39,184 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_PREDICATE_DISTANCE_H
-#define UFO_MAP_PREDICATE_DISTANCE_H
+#ifndef UFO_MAP_DISTANCE_PREDICATE_H
+#define UFO_MAP_DISTANCE_PREDICATE_H
+
+// UFO
+#include <ufo/map/predicate/predicates.h>
+#include <ufo/map/types.h>
 
 namespace ufo::map::predicate
 {
+//
+// Predicates
+//
 
-}
+// REVIEW: Name?
+struct DistanceMap {
+};
 
-#endif  // UFO_MAP_PREDICATE_DISTANCE_H
+template <PredicateCompare PC = PredicateCompare::EQUAL>
+struct Distance {
+	constexpr Distance(distance_t distance) : distance(distance) {}
+
+	distance_t distance;
+};
+
+using DistanceE = Distance<>;
+using DistanceLE = Distance<PredicateCompare::LESS_EQUAL>;
+using DistanceGE = Distance<PredicateCompare::GREATER_EQUAL>;
+using DistanceL = Distance<PredicateCompare::LESS>;
+using DistanceG = Distance<PredicateCompare::GREATER>;
+
+using DistanceMin = DistanceGE;
+using DistanceMax = DistanceLE;
+
+struct DistanceInterval {
+	constexpr DistanceInterval(distance_t min, distance_t max) : min(min), max(max) {}
+
+	DistanceMin min;
+	DistanceMax max;
+};
+
+//
+// Predicate value/return check
+//
+
+template <>
+struct PredicateValueCheck<DistanceMap> {
+	using Pred = DistanceMap;
+
+	template <class Map>
+	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
+	    -> decltype(m.distance(n), true)
+	{
+		return true;
+	}
+
+	static constexpr bool apply(...) { return false; }
+};
+
+template <class PredPost>
+struct PredicateValueCheck<THEN<DistanceMap, PredPost>> {
+	using Pred = THEN<DistanceMap, PredPost>;
+
+	template <class Map>
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		if constexpr (PredicateValueCheck<DistanceMap>::apply(p.pre, m, n)) {
+			return PredicateValueCheck<PredPost>::apply(p.post, m, n);
+		} else {
+			return true;
+		}
+	}
+};
+
+template <PredicateCompare PC>
+struct PredicateValueCheck<Distance<PC>> {
+	using Pred = Distance<PC>;
+
+	template <class Map>
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		if constexpr (PredicateCompare::EQUAL == PC) {
+			return m.distance(n) == p.distance;
+		} else if constexpr (PredicateCompare::LESS_EQUAL == PC) {
+			return m.distance(n) <= p.distance;
+		} else if constexpr (PredicateCompare::GREATER_EQUAL == PC) {
+			return m.distance(n) >= p.distance;
+		} else if constexpr (PredicateCompare::LESS == PC) {
+			return m.distance(n) < p.distance;
+		} else if constexpr (PredicateCompare::GREATER == PC) {
+			return m.distance(n) > p.distance;
+		} else {
+			static_assert("Non-supported predicate comparison.");
+		}
+	}
+};
+
+template <>
+struct PredicateValueCheck<DistanceInterval> {
+	using Pred = DistanceInterval;
+
+	template <class Map>
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
+		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
+	}
+};
+
+//
+// Predicate inner check
+//
+
+template <>
+struct PredicateInnerCheck<DistanceMap> {
+	using Pred = DistanceMap;
+
+	template <class Map>
+	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
+	    -> decltype(m.distance(n), true)
+	{
+		return true;
+	}
+
+	static constexpr bool apply(...) { return false; }
+};
+
+template <class PredPost>
+struct PredicateInnerCheck<THEN<DistanceMap, PredPost>> {
+	using Pred = THEN<DistanceMap, PredPost>;
+
+	template <class Map>
+	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		if constexpr (PredicateInnerCheck<DistanceMap>::apply(p.pre, m, n)) {
+			return PredicateInnerCheck<PredPost>::apply(p.post, m, n);
+		} else {
+			return true;
+		}
+	}
+};
+
+template <PredicateCompare PC>
+struct PredicateInnerCheck<Distance<PC>> {
+	using Pred = Distance<PC>;
+
+	template <class Map>
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		// FIXME: Check how distance step is propagated to determine
+
+		if constexpr (PredicateCompare::EQUAL == PC) {
+			return m.distance(n) >= p.distance;
+		} else if constexpr (PredicateCompare::LESS_EQUAL == PC) {
+			return true;
+		} else if constexpr (PredicateCompare::GREATER_EQUAL == PC) {
+			return m.distance(n) >= p.distance;
+		} else if constexpr (PredicateCompare::LESS == PC) {
+			return true;
+		} else if constexpr (PredicateCompare::GREATER == PC) {
+			return m.distance(n) > p.distance;
+		} else {
+			static_assert("Non-supported predicate comparison.");
+		}
+	}
+};
+
+template <>
+struct PredicateInnerCheck<DistanceInterval> {
+	using Pred = DistanceInterval;
+
+	template <class Map>
+	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	{
+		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
+		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
+	}
+};
+
+}  // namespace ufo::map::predicate
+
+#endif  // UFO_MAP_DISTANCE_PREDICATE_H

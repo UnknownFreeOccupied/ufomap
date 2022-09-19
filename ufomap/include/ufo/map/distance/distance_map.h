@@ -63,80 +63,90 @@ class DistanceMap
 	// Get distance
 	//
 
-	constexpr distance_t getDistance(Node node) const noexcept
+	[[nodiscard]] constexpr distance_t distance(Node node) const noexcept
 	{
-		return getDistance(derived().getLeafNode(node));
+		return derived().leafNode(node).distanceIndex(node.index());
 	}
 
-	distance_t getDistance(Code code) const
+	[[nodiscard]] distance_t distance(Code code) const
 	{
-		return getDistance(derived().getLeafNode(code));
+		return derived().leafNode(code).distanceIndex(code.index());
 	}
 
-	distance_t getDistance(Key key) const { return getDistance(Derived::toCode(key)); }
-
-	distance_t getDistance(Point coord, depth_t depth = 0) const
+	[[nodiscard]] distance_t distance(Key key) const
 	{
-		return getDistance(derived().toCode(coord, depth));
+		return distance(Derived::toCode(key));
 	}
 
-	distance_t getDistance(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	[[nodiscard]] distance_t distance(Point coord, depth_t depth = 0) const
 	{
-		return getDistance(derived().toCode(x, y, z, depth));
+		return distance(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] distance_t distance(coord_t x, coord_t y, coord_t z,
+	                                  depth_t depth = 0) const
+	{
+		return distance(derived().toCode(x, y, z, depth));
 	}
 
 	//
 	// Set distance
 	//
 
-	void setDistance(Node node, distance_t time_step, bool propagate = true)
+	void setDistance(Node node, distance_t distance, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, time_step](auto&& node) { setDistance(node, time_step); },
-		    propagate);
+		    node,
+		    [distance](auto& node, index_t const index) {
+			    node.setDistanceIndex(index, distance);
+		    },
+		    [distance](auto& node) { node.setDistance(distance); }, propagate);
 	}
 
-	void setDistance(Code code, distance_t time_step, bool propagate = true)
+	void setDistance(Code code, distance_t distance, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, time_step](auto&& node) { setDistance(node, time_step); },
-		    propagate);
+		    code,
+		    [distance](auto& node, index_t const index) {
+			    node.setDistanceIndex(index, distance);
+		    },
+		    [distance](auto& node) { node.setDistance(distance); }, propagate);
 	}
 
-	void setDistance(Key key, distance_t time_step, bool propagate = true)
+	void setDistance(Key key, distance_t distance, bool propagate = true)
 	{
-		setDistance(Derived::toCode(key), time_step, propagate);
+		setDistance(Derived::toCode(key), distance, propagate);
 	}
 
-	void setDistance(Point coord, distance_t time_step, bool propagate = true,
+	void setDistance(Point coord, distance_t distance, bool propagate = true,
 	                 depth_t depth = 0)
 	{
-		setDistance(derived().toCode(coord, depth), time_step, propagate);
+		setDistance(derived().toCode(coord, depth), distance, propagate);
 	}
 
-	void setDistance(coord_t x, coord_t y, coord_t z, distance_t time_step,
+	void setDistance(coord_t x, coord_t y, coord_t z, distance_t distance,
 	                 bool propagate = true, depth_t depth = 0)
 	{
-		setDistance(derived().toCode(x, y, z, depth), time_step, propagate);
+		setDistance(derived().toCode(x, y, z, depth), distance, propagate);
 	}
 
 	//
 	// Propagation criteria
 	//
 
-	constexpr PropagationCriteria getDistancePropagationCriteria() const noexcept
+	[[nodiscard]] constexpr PropagationCriteria distancePropagationCriteria() const noexcept
 	{
-		return distance_prop_criteria_;
+		return prop_criteria_;
 	}
 
-	constexpr void setDistancePropagationCriteria(
-	    PropagationCriteria distance_prop_criteria, bool propagate = true) noexcept
+	constexpr void setDistancePropagationCriteria(PropagationCriteria prop_criteria,
+	                                              bool propagate = true) noexcept
 	{
-		if (distance_prop_criteria_ == distance_prop_criteria) {
+		if (prop_criteria_ == prop_criteria) {
 			return;
 		}
 
-		distance_prop_criteria_ = distance_prop_criteria;
+		prop_criteria_ = prop_criteria;
 
 		// Set all inner nodes to modified
 		// FIXME: Possible to optimize this to only set the ones with children
@@ -149,12 +159,46 @@ class DistanceMap
 
  protected:
 	//
+	// Constructors
+	//
+
+	DistanceMap() = default;
+
+	DistanceMap(DistanceMap const& other) = default;
+
+	DistanceMap(DistanceMap&& other) = default;
+
+	template <class Derived2>
+	DistanceMap(DistanceMap<Derived2> const& other)
+	    : prop_criteria_(other.distancePropagationCriteria())
+	{
+	}
+
+	//
+	// Assignment operator
+	//
+
+	DistanceMap& operator=(DistanceMap const& rhs) = default;
+
+	DistanceMap& operator=(DistanceMap&& rhs) = default;
+
+	template <class Derived2>
+	DistanceMap& operator=(DistanceMap<Derived2> const& rhs)
+	{
+		prop_criteria_ = rhs.distancePropagationCriteria();
+		return *this;
+	}
+
+	//
 	// Derived
 	//
 
-	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
+	[[nodiscard]] constexpr Derived& derived() { return *static_cast<Derived*>(this); }
 
-	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
+	[[nodiscard]] constexpr Derived const& derived() const
+	{
+		return *static_cast<Derived const*>(this);
+	}
 
 	//
 	// Initilize root
@@ -163,122 +207,162 @@ class DistanceMap
 	void initRoot()
 	{
 		// FIXME: What should this be?
-		setDistance(derived().getRoot(), std::numeric_limits<distance_t>::max());
-	}
-
-	//
-	// Get distance
-	//
-
-	static constexpr distance_t getDistance(LeafNode const& node) { return node.distance; }
-
-	//
-	// Set distance
-	//
-
-	static constexpr void setDistance(LeafNode& node, distance_t distance)
-	{
-		node.distance = distance;
+		derived().root().setDistanceIndex(derived().rootIndex(), 0);
 	}
 
 	//
 	// Update node
 	//
 
-	void updateNode(DistanceNode) {}
-
-	template <class T>
-	void updateNode(DistanceNode& node, T const& children)
+	template <std::size_t N, class T>
+	void updateNode(DistanceNode<N>& node, index_field_t const indices, T const& children)
 	{
-		switch (distance_prop_criteria_) {
-			case PropagationCriteria::MIN:
-				setDistance(node, minChildDistance(children));
-				break;
-			case PropagationCriteria::MAX:
-				setDistance(node, maxChildDistance(children));
-				break;
-			case PropagationCriteria::MEAN:
-				setDistance(node, averageChildDistance(children));
-				break;
+		if constexpr (1 == N) {
+			auto fun = [](DistanceNode<1> const node) { return node.distance[0]; };
+			switch (prop_criteria_) {
+				case PropagationCriteria::MIN:
+					node.distance[0] = min(children, fun);
+					break;
+				case PropagationCriteria::MAX:
+					node.distance[0] = max(children, fun);
+					break;
+				case PropagationCriteria::MEAN:
+					node.distance[0] = mean(children, fun);
+					break;
+				case PropagationCriteria::SUM:
+					node.distance[0] = sum(children, fun);
+					break;
+			}
+		} else {
+			for (index_t index = 0; children.size() != index; ++index) {
+				if ((indices >> index) & index_field_t(1)) {
+					switch (prop_criteria_) {
+						case PropagationCriteria::MIN:
+							node.distance[index] = min(children[index].distance);
+							break;
+						case PropagationCriteria::MAX:
+							node.distance[index] = max(children[index].distance);
+							break;
+						case PropagationCriteria::MEAN:
+							node.distance[index] = mean(children[index].distance);
+							break;
+						case PropagationCriteria::SUM:
+							node.distance[index] = sum(children[index].distance);
+							break;
+					}
+				}
+			}
 		}
-	}
-
-	//
-	// Min child distance
-	//
-
-	template <class T>
-	constexpr distance_t minChildDistance(T const& children) const
-	{
-		// TODO: Implement
-	}
-
-	//
-	// Max child distance
-	//
-
-	template <class T>
-	constexpr distance_t maxChildDistance(T const& children) const
-	{
-		// TODO: Implement
-	}
-
-	//
-	// Average child distance
-	//
-
-	template <class T>
-	constexpr distance_t averageChildDistance(T const& children) const
-	{
-		// TODO: Implement
 	}
 
 	//
 	// Input/output (read/write)
 	//
 
-	static constexpr DataIdentifier dataIdentifier() noexcept
+	[[nodiscard]] static constexpr DataIdentifier dataIdentifier() noexcept
 	{
 		return DataIdentifier::DISTANCE;
 	}
 
-	static constexpr bool canReadData(DataIdentifier identifier) noexcept
+	[[nodiscard]] static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
 		return dataIdentifier() == identifier;
 	}
 
 	template <class InputIt>
-	void readNodes(std::istream& in, InputIt first, InputIt last)
+	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
-		auto const num_nodes = std::distance(first, last);
+		using typename std::iterator_traits<InputIt>::value_type;
+		using typename value_type::node_type;
+		return node_type::distanceSize();
+	}
+
+	template <class OutputIt>
+	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	{
+		uint8_t n;
+		in.read(reinterpret_cast<char*>(&n), sizeof(n));
+		num_nodes *= n;
 
 		auto data = std::make_unique<distance_t[]>(num_nodes);
 		in.read(reinterpret_cast<char*>(data.get()),
 		        num_nodes * sizeof(typename decltype(data)::element_type));
 
-		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			setDistance(*first, data[i]);
+		auto const d = data.get();
+		if constexpr (1 == numData<OutputIt>()) {
+			if (1 == n) {
+				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
+					first->node.distance[0] = *(d + i);
+				}
+			} else {
+				auto const prop_criteria = prop_criteria_;
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
+					switch (prop_criteria) {
+						case PropagationCriteria::MIN:
+							first->node.distance[0] = min(d + i, d + i + 8);
+							break;
+						case PropagationCriteria::MAX:
+							first->node.distance[0] = max(d + i, d + i + 8);
+							break;
+						case PropagationCriteria::MEAN:
+							first->node.distance[0] = mean(d + i, d + i + 8);
+							break;
+						case PropagationCriteria::SUM:
+							first->node.distance[0] = sum(d + i, d + i + 8);
+							break;
+					}
+				}
+			}
+		} else {
+			if (1 == n) {
+				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
+					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+						first->node.distance.fill(*(d + i));
+					} else {
+						for (std::size_t index = 0; first->node.distance.size() != index; ++index) {
+							if ((first.index_field >> index) & index_field_t(1)) {
+								first->node.distance[index] = *(d + i);
+							}
+						}
+					}
+				}
+			} else {
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
+					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+						std::copy(d + i, d + i + 8, first->node.distance.data());
+					} else {
+						for (index_t index = 0; first->node.distance.size() != index; ++i, ++index) {
+							if ((first.index_field >> index) & index_field_t(1)) {
+								first->node.distance[index] = *(d + i + index);
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool compress,
-	                int compression_acceleration_level, int compression_level) const
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
 	{
-		auto const num_nodes = std::distance(first, last);
+		constexpr uint8_t const n = numData<InputIt>();
+		num_nodes *= n;
 
 		auto data = std::make_unique<distance_t[]>(num_nodes);
-		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			data[i] = getDistance(*first);
+		auto d = data.get();
+		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
+			std::copy(std::cbegin(first->node.distance), std::cend(first->node.distance),
+			          d + i);
 		}
 
+		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:
 	// Propagation criteria
-	PropagationCriteria distance_prop_criteria_ = PropagationCriteria::MIN;
+	PropagationCriteria prop_criteria_ = PropagationCriteria::MIN;
 };
 }  // namespace ufo::map
 

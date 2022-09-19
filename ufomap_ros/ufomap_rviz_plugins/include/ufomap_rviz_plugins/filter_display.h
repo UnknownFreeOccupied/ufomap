@@ -69,9 +69,9 @@ class FilterDisplay
 	rviz::IntProperty* max_occupancy_;
 
 	// Time step
-	rviz::BoolProperty* filter_time_step_;
-	rviz::IntProperty* min_time_step_;
-	rviz::IntProperty* max_time_step_;
+	rviz::BoolProperty* filter_time_;
+	rviz::IntProperty* min_time_;
+	rviz::IntProperty* max_time_;
 
 	// Semantics
 	rviz::BoolProperty* filter_semantics_;

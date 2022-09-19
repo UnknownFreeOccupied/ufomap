@@ -52,13 +52,13 @@ struct Heatmap {
 	ufo::map::Point max_position;
 
 	// Time step
-	ufo::map::time_step_t min_time_step;
-	ufo::map::time_step_t max_time_step;
+	ufo::map::time_t min_time;
+	ufo::map::time_t max_time;
 
 	bool operator==(Heatmap const& rhs) const
 	{
 		return rhs.min_position == min_position && rhs.max_position == max_position &&
-		       rhs.min_time_step == min_time_step && rhs.max_time_step == max_time_step;
+		       rhs.min_time == min_time && rhs.max_time == max_time;
 	}
 
 	bool operator!=(Heatmap const& rhs) const { return !(*this == rhs); }

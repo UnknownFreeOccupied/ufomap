@@ -39,8 +39,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_PREDICATE_TIME_H
-#define UFO_MAP_PREDICATE_TIME_H
+#ifndef UFO_MAP_TIME_PREDICATE_H
+#define UFO_MAP_TIME_PREDICATE_H
 
 // UFO
 #include <ufo/map/predicate/predicates.h>
@@ -53,30 +53,30 @@ namespace ufo::map::predicate
 //
 
 // REVIEW: Name?
-struct TimeStepMap {
+struct TimeMap {
 };
 
 template <PredicateCompare PC = PredicateCompare::EQUAL>
-struct TimeStep {
-	constexpr TimeStep(time_step_t time_step) : time_step(time_step) {}
+struct Time {
+	constexpr Time(time_t time) : time(time) {}
 
-	time_step_t time_step;
+	time_t time;
 };
 
-using TimeStepE = TimeStep<>;
-using TimeStepLE = TimeStep<PredicateCompare::LESS_EQUAL>;
-using TimeStepGE = TimeStep<PredicateCompare::GREATER_EQUAL>;
-using TimeStepL = TimeStep<PredicateCompare::LESS>;
-using TimeStepG = TimeStep<PredicateCompare::GREATER>;
+using TimeE = Time<>;
+using TimeLE = Time<PredicateCompare::LESS_EQUAL>;
+using TimeGE = Time<PredicateCompare::GREATER_EQUAL>;
+using TimeL = Time<PredicateCompare::LESS>;
+using TimeG = Time<PredicateCompare::GREATER>;
 
-using TimeStepMin = TimeStepGE;
-using TimeStepMax = TimeStepLE;
+using TimeMin = TimeGE;
+using TimeMax = TimeLE;
 
-struct TimeStepInterval {
-	constexpr TimeStepInterval(time_step_t min, time_step_t max) : min(min), max(max) {}
+struct TimeInterval {
+	constexpr TimeInterval(time_t min, time_t max) : min(min), max(max) {}
 
-	TimeStepMin min;
-	TimeStepMax max;
+	TimeMin min;
+	TimeMax max;
 };
 
 //
@@ -84,12 +84,12 @@ struct TimeStepInterval {
 //
 
 template <>
-struct PredicateValueCheck<TimeStepMap> {
-	using Pred = TimeStepMap;
+struct PredicateValueCheck<TimeMap> {
+	using Pred = TimeMap;
 
 	template <class Map>
 	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
-	    -> decltype(m.getTimeStep(n), true)
+	    -> decltype(m.time(n), true)
 	{
 		return true;
 	}
@@ -98,13 +98,13 @@ struct PredicateValueCheck<TimeStepMap> {
 };
 
 template <class PredPost>
-struct PredicateValueCheck<THEN<TimeStepMap, PredPost>> {
-	using Pred = THEN<TimeStepMap, PredPost>;
+struct PredicateValueCheck<THEN<TimeMap, PredPost>> {
+	using Pred = THEN<TimeMap, PredPost>;
 
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
-		if constexpr (PredicateValueCheck<TimeStepMap>::apply(p.pre, m, n)) {
+		if constexpr (PredicateValueCheck<TimeMap>::apply(p.pre, m, n)) {
 			return PredicateValueCheck<PredPost>::apply(p.post, m, n);
 		} else {
 			return true;
@@ -113,22 +113,22 @@ struct PredicateValueCheck<THEN<TimeStepMap, PredPost>> {
 };
 
 template <PredicateCompare PC>
-struct PredicateValueCheck<TimeStep<PC>> {
-	using Pred = TimeStep<PC>;
+struct PredicateValueCheck<Time<PC>> {
+	using Pred = Time<PC>;
 
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
 		if constexpr (PredicateCompare::EQUAL == PC) {
-			return m.getTimeStep(n) == p.time_step;
+			return m.time(n) == p.time;
 		} else if constexpr (PredicateCompare::LESS_EQUAL == PC) {
-			return m.getTimeStep(n) <= p.time_step;
+			return m.time(n) <= p.time;
 		} else if constexpr (PredicateCompare::GREATER_EQUAL == PC) {
-			return m.getTimeStep(n) >= p.time_step;
+			return m.time(n) >= p.time;
 		} else if constexpr (PredicateCompare::LESS == PC) {
-			return m.getTimeStep(n) < p.time_step;
+			return m.time(n) < p.time;
 		} else if constexpr (PredicateCompare::GREATER == PC) {
-			return m.getTimeStep(n) > p.time_step;
+			return m.time(n) > p.time;
 		} else {
 			static_assert("Non-supported predicate comparison.");
 		}
@@ -136,8 +136,8 @@ struct PredicateValueCheck<TimeStep<PC>> {
 };
 
 template <>
-struct PredicateValueCheck<TimeStepInterval> {
-	using Pred = TimeStepInterval;
+struct PredicateValueCheck<TimeInterval> {
+	using Pred = TimeInterval;
 
 	template <class Map>
 	static inline bool apply(Pred const& p, Map const& m, Node const& n)
@@ -152,12 +152,12 @@ struct PredicateValueCheck<TimeStepInterval> {
 //
 
 template <>
-struct PredicateInnerCheck<TimeStepMap> {
-	using Pred = TimeStepMap;
+struct PredicateInnerCheck<TimeMap> {
+	using Pred = TimeMap;
 
 	template <class Map>
 	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
-	    -> decltype(m.getTimeStep(n), true)
+	    -> decltype(m.time(n), true)
 	{
 		return true;
 	}
@@ -166,13 +166,13 @@ struct PredicateInnerCheck<TimeStepMap> {
 };
 
 template <class PredPost>
-struct PredicateInnerCheck<THEN<TimeStepMap, PredPost>> {
-	using Pred = THEN<TimeStepMap, PredPost>;
+struct PredicateInnerCheck<THEN<TimeMap, PredPost>> {
+	using Pred = THEN<TimeMap, PredPost>;
 
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
-		if constexpr (PredicateInnerCheck<TimeStepMap>::apply(p.pre, m, n)) {
+		if constexpr (PredicateInnerCheck<TimeMap>::apply(p.pre, m, n)) {
 			return PredicateInnerCheck<PredPost>::apply(p.post, m, n);
 		} else {
 			return true;
@@ -181,8 +181,8 @@ struct PredicateInnerCheck<THEN<TimeStepMap, PredPost>> {
 };
 
 template <PredicateCompare PC>
-struct PredicateInnerCheck<TimeStep<PC>> {
-	using Pred = TimeStep<PC>;
+struct PredicateInnerCheck<Time<PC>> {
+	using Pred = Time<PC>;
 
 	template <class Map>
 	static inline bool apply(Pred const& p, Map const& m, Node const& n)
@@ -190,15 +190,15 @@ struct PredicateInnerCheck<TimeStep<PC>> {
 		// FIXME: Check how time step is propagated to determine
 
 		if constexpr (PredicateCompare::EQUAL == PC) {
-			return m.getTimeStep(n) >= p.time_step;
+			return m.time(n) >= p.time;
 		} else if constexpr (PredicateCompare::LESS_EQUAL == PC) {
 			return true;
 		} else if constexpr (PredicateCompare::GREATER_EQUAL == PC) {
-			return m.getTimeStep(n) >= p.time_step;
+			return m.time(n) >= p.time;
 		} else if constexpr (PredicateCompare::LESS == PC) {
 			return true;
 		} else if constexpr (PredicateCompare::GREATER == PC) {
-			return m.getTimeStep(n) > p.time_step;
+			return m.time(n) > p.time;
 		} else {
 			static_assert("Non-supported predicate comparison.");
 		}
@@ -206,8 +206,8 @@ struct PredicateInnerCheck<TimeStep<PC>> {
 };
 
 template <>
-struct PredicateInnerCheck<TimeStepInterval> {
-	using Pred = TimeStepInterval;
+struct PredicateInnerCheck<TimeInterval> {
+	using Pred = TimeInterval;
 
 	template <class Map>
 	static inline bool apply(Pred const& p, Map const& m, Node const& n)
@@ -219,4 +219,4 @@ struct PredicateInnerCheck<TimeStepInterval> {
 
 }  // namespace ufo::map::predicate
 
-#endif  // UFO_MAP_PREDICATE_TIME_H
+#endif  // UFO_MAP_TIME_PREDICATE_H

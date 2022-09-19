@@ -48,8 +48,8 @@ RenderDisplay::RenderDisplay(rviz::Property* parent, std::string name,
                              RenderStyle default_style,
                              ColoringMode default_coloring_mode, QColor default_color,
                              float default_alpha, bool enabled, bool has_color,
-                             bool has_time_step, bool has_semantics)
-    : has_color_(has_color), has_time_step_(has_time_step), has_semantics_(has_semantics)
+                             bool has_time, bool has_semantics)
+    : has_color_(has_color), has_time_(has_time), has_semantics_(has_semantics)
 {
 	// Should render
 	should_render_ = new rviz::BoolProperty(
@@ -82,7 +82,7 @@ RenderDisplay::RenderDisplay(rviz::Property* parent, std::string name,
 	}
 
 	// Color factor
-	for (auto coloring : {ColoringMode::TIME_STEP_COLOR, ColoringMode::X_AXIS_COLOR,
+	for (auto coloring : {ColoringMode::time_COLOR, ColoringMode::X_AXIS_COLOR,
 	                      ColoringMode::Y_AXIS_COLOR, ColoringMode::Z_AXIS_COLOR}) {
 		color_factor_[coloring] = new rviz::FloatProperty("Factor", 0.8, "", coloring_);
 		color_factor_[coloring]->setMin(0.0);
@@ -92,7 +92,7 @@ RenderDisplay::RenderDisplay(rviz::Property* parent, std::string name,
 	}
 
 	// Color normalize range
-	for (auto coloring : {ColoringMode::TIME_STEP_COLOR, ColoringMode::X_AXIS_COLOR,
+	for (auto coloring : {ColoringMode::time_COLOR, ColoringMode::X_AXIS_COLOR,
 	                      ColoringMode::Y_AXIS_COLOR, ColoringMode::Z_AXIS_COLOR}) {
 		color_normalize_range_[coloring] =
 		    new rviz::BoolProperty("Normalize Range", true,
@@ -119,20 +119,20 @@ RenderDisplay::RenderDisplay(rviz::Property* parent, std::string name,
 	}
 
 	// Time step normalize min/max
-	time_step_normalize_min_value_ = new rviz::IntProperty(
+	time_normalize_min_value_ = new rviz::IntProperty(
 	    "Min Value", 0, "Value which will displayed as min color value",
-	    color_normalize_range_[ColoringMode::TIME_STEP_COLOR]);
-	time_step_normalize_max_value_ = new rviz::IntProperty(
+	    color_normalize_range_[ColoringMode::time_COLOR]);
+	time_normalize_max_value_ = new rviz::IntProperty(
 	    "Max Value", std::pow(2, 24), "Value which will displayed as max color value",
-	    color_normalize_range_[ColoringMode::TIME_STEP_COLOR]);
-	time_step_normalize_min_value_->setMin(0);
-	time_step_normalize_min_value_->setMax(std::pow(2, 24));
-	time_step_normalize_max_value_->setMin(0);
-	time_step_normalize_max_value_->setMax(std::pow(2, 24));
-	time_step_normalize_min_value_->setHidden(
-	    color_normalize_range_[ColoringMode::TIME_STEP_COLOR]->getBool());
-	time_step_normalize_max_value_->setHidden(
-	    color_normalize_range_[ColoringMode::TIME_STEP_COLOR]->getBool());
+	    color_normalize_range_[ColoringMode::time_COLOR]);
+	time_normalize_min_value_->setMin(0);
+	time_normalize_min_value_->setMax(std::pow(2, 24));
+	time_normalize_max_value_->setMin(0);
+	time_normalize_max_value_->setMax(std::pow(2, 24));
+	time_normalize_min_value_->setHidden(
+	    color_normalize_range_[ColoringMode::time_COLOR]->getBool());
+	time_normalize_max_value_->setHidden(
+	    color_normalize_range_[ColoringMode::time_COLOR]->getBool());
 
 	// Semantics
 	use_semantic_ = new rviz::BoolProperty("Use Semantics", false, "", should_render_);
@@ -175,7 +175,7 @@ RenderDisplay::RenderDisplay(rviz::Property* parent, std::string name,
 			case ColoringMode::VOXEL_COLOR:
 			case ColoringMode::SEMANTIC_COLOR:
 				break;
-			case ColoringMode::TIME_STEP_COLOR:
+			case ColoringMode::time_COLOR:
 			case ColoringMode::X_AXIS_COLOR:
 			case ColoringMode::Y_AXIS_COLOR:
 			case ColoringMode::Z_AXIS_COLOR:
@@ -190,15 +190,15 @@ RenderDisplay::RenderDisplay(rviz::Property* parent, std::string name,
 	});
 
 	// Color normalize range
-	for (auto coloring : {ColoringMode::TIME_STEP_COLOR, ColoringMode::X_AXIS_COLOR,
+	for (auto coloring : {ColoringMode::time_COLOR, ColoringMode::X_AXIS_COLOR,
 	                      ColoringMode::Y_AXIS_COLOR, ColoringMode::Z_AXIS_COLOR}) {
 		QObject::connect(color_normalize_range_[coloring], &rviz::BoolProperty::changed,
 		                 [this]() {
 			                 for (auto& [key, value] : color_normalize_range_) {
 				                 switch (key) {
-					                 case ColoringMode::TIME_STEP_COLOR:
-						                 time_step_normalize_min_value_->setHidden(value->getBool());
-						                 time_step_normalize_max_value_->setHidden(value->getBool());
+					                 case ColoringMode::time_COLOR:
+						                 time_normalize_min_value_->setHidden(value->getBool());
+						                 time_normalize_max_value_->setHidden(value->getBool());
 						                 break;
 					                 case ColoringMode::X_AXIS_COLOR:
 					                 case ColoringMode::Y_AXIS_COLOR:
@@ -222,9 +222,9 @@ void RenderDisplay::enableVoxelColor(bool enable)
 	updateColoring(static_cast<ColoringMode>(coloring_->getOptionInt()));
 }
 
-void RenderDisplay::enableTimeStep(bool enable)
+void RenderDisplay::enableTime(bool enable)
 {
-	has_time_step_ = enable;
+	has_time_ = enable;
 	updateColoring(static_cast<ColoringMode>(coloring_->getOptionInt()));
 }
 
@@ -248,7 +248,7 @@ RenderMode RenderDisplay::getRenderMode(double min_occ, double max_occ) const
 		options.color = color_.at(options.coloring_mode)->getOgreColor();
 	}
 
-	for (auto option : {ColoringMode::TIME_STEP_COLOR, ColoringMode::X_AXIS_COLOR,
+	for (auto option : {ColoringMode::time_COLOR, ColoringMode::X_AXIS_COLOR,
 	                    ColoringMode::Y_AXIS_COLOR, ColoringMode::Z_AXIS_COLOR}) {
 		if (option == options.coloring_mode) {
 			options.color_factor = color_factor_.at(option)->getFloat();
@@ -266,11 +266,11 @@ RenderMode RenderDisplay::getRenderMode(double min_occ, double max_occ) const
 		}
 	}
 
-	if (ColoringMode::TIME_STEP_COLOR == options.coloring_mode) {
+	if (ColoringMode::time_COLOR == options.coloring_mode) {
 		options.normalized_value =
-		    color_normalize_range_.at(ColoringMode::TIME_STEP_COLOR)->getBool();
-		options.min_normalized_value = time_step_normalize_min_value_->getInt();
-		options.max_normalized_value = time_step_normalize_max_value_->getInt();
+		    color_normalize_range_.at(ColoringMode::time_COLOR)->getBool();
+		options.min_normalized_value = time_normalize_min_value_->getInt();
+		options.max_normalized_value = time_normalize_max_value_->getInt();
 	}
 
 	if (ColoringMode::OCCUPANCY_COLOR == options.coloring_mode) {
@@ -294,8 +294,8 @@ void RenderDisplay::updateColoring(ColoringMode wanted)
 	if (has_color_) {
 		options.push_back(ColoringMode::VOXEL_COLOR);
 	}
-	if (has_time_step_) {
-		options.push_back(ColoringMode::TIME_STEP_COLOR);
+	if (has_time_) {
+		options.push_back(ColoringMode::time_COLOR);
 	}
 	if (has_semantics_) {
 		options.push_back(ColoringMode::SEMANTIC_COLOR);
@@ -320,8 +320,8 @@ void RenderDisplay::updateColoring(ColoringMode wanted)
 			coloring_->setStdString(std::string(getStr(ColoringMode::Z_AXIS_COLOR)));
 		}
 
-	} else if (ColoringMode::TIME_STEP_COLOR == wanted) {
-		if (has_time_step_) {
+	} else if (ColoringMode::time_COLOR == wanted) {
+		if (has_time_) {
 			coloring_->setStdString(std::string(getStr(wanted)));
 
 		} else {
