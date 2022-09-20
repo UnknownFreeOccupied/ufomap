@@ -54,6 +54,25 @@
 
 namespace ufo::map
 {
+// File options
+struct FileOptions {
+	bool compressed;
+	node_size_t leaf_size;
+	depth_t depth_levels;
+};
+
+// File header
+struct FileHeader : FileOptions {
+	static constexpr std::string_view FILE_HEADER = "# UFOMap file";
+	static constexpr std::uint8_t CURRENT_MAJOR = 1;
+	static constexpr std::uint8_t CURRENT_MINOR = 0;
+	static constexpr std::uint8_t CURRENT_PATCH = 0;
+
+	std::uint8_t major;
+	std::uint8_t minor;
+	std::uint8_t patch;
+};
+
 // Data identifiers
 enum struct DataIdentifier : std::uint8_t {
 	NO_DATA,
@@ -81,25 +100,23 @@ enum struct DataType : std::uint8_t {
 };
 
 template <typename T>
-constexpr inline DataType getDataType()
+[[nodiscard]] constexpr inline DataType dataType()
 {
-	if constexpr (std::is_same_v<uint8_t, T>) {
+	if constexpr (std::is_same_v<std::uint8_t, T>) {
 		return DataType::UINT8;
-	} else if constexpr (std::is_same_v<uint8_t, T>) {
-		return DataType::UINT8;
-	} else if constexpr (std::is_same_v<uint16_t, T>) {
+	} else if constexpr (std::is_same_v<std::uint16_t, T>) {
 		return DataType::UINT16;
-	} else if constexpr (std::is_same_v<uint32_t, T>) {
+	} else if constexpr (std::is_same_v<std::uint32_t, T>) {
 		return DataType::UINT32;
-	} else if constexpr (std::is_same_v<uint64_t, T>) {
+	} else if constexpr (std::is_same_v<std::uint64_t, T>) {
 		return DataType::UINT64;
-	} else if constexpr (std::is_same_v<int8_t, T>) {
+	} else if constexpr (std::is_same_v<std::int8_t, T>) {
 		return DataType::INT8;
-	} else if constexpr (std::is_same_v<int16_t, T>) {
+	} else if constexpr (std::is_same_v<std::int16_t, T>) {
 		return DataType::INT16;
-	} else if constexpr (std::is_same_v<int32_t, T>) {
+	} else if constexpr (std::is_same_v<std::int32_t, T>) {
 		return DataType::INT32;
-	} else if constexpr (std::is_same_v<int64_t, T>) {
+	} else if constexpr (std::is_same_v<std::int64_t, T>) {
 		return DataType::INT64;
 	} else if constexpr (std::is_same_v<float, T>) {
 		return DataType::FLOAT32;
@@ -111,48 +128,30 @@ constexpr inline DataType getDataType()
 }
 
 template <typename T>
-constexpr inline DataType getDataType(T)
+[[nodiscard]] constexpr inline DataType dataType(T const)
 {
-	return getDataType<T>();
+	return dataType<T>();
 }
 
-// File options
-struct FileOptions {
-	bool compressed;
-	node_size_t leaf_size;
-	depth_t depth_levels;
-};
+[[nodiscard]] bool isUFOMap(std::filesystem::path const& filename);
 
-// File header
-struct FileHeader : FileOptions {
-	static constexpr std::string_view FILE_HEADER = "# UFOMap file";
-	static constexpr uint8_t CURRENT_MAJOR = 1;
-	static constexpr uint8_t CURRENT_MINOR = 0;
-	static constexpr uint8_t CURRENT_PATCH = 0;
+[[nodiscard]] bool isUFOMap(std::istream& in_stream);
 
-	uint8_t major;
-	uint8_t minor;
-	uint8_t patch;
-};
+[[nodiscard]] FileHeader readHeader(std::filesystem::path const& filename);
 
-bool isUFOMapFile(std::filesystem::path const& filename);
-
-bool isUFOMapFile(std::istream& in_stream);
-
-FileHeader readHeader(std::filesystem::path const& filename);
-
-FileHeader readHeader(std::istream& in_stream);
+[[nodiscard]] FileHeader readHeader(std::istream& in_stream);
 
 void writeHeader(std::ostream& out_stream, FileOptions const& options);
 
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
-                  uint64_t uncompressed_data_size, int acceleration_level = 1,
+                  std::uint64_t uncompressed_data_size, int acceleration_level = 1,
                   int compression_level = 0);
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint64_t uncompressed_data_size);
+                    std::uint64_t uncompressed_data_size);
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint64_t uncompressed_data_size, uint64_t& compressed_data_size);
+                    std::uint64_t uncompressed_data_size,
+                    std::uint64_t& compressed_data_size);
 }  // namespace ufo::map
 #endif  // UFO_MAP_IO_H

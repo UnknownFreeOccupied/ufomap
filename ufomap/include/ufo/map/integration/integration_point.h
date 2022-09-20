@@ -43,7 +43,7 @@
 #define UFO_MAP_INTEGRATION_POINT_H
 
 // UFO
-#include <ufo/map/code/code.h>
+#include <ufo/map/code.h>
 
 // STL
 #include <algorithm>

@@ -71,7 +71,8 @@ class TimeMap
 
 	[[nodiscard]] time_t time(Code code) const
 	{
-		return derived().leafNode(code).timeIndex(code.index());
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		return n.timeIndex(code.index(d));
 	}
 
 	[[nodiscard]] time_t time(Key key) const { return time(Derived::toCode(key)); }
@@ -215,9 +216,6 @@ class TimeMap
 				case PropagationCriteria::MEAN:
 					node.time[0] = mean(children, fun);
 					break;
-				case PropagationCriteria::SUM:
-					node.time[0] = sum(children, fun);
-					break;
 			}
 		} else {
 			for (index_t index = 0; children.size() != index; ++index) {
@@ -232,8 +230,6 @@ class TimeMap
 						case PropagationCriteria::MEAN:
 							node.time[index] = mean(children[index].time);
 							break;
-						case PropagationCriteria::SUM:
-							node.time[index] = sum(children[index].time);
 					}
 				}
 			}
@@ -265,7 +261,11 @@ class TimeMap
 	template <class OutputIt>
 	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
 	{
-		uint8_t n;
+		std::uint8_t dt;
+		in.read(reinterpret_cast<char*>(&dt), sizeof(dt));
+		// TODO: Do something with data type
+
+		std::uint8_t n;
 		in.read(reinterpret_cast<char*>(&n), sizeof(n));
 		num_nodes *= n;
 
@@ -291,9 +291,6 @@ class TimeMap
 							break;
 						case PropagationCriteria::MEAN:
 							first->node.time[0] = mean(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::SUM:
-							first->node.time[0] = sum(d + i, d + i + 8);
 							break;
 					}
 				}
@@ -330,7 +327,7 @@ class TimeMap
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
 	{
-		constexpr uint8_t const n = numData<InputIt>();
+		constexpr std::uint8_t const n = numData<InputIt>();
 		num_nodes *= n;
 
 		auto data = std::make_unique<time_t[]>(num_nodes);
@@ -339,6 +336,8 @@ class TimeMap
 			std::copy(std::cbegin(first->node.time), std::cend(first->node.time), d + i);
 		}
 
+		std::uint8_t const dt = dataType<time_t>();
+		out.write(reinterpret_cast<char const*>(&dt), sizeof(dt));
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_nodes * sizeof(typename decltype(data)::element_type));

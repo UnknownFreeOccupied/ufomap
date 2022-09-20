@@ -44,17 +44,16 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/code/code.h>
-#include <ufo/map/code/code_unordered_set.h>
-#include <ufo/map/color/color_map_base.h>
+#include <ufo/map/code.h>
+#include <ufo/map/color/color_map.h>
 #include <ufo/map/integration/integration.h>
 #include <ufo/map/integration/integration_point.h>
 #include <ufo/map/integration/integration_point_cloud.h>
-#include <ufo/map/occupancy/occupancy_map_base.h>
+#include <ufo/map/occupancy/occupancy_map.h>
 #include <ufo/map/point_cloud.h>
 #include <ufo/map/ray_caster/ray_caster.h>
-#include <ufo/map/semantic/semantic_map_base.h>
-#include <ufo/map/time/time_map_base.h>
+#include <ufo/map/semantic/semantic_map.h>
+#include <ufo/map/time/time_map.h>
 #include <ufo/map/types.h>
 #include <ufo/math/pose6.h>
 #include <ufo/util/timing.h>
@@ -340,10 +339,7 @@ class Integrator
 	/*!
 	 * @return The automatic increment step.
 	 */
-	[[nodiscard]] constexpr int getTimeAutoInc() const noexcept
-	{
-		return time_auto_inc_;
-	}
+	[[nodiscard]] constexpr int getTimeAutoInc() const noexcept { return time_auto_inc_; }
 
 	/*!
 	 * @return The amount the semantic value increases for a hit.

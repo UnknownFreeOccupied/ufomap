@@ -45,9 +45,7 @@
 // UFO
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/geometry/minimum_distance.h>
-#include <ufo/map/code/code.h>
-#include <ufo/map/code/code_unordered_map.h>
-#include <ufo/map/code/code_unordered_set.h>
+#include <ufo/map/code.h>
 #include <ufo/map/integration/grid.h>
 #include <ufo/map/integration/integration_point.h>
 #include <ufo/map/integration/integration_point_cloud.h>

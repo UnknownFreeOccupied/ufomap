@@ -44,14 +44,14 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/code/code.h>
+#include <ufo/map/code.h>
 #include <ufo/map/io.h>
 #include <ufo/map/key.h>
-#include <ufo/map/octree/iterator.h>
-#include <ufo/map/octree/node.h>
+#include <ufo/map/node.h>
+#include <ufo/map/octree/octree_iterator.h>
 #include <ufo/map/octree/octree_node.h>
 #include <ufo/map/octree/octree_predicate.h>
-#include <ufo/map/octree/query.h>
+#include <ufo/map/octree/octree_query.h>
 #include <ufo/map/point.h>
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/predicate/spatial.h>
@@ -519,8 +519,8 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isModified(Code code) const
 	{
-		auto [n, d] = nodeAndDepth(code);
-		return n->isModifiedIndex(code.index(d));
+		auto [n, d] = leafNodeAndDepth(code);
+		return n.isModifiedIndex(code.index(d));
 	}
 
 	/*!
@@ -1123,8 +1123,8 @@ class OctreeBase
 	 */
 	[[nodiscard]] Node findNode(Code code) const
 	{
-		auto [n, d] = nodeAndDepth(code);
-		return Node(const_cast<LeafNode*>(n), code.parent(d));
+		auto [n, d] = leafNodeAndDepth(code);
+		return Node(const_cast<LeafNode*>(&n), code.parent(d));
 	}
 
 	/*!
@@ -1357,38 +1357,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] Node createNode(Code code, bool set_modified = false)
 	{
-		// FIXME: Handle wrong codes
-
-		InnerNode* node = &root();
-		if (set_modified) {
-			node->setModifiedIndex(rootIndex());
-		}
-		auto const min_depth = std::max(depth_t(1), code.depth());
-		for (depth_t depth = rootDepth(); min_depth < depth; --depth) {
-			auto const index = code.index(depth);
-			if (node->isLeafIndex(index)) {
-				createInnerChildren(*node, index, depth);
-			}
-			node = &innerChild(*node, index, code.index(depth - 1));
-			if (set_modified) {
-				node->setModifiedIndex(code.index(depth - 1));
-			}
-		}
-
-		if (0 == code.depth()) {
-			auto const index = code.index();
-			if (node->isLeafIndex(index)) {
-				createLeafChildren(*node, index);
-			}
-			if (set_modified) {
-				LeafNode* n = &leafChild(*node, code.index(0));
-				n->setModifiedIndex(code.index(0));
-			} else {
-				return Node(&leafChild(*node, code.index()), code);
-			}
-		} else {
-			return Node(node, code);
-		}
+		return Node(&createLeafNode(code, set_modified), code);
 	}
 
 	/*!
@@ -2930,299 +2899,6 @@ class OctreeBase
 	}
 
  protected:
-	//
-	// Set leaf node size and depth levels
-	//
-
-	void setNodeSizeAndDepthLevels(node_size_t const leaf_node_size,
-	                               depth_t const depth_levels)
-	{
-		if (minDepthLevels() > depth_levels || maxDepthLevels() < depth_levels) {
-			throw std::invalid_argument("depth_levels have to be in range [" +
-			                            std::to_string(+minDepthLevels()) + ".." +
-			                            std::to_string(+maxDepthLevels()) + "], '" +
-			                            std::to_string(+depth_levels) + "' was supplied.");
-		}
-
-		depth_levels_ = depth_levels;
-		max_value_ = std::pow(2, depth_levels - 1);
-
-		// For increased precision
-		node_size_[0] = leaf_node_size;
-		int const s = node_size_.size();
-		for (int i = 1; s != i; ++i) {
-			node_size_[i] = std::ldexp(leaf_node_size, i);
-		}
-
-		std::transform(std::cbegin(node_size_), std::cend(node_size_),
-		               std::begin(node_size_factor_), [](auto const n) { return 1.0 / n; });
-	}
-
-	//
-	// Initilize root
-	//
-
-	void initRoot()
-	{
-		root()->setLeaf();
-		root()->resetModified();
-	}
-
-	//
-	// To key
-	//
-
-	/*!
-	 * @brief Convert a coordinate at a specific depth to a key.
-	 *
-	 * @param coord The coordinate.
-	 * @param depth The depth.
-	 * @return The corresponding key.
-	 */
-	[[nodiscard]] constexpr key_t toKey(coord_t coord, depth_t depth = 0) const noexcept
-	{
-		// FIXME: Make it possible to make a cloud of coordinates
-		key_t val = std::floor(node_size_factor_[0] * coord);
-		return ((val + max_value_) >> depth) << depth;
-	}
-
-	/*!
-	 * @brief Convert a coordinate at a specific depth to a key with bounds check.
-	 *
-	 * @param coord The coordinate.
-	 * @param depth The depth.
-	 * @return The corresponding key.
-	 */
-	[[nodiscard]] constexpr std::optional<key_t> toKeyChecked(
-	    coord_t coord, depth_t depth = 0) const noexcept
-	{
-		auto min = -nodeSize(rootDepth() - 1);
-		auto max = -min;
-		return min <= coord && max >= coord ? std::optional<key_t>(toKey(coord, depth))
-		                                    : std::nullopt;
-	}
-
-	//
-	// To coordinate
-	//
-
-	/*!
-	 * @brief Convert a key to a coordinate at a specific depth.
-	 *
-	 * @param key The key.
-	 * @param depth The depth of the coordinate.
-	 * @return The corresponding coordinate.
-	 */
-	[[nodiscard]] constexpr coord_t toCoord(key_t key, depth_t depth = 0) const noexcept
-	{
-		constexpr auto sub64 = std::minus<int_fast64_t>{};
-		return depth_levels_ == depth
-		           ? 0
-		           : (std::floor(sub64(key, max_value_) / static_cast<coord_t>(1U << depth)) +
-		              coord_t(0.5)) *
-		                 nodeSize(depth);
-		//  FIXME: Look at
-		// return rootDepth() == depth
-		//            ? 0
-		//            : ((sub64(key, max_value_) >> depth) + coord_t(0.5)) * nodeSize(depth);
-	}
-
-	//
-	// Get node
-	//
-
-	[[nodiscard]] constexpr LeafNode const& leafNode(Node node) const
-	{
-		return *static_cast<LeafNode*>(node.data());
-	}
-
-	[[nodiscard]] constexpr LeafNode& leafNode(Node node)
-	{
-		return *static_cast<LeafNode*>(node.data());
-	}
-
-	[[nodiscard]] LeafNode const& leafNode(Code code) const
-	{
-		InnerNode const* node = &root();
-		depth_t depth = rootDepth();
-		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			--depth;
-			node = &innerNode(*node, code.index(depth));
-		}
-
-		return 0 == code.depth() && isParent(*node) ? leafNode(*node, code.index()) : *node;
-	}
-
-	[[nodiscard]] LeafNode& leafNode(Code code)
-	{
-		InnerNode* node = &root();
-		depth_t depth = rootDepth();
-		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			--depth;
-			node = &innerNode(*node, code.index(depth));
-		}
-
-		return 0 == code.depth() && isParent(*node) ? leafNode(*node, code.index()) : *node;
-	}
-
-	[[nodiscard]] constexpr InnerNode const& innerNode(Node node) const
-	{
-		return *static_cast<InnerNode*>(node.data());
-	}
-
-	[[nodiscard]] constexpr InnerNode& innerNode(Node& node)
-	{
-		return *static_cast<InnerNode*>(node.data());
-	}
-
-	[[nodiscard]] InnerNode const& innerNode(Code code) const
-	{
-		assert(0 != code.depth());
-
-		InnerNode const* node = &root();
-		depth_t depth = rootDepth();
-		depth_t min_depth = code.depth();
-		while (min_depth != depth && isParent(*node)) {
-			--depth;
-			node = &innerChild(*node, code.index(depth));
-		}
-
-		return *node;
-	}
-
-	[[nodiscard]] InnerNode& innerNode(Code code)
-	{
-		assert(0 != code.depth());
-
-		InnerNode* node = &root();
-		depth_t depth = rootDepth();
-		depth_t min_depth = code.depth();
-		while (min_depth != depth && isParent(*node)) {
-			--depth;
-			node = &innerChild(*node, code.index(depth));
-		}
-
-		return *node;
-	}
-
-	[[nodiscard]] std::pair<LeafNode const*, depth_t> nodeAndDepth(Code code) const
-	{
-		InnerNode const* node = &root();
-		depth_t depth = rootDepth();
-		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			--depth;
-			node = &innerChild(*node, code.index(depth));
-		}
-
-		return 0 == code.depth() && isParent(*node) ? {&leafChild(*node, code.index()), 0}
-		                                            : {node, depth};
-	}
-
-	[[nodiscard]] std::pair<LeafNode*, depth_t> nodeAndDepth(Code code)
-	{
-		InnerNode* node = &root();
-		depth_t depth = rootDepth();
-		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			--depth;
-			node = &innerChild(*node, code.index(depth));
-		}
-
-		return 0 == code.depth() && isParent(*node) ? {&leafChild(*node, code.index(0)), 0}
-		                                            : {node, depth};
-	}
-
-	//
-	// Create node
-	//
-
-	[[nodiscard]] LeafNode const& createLeafNode(Code code) const
-	{
-		// TODO: Implement
-	}
-
-	[[nodiscard]] LeafNode& createLeafNode(Code code)
-	{
-		// TODO: Implement
-	}
-
-	[[nodiscard]] InnerNode const& createInnerNode(Code code) const
-	{
-		// TODO: Implement
-	}
-
-	[[nodiscard]] InnerNode& createInnerNode(Code code)
-	{
-		// TODO: Implement
-	}
-
-	//
-	// Get children
-	//
-
-	[[nodiscard]] static constexpr LeafNodeBlock const& leafChildren(InnerNode const& node)
-	{
-		return *node.leaf_children;
-	}
-
-	[[nodiscard]] static constexpr LeafNodeBlock& leafChildren(InnerNode& node)
-	{
-		return *node.leaf_children;
-	}
-
-	[[nodiscard]] static constexpr InnerNodeBlock const& innerChildren(
-	    InnerNode const& node)
-	{
-		return *node.inner_children;
-	}
-
-	[[nodiscard]] static constexpr InnerNodeBlock& innerChildren(InnerNode& node)
-	{
-		return *node.inner_children;
-	}
-
-	[[nodiscard]] static constexpr LeafNode const& leafChild(InnerNode const& parent,
-	                                                         index_t child_index)
-	{
-		return leafChildren(parent)[child_index];
-	}
-
-	[[nodiscard]] static constexpr LeafNode& leafChild(InnerNode& parent,
-	                                                   index_t child_index)
-	{
-		return leafChildren(parent)[child_index];
-	}
-
-	[[nodiscard]] static constexpr InnerNode const& innerChild(InnerNode const& parent,
-	                                                           index_t child_index)
-	{
-		return innerChildren(parent)[child_index];
-	}
-
-	[[nodiscard]] static constexpr InnerNode& innerChild(InnerNode& parent,
-	                                                     index_t child_index)
-	{
-		return innerChildren(parent)[child_index];
-	}
-
-	[[nodiscard]] static constexpr LeafNode const& child(InnerNode const& parent,
-	                                                     index_t child_index,
-	                                                     depth_t parent_depth)
-	{
-		return 1 == parent_depth ? leafChild(parent, child_index)
-		                         : innerChild(parent, child_index);
-	}
-
-	[[nodiscard]] static constexpr LeafNode& child(InnerNode& parent, index_t child_index,
-	                                               depth_t parent_depth)
-	{
-		return 1 == parent_depth ? leafChild(parent, child_index)
-		                         : innerChild(parent, child_index);
-	}
-
 	/**************************************************************************************
 	|                                                                                     |
 	|                                    Constructors                                     |
@@ -3373,11 +3049,47 @@ class OctreeBase
 
 	/**************************************************************************************
 	|                                                                                     |
+	|                                       Octree                                        |
+	|                                                                                     |
+	**************************************************************************************/
+
+	void setNodeSizeAndDepthLevels(node_size_t const leaf_node_size,
+	                               depth_t const depth_levels)
+	{
+		if (minDepthLevels() > depth_levels || maxDepthLevels() < depth_levels) {
+			throw std::invalid_argument("depth_levels have to be in range [" +
+			                            std::to_string(+minDepthLevels()) + ".." +
+			                            std::to_string(+maxDepthLevels()) + "], '" +
+			                            std::to_string(+depth_levels) + "' was supplied.");
+		}
+
+		depth_levels_ = depth_levels;
+		max_value_ = std::pow(2, depth_levels - 1);
+
+		// For increased precision
+		node_size_[0] = leaf_node_size;
+		int const s = node_size_.size();
+		for (int i = 1; s != i; ++i) {
+			node_size_[i] = std::ldexp(leaf_node_size, i);
+		}
+
+		std::transform(std::cbegin(node_size_), std::cend(node_size_),
+		               std::begin(node_size_factor_), [](auto const n) { return 1.0 / n; });
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
 	|                                        Root                                         |
 	|                                                                                     |
 	**************************************************************************************/
 
 	// TODO: Add comments
+
+	void initRoot()
+	{
+		root()->setLeaf();
+		root()->resetModified();
+	}
 
 	[[nodiscard]] constexpr InnerNode const& root() const noexcept { return root_; }
 
@@ -3511,11 +3223,329 @@ class OctreeBase
 
 	/**************************************************************************************
 	|                                                                                     |
+	|                                     Conversion                                      |
+	|                                                                                     |
+	**************************************************************************************/
+
+	//
+	// Key
+	//
+
+	/*!
+	 * @brief Convert a coordinate at a specific depth to a key.
+	 *
+	 * @param coord The coordinate.
+	 * @param depth The depth.
+	 * @return The corresponding key.
+	 */
+	[[nodiscard]] constexpr key_t toKey(coord_t coord, depth_t depth = 0) const noexcept
+	{
+		// FIXME: Make it possible to make a cloud of coordinates
+		key_t val = std::floor(node_size_factor_[0] * coord);
+		return ((val + max_value_) >> depth) << depth;
+	}
+
+	/*!
+	 * @brief Convert a coordinate at a specific depth to a key with bounds check.
+	 *
+	 * @param coord The coordinate.
+	 * @param depth The depth.
+	 * @return The corresponding key.
+	 */
+	[[nodiscard]] constexpr std::optional<key_t> toKeyChecked(
+	    coord_t coord, depth_t depth = 0) const noexcept
+	{
+		auto min = -nodeSize(rootDepth() - 1);
+		auto max = -min;
+		return min <= coord && max >= coord ? std::optional<key_t>(toKey(coord, depth))
+		                                    : std::nullopt;
+	}
+
+	//
+	// Coordinate
+	//
+
+	/*!
+	 * @brief Convert a key to a coordinate at a specific depth.
+	 *
+	 * @param key The key.
+	 * @param depth The depth of the coordinate.
+	 * @return The corresponding coordinate.
+	 */
+	[[nodiscard]] constexpr coord_t toCoord(key_t key, depth_t depth = 0) const noexcept
+	{
+		constexpr auto sub64 = std::minus<int_fast64_t>{};
+		return depth_levels_ == depth
+		           ? 0
+		           : (std::floor(sub64(key, max_value_) / static_cast<coord_t>(1U << depth)) +
+		              coord_t(0.5)) *
+		                 nodeSize(depth);
+		//  FIXME: Look at
+		// return rootDepth() == depth
+		//            ? 0
+		//            : ((sub64(key, max_value_) >> depth) + coord_t(0.5)) * nodeSize(depth);
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
 	|                                    Access nodes                                     |
 	|                                                                                     |
 	**************************************************************************************/
 
-	// TODO: Implement
+	//
+	// Get node
+	//
+
+	[[nodiscard]] constexpr LeafNode const& leafNode(Node node) const
+	{
+		return *static_cast<LeafNode*>(node.data());
+	}
+
+	[[nodiscard]] constexpr LeafNode& leafNode(Node node)
+	{
+		return *static_cast<LeafNode*>(node.data());
+	}
+
+	[[nodiscard]] LeafNode const& leafNode(Code code) const
+	{
+		InnerNode const* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = std::max(code.depth(), depth_t(1));
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerNode(*node, code.index(depth));
+			--depth;
+		}
+
+		return 0 == code.depth() && isParent(*node) ? leafNode(*node, code.index()) : *node;
+	}
+
+	[[nodiscard]] LeafNode& leafNode(Code code)
+	{
+		InnerNode* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = std::max(code.depth(), depth_t(1));
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerNode(*node, code.index(depth));
+			--depth;
+		}
+
+		return 0 == code.depth() && isParent(*node) ? leafNode(*node, code.index()) : *node;
+	}
+
+	[[nodiscard]] constexpr InnerNode const& innerNode(Node node) const
+	{
+		return *static_cast<InnerNode*>(node.data());
+	}
+
+	[[nodiscard]] constexpr InnerNode& innerNode(Node& node)
+	{
+		return *static_cast<InnerNode*>(node.data());
+	}
+
+	[[nodiscard]] InnerNode const& innerNode(Code code) const
+	{
+		assert(0 != code.depth());
+
+		InnerNode const* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = code.depth();
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerChild(*node, code.index(depth));
+			--depth;
+		}
+
+		return *node;
+	}
+
+	[[nodiscard]] InnerNode& innerNode(Code code)
+	{
+		assert(0 != code.depth());
+
+		InnerNode* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = code.depth();
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerChild(*node, code.index(depth));
+			--depth;
+		}
+
+		return *node;
+	}
+
+	[[nodiscard]] std::pair<LeafNode const&, depth_t> leafNodeAndDepth(Code code) const
+	{
+		InnerNode const* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = std::max(code.depth(), depth_t(1));
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerChild(*node, code.index(depth));
+			--depth;
+		}
+
+		return 0 == code.depth() && isParent(*node) ? {leafChild(*node, code.index()), 0}
+		                                            : {*node, depth};
+	}
+
+	[[nodiscard]] std::pair<LeafNode&, depth_t> leafNodeAndDepth(Code code)
+	{
+		InnerNode* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = std::max(code.depth(), depth_t(1));
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerChild(*node, code.index(depth));
+			--depth;
+		}
+
+		return 0 == code.depth() && isParent(*node) ? {leafChild(*node, code.index(0)), 0}
+		                                            : {*node, depth};
+	}
+
+	[[nodiscard]] std::pair<InnerNode const&, depth_t> innerNodeAndDepth(Code code) const
+	{
+		InnerNode const* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = std::max(code.depth(), depth_t(1));
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerChild(*node, code.index(depth));
+			--depth;
+		}
+
+		return {*node, depth};
+	}
+
+	[[nodiscard]] std::pair<InnerNode&, depth_t> innerNodeAndDepth(Code code)
+	{
+		InnerNode* node = &root();
+		depth_t depth = rootDepth();
+		depth_t min_depth = std::max(code.depth(), depth_t(1));
+		while (min_depth != depth && isParent(*node)) {
+			node = &innerChild(*node, code.index(depth));
+			--depth;
+		}
+
+		return {*node, depth};
+	}
+
+	//
+	// Create node
+	//
+
+	[[nodiscard]] LeafNode& createLeafNode(Code code, bool set_modified = false)
+	{
+		InnerNode* node = &root();
+		if (set_modified) {
+			node->setModifiedIndex(rootIndex());
+		}
+		auto const min_depth = std::max(depth_t(1), code.depth());
+		for (depth_t depth = rootDepth(); min_depth < depth; --depth) {
+			auto const index = code.index(depth);
+			if (node->isLeafIndex(index)) {
+				createInnerChildren(*node, index, depth);
+			}
+			node = &innerChild(*node, index);
+			if (set_modified) {
+				node->setModifiedIndex(code.index(depth - 1));
+			}
+		}
+
+		if (0 == code.depth()) {
+			auto const index = code.index(1);
+			if (node->isLeafIndex(index)) {
+				createLeafChildren(*node, index);
+			}
+			LeafNode& n = leafChild(*node, index);
+			if (set_modified) {
+				n.setModifiedIndex(code.index(0));
+			}
+			return n;
+		} else {
+			return *node;
+		}
+	}
+
+	[[nodiscard]] InnerNode& createInnerNode(Code code, bool set_modified = false)
+	{
+		InnerNode* node = &root();
+		if (set_modified) {
+			node->setModifiedIndex(rootIndex());
+		}
+		auto const min_depth = std::max(depth_t(1), code.depth());
+		for (depth_t depth = rootDepth(); min_depth < depth; --depth) {
+			auto const index = code.index(depth);
+			if (node->isLeafIndex(index)) {
+				createInnerChildren(*node, index, depth);
+			}
+			node = &innerChild(*node, index);
+			if (set_modified) {
+				node->setModifiedIndex(code.index(depth - 1));
+			}
+		}
+		return *node;
+	}
+
+	//
+	// Get children
+	//
+
+	[[nodiscard]] static constexpr LeafNodeBlock const& leafChildren(InnerNode const& node)
+	{
+		return *node.leaf_children;
+	}
+
+	[[nodiscard]] static constexpr LeafNodeBlock& leafChildren(InnerNode& node)
+	{
+		return *node.leaf_children;
+	}
+
+	[[nodiscard]] static constexpr InnerNodeBlock const& innerChildren(
+	    InnerNode const& node)
+	{
+		return *node.inner_children;
+	}
+
+	[[nodiscard]] static constexpr InnerNodeBlock& innerChildren(InnerNode& node)
+	{
+		return *node.inner_children;
+	}
+
+	[[nodiscard]] static constexpr LeafNode const& leafChild(InnerNode const& parent,
+	                                                         index_t child_index)
+	{
+		return leafChildren(parent)[child_index];
+	}
+
+	[[nodiscard]] static constexpr LeafNode& leafChild(InnerNode& parent,
+	                                                   index_t child_index)
+	{
+		return leafChildren(parent)[child_index];
+	}
+
+	[[nodiscard]] static constexpr InnerNode const& innerChild(InnerNode const& parent,
+	                                                           index_t child_index)
+	{
+		return innerChildren(parent)[child_index];
+	}
+
+	[[nodiscard]] static constexpr InnerNode& innerChild(InnerNode& parent,
+	                                                     index_t child_index)
+	{
+		return innerChildren(parent)[child_index];
+	}
+
+	[[nodiscard]] static constexpr LeafNode const& child(InnerNode const& parent,
+	                                                     index_t child_index,
+	                                                     depth_t parent_depth)
+	{
+		return 1 == parent_depth ? leafChild(parent, child_index)
+		                         : innerChild(parent, child_index);
+	}
+
+	[[nodiscard]] static constexpr LeafNode& child(InnerNode& parent, index_t child_index,
+	                                               depth_t parent_depth)
+	{
+		return 1 == parent_depth ? leafChild(parent, child_index)
+		                         : innerChild(parent, child_index);
+	}
 
 	/**************************************************************************************
 	|                                                                                     |

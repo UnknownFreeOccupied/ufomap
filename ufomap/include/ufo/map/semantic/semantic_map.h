@@ -1092,8 +1092,8 @@ class SemanticMap
 
 		auto const num_nodes = nodes.size();
 
-		DataType const label_type = getDataType<SemanticLabelType>();
-		DataType const value_type = getDataType<SeamnticValueType>();
+		DataType const label_type = dataType<SemanticLabelType>();
+		DataType const value_type = dataType<SeamnticValueType>();
 
 		uint8_t const label_value = enumToValue(label_type);
 		uint8_t const value_value = enumToValue(value_type);

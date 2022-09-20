@@ -44,7 +44,6 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/code/code_unordered_map.h>
 #include <ufo/map/surfel/surfel_predicate.h>
 #include <ufo/util/enum.h>
 
@@ -750,7 +749,7 @@ class SurfelMap
 
 		uint8_t type;
 		in_stream.read(reinterpret_cast<char*>(&type), sizeof(type));
-		DataType dt = getDataType(type);
+		DataType dt = dataType(type);
 
 		auto const num_nodes = nodes.size();
 
@@ -782,7 +781,7 @@ class SurfelMap
 	{
 		// TODO: Implement
 
-		uint8_t type = util::enumToValue(getDataType<typename Surfel::scalar_t>());
+		uint8_t type = util::enumToValue(dataType<typename Surfel::scalar_t>());
 		out_stream.write(reinterpret_cast<char const*>(&type), sizeof(type));
 
 		auto const num_nodes = nodes.size();

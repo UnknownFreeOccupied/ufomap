@@ -54,17 +54,17 @@
 
 namespace ufo::map
 {
-bool isUFOMapFile(std::filesystem::path const& filename)
+bool isUFOMap(std::filesystem::path const& filename)
 {
 	std::ifstream file;
 	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 	file.imbue(std::locale());
 	file.open(filename, std::ios_base::in | std::ios_base::binary);
 
-	return isUFOMapFile(file);
+	return isUFOMap(file);
 }
 
-bool isUFOMapFile(std::istream& in_stream)
+bool isUFOMap(std::istream& in_stream)
 {
 	std::string line;
 	std::getline(in_stream, line);
@@ -83,8 +83,8 @@ FileHeader readHeader(std::filesystem::path const& filename)
 
 FileHeader readHeader(std::istream& in_stream)
 {
-	if (!isUFOMapFile(in_stream)) {
-		throw std::runtime_error("Trying to read non-UFOMap file");
+	if (!isUFOMap(in_stream)) {
+		throw std::runtime_error("Trying to read non-UFOMap");
 	}
 
 	FileHeader header;
@@ -92,7 +92,7 @@ FileHeader readHeader(std::istream& in_stream)
 	in_stream.read(reinterpret_cast<char*>(&header.minor), sizeof(header.minor));
 	in_stream.read(reinterpret_cast<char*>(&header.patch), sizeof(header.patch));
 
-	uint8_t compressed;
+	std::uint8_t compressed;
 	in_stream.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
 	header.compressed = compressed & 1U;
 
@@ -113,9 +113,9 @@ void writeHeader(std::ostream& out_stream, FileOptions const& options)
 	out_stream.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_PATCH),
 	                 sizeof(FileHeader::CURRENT_PATCH));
 
-	uint8_t const compressed = options.compressed ? uint8_t(1) : uint8_t(0);
+	std::uint8_t const compressed = options.compressed ? std::uint8_t(1) : std::uint8_t(0);
 	double const leaf_size = options.leaf_size;
-	uint8_t const depth_levels = options.depth_levels;
+	std::uint8_t const depth_levels = options.depth_levels;
 
 	out_stream.write(reinterpret_cast<char const*>(&compressed), sizeof(compressed));
 	out_stream.write(reinterpret_cast<char const*>(&leaf_size), sizeof(leaf_size));
@@ -123,23 +123,23 @@ void writeHeader(std::ostream& out_stream, FileOptions const& options)
 }
 
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
-                  uint_fast64_t uncompressed_data_size, int acceleration_level,
+                  std::uint_fast64_t uncompressed_data_size, int acceleration_level,
                   int compression_level)
 {
 	static constexpr uint_fast64_t max = std::numeric_limits<int32_t>::max();
 
-	uint_fast64_t begin = 0;
-	uint_fast64_t end = std::min(max, uncompressed_data_size);
+	std::uint_fast64_t begin = 0;
+	std::uint_fast64_t end = std::min(max, uncompressed_data_size);
 	int const max_dst_size = LZ4_compressBound(end);
 	auto data = std::make_unique<char[]>(end);
 	auto compressed_data = std::make_unique<char[]>(max_dst_size);
 	while (begin != end) {
-		int32_t num_data = end - begin;
+		std::int32_t num_data = end - begin;
 
 		// Compress data
 		in_stream.read(data.get(), num_data);
 
-		int32_t compressed_data_size =
+		std::int32_t compressed_data_size =
 		    (0 >= compression_level)
 		        ? LZ4_compress_fast(data.get(), compressed_data.get(), num_data, max_dst_size,
 		                            acceleration_level)
@@ -159,7 +159,7 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
 
 		// Move to next
 		begin = end;
-		uint_fast64_t const diff = uncompressed_data_size - end;
+		std::uint_fast64_t const diff = uncompressed_data_size - end;
 		end += std::min(max, diff);
 	}
 
@@ -167,13 +167,13 @@ bool compressData(std::istream& in_stream, std::ostream& out_stream,
 }
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint_fast64_t uncompressed_data_size)
+                    std::uint_fast64_t uncompressed_data_size)
 {
 	auto regen_buffer = std::make_unique<char[]>(uncompressed_data_size);
 	size_t cur = 0;
 	while (in_stream.good() && cur < uncompressed_data_size) {
 		// Get size of compressed data
-		int32_t compressed_data_size;
+		std::int32_t compressed_data_size;
 		in_stream.read(reinterpret_cast<char*>(&compressed_data_size),
 		               sizeof(compressed_data_size));
 
@@ -198,14 +198,14 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 }
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    uint_fast64_t uncompressed_data_size,
-                    uint_fast64_t& compressed_data_size)
+                    std::uint_fast64_t uncompressed_data_size,
+                    std::uint_fast64_t& compressed_data_size)
 {
 	auto regen_buffer = std::make_unique<char[]>(uncompressed_data_size);
 	size_t cur = 0;
 	while (in_stream.good() && cur < uncompressed_data_size) {
 		// Get size of compressed data
-		int32_t cur_compressed_data_size;
+		std::int32_t cur_compressed_data_size;
 		in_stream.read(reinterpret_cast<char*>(&cur_compressed_data_size),
 		               sizeof(cur_compressed_data_size));
 

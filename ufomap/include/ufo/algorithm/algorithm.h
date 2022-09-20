@@ -45,6 +45,7 @@
 // STL
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <numeric>
 #include <type_traits>
 #include <vector>
@@ -130,9 +131,9 @@ template <class InputIt>
 [[nodiscard]] typename std::iterator_traits<InputIt>::value_type min(InputIt first,
                                                                      InputIt last)
 {
-	using typename std::iterator_traits<InputIt>::value_type;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	auto m = std::numeric_limits<value_type>::max();
-	while (; first != last; ++first) {
+	for (; first != last; ++first) {
 		if (*first < m) {
 			m = *first;
 		}
@@ -141,12 +142,13 @@ template <class InputIt>
 }
 
 template <class InputIt, class UnaryFunction>
-[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+[[nodiscard]] std::invoke_result_t<UnaryFunction,
+                                   typename std::iterator_traits<InputIt>::value_type>
 min(InputIt first, InputIt last, UnaryFunction f)
 {
-	using typename std::iterator_traits<InputIt>::value_type;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	auto m = std::numeric_limits<value_type>::max();
-	while (; first != last; ++first) {
+	for (; first != last; ++first) {
 		auto const c = f(*first);
 		if (c < m) {
 			m = c;
@@ -175,9 +177,9 @@ template <class InputIt>
 [[nodiscard]] typename std::iterator_traits<InputIt>::value_type max(InputIt first,
                                                                      InputIt last)
 {
-	using typename std::iterator_traits<InputIt>::value_type;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	auto m = std::numeric_limits<value_type>::lowest();
-	while (; first != last; ++first) {
+	for (; first != last; ++first) {
 		if (*first > m) {
 			m = *first;
 		}
@@ -186,12 +188,13 @@ template <class InputIt>
 }
 
 template <class InputIt, class UnaryFunction>
-[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+[[nodiscard]] std::invoke_result_t<UnaryFunction,
+                                   typename std::iterator_traits<InputIt>::value_type>
 max(InputIt first, InputIt last, UnaryFunction f)
 {
-	using typename std::iterator_traits<InputIt>::value_type;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	auto m = std::numeric_limits<value_type>::lowest();
-	while (; first != last; ++first) {
+	for (; first != last; ++first) {
 		auto const c = f(*first);
 		if (c > m) {
 			m = c;
@@ -224,11 +227,13 @@ template <class InputIt>
 }
 
 template <class InputIt, class UnaryFunction>
-[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+[[nodiscard]] std::invoke_result_t<UnaryFunction,
+                                   typename std::iterator_traits<InputIt>::value_type>
 sum(InputIt first, InputIt last, UnaryFunction f)
 {
 	using value_type =
-	    std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>;
+	    std::invoke_result_t<UnaryFunction,
+	                         typename std::iterator_traits<InputIt>::value_type>;
 	value_type s{};
 	for (; first != last; ++first) {
 		s += f(*first);
@@ -266,7 +271,8 @@ template <class InputIt>
 }
 
 template <class InputIt, class UnaryFunction>
-[[nodiscard]] std::invoke_result_t<F, typename std::iterator_traits<InputIt>::value_type>
+[[nodiscard]] std::invoke_result_t<UnaryFunction,
+                                   typename std::iterator_traits<InputIt>::value_type>
 mean(InputIt first, InputIt last, UnaryFunction f)
 {
 	// TODO: Improve

@@ -46,8 +46,8 @@
 #include <ufo/geometry/bounding_volume.h>
 #include <ufo/geometry/minimum_distance.h>
 #include <ufo/geometry/point.h>
-#include <ufo/map/code/code.h>
-#include <ufo/map/octree/node.h>
+#include <ufo/map/code.h>
+#include <ufo/map/node.h>
 #include <ufo/map/octree/octree_predicate.h>
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/types.h>

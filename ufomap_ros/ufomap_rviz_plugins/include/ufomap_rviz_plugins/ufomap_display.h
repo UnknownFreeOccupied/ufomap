@@ -44,7 +44,7 @@
 
 // UFO
 #include <ufo/geometry/frustum.h>
-#include <ufo/map/code/code.h>
+#include <ufo/map/code.h>
 #include <ufo/map/ufomap.h>
 #include <ufomap_msgs/UFOMapStamped.h>
 #include <ufomap_rviz_plugins/data.h>

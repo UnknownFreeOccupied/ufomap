@@ -250,7 +250,7 @@ class Code
 	};
 
  private:
-	static code_t splitBy3(Key::key_t a)
+	static code_t splitBy3(key_t a)
 	{
 #if defined(__BMI2__)
 		return _pdep_u64(static_cast<code_t>(a), 0x9249249249249249);
@@ -265,10 +265,10 @@ class Code
 #endif
 	}
 
-	static Key::key_t get3Bits(code_t code)
+	static key_t get3Bits(code_t code)
 	{
 #if defined(__BMI2__)
-		return static_cast<Key::key_t>(_pext_u64(code, 0x9249249249249249));
+		return static_cast<key_t>(_pext_u64(code, 0x9249249249249249));
 #else
 		code_t a = code & 0x1249249249249249;
 		a = (a ^ (a >> 2)) & 0x10c30c30c30c30c3;
@@ -276,7 +276,7 @@ class Code
 		a = (a ^ (a >> 8)) & 0x1f0000ff0000ff;
 		a = (a ^ (a >> 16)) & 0x1f00000000ffff;
 		a = (a ^ a >> 32) & 0x1fffff;
-		return static_cast<Key::key_t>(a);
+		return static_cast<key_t>(a);
 #endif
 	}
 

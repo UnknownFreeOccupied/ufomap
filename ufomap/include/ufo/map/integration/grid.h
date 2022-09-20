@@ -43,7 +43,7 @@
 #define UFO_MAP_INTEGRATOR_GRID_H
 
 // UFO
-#include <ufo/map/code/code.h>
+#include <ufo/map/code.h>
 #include <ufo/math/util.h>
 
 // STL
@@ -58,8 +58,8 @@ class Grid
  private:
 	static constexpr std::size_t NumIndices = math::ipow(8, Depth);
 
-	static constexpr Code::code_t Mask =
-	    ~((std::numeric_limits<Code::code_t>::max() >> 3 * Depth) << 3 * Depth);
+	static constexpr code_t Mask =
+	    ~((std::numeric_limits<code_t>::max() >> 3 * Depth) << 3 * Depth);
 
 	using DataType = std::array<uint64_t, NumIndices / 64>;
 	using iterator = typename DataType::iterator;
@@ -144,7 +144,7 @@ class Grid
 		return Code(index << 3 * depth, depth);
 	}
 
-	static constexpr Code code(Code::code_t prefix, std::size_t const index,
+	static constexpr Code code(code_t prefix, std::size_t const index,
 	                           depth_t const depth)
 	{
 		return Code(prefix | (index << 3 * depth), depth);

@@ -45,7 +45,7 @@
 // UFO
 #include <ufo/geometry/aaebb.h>
 #include <ufo/geometry/point.h>
-#include <ufo/map/code/code.h>
+#include <ufo/map/code.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -119,9 +119,9 @@ struct Node {
 	constexpr depth_t depth() const noexcept { return code_.depth(); }
 
 	struct Hash {
-		static constexpr Code::code_t hash(Node node) { return node.code().code(); }
+		static constexpr code_t hash(Node node) { return node.code().code(); }
 
-		constexpr Code::code_t operator()(Node node) const { return hash(node); }
+		constexpr code_t operator()(Node node) const { return hash(node); }
 
 		static constexpr bool equal(Node lhs, Node rhs) { return lhs == rhs; }
 	};
@@ -155,7 +155,7 @@ struct Node {
 	// The code for the node
 	Code code_;
 
-	template <class Derived, class DataType, bool ReuseNodes, bool LockLess,
+	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>
 	friend class OctreeBase;
 };
@@ -248,7 +248,7 @@ struct BV {
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
 
-	template <class Derived, class DataType, bool ReuseNodes, bool LockLess,
+	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>
 	friend class OctreeBase;
 };
@@ -284,7 +284,8 @@ struct NodeBV : public Node, public BV {
 	{
 	}
 
-	template <class Derived, class DataType, bool ReuseNodes, bool LockLess>
+	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
+	          bool CountNodes>
 	friend class OctreeBase;
 };
 
@@ -312,47 +313,47 @@ struct NodeP : public Node {
 	// Pointer to the parent
 	void* data_parent_ = nullptr;
 
-	template <class Derived, class DataType, bool ReuseNodes, bool LockLess,
+	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>
 	friend class OctreeBase;
 };
 
-struct NodePs : public Node {
- public:
-	using parents_t = std::vector<void*>;
+// struct NodePs : public Node {
+//  public:
+// 	using parents_t = std::vector<void*>;
 
-	constexpr NodePs() = default;
+// 	constexpr NodePs() = default;
 
- protected:
-	constexpr NodePs(void* data, Code code, parents_t const& parents) noexcept
-	    : Node(data, code), data_parents_(parents)
-	{
-	}
+//  protected:
+// 	constexpr NodePs(void* data, Code code, parents_t const& parents) noexcept
+// 	    : Node(data, code), data_parents_(parents)
+// 	{
+// 	}
 
-	constexpr NodePs(Node node, parents_t const& parents) noexcept
-	    : Node(node), data_parents_(parents)
-	{
-	}
+// 	constexpr NodePs(Node node, parents_t const& parents) noexcept
+// 	    : Node(node), data_parents_(parents)
+// 	{
+// 	}
 
-	constexpr NodePs(Node&& node, parents_t parents) noexcept
-	    : Node(std::forward<Node>(node)), data_parents_(parents)
-	{
-	}
+// 	constexpr NodePs(Node&& node, parents_t parents) noexcept
+// 	    : Node(std::forward<Node>(node)), data_parents_(parents)
+// 	{
+// 	}
 
-	constexpr NodePs() {}
+// 	constexpr NodePs() {}
 
-	constexpr void* parentsData() noexcept { return data_parents_; }
+// 	constexpr void* parentsData() noexcept { return data_parents_; }
 
-	constexpr void const* parentsData() const noexcept { return data_parents_; }
+// 	constexpr void const* parentsData() const noexcept { return data_parents_; }
 
- protected:
-	// Pointers to the parents
-	parents_t data_parents_;  // TODO: What should this be?
+//  protected:
+// 	// Pointers to the parents
+// 	parents_t data_parents_;  // TODO: What should this be?
 
-	template <class Derived, class DataType, bool ReuseNodes, bool LockLess,
-	          bool CountNodes>
-	friend class OctreeBase;
-};
+// 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
+// 	          bool CountNodes>
+// 	friend class OctreeBase;
+// };
 
 struct NodePBV : public Node, public BV {
  public:
@@ -378,46 +379,46 @@ struct NodePBV : public Node, public BV {
 	// Pointer to the parent
 	void* data_parent_ = nullptr;
 
-	template <class Derived, class DataType, bool ReuseNodes, bool LockLess,
+	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>
 	friend class OctreeBase;
 };
 
-struct NodePsBV : public Node, public BV {
- public:
-	using parents_t = std::vector<void*>;
+// struct NodePsBV : public Node, public BV {
+//  public:
+// 	using parents_t = std::vector<void*>;
 
-	constexpr NodePsBV() = default;
+// 	constexpr NodePsBV() = default;
 
- protected:
-	constexpr NodePsBV(void* data, Code code, geometry::AAEBB aaebb,
-	                   parents_t const& parents) noexcept
-	    : Node(data, code), BV(aaebb), data_parents_(parents)
-	{
-	}
+//  protected:
+// 	constexpr NodePsBV(void* data, Code code, geometry::AAEBB aaebb,
+// 	                   parents_t const& parents) noexcept
+// 	    : Node(data, code), BV(aaebb), data_parents_(parents)
+// 	{
+// 	}
 
-	constexpr NodePsBV(Node node, geometry::AAEBB aaebb, parents_t const& parents) noexcept
-	    : Node(node), BV(aaebb), data_parents_(parents)
-	{
-	}
+// 	constexpr NodePsBV(Node node, geometry::AAEBB aaebb, parents_t const& parents) noexcept
+// 	    : Node(node), BV(aaebb), data_parents_(parents)
+// 	{
+// 	}
 
-	constexpr NodePsBV(Node&& node, geometry::AAEBB aaebb, parents_t parents) noexcept
-	    : Node(std::forward<Node>(node)), BV(aaebb), data_parents_(parents)
-	{
-	}
+// 	constexpr NodePsBV(Node&& node, geometry::AAEBB aaebb, parents_t parents) noexcept
+// 	    : Node(std::forward<Node>(node)), BV(aaebb), data_parents_(parents)
+// 	{
+// 	}
 
-	constexpr void* parentsData() noexcept { return data_parents_; }
+// 	constexpr void* parentsData() noexcept { return data_parents_; }
 
-	constexpr void const* parentsData() const noexcept { return data_parents_; }
+// 	constexpr void const* parentsData() const noexcept { return data_parents_; }
 
- protected:
-	// Pointers to the parents
-	parents_t data_parents_;  // TODO: What should this be?
+//  protected:
+// 	// Pointers to the parents
+// 	parents_t data_parents_;  // TODO: What should this be?
 
-	template <class Derived, class DataType, bool ReuseNodes, bool LockLess,
-	          bool CountNodes>
-	friend class OctreeBase;
-};
+// 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
+// 	          bool CountNodes>
+// 	friend class OctreeBase;
+// };
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCTREE_NODE_H

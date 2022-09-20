@@ -145,7 +145,7 @@ struct ColorNode {
 
 	void clearColorIndex(index_t const index)
 	{
-		if constexpr (Single) {
+		if constexpr (1 == N) {
 			clearColor();
 		} else {
 			red[index] = 0;

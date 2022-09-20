@@ -48,7 +48,7 @@
 namespace ufo::map
 {
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
-enum class PropagationCriteria { MIN, MAX, MEAN, SUM };
+enum class PropagationCriteria { MIN, MAX, MEAN };
 
 using coord_t = float;
 using node_size_t = double;

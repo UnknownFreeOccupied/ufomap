@@ -229,9 +229,6 @@ class DistanceMap
 				case PropagationCriteria::MEAN:
 					node.distance[0] = mean(children, fun);
 					break;
-				case PropagationCriteria::SUM:
-					node.distance[0] = sum(children, fun);
-					break;
 			}
 		} else {
 			for (index_t index = 0; children.size() != index; ++index) {
@@ -245,9 +242,6 @@ class DistanceMap
 							break;
 						case PropagationCriteria::MEAN:
 							node.distance[index] = mean(children[index].distance);
-							break;
-						case PropagationCriteria::SUM:
-							node.distance[index] = sum(children[index].distance);
 							break;
 					}
 				}
@@ -306,9 +300,6 @@ class DistanceMap
 							break;
 						case PropagationCriteria::MEAN:
 							first->node.distance[0] = mean(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::SUM:
-							first->node.distance[0] = sum(d + i, d + i + 8);
 							break;
 					}
 				}

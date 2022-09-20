@@ -45,6 +45,10 @@
 // UFO
 #include <ufo/map/color/color_node.h>
 #include <ufo/map/color/color_predicate.h>
+#include <ufo/map/io.h>
+#include <ufo/map/node.h>
+#include <ufo/map/point.h>
+#include <ufo/map/types.h>
 
 // STL
 #include <iostream>
@@ -66,7 +70,8 @@ class ColorMap
 
 	[[nodiscard]] constexpr Color color(Code code) const
 	{
-		return derived().leafNode(code).colorIndex(code.index());
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		return n.colorIndex(code.index(d));
 	}
 
 	[[nodiscard]] constexpr Color color(Key key) const
@@ -84,6 +89,8 @@ class ColorMap
 	{
 		return color(derived().toCode(x, y, z, depth));
 	}
+
+	// TODO: Add has color?
 
 	//
 	// Set color
@@ -292,8 +299,8 @@ class ColorMap
 	template <class InputIt>
 	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
-		using typename std::iterator_traits<InputIt>::value_type;
-		using typename value_type::node_type;
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
 		return node_type::colorSize();
 	}
 

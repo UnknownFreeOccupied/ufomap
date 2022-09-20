@@ -67,7 +67,8 @@ class ReflectionMap
 
 	[[nodiscard]] count_t hits(Code code) const
 	{
-		return derived().leafNode(code).hitsIndex(code.index());
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		return n.hitsIndex(code.index(d));
 	}
 
 	[[nodiscard]] count_t hits(Key key) const { return hits(Derived::toCode(key)); }
@@ -192,30 +193,31 @@ class ReflectionMap
 	// Get misses
 	//
 
-	[[nodiscard]] constexpr count_t hits(Node node) const
+	[[nodiscard]] constexpr count_t misses(Node node) const
 	{
-		return derived().leafNode(node).hitsIndex(node.index());
+		return derived().leafNode(node).missesIndex(node.index());
 	}
 
-	[[nodiscard]] count_t hits(Code code) const
+	[[nodiscard]] count_t misses(Code code) const
 	{
-		return derived().leafNode(code).hitsIndex(code.index());
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		return n.missesIndex(code.index(d));
 	}
 
-	[[nodiscard]] count_t hits(Key key) const { return hits(Derived::toCode(key)); }
+	[[nodiscard]] count_t misses(Key key) const { return misses(Derived::toCode(key)); }
 
-	[[nodiscard]] count_t hits(Point coord, depth_t depth = 0) const
+	[[nodiscard]] count_t misses(Point coord, depth_t depth = 0) const
 	{
-		return hits(derived().toCode(coord, depth));
+		return misses(derived().toCode(coord, depth));
 	}
 
-	[[nodiscard]] count_t hits(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	[[nodiscard]] count_t misses(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
-		return hits(derived().toCode(x, y, z, depth));
+		return misses(derived().toCode(x, y, z, depth));
 	}
 
 	//
-	// Set hits
+	// Set misses
 	//
 
 	void setMisses(Node node, count_t misses, bool propagate = true)
@@ -336,9 +338,9 @@ class ReflectionMap
 
 	[[nodiscard]] double reflectiveness(Code code) const
 	{
-		auto const& n = derived().leafNode(code);
-		double const hits = n.hitsIndex(code.index());
-		double const misses = n.missesIndex(code.index());
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		double const hits = n.hitsIndex(code.index(d));
+		double const misses = n.missesIndex(code.index(d));
 		return hits / (hits + misses);
 	}
 
@@ -462,10 +464,6 @@ class ReflectionMap
 					node.hits[0] = mean(children, hits_fun);
 					node.misses[0] = mean(children, misses_fun);
 					break;
-				case PropagationCriteria::SUM:
-					node.hits[0] = sum(children, hits_fun);
-					node.misses[0] = sum(children, misses_fun);
-					break;
 			}
 		} else {
 			for (index_t index = 0; children.size() != index; ++index) {
@@ -482,10 +480,6 @@ class ReflectionMap
 						case PropagationCriteria::MEAN:
 							node.hits[index] = mean(children[index].hits);
 							node.misses[index] = mean(children[index].misses);
-							break;
-						case PropagationCriteria::SUM:
-							node.hits[index] = sum(children[index].hits);
-							node.misses[index] = sum(children[index].misses);
 							break;
 					}
 				}
@@ -550,10 +544,6 @@ class ReflectionMap
 							first->node.hits[0] = mean(d + i, d + i + 8);
 							first->node.misses[0] = mean(d + i + 8, d + i + 16);
 							break;
-						case PropagationCriteria::SUM:
-							first->node.hits[0] = sum(d + i, d + i + 8);
-							first->node.misses[0] = sum(d + i + 8, d + i + 16);
-							break;
 					}
 				}
 			}
@@ -612,7 +602,7 @@ class ReflectionMap
 
  protected:
 	// Propagation criteria
-	PropagationCriteria prop_criteria_ = PropagationCriteria::SUM;
+	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
 };
 }  // namespace ufo::map
 

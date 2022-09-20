@@ -43,8 +43,8 @@
 #define UFO_MAP_PREDICATE_OCTREE_H
 
 // UFO
-#include <ufo/map/code/code.h>
-#include <ufo/map/octree/node.h>
+#include <ufo/map/code.h>
+#include <ufo/map/node.h>
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/types.h>
 

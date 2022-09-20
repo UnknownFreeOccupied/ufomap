@@ -45,10 +45,9 @@
 // UFO
 #include <ufo/geometry/aabb.h>
 #include <ufo/map/io.h>
-#include <ufo/map/occupancy/occupancy_indicators.h>
+#include <ufo/map/node.h>
 #include <ufo/map/occupancy/occupancy_node.h>
 #include <ufo/map/occupancy/occupancy_predicate.h>
-#include <ufo/map/octree/node.h>
 #include <ufo/map/point.h>
 #include <ufo/map/predicate/satisfies.h>
 #include <ufo/map/types.h>
@@ -444,7 +443,7 @@ class OccupancyMap
 			return isUnknown(code);
 		}
 		auto [n, d] = derived().innerNodeAndDepth(code);
-		return n->containsUnknownIndex(code.index(d));
+		return n.containsUnknownIndex(code.index(d));
 	}
 
 	[[nodiscard]] bool containsUnknown(Key key) const
@@ -587,7 +586,7 @@ class OccupancyMap
 	// Set occupancy
 	//
 
-	void setOccupancy(Node& node, occupancy_t occupancy, bool propagate = true)
+	void setOccupancy(Node node, occupancy_t occupancy, bool propagate = true)
 	{
 		logit_t logit = toOccupancyLogit(occupancy);
 		setOccupancyLogit(node, logit, propagate);
@@ -661,7 +660,7 @@ class OccupancyMap
 	// Increase occupancy logit
 	//
 
-	void increaseOccupancyLogit(Node& node, logit_t inc, bool propagate = true)
+	void increaseOccupancyLogit(Node node, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
 		    node,
@@ -702,7 +701,7 @@ class OccupancyMap
 	// Decrease occupancy logit
 	//
 
-	void decreaseOccupancyLogit(Node& node, logit_t dec, bool propagate = true)
+	void decreaseOccupancyLogit(Node node, logit_t dec, bool propagate = true)
 	{
 		derived().apply(
 		    node,
@@ -743,7 +742,7 @@ class OccupancyMap
 	// Increase occupancy
 	//
 
-	void increaseOccupancy(Node& node, occupancy_t inc, bool propagate = true)
+	void increaseOccupancy(Node node, occupancy_t inc, bool propagate = true)
 	{
 		increaseOccupancyLogit(node, toOccupancyChangeLogit(inc), propagate);
 	}
@@ -774,7 +773,7 @@ class OccupancyMap
 	// Decrease occupancy
 	//
 
-	void decreaseOccupancy(Node& node, occupancy_t dec, bool propagate = true)
+	void decreaseOccupancy(Node node, occupancy_t dec, bool propagate = true)
 	{
 		decreaseOccupancyLogit(node, toOccupancyChangeLogit(dec), propagate);
 	}
@@ -856,90 +855,140 @@ class OccupancyMap
 
 	void initRoot()
 	{
-		derived().root().setOccupancyIndex(derived().rootIndex(), toOccupancyLogit(0.5));
-		derived().root().setContainsUnknownIndex(derived().rootIndex(), isUnknown(...));
-		derived().root().setContainsFreeIndex(derived().rootIndex(), isFree(...));
-		derived().root().setContainsOccupiedIndex(derived().rootIndex(), isOccupied(...));
+		auto const occ = toOccupancyLogit(0.5);
+		derived().root().setOccupancyIndex(derived().rootIndex(), occ);
+		derived().root().setContainsUnknownIndex(derived().rootIndex(), isUnknown(occ));
+		derived().root().setContainsFreeIndex(derived().rootIndex(), isFree(occ));
+		derived().root().setContainsOccupiedIndex(derived().rootIndex(), isOccupied(occ));
 	}
 
 	//
 	// Update node
 	//
 
-	template <class T>
-	void updateNode(OccupancyNode& node, T const& children)
+	template <std::size_t N, class T>
+	void updateNode(OccupancyNode<N>& node, index_field_t const indices, T const& children)
 	{
-		switch (prop_criteria_) {
-			case PropagationCriteria::MIN:
-				setOccupancyLogit(node, minChildOccupancyLogit(children));
-				break;
-			case PropagationCriteria::MAX:
-				setOccupancyLogit(node, maxChildOccupancyLogit(children));
-				break;
-			case PropagationCriteria::MEAN:
-				setOccupancyLogit(node, averageChildOccupancyLogit(children));
-				break;
-		}
+		if constexpr (1 == N) {
+			auto fun = [](OccupancyNode<1> const node) { return node.occupancy[0]; };
+			switch (prop_criteria_) {
+				case PropagationCriteria::MIN:
+					node.occupancy[0] = min(children, fun);
+					break;
+				case PropagationCriteria::MAX:
+					node.occupancy[0] = max(children, fun);
+					break;
+				case PropagationCriteria::MEAN:
+					node.occupancy[0] = mean(children, fun);
+					break;
+			}
 
-		node.contains_unknown =
-		    any_of(children, [this](auto const& child) { return containsUnknown(child); });
-		node.contains_free =
-		    any_of(children, [this](auto const& child) { return containsFree(child); });
-		node.contains_occupied =
-		    any_of(children, [this](auto const& child) { return containsOccupied(child); });
+			node.contains_unknown =
+			    any_of(children, [this](auto const& child) { return containsUnknown(child); });
+			node.contains_free =
+			    any_of(children, [this](auto const& child) { return containsFree(child); });
+			node.contains_occupied =
+			    any_of(children, [this](auto const& child) { return containsOccupied(child); });
+		} else {
+			for (index_t index = 0; children.size() != index; ++index) {
+				if (index_field_t(0) == (indices >> index) & index_field_t(1)) {
+					continue;
+				}
+
+				switch (prop_criteria_) {
+					case PropagationCriteria::MIN:
+						node.occupancy[index] = min(children[index].occupancy);
+						break;
+					case PropagationCriteria::MAX:
+						node.occupancy[index] = max(children[index].occupancy);
+						break;
+					case PropagationCriteria::MEAN:
+						node.occupancy[index] = mean(children[index].occupancy);
+						break;
+				}
+
+				if (containsUnknown(children[index])) {
+					node.setContainsUnknownIndex(index);
+				} else {
+					node.resetContainsUnknownIndex(index);
+				}
+				if (containsFree(children[index])) {
+					node.setContainsFreeIndex(index);
+				} else {
+					node.resetContainsFreeIndex(index);
+				}
+				if (containsOccupied(children[index])) {
+					node.setContainsOccupiedIndex(index);
+				} else {
+					node.resetContainsOccupiedIndex(index);
+				}
+			}
+		}
 	}
 
 	//
-	// Min child occupancy logit
+	// Is
 	//
 
-	template <class T>
-	constexpr logit_t minChildOccupancyLogit(T const& children) const
+	[[nodiscard]] constexpr bool isUnknown(logit_t const logit) const noexcept
 	{
-		logit_t min = std::numeric_limits<logit_t>::max();
-		for (auto const& child : children) {
-			min = std::min(min, occupancyLogit(child));
-		}
-		return min;
+		return freeThresLogit() <= logit && occupiedThresLogit() >= logit;
+	}
+
+	[[nodiscard]] constexpr bool isFree(logit_t const logit) const noexcept
+	{
+		return freeThresLogit() > logit;
+	}
+
+	[[nodiscard]] constexpr bool isOccupied(logit_t const logit) const noexcept
+	{
+		return occupiedThresLogit() < logit;
 	}
 
 	//
-	// Max child occupancy logit
+	// Contains
 	//
 
 	template <class T>
-	constexpr logit_t maxChildOccupancyLogit(T const& children) const
+	[[nodiscard]] bool containsUnknown(T const& node)
 	{
-		logit_t max = std::numeric_limits<logit_t>::lowest();
-		for (auto const& child : children) {
-			max = std::max(max, occupancyLogit(child));
+		if constexpr (std::is_base_of_v<ContainsOccupancy<node.occupancySize()>, T>) {
+			return node.containsUnknown();
+		} else {
+			return any_of(node.occupancy, [this](auto const occ) { isUnknown(occ); });
 		}
-		return max;
 	}
 
-	//
-	// Average child occupancy logit
-	//
+	template <class T>
+	[[nodiscard]] bool containsFree(T const& node)
+	{
+		if constexpr (std::is_base_of_v<ContainsOccupancy<node.occupancySize()>, T>) {
+			return node.containsFree();
+		} else {
+			return any_of(node.occupancy, [this](auto const occ) { isFree(occ); });
+		}
+	}
 
 	template <class T>
-	constexpr logit_t averageChildOccupancyLogit(T const& children) const
+	[[nodiscard]] bool containsOccupied(T const& node)
 	{
-		double sum = std::accumulate(
-		    std::cbegin(children), std::cend(children), 0.0,
-		    [](auto cur, auto const& child) { return cur + occupancyLogit(child); });
-		return sum / children.size();
+		if constexpr (std::is_base_of_v<ContainsOccupancy<node.occupancySize()>, T>) {
+			return node.containsOccupied();
+		} else {
+			return any_of(node.occupancy, [this](auto const occ) { isOccupied(occ); });
+		}
 	}
 
 	//
 	// Input/output (read/write)
 	//
 
-	static constexpr DataIdentifier dataIdentifier() noexcept
+	[[nodiscard]] static constexpr DataIdentifier dataIdentifier() noexcept
 	{
 		return DataIdentifier::OCCUPANCY;
 	}
 
-	static constexpr bool canReadData(DataIdentifier identifier) noexcept
+	[[nodiscard]] static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
 		return dataIdentifier() == identifier;
 	}
@@ -972,7 +1021,7 @@ class OccupancyMap
 							first->node.occupancy[0] = max(d + i, d + i + 8);
 							break;
 						case PropagationCriteria::MEAN:
-							first->node.occupancy[0] = average(d + i, d + i + 8);
+							first->node.occupancy[0] = mean(d + i, d + i + 8);
 							break;
 					}
 				}
