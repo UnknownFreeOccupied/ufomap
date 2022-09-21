@@ -64,286 +64,37 @@
 
 namespace ufo::map
 {
-/*!
- * Associative ordered container using a data-coherent implementation.
- * LabelValuePairs of the container are stored using a single unsigned type
- * where the most significant bits represent the key and the least significant the value.
- * The number of bits allocated for the key and value is custom for each
- * container instance, e.g., if DataType = uint16_t and ValueWidth = 1
- * the key will be 15 bits and the value 1 bit.
- */
-template <std::size_t NumLabelBits, std::size_t NumValueBits>
+template <std::size_t N = 1>
 class Semantics
 {
- private:
-	static_assert(0 != NumLabelBits && 64 >= NumLabelBits && 0 != NumValueBits &&
-	                  64 >= NumValueBits,
-	              "'NumLabelBits' and 'NumValueBits' have to be in the range [1..64]");
-
-	static constexpr std::size_t TotalBits = NumLabelBits + NumValueBits;
-
-	using data_type = std::conditional_t<
-	    8 >= TotalBits, uint8_t,
-	    std::conditional_t<
-	        16 >= TotalBits,
-	        std::conditional_t<8 < NumLabelBits || 8 < NumValueBits, uint16_t,
-	                           std::pair<uint8_t, uint8_t>>,
-	        std::conditional_t<
-	            24 >= TotalBits,
-	            std::conditional_t<
-	                8 >= NumLabelBits && 16 >= NumValueBits, std::pair<uint8_t, uint16_t>,
-	                std::conditional_t<
-	                    16 >= NumLabelBits && 8 >= NumValueBits,
-	                    std::pair<uint16_t, uint8_t>,
-	                    std::conditional_t<16 >= NumLabelBits && 16 >= NumValueBits,
-	                                       std::pair<uint16_t, uint16_t>, uint32_t>>>,
-	            std::conditional_t<
-	                32 >= TotalBits,
-	                std::conditional_t<16 >= NumLabelBits && 16 >= NumValueBits,
-	                                   std::pair<uint16_t, uint16_t>, uint32_t>,
-	                std::conditional_t<
-	                    40 >= TotalBits,
-	                    std::conditional_t<
-	                        8 >= NumLabelBits && 32 >= NumValueBits,
-	                        std::pair<uint8_t, uint32_t>,
-	                        std::conditional_t<32 >= NumLabelBits && 8 >= NumValueBits,
-	                                           std::pair<uint32_t, uint8_t>, uint64_t>>,
-	                    std::conditional_t<
-	                        48 >= TotalBits,
-	                        std::conditional_t<
-	                            16 >= NumLabelBits && 32 >= NumValueBits,
-	                            std::pair<uint16_t, uint32_t>,
-	                            std::conditional_t<32 >= NumLabelBits && 16 >= NumValueBits,
-	                                               std::pair<uint32_t, uint16_t>,
-	                                               uint64_t>>,
-	                        std::conditional_t<
-	                            64 >= TotalBits,
-	                            std::conditional_t<32 >= NumLabelBits && 32 >= NumValueBits,
-	                                               std::pair<uint32_t, uint32_t>, uint64_t>,
-	                            //  Everything below is above 64 bits
-	                            std::conditional_t<
-	                                8 >= NumLabelBits, std::pair<uint8_t, uint64_t>,
-	                                std::conditional_t<
-	                                    8 >= NumValueBits, std::pair<uint64_t, uint8_t>,
-	                                    std::conditional_t<
-	                                        16 >= NumLabelBits,
-	                                        std::pair<uint16_t, uint64_t>,
-	                                        std::conditional_t<
-	                                            16 >= NumValueBits,
-	                                            std::pair<uint64_t, uint16_t>,
-	                                            std::conditional_t<
-	                                                32 >= NumLabelBits,
-	                                                std::pair<uint32_t, uint64_t>,
-	                                                std::conditional_t<
-	                                                    32 >= NumValueBits,
-	                                                    std::pair<uint64_t, uint32_t>,
-	                                                    std::pair<uint64_t,
-	                                                              uint64_t>>>>>>>>>>>>>>;
-
-	static constexpr bool IsPair = util::is_pair_v<data_type>;
+	static constexpr N_H =
+	    1 + (N - 1) / 2;  // -1 half rounded up (i.e., the number of elements needed to
+	                      // store the size of the N semantic containers)
 
  public:
-	//  Tags
-	using label_type =
-	    std::conditional_t<IsPair, typename data_type::first_type, data_type>;
-	using value_type =
-	    std::conditional_t<IsPair, typename data_type::second_type, data_type>;
-
- private:
-	static constexpr label_type LabelMask = []() {
-		if constexpr (IsPair) {
-			return ~label_type(0);
-		} else {
-			return ~label_type(0) << NumValueBits;
-		};
-	}();
-	static constexpr value_type ValueMask = []() {
-		if constexpr (IsPair) {
-			return ~value_type(0);
-		} else {
-			return ~LabelMask;
-		}
-	}();
-
-	static constexpr label_type LabelMax = []() {
-		if constexpr (IsPair) {
-			return LabelMask;
-		} else {
-			return LabelMask >> NumValueBits;
-		}
-	}();
-	static constexpr value_type ValueMax = ValueMask;
-
- public:
-	//
-	// Label value pair
-	//
-
-	struct LabelValuePair {
-	 public:
-		constexpr LabelValuePair() = default;
-
-		template <std::size_t NLB = NumLabelBits, std::size_t NVB = NumValueBits,
-		          std::enable_if_t<IsPair, bool> = true>
-		constexpr LabelValuePair(label_type label, value_type value) : data_(label, value)
-		{
-		}
-
-		template <std::size_t NLB = NumLabelBits, std::size_t NVB = NumValueBits,
-		          std::enable_if_t<!IsPair, bool> = true>
-		constexpr LabelValuePair(label_type label, value_type value)
-		    : data_((label << NumValueBits) | (value & ValueMask))
-		{
-		}
-
-		[[nodiscard]] constexpr label_type getLabel() const noexcept
-		{
-			if constexpr (IsPair) {
-				return data_.first;
-			} else {
-				return data_ >> NumValueBits;
-			}
-		}
-
-		[[nodiscard]] constexpr value_type getValue() const noexcept
-		{
-			if constexpr (IsPair) {
-				return data_.second;
-			} else {
-				return data_ & ValueMask;
-			}
-		}
-
-		constexpr void setValue(value_type value) noexcept
-		{
-			if constexpr (IsPair) {
-				data_.second = value;
-			} else {
-				data_ = (data_ & LabelMask) | (value & ValueMask);
-			}
-		}
-
-		constexpr void increaseValue(value_type inc) noexcept
-		{
-			if constexpr (IsPair) {
-				data_.second = ValueMax - data_.second > inc ? data_.second + inc : ValueMax;
-			} else {
-				value_type cur = getValue();
-				data_ = (data_ & LabelMask) | (ValueMax - cur > inc ? cur + inc : ValueMax);
-			}
-		}
-
-		constexpr void decreaseValue(value_type dec) noexcept
-		{
-			if constexpr (IsPair) {
-				data_.second -= std::min(data_.second, dec);
-			} else {
-				value_type cur = getValue();
-				data_ = (data_ & LabelMask) | (cur - std::min(cur, dec));
-			}
-		}
-
-		constexpr bool operator==(LabelValuePair rhs) const noexcept
-		{
-			return rhs.data_ == data_;
-		}
-
-		constexpr bool operator!=(LabelValuePair rhs) const noexcept
-		{
-			return rhs.data_ != data_;
-		}
-
-		constexpr bool operator<(LabelValuePair rhs) const noexcept
-		{
-			return data_ < rhs.data_;
-		}
-
-		constexpr bool operator<=(LabelValuePair rhs) const noexcept
-		{
-			return data_ <= rhs.data_;
-		}
-
-		constexpr bool operator>(LabelValuePair rhs) const noexcept { return rhs < *this; }
-
-		constexpr bool operator>=(LabelValuePair rhs) const noexcept { return rhs <= *this; }
-
-		friend std::ostream &operator<<(std::ostream &os, LabelValuePair element)
-		{
-			// Note: '+' to apply arithmetic promotion.
-			os << +element.getLabel() << ": " << +element.getValue();
-			return os;
-		}
-
-	 private:
-		constexpr void setLabel(label_type label) noexcept
-		{
-			if constexpr (IsPair) {
-				data_.first = label;
-			} else {
-				data_ = (label << NumValueBits) | (data_ & ValueMask);
-			}
-		}
-
-		constexpr void setLabelValue(label_type label, value_type value) noexcept
-		{
-			if constexpr (IsPair) {
-				data_.first = label;
-				data_.second = value;
-			} else {
-				data_ = (label << NumValueBits) | (value & ValueMask);
-			}
-		}
-
-		constexpr void setData(data_type data) noexcept { data_ = data; }
-
-		constexpr data_type getData() const noexcept { return data_; }
-
-	 private:
-		data_type data_{};
-		friend class Semantics;
-	};
-
 	// Tags continue
-	using size_type = label_type;
+	using size_type = std::size_t;
 	using difference_type = std::ptrdiff_t;
-	using reference = LabelValuePair &;
-	using const_reference = LabelValuePair const &;
+	using reference = Semantic &;  // TODO: Make label const
+	using const_reference = Semantic const &;
 	// using pointer = typename std::allocator_traits<Allocator>::pointer;
 	// using const_pointer = typename
 	// std::allocator_traits<Allocator>::const_pointer;
-	using iterator = LabelValuePair *;
-	using const_iterator = LabelValuePair const *;
+	using iterator = Semantic *;  // TODO: Make label const
+	using const_iterator = Semantic const *;
 	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
  public:
-	[[nodiscard]] static constexpr std::size_t getNumLabelBits() noexcept
-	{
-		return NumLabelBits;
-	}
-
-	[[nodiscard]] static constexpr std::size_t getNumValueBits() noexcept
-	{
-		return NumValueBits;
-	}
-
 	//
 	// Constructors
 	//
 
 	constexpr Semantics() = default;
 
-	template <class InputIt>
-	Semantics(InputIt first, InputIt last)
-	{
-		insert(first, last);
-	}
-
 	Semantics(Semantics const &other) { *this = other; }
 
 	Semantics(Semantics &&other) noexcept = default;
-
-	Semantics(std::initializer_list<value_type> init) { insert(init); }
 
 	//
 	// Assignment operator
@@ -355,28 +106,22 @@ class Semantics
 			clear();
 		} else {
 			resize(rhs.size());
-			std::copy(std::begin(rhs), std::end(rhs), begin());
+			std::copy(std::cbegin(rhs), std::cend(rhs), begin());
 		}
 		return *this;
 	}
 
 	Semantics &operator=(Semantics &&rhs) noexcept = default;
 
-	Semantics &operator=(std::initializer_list<value_type> ilist)
-	{
-		insert(ilist);
-		return *this;
-	}
-
 	//
 	// Iterators
 	//
 
-	iterator begin() noexcept { return empty() ? nullptr : std::next(data_.get()); }
+	iterator begin() noexcept { return empty() ? nullptr : std::next(data_.get(), N_H); }
 
 	const_iterator begin() const noexcept
 	{
-		return empty() ? nullptr : std::next(data_.get());
+		return empty() ? nullptr : std::next(data_.get(), N_H);
 	}
 
 	const_iterator cbegin() const noexcept { return begin(); }
@@ -395,36 +140,176 @@ class Semantics
 
 	const_iterator cend() const noexcept { return end(); }
 
-	// TODO: Implement reverse iterators
+	//
+	// Reverse iterators
+	//
+
+	reverse_iterator rbegin() noexcept { return std::make_reverse_iterator(end()); }
+
+	const_reverse_iterator rbegin() const noexcept
+	{
+		return std::make_reverse_iterator(end());
+	}
+
+	const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+
+	reverse_iterator rend() noexcept { return std::make_reverse_iterator(begin()); }
+
+	const_reverse_iterator rend() const noexcept
+	{
+		return std::make_reverse_iterator(begin());
+	}
+
+	const_reverse_iterator crend() const noexcept { return rend(); }
 
 	//
-	// Capacity
+	// Index iterators
+	//
+
+	iterator begin(index_t const index) noexcept
+	{
+		return empty(index) ? nullptr : std::next(data_.get(), N_H + offset(index));
+	}
+
+	const_iterator begin(index_t const index) const noexcept
+	{
+		return empty(index) ? nullptr : std::next(data_.get(), N_H + offset(index));
+	}
+
+	const_iterator cbegin(index_t const index) const noexcept { return begin(index); }
+
+	iterator end(index_t const index) noexcept
+	{
+		auto const s = size(index);
+		return 0 == s ? nullptr : std::next(data_.get(), N_H + offset(index) + s);
+	}
+
+	const_iterator end(index_t const index) const noexcept
+	{
+		auto const s = size(index);
+		return 0 == s ? nullptr : std::next(data_.get(), N_H + offset(index) + s);
+	}
+
+	const_iterator cend(index_t const index) const noexcept { return end(index); }
+
+	//
+	// Reverse index iterators
+	//
+
+	reverse_iterator rbegin(index_t const index) noexcept
+	{
+		return std::make_reverse_iterator(end(index));
+	}
+
+	const_reverse_iterator rbegin(index_t const index) const noexcept
+	{
+		return std::make_reverse_iterator(end(index));
+	}
+
+	const_reverse_iterator crbegin(index_t const index) const noexcept
+	{
+		return rbegin(index);
+	}
+
+	reverse_iterator rend(index_t const index) noexcept
+	{
+		return std::make_reverse_iterator(begin(index));
+	}
+
+	const_reverse_iterator rend(index_t const index) const noexcept
+	{
+		return std::make_reverse_iterator(begin(index));
+	}
+
+	const_reverse_iterator crend(index_t const index) const noexcept { return rend(index); }
+
+	//
+	// Empty
 	//
 
 	[[nodiscard]] bool empty() const noexcept { return 0 == size(); }
 
-	[[nodiscard]] size_type size() const noexcept
+	[[nodiscard]] bool empty(index_t const index) const noexcept
 	{
-		return data_ ? data_[0].getLabel() : 0;
+		return 0 == size(index);
 	}
-
-	[[nodiscard]] size_type allocSize() const noexcept
-	{
-		return empty() ? 0 : data_[0].getLabel() + 1;
-	}
-
-	[[nodiscard]] constexpr size_type max_size() const noexcept { return LabelMax; }
 
 	//
-	// Modifiers
+	// Size
+	//
+
+	[[nodiscard]] size_type size() const noexcept
+	{
+		if (!data_) {
+			return 0;
+		}
+
+		size_type total_size = 0;
+		for (std::size_t i = 0; N_H != i; ++i) {
+			total_size += data_[i].label;
+			total_size += reinterpret_cast<label_t>(data_[i].value);
+		}
+		return total_size;
+	}
+
+	[[nodiscard]] size_type size(index_t const index) const noexcept
+	{
+		return data_ ? (index % 2 ? data_[index / 2].label
+		                          : reinterpret_cast<label_t>(data_[index / 2].value))
+		             : 0;
+	}
+
+	[[nodiscard]] size_type allocSize() const noexcept { return data_ ? size() + N_H : 0; }
+
+	[[nodiscard]] size_type allocSize(index_t const index) const noexcept
+	{
+		return data_ ? size(index) + 1;
+	}
+
+	[[nodiscard]] static constexpr size_type maxSize() noexcept
+	{
+		return size_type(N) * maxSize(0);
+	}
+
+	[[nodiscard]] static constexpr size_type maxSize(index_t const index) noexcept
+	{
+		return std::numeric_limits<label_t>::max() - 1;
+	}
+
+	//
+	// Clear
 	//
 
 	void clear() noexcept { data_.reset(); }
 
+	void clear(index_t const index)
+	{
+		size_type cur_size = size(index);
+		if (0 == cur_size) {
+			return;
+		}
+
+		if (size() == cur_size) {
+			clear();
+			return;
+		}
+
+		auto index_last = end(index);
+		auto last = end();
+		if (index_last != last) {
+			std::move(index_last, last, begin(index));
+		}
+		resize(index, 0);
+	}
+
+	//
+	// Set combine
+	//
+
 	template <class InputIt>
 	void setCombine(InputIt first, InputIt last, SemanticLabelPropagation const &prop)
 	{
-		switch (prop.getDefaultPropCriteria()) {
+		switch (prop.defaultPropCriteria()) {
 			case PropagationCriteria::MAX:
 				setCombine<InputIt, true>(first, last, prop);
 				return;
@@ -433,112 +318,94 @@ class Semantics
 		}
 	}
 
-	std::pair<iterator, bool> insert(value_type const &value)
+	//
+	// Insert
+	//
+
+	std::pair<iterator, bool> insert(Semantic semantic)
 	{
-		return insert_impl<InsertType::NORMAL>(value.getLabel(), value.getValue());
+		return insert<InsertType::NORMAL>(semantic);
 	}
 
-	iterator insert(const_iterator hint, value_type const &value)
+	std::pair<iterator, bool> insert(label_t label, value_t value)
 	{
-		return insert_impl<InsertType::NORMAL>(hint, value.first, value.second).first;
+		return insert(Semantic(label, value));
+	}
+
+	iterator insert(const_iterator hint, Semantic semantic)
+	{
+		return insert<InsertType::NORMAL>(hint, semantic).first;
+	}
+
+	iterator insert(const_iterator hint, label_t label, value_t value)
+	{
+		return insert(hint, label, value);
 	}
 
 	template <class InputIt>
 	void insert(InputIt first, InputIt last)
 	{
-		std::vector<typename std::iterator_traits<InputIt>::value_type> temp(first, last);
-		insert_impl(temp);
+		std::vector<Semantic> temp(first, last);
+		insert(temp);
 	}
 
-	void insert(std::initializer_list<value_type> ilist)
+	void insert(std::initializer_list<Semantic> ilist)
 	{
-		std::vector<value_type> temp(ilist);
-		insert_impl(temp);
+		insert(std::cbegin(ilist), std::cend(ilist));
 	}
 
-	template <class... Args>
-	std::pair<iterator, bool> emplace(Args &&...args)
+	std::pair<iterator, bool> insertOrAssign(Semantic semantic)
 	{
-		return insert_impl(std::forward<Args>(args)...);
+		return insert<InsertType::ASSIGN>(semantic);
 	}
 
-	template <class... Args>
-	std::pair<iterator, bool> try_emplace(label_type const &k, Args &&...args)
+	std::pair<iterator, bool> insertOrAssign(label_t label, value_t value)
 	{
-		return insert(value_type(k, std::forward<Args>(args)...));
+		return insertOrAssign(Semantic(label, value));
 	}
 
-	template <class... Args>
-	std::pair<iterator, bool> try_emplace(label_type &&k, Args &&...args)
+	iterator insertOrAssign(const_iterator hint, Semantic semantic)
 	{
-		return insert(value_type(std::move(k), std::forward<Args>(args)...));
+		return insert<InsertType::ASSIGN>(hint, semantic).first;
 	}
 
-	template <class... Args>
-	std::pair<iterator, bool> try_emplace(const_iterator hint, label_type const &k,
-	                                      Args &&...args)
+	iterator insertOrAssign(const_iterator hint, label_t label, value_t value)
 	{
-		return insert(hint, value_type(k, std::forward<Args>(args)...));
+		return insertOrAssign(Semantic(hint, label, value));
 	}
 
-	template <class... Args>
-	std::pair<iterator, bool> try_emplace(const_iterator hint, label_type &&k,
-	                                      Args &&...args)
-	{
-		return insert(hint, value_type(std::move(k), std::forward<Args>(args)...));
-	}
+	// TODO: Some generic insert that takes function
 
-	template <class M>
-	std::pair<iterator, bool> insert_or_assign(label_type const &k, M &&obj)
-	{
-		return insert_impl<InsertType::ASSIGN>(k, std::forward<M>(obj));
-	}
-
-	template <class M>
-	std::pair<iterator, bool> insert_or_assign(label_type &&k, M &&obj)
-	{
-		return insert_impl<InsertType::ASSIGN>(std::move(k), std::forward<M>(obj));
-	}
-
-	template <class M>
-	iterator insert_or_assign(const_iterator hint, label_type const &k, M &&obj)
-	{
-		return insert_impl<InsertType::ASSIGN>(hint, k, std::forward<M>(obj)).first;
-	}
-
-	template <class M>
-	iterator insert_or_assign(const_iterator hint, label_type &&k, M &&obj)
-	{
-		return insert_impl<InsertType::ASSIGN>(hint, std::move(k), std::forward<M>(obj))
-		    .first;
-	}
+	//
+	// Assign
+	//
 
 	/*
 	 * insert_or_replace_max
-	 * If label_type k is not present in the map it is inserted with value obj.
-	 * If label_type k is present then its value is update acording to
+	 * If label_t k is not present in the map it is inserted with value obj.
+	 * If label_t k is present then its value is update acording to
 	 * 	max(current_value, obj).
 	 */
 	template <class M>
-	std::pair<iterator, bool> insert_or_replace_max(label_type const &k, M &&obj)
+	std::pair<iterator, bool> insert_or_replace_max(label_t const &k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(k, std::forward<M>(obj));
 	}
 
 	template <class M>
-	std::pair<iterator, bool> insert_or_replace_max(label_type &&k, M &&obj)
+	std::pair<iterator, bool> insert_or_replace_max(label_t &&k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(std::move(k), std::forward<M>(obj));
 	}
 
 	template <class M>
-	iterator insert_or_replace_max(const_iterator hint, label_type const &k, M &&obj)
+	iterator insert_or_replace_max(const_iterator hint, label_t const &k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(hint, k, std::forward<M>(obj)).first;
 	}
 
 	template <class M>
-	iterator insert_or_replace_max(const_iterator hint, label_type &&k, M &&obj)
+	iterator insert_or_replace_max(const_iterator hint, label_t &&k, M &&obj)
 	{
 		return insert_impl<InsertType::MAX>(hint, std::move(k), std::forward<M>(obj)).first;
 	}
@@ -547,7 +414,7 @@ class Semantics
 	 * Assign value to Keys present in the given Range.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(container::Range<T> const &range, value_type value)
+	void assign_values(container::Range<T> const &range, value_t value)
 	{
 		assign_values(container::RangeSet<T>(range), value);
 	}
@@ -556,7 +423,7 @@ class Semantics
 	 * Assign value to Keys present in each Range of the RangeSet.
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(container::RangeSet<T> const &rangeSet, value_type value)
+	void assign_values(container::RangeSet<T> const &rangeSet, value_t value)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -571,7 +438,7 @@ class Semantics
 	 * Increase the value by inc for all Keys present in Range
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(container::Range<T> const &range, value_type inc)
+	void increase_values(container::Range<T> const &range, Semantic inc)
 	{
 		increase_values(container::RangeSet<T>(range), inc);
 	}
@@ -580,7 +447,7 @@ class Semantics
 	 * Increase the value by inc for all Keys in each Range of the RangeSet
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(container::RangeSet<T> const &rangeSet, value_type inc)
+	void increase_values(container::RangeSet<T> const &rangeSet, Semantic inc)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -595,7 +462,7 @@ class Semantics
 	 * Decrease the value by dec for all Keys present in Range
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(container::Range<T> const &range, value_type dec)
+	void decrease_values(container::Range<T> const &range, Semantic dec)
 	{
 		decrease_values(container::RangeSet<T>(range), dec);
 	}
@@ -604,7 +471,7 @@ class Semantics
 	 * Decrease the value by dec for all Keys in each Range of the RangeSet
 	 */
 	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(container::RangeSet<T> const &rangeSet, value_type dec)
+	void decrease_values(container::RangeSet<T> const &rangeSet, Semantic dec)
 	{
 		for (auto const &range : rangeSet) {
 			auto lower = lower_bound(range.lower());
@@ -616,12 +483,12 @@ class Semantics
 	}
 
 	/*
-	 * Increase or set the value of key
+	 * Increase or set the value of label
 	 */
-	std::pair<iterator, bool> increase_value(label_type key, value_type inc,
-	                                         value_type init_value)
+	std::pair<iterator, bool> increase_value(label_t label, Semantic inc,
+	                                         Semantic init_value)
 	{
-		auto [it, inserted] = try_emplace(key, init_value);
+		auto [it, inserted] = try_emplace(label, init_value);
 		if (!inserted) {
 			it->increaseValue(inc);
 		}
@@ -629,12 +496,12 @@ class Semantics
 	}
 
 	/*
-	 * Increase or set the value of key
+	 * Increase or set the value of label
 	 */
-	iterator increase_value(const_iterator hint, label_type key, value_type inc,
-	                        value_type init_value)
+	iterator increase_value(const_iterator hint, label_t label, Semantic inc,
+	                        Semantic init_value)
 	{
-		auto [it, inserted] = try_emplace(hint, key, init_value);
+		auto [it, inserted] = try_emplace(hint, label, init_value);
 		if (!inserted) {
 			it->increaseValue(inc);
 		}
@@ -642,12 +509,12 @@ class Semantics
 	}
 
 	/*
-	 * Decrease or set the value of key
+	 * Decrease or set the value of label
 	 */
-	std::pair<iterator, bool> decrease_value(label_type key, value_type dec,
-	                                         value_type init_value)
+	std::pair<iterator, bool> decrease_value(label_t label, Semantic dec,
+	                                         Semantic init_value)
 	{
-		auto [it, inserted] = try_emplace(key, init_value);
+		auto [it, inserted] = try_emplace(label, init_value);
 		if (!inserted) {
 			it->decreaseValue(dec);
 		}
@@ -655,12 +522,12 @@ class Semantics
 	}
 
 	/*
-	 * Decrease or set the value of key
+	 * Decrease or set the value of label
 	 */
-	iterator decrease_value(const_iterator hint, label_type key, value_type dec,
-	                        value_type init_value)
+	iterator decrease_value(const_iterator hint, label_t label, Semantic dec,
+	                        Semantic init_value)
 	{
-		auto [it, inserted] = try_emplace(hint, key, init_value).first;
+		auto [it, inserted] = try_emplace(hint, label, init_value).first;
 		if (!inserted) {
 			it->decreaseValue(dec);
 		}
@@ -694,9 +561,9 @@ class Semantics
 		return it;
 	}
 
-	size_type erase(label_type key)
+	size_type erase(label_t label)
 	{
-		if (iterator it = find(key); end() != it) {
+		if (iterator it = find(label); end() != it) {
 			erase(it);
 			return 1;
 		}
@@ -704,11 +571,11 @@ class Semantics
 	}
 
 	/*
-	 * Erases all LabelValuePairs of range which fulfills the pairwise comparison
-	 * comp(LabelValuePair.value, value)
+	 * Erases all Semantics of range which fulfills the pairwise comparison
+	 * comp(Semantic.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(container::Range<T> const &range, value_type value, Compare comp)
+	size_type erase(container::Range<T> const &range, value_t value, Compare comp)
 	{
 		return erase(container::RangeSet<T>(range), value, comp);
 	}
@@ -720,11 +587,11 @@ class Semantics
 	}
 
 	/*
-	 * Erases all LabelValuePairs of rangeSet which fulfills the pairwise comparison
-	 * comp(LabelValuePair.value, value)
+	 * Erases all Semantics of rangeSet which fulfills the pairwise comparison
+	 * comp(Semantic.value, value)
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(container::RangeSet<T> const &rangeSet, value_type value, Compare comp)
+	size_type erase(container::RangeSet<T> const &rangeSet, value_t value, Compare comp)
 	{
 		size_type old_size = size();
 		for (auto const &range : rangeSet) {
@@ -733,7 +600,7 @@ class Semantics
 			uint32_t c = 0;
 
 			while (lower != upper) {
-				if (!comp(lower->getValue(), value)) {
+				if (!comp(lower->value, value)) {
 					++lower;
 				} else {
 					lower = erase(lower);
@@ -759,70 +626,69 @@ class Semantics
 	void swap(Semantics &other) noexcept { std::swap(data_, other.data_); }
 
 	// Lookup
-	[[nodiscard]] value_type at(label_type key) const
+	[[nodiscard]] Semantic at(label_t label) const
 	{
-		if (auto it = find(key); end() != it) {
-			return it->getValue();
+		if (auto it = find(label); end() != it) {
+			return it->value;
 		}
-		throw std::out_of_range("Cannot find key " + std::to_string(key));
+		throw std::out_of_range("Cannot find label " + std::to_string(label));
 	}
 
-	[[nodiscard]] value_type getValue(label_type key) const
+	[[nodiscard]] Semantic getValue(label_t label) const
 	{
-		auto it = find(key);
-		return end() != it ? it->getValue() : 0;
+		auto it = find(label);
+		return end() != it ? it->value : 0;
 	}
 
-	[[nodiscard]] size_type count(label_type key) const { return contains(key) ? 1 : 0; }
+	[[nodiscard]] size_type count(label_t label) const { return contains(label) ? 1 : 0; }
 
-	[[nodiscard]] iterator find(label_type key)
+	[[nodiscard]] iterator find(label_t label)
 	{
-		auto it = lower_bound(key);
-		return end() != it && it->getLabel() == key ? it : end();
+		auto it = lower_bound(label);
+		return end() != it && it->label == label ? it : end();
 	}
 
-	[[nodiscard]] const_iterator find(label_type key) const
+	[[nodiscard]] const_iterator find(label_t label) const
 	{
-		auto it = lower_bound(key);
-		return end() != it && it->getLabel() == key ? it : end();
+		auto it = lower_bound(label);
+		return end() != it && it->label == label ? it : end();
 	}
 
-	[[nodiscard]] bool contains(label_type key) const { return end() != find(key); }
+	[[nodiscard]] bool contains(label_t label) const { return end() != find(label); }
 
-	[[nodiscard]] std::pair<iterator, iterator> equal_range(label_type key)
+	[[nodiscard]] std::pair<iterator, iterator> equal_range(label_t label)
 	{
-		return equal_range(begin(), end(), key);
+		return equal_range(begin(), end(), label);
 	}
 
-	[[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(
-	    label_type key) const
+	[[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(label_t label) const
 	{
-		return equal_range(begin(), end(), key);
+		return equal_range(begin(), end(), label);
 	}
 
-	[[nodiscard]] iterator lower_bound(label_type key)
+	[[nodiscard]] iterator lower_bound(label_t label)
 	{
-		return lower_bound(begin(), end(), key);
+		return lower_bound(begin(), end(), label);
 	}
 
-	[[nodiscard]] const_iterator lower_bound(label_type key) const
+	[[nodiscard]] const_iterator lower_bound(label_t label) const
 	{
-		return lower_bound(begin(), end(), key);
+		return lower_bound(begin(), end(), label);
 	}
 
-	[[nodiscard]] iterator upper_bound(label_type key)
+	[[nodiscard]] iterator upper_bound(label_t label)
 	{
-		return upper_bound(begin(), end(), key);
+		return upper_bound(begin(), end(), label);
 	}
 
-	[[nodiscard]] const_iterator upper_bound(label_type key) const
+	[[nodiscard]] const_iterator upper_bound(label_t label) const
 	{
-		return upper_bound(begin(), end(), key);
+		return upper_bound(begin(), end(), label);
 	}
 
-	LabelValuePair *getData() { return std::next(data_.get(), 1); }
+	// FIXME: Not safe Semantic *data() { return std::next(data_.get(), 1); }
 
-	LabelValuePair const *getData() const { return std::next(data_.get(), 1); }
+	Semantic const *data() const { return std::next(data_.get(), 1); }
 
 	/*
 	 * True if container contains any Key present in Range.
@@ -839,7 +705,7 @@ class Semantics
 	 * binary comparison comp.  I.e., the container does not have to contain the full range.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(container::Range<T> const &range, value_type value,
+	[[nodiscard]] bool containsAny(container::Range<T> const &range, value_t value,
 	                               Compare comp) const
 	{
 		return containsAny({range}, value, comp);
@@ -859,14 +725,14 @@ class Semantics
 
 		if (size() < rangeSet.size()) {
 			for (auto const &element : *this) {
-				if (rangeSet.contains(element.getLabel())) {
+				if (rangeSet.contains(element.label)) {
 					return true;
 				}
 			}
 		} else {
 			for (auto const &range : rangeSet) {
 				const_iterator lower = lower_bound(range.lower());
-				if (lower != end() && lower->getLabel() <= range.upper()) {
+				if (lower != end() && lower->label <= range.upper()) {
 					return true;
 				}
 			}
@@ -880,7 +746,7 @@ class Semantics
 	 * the full range.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet, value_type value,
+	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet, value_t value,
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
@@ -890,7 +756,7 @@ class Semantics
 
 		if (size() < rangeSet.size()) {
 			for (auto const &element : *this) {
-				if (rangeSet.contains(element.getLabel()) && comp(element.getValue(), value)) {
+				if (rangeSet.contains(element.label) && comp(element.value, value)) {
 					return true;
 				}
 			}
@@ -899,7 +765,7 @@ class Semantics
 				auto lower = lower_bound(range.lower());
 				auto upper = upper_bound(range.upper());
 				for (; lower != upper; ++lower) {
-					if (comp(lower->getValue(), value)) {
+					if (comp(lower->value, value)) {
 						return true;
 					}
 				}
@@ -921,7 +787,7 @@ class Semantics
 	 * Negated containsAny
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(container::Range<T> const &range, value_type value,
+	[[nodiscard]] bool containsNone(container::Range<T> const &range, value_t value,
 	                                Compare comp) const
 	{
 		return !containsAny({range}, value, comp);
@@ -940,18 +806,18 @@ class Semantics
 	 * Negated containsAny
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet,
-	                                value_type value, Compare comp) const
+	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet, value_t value,
+	                                Compare comp) const
 	{
 		return !containsAny(rangeSet, value, comp);
 	}
 
 	/*
-	 * True if container contains all Keys of the range and that comp(LabelValuePair.value,
+	 * True if container contains all Keys of the range and that comp(Semantic.value,
 	 * value) is true for all such elements.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(container::Range<T> const &range, value_type value,
+	[[nodiscard]] bool containsAll(container::Range<T> const &range, value_t value,
 	                               Compare comp) const
 	{
 		return containsAll({range}, value, comp);
@@ -968,10 +834,10 @@ class Semantics
 
 	/*
 	 * True if container contains all Keys of each range in the set and that
-	 * comp(LabelValuePair.value, value) is true for all such elements.
+	 * comp(Semantic.value, value) is true for all such elements.
 	 */
 	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet, value_type value,
+	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet, value_t value,
 	                               Compare comp) const
 	{
 		// map contains empty set of ranges
@@ -998,7 +864,7 @@ class Semantics
 			}
 
 			for (; lower != upper; ++lower) {
-				if (!comp(lower->getValue(), value)) {
+				if (!comp(lower->value, value)) {
 					return false;
 				}
 			}
@@ -1068,10 +934,10 @@ class Semantics
 			auto lower = lower_bound(range.lower());
 			auto upper = upper_bound(range.upper());
 			for (; lower != upper; ++lower) {
-				if (ret_high == end() || !comp(lower->getValue(), ret_high->getValue())) {
+				if (ret_high == end() || !comp(lower->value, ret_high->value)) {
 					ret_high = lower;
 				}
-				if (ret_low == end() || comp(lower->getValue(), ret_low->getValue())) {
+				if (ret_low == end() || comp(lower->value, ret_low->value)) {
 					ret_low = lower;
 				}
 			}
@@ -1084,7 +950,7 @@ class Semantics
 		size_type num = size();
 		out_stream.write(reinterpret_cast<char const *>(&num), sizeof(size_type));
 		return out_stream.write(reinterpret_cast<char const *>(getData()),
-		                        sizeof(LabelValuePair) * num);
+		                        sizeof(Semantic) * num);
 	}
 
 	std::istream &read(std::istream &in_stream)
@@ -1096,21 +962,38 @@ class Semantics
 			return in_stream;
 		}
 		resize(num);
-		return in_stream.read(reinterpret_cast<char *>(getData()),
-		                      sizeof(LabelValuePair) * num);
+		return in_stream.read(reinterpret_cast<char *>(getData()), sizeof(Semantic) * num);
 	}
 
 	friend std::ostream &operator<<(std::ostream &os, Semantics const &map)
 	{
 		if (!map.empty()) {
 			std::copy(std::begin(map), std::prev(std::end(map)),
-			          std::ostream_iterator<LabelValuePair>(os, "; "));
+			          std::ostream_iterator<Semantic>(os, "; "));
 			os << *std::prev(std::end(map));
 		}
 		return os;
 	}
 
  protected:
+	//
+	// Index offset
+	//
+
+	[[nodiscard]] std::size_t offset(index_t const index) const
+	{
+		if (!data_) {
+			return 0;
+		}
+
+		std::size_t offset = 0;
+		for (std::size_t i = 0; index != i; ++i) {
+			offset +=
+			    i % 2 ? data_[i / 2].label : reinterpret_cast<label_t>(data_[i / 2].value);
+		}
+		return offset;
+	}
+
 	template <class InputIt, bool Max>
 	void setCombine(InputIt first, InputIt last, SemanticLabelPropagation const &prop)
 	{
@@ -1142,7 +1025,7 @@ class Semantics
 			auto it_end = std::next(it_beg, sizes[i]);
 			std::inplace_merge(begin(), it_beg, it_end, [](auto const &a, auto const &b) {
 				if constexpr (IsPair) {
-					return a.getLabel() < b.getLabel();
+					return a.label < b.label;
 				} else {
 					return a < b;
 				}
@@ -1154,10 +1037,9 @@ class Semantics
 			for (auto it_first = begin(), it_end = end(); it_first != it_end;) {
 				auto it_last = std::find_if_not(
 				    std::next(it_first), it_end,
-				    [l = it_first->getLabel()](auto const v) { return l == v.getLabel(); });
+				    [l = it_first->label](auto const v) { return l == v.label; });
 
-				auto value =
-				    getValue(it_first, it_last, prop.getPropCriteria(it_first->getLabel()));
+				auto value = getValue(it_first, it_last, prop.getPropCriteria(it_first->label));
 
 				if constexpr (Max) {
 					// FIXME: Improve
@@ -1173,16 +1055,15 @@ class Semantics
 		// Remove duplicates (if duplicate, save correct value)
 		if constexpr (Max) {
 			auto new_beg = std::unique(rbegin(), rend(), [](auto const a, auto const b) {
-				               return a.getLabel() == b.getLabel();
+				               return a.label == b.label;
 			               }).base();
 			if (begin() != new_beg) {
 				std::copy(new_beg, end(), begin());
 				resize(std::distance(new_beg, end()));
 			}
 		} else {
-			auto new_end = std::unique(begin(), end(), [](auto const a, auto const b) {
-				return a.getLabel() == b.getLabel();
-			});
+			auto new_end = std::unique(
+			    begin(), end(), [](auto const a, auto const b) { return a.label == b.label; });
 			if (end() != new_end) {
 				resize(std::distance(begin(), new_end));
 			}
@@ -1190,26 +1071,26 @@ class Semantics
 	}
 
 	template <class InputIt>
-	value_type getValue(InputIt first, InputIt last, PropagationCriteria prop_criteria)
+	Semantic getValue(InputIt first, InputIt last, PropagationCriteria prop_criteria)
 	{
 		switch (prop_criteria) {
 			case PropagationCriteria::MAX:
-				value_type max = std::numeric_limits<value_type>::lowest();
+				Semantic max = std::numeric_limits<Semantic>::lowest();
 				for (; first != last; std::advance(first, 1)) {
-					max = std::max(max, first->getValue());
+					max = std::max(max, first->value);
 				}
 				return max;
 			case PropagationCriteria::MIN:
-				value_type min = std::numeric_limits<value_type>::max();
+				Semantic min = std::numeric_limits<Semantic>::max();
 				for (; first != last; std::advance(first, 1)) {
-					min = std::min(min, first->getValue());
+					min = std::min(min, first->value);
 				}
 				return min;
 			case PropagationCriteria::MEAN:
 				double total = 0;
 				double num_elem = std::distance(first, last);
 				for (; first != last; std::advance(first, 1)) {
-					total += first->getValue();
+					total += first->value;
 				}
 				return total / num_elem;
 		}
@@ -1218,16 +1099,17 @@ class Semantics
 	enum class InsertType { NORMAL, ASSIGN, MAX };
 
 	template <InsertType T = InsertType::NORMAL>
-	std::pair<iterator, bool> insert_impl(label_type key, value_type value)
+	std::pair<iterator, bool> insert_impl(label_t label, value_t value)
 	{
 		if (empty()) {
 			resize(1);
-			data_[1].setLabelValue(key, value);
+			data_[1].label = label;
+			data_[1].value = value;
 			return {begin(), true};
 		}
 
-		auto it = lower_bound(key);
-		if (end() != it && it->getLabel() == key) {
+		auto it = lower_bound(label);
+		if (end() != it && it->label == label) {
 			// Label already exists
 			if constexpr (InsertType::NORMAL == T) {
 				// Do nothing
@@ -1236,7 +1118,7 @@ class Semantics
 				it->setValue(value);
 			} else if constexpr (InsertType::MAX == T) {
 				// Set value to max
-				it->setValue(std::max(it->getValue(), value));
+				it->setValue(std::max(it->value, value));
 			}
 			return {it, false};
 		} else {
@@ -1248,30 +1130,29 @@ class Semantics
 
 			std::move_backward(it, std::prev(end(), 1), end());
 
-			data_[index + 1].setLabelValue(key, value);
+			data_[index + 1].setLabelValue(label, value);
 
 			return {it, true};
 		}
 	}
 
 	template <InsertType T = InsertType::NORMAL>
-	std::pair<iterator, bool> insert_impl(const_iterator hint, label_type key,
-	                                      value_type value)
+	std::pair<iterator, bool> insert_impl(const_iterator hint, label_t label, value_t value)
 	{
 		if (empty()) {
 			resize(1);
-			data_[1].setLabelValue(key, value);
+			data_[1].label = label;
+			data_[1].value = value;
 			return {begin(), true};
 		}
 
-		auto first =
-		    cbegin() != hint && std::prev(hint, 1)->getLabel() < key ? hint : cbegin();
-		auto last = cend() != hint && hint->getLabel() >= key ? hint : cend();
-		hint = lower_bound(first, last, key);
+		auto first = cbegin() != hint && std::prev(hint, 1)->label < label ? hint : cbegin();
+		auto last = cend() != hint && hint->label >= label ? hint : cend();
+		hint = lower_bound(first, last, label);
 
 		auto index = std::distance(cbegin(), hint);
 
-		if (cend() != hint && hint->getLabel() == key) {
+		if (cend() != hint && hint->label == label) {
 			auto it = std::next(begin(), index);
 			// Label already exists
 			if constexpr (InsertType::NORMAL == T) {
@@ -1281,7 +1162,7 @@ class Semantics
 				it->setValue(value);
 			} else if constexpr (InsertType::MAX == T) {
 				// Set value to max
-				it->setValue(std::max(it->getValue(), value));
+				it->setValue(std::max(it->value, value));
 			}
 			return {it, false};
 		} else {
@@ -1291,67 +1172,68 @@ class Semantics
 
 			std::move_backward(it, std::prev(end(), 1), end());
 
-			data_[index + 1].setLabelValue(key, value);
+			data_[index + 1].setLabelValue(label, value);
 
 			return {it, true};
 		}
 	}
 
-	template <InsertType InsertT = InsertType::NORMAL, class T>
-	void insert_impl(std::vector<T> &vec)
+	template <InsertType InsertT = InsertType::NORMAL>
+	void insert_impl(std::vector<Semantic> &vec)
 	{
-		// Sort based on key and such highest value first if same key
 		std::sort(std::begin(vec), std::end(vec));
 
-		// Erase duplicate keys, saving the highest value for each key
-		auto r_last = std::unique(std::rbegin(vec), std::rend(vec), [](auto v1, auto v2) {
-			return v1.getLabel() == v2.getLabel();
-		});
-		// vec.erase(std::begin(vec), r_last.base());
+		// Erase duplicate labels, saving the highest value for each label
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto v1, auto v2) { return v1.label == v2.label; });
+
+		auto first = r_last.base();
+		auto last = std::end(vec);
 
 		if (empty()) {
 			// Optimized insert
-			resize(std::distance(r_last.base(), std::end(vec)));
-			std::copy(r_last.base(), std::end(vec), begin());
+			resize(std::distance(first, last));
+			std::copy(first, last, begin());
 		} else {
 			// Normal insert
 			auto hint = begin();
-			for (auto it = r_last.base(); it != std::end(vec); ++it) {
-				hint = insert<InsertT>(hint, it->getLabel(), it->getValue()).first;
+			for (; first != last; ++first) {
+				hint = insert<InsertT>(hint, first->label, first->value).first;
 			}
-			// for (auto const &elem : vec) {
-			// 	hint = insert<InsertT>(hint, elem.getLabel(), elem.getValue()).first;
-			// }
 		}
 	}
 
-	static iterator lower_bound(iterator first, iterator last, label_type key)
+	static iterator lower_bound(iterator first, iterator last, label_t label)
 	{
-		return std::lower_bound(first, last, LabelValuePair(key, 0));
+		return std::lower_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::lowest()));
 	}
 
 	static const_iterator lower_bound(const_iterator first, const_iterator last,
-	                                  label_type key)
+	                                  label_t label)
 	{
-		return std::lower_bound(first, last, LabelValuePair(key, 0));
+		return std::lower_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::lowest()));
 	}
 
-	static iterator upper_bound(iterator first, iterator last, label_type key)
+	static iterator upper_bound(iterator first, iterator last, label_t label)
 	{
-		return std::upper_bound(first, last, LabelValuePair(key, ValueMask));
+		return std::upper_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::max()));
 	}
 
 	static const_iterator upper_bound(const_iterator first, const_iterator last,
-	                                  label_type key)
+	                                  label_t label)
 	{
-		return std::upper_bound(first, last, LabelValuePair(key, ValueMask));
+		return std::upper_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::max()));
 	}
 
 	static std::pair<iterator, iterator> equal_range(iterator first, iterator last,
-	                                                 label_type key)
+	                                                 label_t label)
 	{
-		auto it = lower_bound(first, last, key);
-		if (last == it || it->getLabel() != key) {
+		auto it = lower_bound(first, last, label);
+		if (last == it || it->label != label) {
 			return {it, it};
 		} else {
 			return {it, std::next(it)};
@@ -1360,22 +1242,24 @@ class Semantics
 
 	static std::pair<const_iterator, const_iterator> equal_range(const_iterator first,
 	                                                             const_iterator last,
-	                                                             label_type key)
+	                                                             label_t label)
 	{
-		auto it = lower_bound(first, last, key);
-		if (last == it || it->getLabel() != key) {
+		auto it = lower_bound(first, last, label);
+		if (last == it || it->label != label) {
 			return {it, it};
 		} else {
 			return {it, std::next(it)};
 		}
 	}
 
-	void resize(size_type const new_size)
+	void resize(index_t const index, size_type new_size)
 	{
-		LabelValuePair *ptr_cur = data_.release();
+		Semantic *ptr_cur = data_.release();
 
-		LabelValuePair *ptr_new = static_cast<LabelValuePair *>(
-		    realloc(ptr_cur, (new_size + 1) * sizeof(LabelValuePair)));
+		auto new_total_size = new_size + size() - sizeIndex(index) + N_H;
+
+		Semantic *ptr_new =
+		    static_cast<Semantic *>(realloc(ptr_cur, new_total_size * sizeof(Semantic)));
 
 		if (!ptr_new) {
 			data_.reset(ptr_cur);
@@ -1384,43 +1268,48 @@ class Semantics
 
 		data_.reset(ptr_new);
 
-		data_[0].setLabel(new_size);  // Special
+		if (nullptr == ptr_cur) {
+			for (std::size_t i = 0; N_H != i; ++i) {
+				data_[i].label = 0;
+				data_[i].value = reinterpret_cast<value_t>(label_t(0));
+			}
+		}
+
+		// Special
+		if (index % 2) {
+			data_[index / 2].label = new_size;
+		} else {
+			data_[index / 2].value = reinterpret_cast<value_t>(static_cast<label_t>(new_size));
+		}
 	}
 
  private:
-	std::unique_ptr<value_type[]> data_;
+	std::unique_ptr<Semantic[]> data_;
 
-	std::unique_ptr<label_type[]> labels_;
-	std::unique_ptr<value_type[]> values_;
-
-	template <class Derived, class LeafNode>
+	template <class Derived>
 	friend class SemanticMap;
 };
 
-template <typename DataType, std::size_t ValueWidth>
-bool operator==(Semantics<DataType, ValueWidth> const &lhs,
-                Semantics<DataType, ValueWidth> const &rhs)
+template <std::size_t N>
+bool operator==(Semantics<N> const &lhs, Semantics<N> const &rhs)
 {
 	return std::equal(std::begin(lhs), std::end(lhs), std::begin(rhs), std::end(rhs));
 }
 
-template <typename DataType, std::size_t ValueWidth>
-bool operator!=(Semantics<DataType, ValueWidth> const &lhs,
-                Semantics<DataType, ValueWidth> const &rhs)
+template <std::size_t N>
+bool operator!=(Semantics<N> const &lhs, Semantics<N> const &rhs)
 {
 	return !(lhs == rhs);
 }
 
-template <typename DataType, std::size_t ValueWidth>
-void swap(Semantics<DataType, ValueWidth> &lhs,
-          Semantics<DataType, ValueWidth> &rhs) noexcept(noexcept(lhs.swap(rhs)))
+template <std::size_t N>
+void swap(Semantics<N> &lhs, Semantics<N> &rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }
 
-template <typename DataType, std::size_t ValueWidth, class Pred>
-typename Semantics<DataType, ValueWidth>::size_type erase_if(
-    Semantics<DataType, ValueWidth> &c, Pred pred)
+template <std::size_t N, class Pred>
+typename Semantics<N>::size_type erase_if(Semantics<N> &c, Pred pred)
 {
 	auto old_size = c.size();
 	for (auto it = std::begin(c), last = std::end(c); it != last;) {
@@ -1432,7 +1321,6 @@ typename Semantics<DataType, ValueWidth>::size_type erase_if(
 	}
 	return old_size - c.size();
 }
-
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SEMANTICS_H

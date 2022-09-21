@@ -50,34 +50,50 @@
 
 namespace ufo::map
 {
-using semantic_label_t = uint64_t;
-using semantic_value_t = uint64_t;
+using label_range_t = container::Range<label_t>;
+using value_range_t = container::Range<value_t>;
 
-using semantic_label_range_t = container::Range<semantic_label_t>;
-using semantic_value_range_t = container::Range<semantic_value_t>;
+using label_range_set_t = container::RangeSet<label_t>;
+using value_range_set_t = container::RangeSet<value_t>;
 
-using semantic_label_range_set_t = container::RangeSet<semantic_label_t>;
-using semantic_value_range_set_t = container::RangeSet<semantic_value_t>;
-
-using semantic_range_map_t = container::RangeMap<semantic_label_t, semantic_value_t>;
+using semantic_range_map_t = container::RangeMap<label_t, value_t>;
 
 struct Semantic {
-	semantic_label_t label = 0;
-	semantic_value_t value = 0;
+	label_t label = 0;
+	value_t value = 0;
 
-	constexpr Semantic() = default;
+	constexpr Semantic() noexcept = default;
 
-	constexpr Semantic(semantic_label_t label, semantic_value_t value = 0)
+	constexpr Semantic(Semantic const&) noexcept = default;
+
+	constexpr Semantic(Semantic&&) noexcept = default;
+
+	constexpr Semantic(label_t label, value_t value = 0) noexcept
 	    : label(label), value(value)
 	{
 	}
 
-	constexpr bool operator==(Semantic rhs) const
+	constexpr Semantic& operator=(Semantic const&) = default;
+
+	constexpr Semantic& operator=(Semantic&&) = default;
+
+	friend bool operator==(Semantic lhs, Semantic rhs)
 	{
-		return label == rhs.label && value == rhs.value;
+		return lhs.label == rhs.label && lhs.value == rhs.value;
 	}
 
-	constexpr bool operator!=(Semantic rhs) const { return !(*this == rhs); }
+	friend bool operator!=(Semantic lhs, Semantic rhs) { return !(lhs == rhs); }
+
+	friend bool operator<(Semantic lhs, Semantic rhs)
+	{
+		return lhs.label < rhs.label || (lhs.label == rhs.label && lhs.value < rhs.value);
+	}
+
+	friend bool operator<=(Semantic lhs, Semantic rhs) { return !(rhs < lhs); }
+
+	friend bool operator>(Semantic lhs, Semantic rhs) { return rhs < lhs; }
+
+	friend bool operator>=(Semantic lhs, Semantic rhs) { return !(lhs < rhs); }
 
 	friend std::ostream& operator<<(std::ostream& out, Semantic s)
 	{
