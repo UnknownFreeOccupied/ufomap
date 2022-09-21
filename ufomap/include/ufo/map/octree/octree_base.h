@@ -3116,15 +3116,15 @@ class OctreeBase
 	void apply(NodeType const& node, BinaryFunction f, UnaryFunction f2,
 	           bool const propagate)
 	{
-		if (leaf(node)) {
+		if (isLeaf(node)) {
 			f(leafNode(node), node.index());
 		} else {
 			applyAllRecurs(innerNode(node), node.depth(), f, f2);
 		}
 
-		if (!modified(node)) {
-			setModifiedParents(node);
-			setModified(leafNode(node), ...);
+		if (!isModified(node)) {
+			setModifiedParents(node.code());
+			leafNode(node).setModifiedIndex(node.index());
 		}
 
 		if (propagate) {
@@ -3311,12 +3311,14 @@ class OctreeBase
 		InnerNode const* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
+		while (min_depth != depth && node->isParentIndex(code.index(depth))) {
 			node = &innerNode(*node, code.index(depth));
 			--depth;
 		}
 
-		return 0 == code.depth() && isParent(*node) ? leafNode(*node, code.index()) : *node;
+		return 0 == code.depth() && node->isParentIndex(code.index(depth))
+		           ? leafNode(*node, code.index(1))
+		           : *node;
 	}
 
 	[[nodiscard]] LeafNode& leafNode(Code code)
@@ -3324,12 +3326,14 @@ class OctreeBase
 		InnerNode* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
+		while (min_depth != depth && node->isParentIndex(code.index(depth))) {
 			node = &innerNode(*node, code.index(depth));
 			--depth;
 		}
 
-		return 0 == code.depth() && isParent(*node) ? leafNode(*node, code.index()) : *node;
+		return 0 == code.depth() && node->isParentIndex(code.index(depth))
+		           ? leafNode(*node, code.index(1))
+		           : *node;
 	}
 
 	[[nodiscard]] constexpr InnerNode const& innerNode(Node node) const
