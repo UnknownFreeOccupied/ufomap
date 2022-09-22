@@ -867,7 +867,7 @@ class OccupancyMap
 	//
 
 	template <std::size_t N, class T>
-	void updateNode(OccupancyNode<N>& node, index_field_t const indices, T const& children)
+	void updateNode(OccupancyNode<N>& node, IndexField const indices, T const& children)
 	{
 		if constexpr (1 == N) {
 			auto fun = [](OccupancyNode<1> const node) { return node.occupancy[0]; };
@@ -890,8 +890,8 @@ class OccupancyMap
 			node.contains_occupied =
 			    any_of(children, [this](auto const& child) { return containsOccupied(child); });
 		} else {
-			for (index_t index = 0; children.size() != index; ++index) {
-				if (index_field_t(0) == (indices >> index) & index_field_t(1)) {
+			for (std::size_t index = 0; children.size() != index; ++index) {
+				if (!indices[index]) {
 					continue;
 				}
 
@@ -1029,11 +1029,11 @@ class OccupancyMap
 		} else {
 			if (1 == n) {
 				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						first->node.occupancy.fill(*(d + i));
 					} else {
 						for (std::size_t index = 0; first->node.occupancy.size() != index; ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.occupancy[index] = *(d + i);
 							}
 						}
@@ -1041,11 +1041,11 @@ class OccupancyMap
 				}
 			} else {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						std::copy(d + i, d + i + 8, first->node.occupancy.data());
 					} else {
 						for (index_t index = 0; first->node.occupancy.size() != index; ++i, ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.occupancy[index] = *(d + i + index);
 							}
 						}

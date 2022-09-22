@@ -446,7 +446,7 @@ class ReflectionMap
 	//
 
 	template <std::size_t N, class T>
-	void updateNode(ReflectionNode<N>& node, index_field_t const indices, T const& children)
+	void updateNode(ReflectionNode<N>& node, IndexField const indices, T const& children)
 	{
 		if constexpr (1 == N) {
 			auto hits_fun = [](ReflectionNode<1> const node) { return node.hits[0]; };
@@ -466,8 +466,8 @@ class ReflectionMap
 					break;
 			}
 		} else {
-			for (index_t index = 0; children.size() != index; ++index) {
-				if ((indices >> index) & index_field_t(1)) {
+			for (std::size_t index = 0; children.size() != index; ++index) {
+				if (indices[index]) {
 					switch (prop_criteria_) {
 						case PropagationCriteria::MIN:
 							node.hits[index] = min(children[index].hits);
@@ -550,12 +550,12 @@ class ReflectionMap
 		} else {
 			if (1 == n) {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 2) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						first->node.hits.fill(*(d + i));
 						first->node.misses.fill(*(d + i + 1));
 					} else {
 						for (std::size_t index = 0; first->node.hits.size() != index; ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.hits[index] = *(d + i);
 								first->node.misses[index] = *(d + i + 1);
 							}
@@ -564,12 +564,12 @@ class ReflectionMap
 				}
 			} else {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 16) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						std::copy(d + i, d + i + 8, first->node.hits.data());
 						std::copy(d + i + 8, d + i + 16, first->node.misses.data());
 					} else {
 						for (index_t index = 0; first->node.hits.size() != index; ++i, ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.hits[index] = *(d + i + index);
 								first->node.misses[index] = *(d + i + index + 8);
 							}

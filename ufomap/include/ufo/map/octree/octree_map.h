@@ -181,7 +181,7 @@ class OctreeMap
 	//
 
 	template <class NodeT, class T>
-	void updateNode(NodeT& node, index_field_t const indices, T const& children)
+	void updateNode(NodeT& node, IndexField const indices, T const& children)
 	{
 		(Bases<OctreeMap>::updateNode(node, indices, children), ...);
 	}

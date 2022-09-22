@@ -72,12 +72,12 @@ struct OccupancyNode {
 	// Fill
 	//
 
-	void fill(OccupancyNode const parent, index_t const index)
+	void fill(OccupancyNode const parent, std::size_t const pos)
 	{
 		if constexpr (1 == N) {
 			occupancy = other.occupancy;
 		} else {
-			occupancy.fill(other.occupancy[index]);
+			occupancy.fill(other.occupancy[pos]);
 		}
 	}
 
@@ -85,41 +85,14 @@ struct OccupancyNode {
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(OccupancyNode const parent, index_t const index) const
+	[[nodiscard]] bool isCollapsible(OccupancyNode const parent,
+	                                 std::size_t const pos) const
 	{
 		if constexpr (1 == N) {
 			return occupancy == parent.occupancy;
 		} else {
 			return all_of(occupancy,
-			              [p = parent.occupancy[index]](auto const x) { return x == p; });
-		}
-	}
-
-	//
-	// Get occupancy
-	//
-
-	[[nodiscard]] constexpr occupancy_t occupancyIndex(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return occupancy[0];
-		} else {
-			return occupancy[index];
-		}
-	}
-
-	//
-	// Set occupancy
-	//
-
-	void setOccupancy(occupancy_t const value) { occupancy.fill(value); }
-
-	void setOccupancyIndex(index_t const index, occupancy_t const value)
-	{
-		if constexpr (1 == N) {
-			setOccupancy(value);
-		} else {
-			occupancy[index] = value;
+			              [p = parent.occupancy[pos]](auto const x) { return x == p; });
 		}
 	}
 };
@@ -127,9 +100,9 @@ struct OccupancyNode {
 template <std::size_t N>
 struct ContainsOccupancy {
 	// Indicators
-	index_field_t contains_unknown;
-	index_field_t contains_free;
-	index_field_t contains_occupied;
+	IndexField contains_unknown;
+	IndexField contains_free;
+	IndexField contains_occupied;
 
 	//
 	// Fill
@@ -137,15 +110,21 @@ struct ContainsOccupancy {
 
 	void fill(ContainsOccupancy const parent, index_t const index)
 	{
-		contains_unknown = (parent.contains_unknown >> index) & index_field_t(1)
-		                       ? std::numeric_limits<index_field_t>::max()
-		                       : 0;
-		contains_free = (parent.contains_free >> index) & index_field_t(1)
-		                    ? std::numeric_limits<index_field_t>::max()
-		                    : 0;
-		contains_occupied = (parent.contains_occupied >> index) & index_field_t(1)
-		                        ? std::numeric_limits<index_field_t>::max()
-		                        : 0;
+		if (parent.contains_unknown[index]) {
+			contains_unknown.set();
+		} else {
+			contains_unknown.reset();
+		}
+		if (parent.contains_free[index]) {
+			contains_free.set();
+		} else {
+			contains_free.reset();
+		}
+		if (parent.contains_occupied[index]) {
+			contains_occupied.set();
+		} else {
+			contains_occupied.reset();
+		}
 	}
 
 	//
@@ -153,162 +132,9 @@ struct ContainsOccupancy {
 	//
 
 	[[nodiscard]] bool isCollapsible(ContainsOccupancy const parent,
-	                                 index_t const index) const
+	                                 std::size_t const pos) const
 	{
 		return true;  // Does not matter what this is...
-	}
-
-	//
-	// Contains unknown
-	//
-
-	constexpr index_field_t containsUnknown() const { return contains_unknown; }
-
-	constexpr index_field_t containsUnknown(index_field_t const indices) const
-	{
-		return contains_unknown & indices;
-	}
-
-	constexpr bool containsUnknownIndex(index_t const index) const
-	{
-		return (contains_unknown >> index) & index_field_t(1);
-	}
-
-	//
-	// Contains free
-	//
-
-	constexpr index_field_t containsFree() const { return contains_free; }
-
-	constexpr index_field_t containsFree(index_field_t const indices) const
-	{
-		return contains_free & indices;
-	}
-
-	constexpr bool containsFreeIndex(index_t const index) const
-	{
-		return (contains_free >> index) & index_field_t(1);
-	}
-
-	//
-	// Contains occupied
-	//
-
-	constexpr index_field_t containsOccupied() const { return contains_occupied; }
-
-	constexpr index_field_t containsOccupied(index_field_t const indices) const
-	{
-		return contains_occupied & indices;
-	}
-
-	constexpr bool containsOccupiedIndex(index_t const index) const
-	{
-		return (contains_occupied >> index) & index_field_t(1);
-	}
-
-	//
-	// Set contains unknown
-	//
-
-	constexpr void setContainsUnknown() noexcept
-	{
-		contains_unknown = std::numeric_limits<index_field_t>::max();
-	}
-
-	constexpr void setContainsUnknown(index_field_t const indices) noexcept
-	{
-		contains_unknown |= indices;
-	}
-
-	constexpr void setContainsUnknownIndex(index_t const index) noexcept
-	{
-		contains_unknown |= index_field_t(1) << index;
-	}
-
-	//
-	// Reset contains unknown
-	//
-
-	constexpr void resetContainsUnknown() noexcept { contains_unknown = 0; }
-
-	constexpr void resetContainsUnknown(index_field_t const indices) noexcept
-	{
-		contains_unknown &= ~indices;
-	}
-
-	constexpr void resetContainsUnknownIndex(index_t const index) noexcept
-	{
-		contains_unknown &= ~(index_field_t(1) << index);
-	}
-
-	//
-	// Set contains free
-	//
-
-	constexpr void setContainsFree() noexcept
-	{
-		contains_free = std::numeric_limits<index_field_t>::max();
-	}
-
-	constexpr void setContainsFree(index_field_t const indices) noexcept
-	{
-		contains_free |= indices;
-	}
-
-	constexpr void setContainsFreeIndex(index_t const index) noexcept
-	{
-		contains_free |= index_field_t(1) << index;
-	}
-
-	//
-	// Reset contains free
-	//
-
-	constexpr void resetContainsFree() noexcept { contains_unknown = 0; }
-
-	constexpr void resetContainsFree(index_field_t const indices) noexcept
-	{
-		contains_free &= ~indices;
-	}
-
-	constexpr void resetContainsFreeIndex(index_t const index) noexcept
-	{
-		contains_free &= ~(index_field_t(1) << index);
-	}
-
-	//
-	// Set contains occupied
-	//
-
-	constexpr void setContainsOccupied() noexcept
-	{
-		contains_occupied = std::numeric_limits<index_field_t>::max();
-	}
-
-	constexpr void setContainsOccupied(index_field_t const indices) noexcept
-	{
-		contains_occupied |= indices;
-	}
-
-	constexpr void setContainsOccupiedIndex(index_t const index) noexcept
-	{
-		contains_occupied |= index_field_t(1) << index;
-	}
-
-	//
-	// Reset contains occupied
-	//
-
-	constexpr void resetContainsOccupied() noexcept { contains_occupied = 0; }
-
-	constexpr void resetContainsOccupied(index_field_t const indices) noexcept
-	{
-		contains_occupied &= ~indices;
-	}
-
-	constexpr void resetContainsOccupiedIndex(index_t const index) noexcept
-	{
-		contains_occupied &= ~(index_field_t(1) << index);
 	}
 };
 
@@ -323,131 +149,20 @@ struct ContainsOccupancy<1> {
 	// Fill
 	//
 
-	void fill(ContainsOccupancy const parent, index_t const)
+	void fill(ContainsOccupancy const parent, std::size_t const)
 	{
-		contains_unknown = parent.contains_unknown ? 1 : 0;
-		contains_free = parent.contains_free ? 1 : 0;
-		contains_occupied = parent.contains_occupied ? 1 : 0;
+		contains_unknown = parent.contains_unknown;
+		contains_free = parent.contains_free;
+		contains_occupied = parent.contains_occupied;
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(ContainsOccupancy const, index_t const) const
+	[[nodiscard]] bool isCollapsible(ContainsOccupancy const, std::size_t const) const
 	{
 		return true;  // Does not matter what this is...
-	}
-
-	//
-	// Contains unknown
-	//
-
-	constexpr bool containsUnknown() const { return contains_unknown; }
-
-	constexpr bool containsUnknown(index_field_t const) const { return contains_unknown; }
-
-	constexpr bool containsUnknownIndex(index_t const) const { return contains_unknown; }
-
-	//
-	// Contains free
-	//
-
-	constexpr bool containsFree() const { return contains_free; }
-
-	constexpr bool containsFree(index_field_t const) const { return contains_free; }
-
-	constexpr bool containsFreeIndex(index_t const) const { return contains_free; }
-
-	//
-	// Contains occupied
-	//
-
-	constexpr bool containsOccupied() const { return contains_occupied; }
-
-	constexpr bool containsOccupied(index_field_t const) const { return contains_occupied; }
-
-	constexpr bool containsOccupiedIndex(index_t const) const { return contains_occupied; }
-
-	//
-	// Set contains unknown
-	//
-
-	constexpr void setContainsUnknown() noexcept { contains_unknown = 1; }
-
-	constexpr void setContainsUnknown(index_field_t const) noexcept
-	{
-		contains_unknown = 1;
-	}
-
-	constexpr void setContainsUnknownIndex(index_t const) noexcept { contains_unknown = 1; }
-
-	//
-	// Reset contains unknown
-	//
-
-	constexpr void resetContainsUnknown() noexcept { contains_unknown = 0; }
-
-	constexpr void resetContainsUnknown(index_field_t const) noexcept
-	{
-		contains_unknown = 0;
-	}
-
-	constexpr void resetContainsUnknownIndex(index_t const) noexcept
-	{
-		contains_unknown = 0;
-	}
-
-	//
-	// Set contains free
-	//
-
-	constexpr void setContainsFree() noexcept { contains_free = 1; }
-
-	constexpr void setContainsFree(index_field_t const) noexcept { contains_free = 1; }
-
-	constexpr void setContainsFreeIndex(index_t const) noexcept { contains_free = 1; }
-
-	//
-	// Reset contains free
-	//
-
-	constexpr void resetContainsFree() noexcept { contains_unknown = 0; }
-
-	constexpr void resetContainsFree(index_field_t const) noexcept { contains_free = 0; }
-
-	constexpr void resetContainsFreeIndex(index_t const) noexcept { contains_free = 0; }
-
-	//
-	// Set contains occupied
-	//
-
-	constexpr void setContainsOccupied() noexcept { contains_occupied = 1; }
-
-	constexpr void setContainsOccupied(index_field_t const) noexcept
-	{
-		contains_occupied = 1;
-	}
-
-	constexpr void setContainsOccupiedIndex(index_t const) noexcept
-	{
-		contains_occupied = 1;
-	}
-
-	//
-	// Reset contains occupied
-	//
-
-	constexpr void resetContainsOccupied() noexcept { contains_occupied = 0; }
-
-	constexpr void resetContainsOccupied(index_field_t const) noexcept
-	{
-		contains_occupied = 0;
-	}
-
-	constexpr void resetContainsOccupiedIndex(index_t const) noexcept
-	{
-		contains_occupied = 0;
 	}
 };
 }  // namespace ufo::map

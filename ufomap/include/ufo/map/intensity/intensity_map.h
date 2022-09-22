@@ -73,14 +73,18 @@ class IntensityMap
 		return derived().leafNode(code).intensityIndex(code.index());
 	}
 
-	[[nodiscard]] intensity_t intensity(Key key) const { return intensity(Derived::toCode(key)); }
+	[[nodiscard]] intensity_t intensity(Key key) const
+	{
+		return intensity(Derived::toCode(key));
+	}
 
 	[[nodiscard]] intensity_t intensity(Point coord, depth_t depth = 0) const
 	{
 		return intensity(derived().toCode(coord, depth));
 	}
 
-	[[nodiscard]] intensity_t intensity(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	[[nodiscard]] intensity_t intensity(coord_t x, coord_t y, coord_t z,
+	                                    depth_t depth = 0) const
 	{
 		return intensity(derived().toCode(x, y, z, depth));
 	}
@@ -92,14 +96,20 @@ class IntensityMap
 	void setIntensity(Node node, intensity_t intensity, bool propagate = true)
 	{
 		derived().apply(
-		    node, [intensity](auto& node, index_t const index) { node.setIntensityIndex(index, intensity); },
+		    node,
+		    [intensity](auto& node, index_t const index) {
+			    node.setIntensityIndex(index, intensity);
+		    },
 		    [intensity](auto& node) { node.setIntensity(intensity); }, propagate);
 	}
 
 	void setIntensity(Code code, intensity_t intensity, bool propagate = true)
 	{
 		derived().apply(
-		    code, [intensity](auto& node, index_t const index) { node.setIntensityIndex(index, intensity); },
+		    code,
+		    [intensity](auto& node, index_t const index) {
+			    node.setIntensityIndex(index, intensity);
+		    },
 		    [intensity](auto& node) { node.setIntensity(intensity); }, propagate);
 	}
 
@@ -108,13 +118,14 @@ class IntensityMap
 		setIntensity(Derived::toCode(key), intensity, propagate);
 	}
 
-	void setIntensity(Point coord, intensity_t intensity, bool propagate = true, depth_t depth = 0)
+	void setIntensity(Point coord, intensity_t intensity, bool propagate = true,
+	                  depth_t depth = 0)
 	{
 		setIntensity(derived().toCode(coord, depth), intensity, propagate);
 	}
 
-	void setIntensity(coord_t x, coord_t y, coord_t z, intensity_t intensity, bool propagate = true,
-	             depth_t depth = 0)
+	void setIntensity(coord_t x, coord_t y, coord_t z, intensity_t intensity,
+	                  bool propagate = true, depth_t depth = 0)
 	{
 		setIntensity(derived().toCode(x, y, z, depth), intensity, propagate);
 	}
@@ -123,13 +134,14 @@ class IntensityMap
 	// Propagation criteria
 	//
 
-	[[nodiscard]] constexpr PropagationCriteria intensityPropagationCriteria() const noexcept
+	[[nodiscard]] constexpr PropagationCriteria intensityPropagationCriteria()
+	    const noexcept
 	{
 		return prop_criteria_;
 	}
 
 	constexpr void setIntensityPropagationCriteria(PropagationCriteria prop_criteria,
-	                                          bool propagate = true) noexcept
+	                                               bool propagate = true) noexcept
 	{
 		if (prop_criteria_ == prop_criteria) {
 			return;
@@ -200,7 +212,7 @@ class IntensityMap
 	//
 
 	template <std::size_t N, class T>
-	void updateNode(IntensityNode<N>& node, index_field_t const indices, T const& children)
+	void updateNode(IntensityNode<N>& node, IndexField const indices, T const& children)
 	{
 		if constexpr (1 == N) {
 			switch (prop_criteria_) {
@@ -216,7 +228,7 @@ class IntensityMap
 			}
 		} else {
 			for (index_t index = 0; children.size() != index; ++index) {
-				if ((indices >> index) & index_field_t(1)) {
+				if (indices[index]) {
 					switch (prop_criteria_) {
 						case PropagationCriteria::MIN:
 							node.intensity[index] = minIntensity(children[index]);
@@ -298,13 +310,15 @@ class IntensityMap
 	template <class T>
 	[[nodiscard]] static constexpr intensity_t averageIntensity(T const& nodes)
 	{
-		return std::accumulate(
-		           std::cbegin(nodes), std::cend(nodes), 0.0,
-		           [](double cur, IntensityNode<1> node) { return cur + node.intensity[0]; }) /
+		return std::accumulate(std::cbegin(nodes), std::cend(nodes), 0.0,
+		                       [](double cur, IntensityNode<1> node) {
+			                       return cur + node.intensity[0];
+		                       }) /
 		       double(nodes.size());
 	}
 
-	[[nodiscard]] static constexpr intensity_t averageIntensity(IntensityNode<8> const& node)
+	[[nodiscard]] static constexpr intensity_t averageIntensity(
+	    IntensityNode<8> const& node)
 	{
 		return averageIntensity(std::cbegin(node.intensity), std::cend(node.intensity));
 	}
@@ -373,11 +387,11 @@ class IntensityMap
 		} else {
 			if (1 == n) {
 				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						first->node.intensity.fill(*(d + i));
 					} else {
 						for (std::size_t index = 0; first->node.intensity.size() != index; ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.intensity[index] = *(d + i);
 							}
 						}
@@ -385,11 +399,11 @@ class IntensityMap
 				}
 			} else {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						std::copy(d + i, d + i + 8, first->node.intensity.data());
 					} else {
 						for (index_t index = 0; first->node.intensity.size() != index; ++i, ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.intensity[index] = *(d + i + index);
 							}
 						}
@@ -408,7 +422,8 @@ class IntensityMap
 		auto data = std::make_unique<intensity_t[]>(num_nodes);
 		auto d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(std::cbegin(first->node.intensity), std::cend(first->node.intensity), d + i);
+			std::copy(std::cbegin(first->node.intensity), std::cend(first->node.intensity),
+			          d + i);
 		}
 
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));

@@ -696,14 +696,8 @@ class SurfelMap
 	// Update node
 	//
 
-	template <bool Single>
-	void updateNode(SurfelNode<Single> const&, index_field_t const)
-	{
-	}
-
 	template <bool Single, class T>
-	void updateNode(SurfelNode<Single>& node, index_field_t const indices,
-	                T const& children)
+	void updateNode(SurfelNode<Single>& node, IndexField const indices, T const& children)
 	{
 		// TODO: Implement
 

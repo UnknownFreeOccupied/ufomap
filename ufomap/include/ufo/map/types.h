@@ -42,6 +42,9 @@
 #ifndef UFO_MAP_TYPES_H
 #define UFO_MAP_TYPES_H
 
+// UFO
+#include <ufo/map/index_field.h>
+
 // STL
 #include <cstdint>
 
@@ -53,7 +56,6 @@ enum class PropagationCriteria { MIN, MAX, MEAN };
 using coord_t = float;
 using node_size_t = double;
 using index_t = std::uint_fast8_t;
-using index_field_t = std::uint8_t;
 using depth_t = std::uint_fast8_t;
 using key_t = std::uint_fast32_t;
 using code_t = std::uint_fast64_t;
@@ -64,10 +66,6 @@ using label_t = std::uint32_t;
 using value_t = float;
 using intensity_t = float;
 using count_t = std::uint32_t;
-
-struct IndexField {
-	std::uint8_t field;
-};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TYPES_H

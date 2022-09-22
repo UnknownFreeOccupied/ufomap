@@ -66,10 +66,10 @@ class EmptyMap
 	// Update node
 	//
 
-	static constexpr void updateNode(EmptyNode, index_field_t const) noexcept {}
+	static constexpr void updateNode(EmptyNode, IndexField const) noexcept {}
 
 	template <class T>
-	static constexpr void updateNode(EmptyNode, index_field_t const, T const&) noexcept
+	static constexpr void updateNode(EmptyNode, IndexField const, T const&) noexcept
 	{
 	}
 

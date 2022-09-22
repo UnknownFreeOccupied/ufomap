@@ -215,7 +215,7 @@ class DistanceMap
 	//
 
 	template <std::size_t N, class T>
-	void updateNode(DistanceNode<N>& node, index_field_t const indices, T const& children)
+	void updateNode(DistanceNode<N>& node, IndexField const indices, T const& children)
 	{
 		if constexpr (1 == N) {
 			auto fun = [](DistanceNode<1> const node) { return node.distance[0]; };
@@ -231,8 +231,8 @@ class DistanceMap
 					break;
 			}
 		} else {
-			for (index_t index = 0; children.size() != index; ++index) {
-				if ((indices >> index) & index_field_t(1)) {
+			for (std::size_t index = 0; children.size() != index; ++index) {
+				if (indices[index]) {
 					switch (prop_criteria_) {
 						case PropagationCriteria::MIN:
 							node.distance[index] = min(children[index].distance);
@@ -307,11 +307,11 @@ class DistanceMap
 		} else {
 			if (1 == n) {
 				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						first->node.distance.fill(*(d + i));
 					} else {
 						for (std::size_t index = 0; first->node.distance.size() != index; ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.distance[index] = *(d + i);
 							}
 						}
@@ -319,11 +319,11 @@ class DistanceMap
 				}
 			} else {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						std::copy(d + i, d + i + 8, first->node.distance.data());
 					} else {
 						for (index_t index = 0; first->node.distance.size() != index; ++i, ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.distance[index] = *(d + i + index);
 							}
 						}

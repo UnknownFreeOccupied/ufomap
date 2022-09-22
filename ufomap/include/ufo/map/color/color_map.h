@@ -245,7 +245,7 @@ class ColorMap
 	//
 
 	template <std::size_t N, class T>
-	void updateNode(ColorNode<N>& node, index_field_t const indices, T const& children)
+	void updateNode(ColorNode<N>& node, IndexField const indices, T const& children)
 	{
 		if constexpr (1 == N) {
 			std::array<color_t, children.size()> red;
@@ -260,8 +260,8 @@ class ColorMap
 			node.green[0] = average(green);
 			node.blue[0] = average(blue);
 		} else {
-			for (index_t index = 0; children.size() != index; ++index) {
-				if ((indices >> index) & index_field_t(1)) {
+			for (std::size_t index = 0; children.size() != index; ++index) {
+				if (indices[index]) {
 					node.red[index] = average(children[index].red);
 					node.green[index] = average(children[index].green);
 					node.blue[index] = average(children[index].blue);
@@ -334,13 +334,13 @@ class ColorMap
 		} else {
 			if (1 == n) {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 3) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						first->node.red.fill(*(d + i));
 						first->node.green.fill(*(d + i + 1));
 						first->node.blue.fill(*(d + i + 2));
 					} else {
 						for (std::size_t index = 0; first->node.red.size() != index; ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.red[index] = *(d + i);
 								first->node.green[index] = *(d + i + 1);
 								first->node.blue[index] = *(d + i + 2);
@@ -350,13 +350,13 @@ class ColorMap
 				}
 			} else {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 24) {
-					if (std::numeric_limits<index_field_t>::max() == first->index_field) {
+					if (first->index_field.all()) {
 						std::copy(d + i, d + i + 8, first->node.red.data());
 						std::copy(d + i + 8, d + i + 16, first->node.green.data());
 						std::copy(d + i + 16, d + i + 24, first->node.blue.data());
 					} else {
 						for (std::size_t index = 0; first->node.red.size() != index; ++index) {
-							if ((first.index_field >> index) & index_field_t(1)) {
+							if (first.index_field[index]) {
 								first->node.red[index] = *(d + i + index);
 								first->node.green[index] = *(d + i + index + 8);
 								first->node.blue[index] = *(d + i + index + 16);

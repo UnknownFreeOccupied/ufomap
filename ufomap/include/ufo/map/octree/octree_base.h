@@ -3095,9 +3095,9 @@ class OctreeBase
 
 	[[nodiscard]] constexpr InnerNode& root() noexcept { return root_; }
 
-	[[nodiscard]] constexpr index_field_t rootIndexField() const noexcept
+	[[nodiscard]] constexpr IndexField rootIndexField() const noexcept
 	{
-		return index_field_t(1);
+		return IndexField(1);
 	}
 
 	[[nodiscard]] constexpr index_t rootIndex() const noexcept { return index_t(0); }
@@ -3739,7 +3739,7 @@ class OctreeBase
 	// TODO: Add comments
 
 	template <bool KeepModified>
-	void updateNode(InnerNode& node, index_field_t indices, depth_t const depth)
+	void updateNode(InnerNode& node, IndexField indices, depth_t const depth)
 	{
 		if (1 == depth) {
 			derived().updateNode(node, indices, leafChildren(node));
@@ -3780,9 +3780,9 @@ class OctreeBase
 	template <bool KeepModified>
 	void propagateModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
 	{
-		index_field_t modified_parent = node.isModified() & node.isParent();
+		IndexField modified_parent = node.isModified() & node.isParent();
 
-		if (index_field_t(0) == modified_parent) {
+		if (modified_parent.none()) {
 			if constexpr (!KeepModified) {
 				node.resetModified();
 			}
@@ -3791,16 +3791,16 @@ class OctreeBase
 
 		if (1 == depth) {
 			if constexpr (!KeepModified) {
-				for (index_t index = 0; 8 != index; ++index) {
-					if (index_field_t(0) == (modified_parent >> index) & index_field_t(1)) {
+				for (std::size_t index = 0; 8 != index; ++index) {
+					if (!modified_parent[index]) {
 						continue;
 					}
 					leafChild(node, index).resetModified();
 				}
 			}
 		} else {
-			for (index_t index = 0; 8 != index; ++index) {
-				if (index_field_t(0) == (modified_parent >> index) & index_field_t(1)) {
+			for (std::size_t index = 0; 8 != index; ++index) {
+				if (!modified_parent[index]) {
 					continue;
 				}
 				propagateModifiedRecurs<KeepModified>(innerChild(node, index), depth - 1,
@@ -3826,22 +3826,22 @@ class OctreeBase
 
 	// If all children are the same as the parent they can be pruned
 	// NOTE: Only call with nodes that have children
-	[[nodiscard]] static index_field_t isCollapsible(InnerNode const& node,
-	                                                 index_field_t const indices,
-	                                                 depth_t const depth)
+	[[nodiscard]] static IndexField isCollapsible(InnerNode const& node,
+	                                              IndexField const indices,
+	                                              depth_t const depth)
 	{
-		index_field_t collapsible = 0;
-		for (index_t index = 0; 8 != index; ++index) {
-			if (0 == (indices >> index) & index_field_t(1)) {
+		IndexField collapsible;
+		for (std::size_t index = 0; 8 != index; ++index) {
+			if (!indices[index]) {
 				continue;
 			}
 			if (1 == depth) {
 				if (leafChild(node, index).isCollapsible(node, index)) {
-					collapsible |= index_field_t(1) << index;
+					collapsible.set(index);
 				}
 			} else {
 				if (innerChild(node, index).isCollapsible(node, index)) {
-					collapsible |= index_field_t(1) << index;
+					collapsible.set(index);
 				}
 			}
 		}
@@ -3849,7 +3849,7 @@ class OctreeBase
 	}
 
 	// NOTE: Only call with nodes that have children
-	index_field_t prune(InnerNode& node, index_field_t indices, depth_t depth)
+	IndexField prune(InnerNode& node, IndexField indices, depth_t depth)
 	{
 		indices = isCollapsible(node, indices, depth);
 		if (indices) {
@@ -3858,7 +3858,7 @@ class OctreeBase
 		return indices;
 	}
 
-	index_field_t pruneRecurs(InnerNode& node, depth_t depth)
+	IndexField pruneRecurs(InnerNode& node, depth_t depth)
 	{
 		if (node.isAllLeaf()) {
 			return node.isLeaf();
@@ -3868,15 +3868,15 @@ class OctreeBase
 			return node.isLeaf() | prune(node, node.isParent(), depth);
 		}
 
-		index_field_t prunable = 0;
-		for (index_t index = 0; 8 != index; ++index) {
+		IndexField prunable;
+		for (std::size_t index = 0; 8 != index; ++index) {
 			if (node.isLeafIndex(index)) {
 				continue;
 			}
 
 			auto& child = innerChild(node, index);
 			if (child.isParent() == pruneRecurs(child, depth - 1)) {
-				prunable |= index_field_t(1) << index;
+				prunable.set(index);
 			}
 		}
 
@@ -3923,10 +3923,10 @@ class OctreeBase
 
 	void createLeafChildren(InnerNode& node) { createLeafChildren(node, leaf(node)); }
 
-	void createLeafChildren(InnerNode& node, index_field_t indices)
+	void createLeafChildren(InnerNode& node, IndexField indices)
 	{
 		indices &= leaf(node);
-		if (0U == indices) {
+		if (indices.none()) {
 			return;
 		}
 

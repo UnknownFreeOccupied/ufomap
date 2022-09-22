@@ -354,6 +354,42 @@ class Semantics
 		insert(std::cbegin(ilist), std::cend(ilist));
 	}
 
+	std::pair<iterator, bool> insert(index_t const index, Semantic semantic)
+	{
+		return insert<InsertType::NORMAL>(index, semantic);
+	}
+
+	std::pair<iterator, bool> insert(index_t const index, label_t label, value_t value)
+	{
+		return insert(index, Semantic(label, value));
+	}
+
+	iterator insert(index_t const index, const_iterator hint, Semantic semantic)
+	{
+		return insert<InsertType::NORMAL>(index, hint, semantic).first;
+	}
+
+	iterator insert(index_t const index, const_iterator hint, label_t label, value_t value)
+	{
+		return insert(index, hint, label, value);
+	}
+
+	template <class InputIt>
+	void insert(index_t const index, InputIt first, InputIt last)
+	{
+		std::vector<Semantic> temp(first, last);
+		insert(index, temp);
+	}
+
+	void insert(index_t const index, std::initializer_list<Semantic> ilist)
+	{
+		insert(index, std::cbegin(ilist), std::cend(ilist));
+	}
+
+	//
+	// Insert or assign
+	//
+
 	std::pair<iterator, bool> insertOrAssign(Semantic semantic)
 	{
 		return insert<InsertType::ASSIGN>(semantic);
@@ -374,40 +410,157 @@ class Semantics
 		return insertOrAssign(Semantic(hint, label, value));
 	}
 
-	// TODO: Some generic insert that takes function
+	template <class InputIt>
+	void insertOrAssign(InputIt first, InputIt last)
+	{
+		std::vector<Semantic> temp(first, last);
+		insertOrAssign(temp);
+	}
+
+	void insertOrAssign(std::initializer_list<Semantic> ilist)
+	{
+		insertOrAssign(std::cbegin(ilist), std::cend(ilist));
+	}
+
+	std::pair<iterator, bool> insertOrAssign(index_t const index, Semantic semantic)
+	{
+		return insert<InsertType::ASSIGN>(index, semantic);
+	}
+
+	std::pair<iterator, bool> insertOrAssign(index_t const index, label_t label,
+	                                         value_t value)
+	{
+		return insertOrAssign(index, Semantic(label, value));
+	}
+
+	iterator insertOrAssign(index_t const index, const_iterator hint, Semantic semantic)
+	{
+		return insert<InsertType::ASSIGN>(index, hint, semantic).first;
+	}
+
+	iterator insertOrAssign(index_t const index, const_iterator hint, label_t label,
+	                        value_t value)
+	{
+		return insertOrAssign(index, Semantic(hint, label, value));
+	}
+
+	template <class InputIt>
+	void insertOrAssign(index_t const index, InputIt first, InputIt last)
+	{
+		std::vector<Semantic> temp(first, last);
+		insertOrAssign(index, temp);
+	}
+
+	void insertOrAssign(index_t const index, std::initializer_list<Semantic> ilist)
+	{
+		insertOrAssign(index, std::cbegin(ilist), std::cend(ilist));
+	}
+
+	//
+	// Insert or assign custom function
+	//
+
+	template <class UnaryFunction>
+	std::pair<iterator, bool> insertOrAssign(label_t label, UnaryFunction f)
+	{
+		return insert(label, f);
+	}
+
+	template <class UnaryFunction>
+	iterator insertOrAssign(const_iterator hint, label_t label, UnaryFunction f)
+	{
+		return insert(hint, label, f).first;
+	}
+
+	template <class InputIt, class UnaryFunction>
+	void insertOrAssign(InputIt first, InputIt last, UnaryFunction f)
+	{
+		std::vector<Semantic> temp(first, last);
+		insertOrAssign(temp, f);
+	}
+
+	template <class UnaryFunction>
+	void insertOrAssign(std::initializer_list<label_t> ilist, UnaryFunction f)
+	{
+		insertOrAssign(std::cbegin(ilist), std::cend(ilist), f);
+	}
+
+	template <class UnaryFunction>
+	std::pair<iterator, bool> insertOrAssign(index_t const index, label_t label,
+	                                         UnaryFunction f)
+	{
+		return insert(index, label, f);
+	}
+
+	template <class UnaryFunction>
+	iterator insertOrAssign(index_t const index, const_iterator hint, label_t label,
+	                        UnaryFunction f)
+	{
+		return insert(index, hint, label, f).first;
+	}
+
+	template <class InputIt, class UnaryFunction>
+	void insertOrAssign(index_t const index, InputIt first, InputIt last, UnaryFunction f)
+	{
+		std::vector<Semantic> temp(first, last);
+		insertOrAssign(index, temp, f);
+	}
+
+	template <class UnaryFunction>
+	void insertOrAssign(index_t const index, std::initializer_list<label_t> ilist,
+	                    UnaryFunction f)
+	{
+		insertOrAssign(index, std::cbegin(ilist), std::cend(ilist), f);
+	}
 
 	//
 	// Assign
 	//
 
-	/*
-	 * insert_or_replace_max
-	 * If label_t k is not present in the map it is inserted with value obj.
-	 * If label_t k is present then its value is update acording to
-	 * 	max(current_value, obj).
-	 */
-	template <class M>
-	std::pair<iterator, bool> insert_or_replace_max(label_t const &k, M &&obj)
+	void assign(container::Range<label_t> range, value_t value)
 	{
-		return insert_impl<InsertType::MAX>(k, std::forward<M>(obj));
+		assign(container::RangeSet<label_t>(range), value);
 	}
 
-	template <class M>
-	std::pair<iterator, bool> insert_or_replace_max(label_t &&k, M &&obj)
+	void assign(container::RangeSet<label_t> const &range, value_t value)
 	{
-		return insert_impl<InsertType::MAX>(std::move(k), std::forward<M>(obj));
+		// TODO: Implement
 	}
 
-	template <class M>
-	iterator insert_or_replace_max(const_iterator hint, label_t const &k, M &&obj)
+	template <class UnaryFunction>
+	void assign(container::Range<label_t> range, UnaryFunction f)
 	{
-		return insert_impl<InsertType::MAX>(hint, k, std::forward<M>(obj)).first;
+		assign(container::RangeSet<label_t>(range), f);
 	}
 
-	template <class M>
-	iterator insert_or_replace_max(const_iterator hint, label_t &&k, M &&obj)
+	template <class UnaryFunction>
+	void assign(container::RangeSet<label_t> const &range, UnaryFunction f)
 	{
-		return insert_impl<InsertType::MAX>(hint, std::move(k), std::forward<M>(obj)).first;
+		// TODO: Implement
+	}
+
+	void assign(index_t const index, container::Range<label_t> range, value_t value)
+	{
+		assign(index, container::RangeSet<label_t>(range), value);
+	}
+
+	void assign(index_t const index, container::RangeSet<label_t> const &range,
+	            value_t value)
+	{
+		// TODO: Implement
+	}
+
+	template <class UnaryFunction>
+	void assign(index_t const index, container::Range<label_t> range, UnaryFunction f)
+	{
+		assign(index, container::RangeSet<label_t>(range), f);
+	}
+
+	template <class UnaryFunction>
+	void assign(index_t const index, container::RangeSet<label_t> const &range,
+	            UnaryFunction f)
+	{
+		// TODO: Implement
 	}
 
 	/*
@@ -432,106 +585,6 @@ class Semantics
 				lower->setValue(value);
 			}
 		}
-	}
-
-	/*
-	 * Increase the value by inc for all Keys present in Range
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(container::Range<T> const &range, Semantic inc)
-	{
-		increase_values(container::RangeSet<T>(range), inc);
-	}
-
-	/*
-	 * Increase the value by inc for all Keys in each Range of the RangeSet
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void increase_values(container::RangeSet<T> const &rangeSet, Semantic inc)
-	{
-		for (auto const &range : rangeSet) {
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
-			for (; lower != upper; ++lower) {
-				lower->increaseValue(inc);
-			}
-		}
-	}
-
-	/*
-	 * Decrease the value by dec for all Keys present in Range
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(container::Range<T> const &range, Semantic dec)
-	{
-		decrease_values(container::RangeSet<T>(range), dec);
-	}
-
-	/*
-	 * Decrease the value by dec for all Keys in each Range of the RangeSet
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void decrease_values(container::RangeSet<T> const &rangeSet, Semantic dec)
-	{
-		for (auto const &range : rangeSet) {
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
-			for (; lower != upper; ++lower) {
-				lower->decreaseValue(dec);
-			}
-		}
-	}
-
-	/*
-	 * Increase or set the value of label
-	 */
-	std::pair<iterator, bool> increase_value(label_t label, Semantic inc,
-	                                         Semantic init_value)
-	{
-		auto [it, inserted] = try_emplace(label, init_value);
-		if (!inserted) {
-			it->increaseValue(inc);
-		}
-		return {it, inserted};
-	}
-
-	/*
-	 * Increase or set the value of label
-	 */
-	iterator increase_value(const_iterator hint, label_t label, Semantic inc,
-	                        Semantic init_value)
-	{
-		auto [it, inserted] = try_emplace(hint, label, init_value);
-		if (!inserted) {
-			it->increaseValue(inc);
-		}
-		return it;
-	}
-
-	/*
-	 * Decrease or set the value of label
-	 */
-	std::pair<iterator, bool> decrease_value(label_t label, Semantic dec,
-	                                         Semantic init_value)
-	{
-		auto [it, inserted] = try_emplace(label, init_value);
-		if (!inserted) {
-			it->decreaseValue(dec);
-		}
-		return {it, inserted};
-	}
-
-	/*
-	 * Decrease or set the value of label
-	 */
-	iterator decrease_value(const_iterator hint, label_t label, Semantic dec,
-	                        Semantic init_value)
-	{
-		auto [it, inserted] = try_emplace(hint, label, init_value).first;
-		if (!inserted) {
-			it->decreaseValue(dec);
-		}
-		return it;
 	}
 
 	iterator erase(const_iterator pos) { return erase(pos, std::next(pos, 1)); }
@@ -987,7 +1040,7 @@ class Semantics
 		}
 
 		std::size_t offset = 0;
-		for (std::size_t i = 0; index != i; ++i) {
+		for (index_t i = 0; index != i; ++i) {
 			offset +=
 			    i % 2 ? data_[i / 2].label : reinterpret_cast<label_t>(data_[i / 2].value);
 		}
@@ -1096,9 +1149,9 @@ class Semantics
 		}
 	}
 
-	enum class InsertType { NORMAL, ASSIGN, MAX };
+	enum class InsertType { NORMAL, ASSIGN, CUSTOM };
 
-	template <InsertType T = InsertType::NORMAL>
+	template <InsertType T>
 	std::pair<iterator, bool> insert_impl(label_t label, value_t value)
 	{
 		if (empty()) {
@@ -1116,9 +1169,8 @@ class Semantics
 			} else if constexpr (InsertType::ASSIGN == T) {
 				// Update value
 				it->setValue(value);
-			} else if constexpr (InsertType::MAX == T) {
-				// Set value to max
-				it->setValue(std::max(it->value, value));
+			} else if constexpr (InsertType::CUSTOM == T) {
+				it->value = f(*it);
 			}
 			return {it, false};
 		} else {
@@ -1256,7 +1308,7 @@ class Semantics
 	{
 		Semantic *ptr_cur = data_.release();
 
-		auto new_total_size = new_size + size() - sizeIndex(index) + N_H;
+		auto new_total_size = new_size + size() - size(index) + N_H;
 
 		Semantic *ptr_new =
 		    static_cast<Semantic *>(realloc(ptr_cur, new_total_size * sizeof(Semantic)));
@@ -1268,7 +1320,7 @@ class Semantics
 
 		data_.reset(ptr_new);
 
-		if (nullptr == ptr_cur) {
+		if (!ptr_cur) {
 			for (std::size_t i = 0; N_H != i; ++i) {
 				data_[i].label = 0;
 				data_[i].value = reinterpret_cast<value_t>(label_t(0));
