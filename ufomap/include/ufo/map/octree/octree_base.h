@@ -51,12 +51,12 @@
 #include <ufo/map/octree/octree_iterator.h>
 #include <ufo/map/octree/octree_node.h>
 #include <ufo/map/octree/octree_predicate.h>
-#include <ufo/map/octree/octree_query.h>
 #include <ufo/map/point.h>
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/predicate/spatial.h>
 #include <ufo/map/types.h>
 #include <ufo/math/util.h>
+#include <ufo/util/iterator_wrapper.h>
 #include <ufo/util/type_traits.h>
 
 // STL
@@ -1977,45 +1977,46 @@ class OctreeBase
 	//
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_query_iterator> query(Predicates&& predicates) const
+	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
+	    Predicates&& predicates) const
 	{
-		return Query<const_query_iterator>(beginQuery(std::forward<Predicates>(predicates)),
-		                                   endQuery());
+		return util::IteratorWrapper<const_query_iterator>(
+		    beginQuery(std::forward<Predicates>(predicates)), endQuery());
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_query_iterator> query(Node node,
-	                                                Predicates&& predicates) const
+	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
+	    Node node, Predicates&& predicates) const
 	{
-		return Query<const_query_iterator>(
+		return util::IteratorWrapper<const_query_iterator>(
 		    beginQuery(node, std::forward<Predicates>(predicates)), endQuery());
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_query_iterator> query(Code code,
-	                                                Predicates&& predicates) const
+	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
+	    Code code, Predicates&& predicates) const
 	{
-		return Query<const_query_iterator>(
+		return util::IteratorWrapper<const_query_iterator>(
 		    beginQuery(code, std::forward<Predicates>(predicates)), endQuery());
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_query_iterator> query(Key key, Predicates&& predicates) const
+	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
+	    Key key, Predicates&& predicates) const
 	{
 		return query(code(key), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_query_iterator> query(Point coord, depth_t depth,
-	                                                Predicates&& predicates) const
+	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
+	    Point coord, depth_t depth, Predicates&& predicates) const
 	{
 		return query(code(coord, depth), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_query_iterator> query(coord_t x, coord_t y, coord_t z,
-	                                                depth_t depth,
-	                                                Predicates&& predicates) const
+	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
+	    coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates) const
 	{
 		return query(code(x, y, z, depth), std::forward<Predicates>(predicates));
 	}
@@ -2025,45 +2026,45 @@ class OctreeBase
 	//
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_bounding_volume_query_iterator> queryBV(
+	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    Predicates&& predicates) const
 	{
-		return Query<const_bounding_volume_query_iterator>(
+		return util::IteratorWrapper<const_bounding_volume_query_iterator>(
 		    beginQueryBV(std::forward<Predicates>(predicates)), endQueryBV());
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_bounding_volume_query_iterator> queryBV(
+	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    Node node, Predicates&& predicates) const
 	{
-		return Query<const_bounding_volume_query_iterator>(
+		return util::IteratorWrapper<const_bounding_volume_query_iterator>(
 		    beginQueryBV(node, std::forward<Predicates>(predicates)), endQueryBV());
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_bounding_volume_query_iterator> queryBV(
+	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    Code code, Predicates&& predicates) const
 	{
-		return Query<const_bounding_volume_query_iterator>(
+		return util::IteratorWrapper<const_bounding_volume_query_iterator>(
 		    beginQueryBV(code, std::forward<Predicates>(predicates)), endQueryBV());
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_bounding_volume_query_iterator> queryBV(
+	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    Key key, Predicates&& predicates) const
 	{
 		return queryBV(code(key), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_bounding_volume_query_iterator> queryBV(
+	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    Point coord, depth_t depth, Predicates&& predicates) const
 	{
 		return queryBV(code(coord, depth), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
-	[[nodiscard]] Query<const_bounding_volume_query_iterator> queryBV(
+	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates) const
 	{
 		return queryBV(code(x, y, z, depth), std::forward<Predicates>(predicates));
@@ -2074,37 +2075,37 @@ class OctreeBase
 	//
 
 	template <class Geometry, class Predicates>
-	[[nodiscard]] Query<const_query_nearest_iterator> queryNearest(
+	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    Geometry&& geometry, Predicates&& predicates) const
 	{
-		return Query<const_query_nearest_iterator>(
+		return util::IteratorWrapper<const_query_nearest_iterator>(
 		    beginQueryNearest(std::forward<Geometry>(geometry),
 		                      std::forward<Predicates>(predicates)),
 		    endQueryNearest());
 	}
 
 	template <class Geometry, class Predicates>
-	[[nodiscard]] Query<const_query_nearest_iterator> queryNearest(
+	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    Node node, Geometry&& geometry, Predicates&& predicates) const
 	{
-		return Query<const_query_nearest_iterator>(
+		return util::IteratorWrapper<const_query_nearest_iterator>(
 		    beginQueryNearest(node, std::forward<Geometry>(geometry),
 		                      std::forward<Predicates>(predicates)),
 		    endQueryNearest());
 	}
 
 	template <class Geometry, class Predicates>
-	[[nodiscard]] Query<const_query_nearest_iterator> queryNearest(
+	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    Code code, Geometry&& geometry, Predicates&& predicates) const
 	{
-		return Query<const_query_nearest_iterator>(
+		return util::IteratorWrapper<const_query_nearest_iterator>(
 		    beginQueryNearest(code, std::forward<Geometry>(geometry),
 		                      std::forward<Predicates>(predicates)),
 		    endQueryNearest());
 	}
 
 	template <class Geometry, class Predicates>
-	[[nodiscard]] Query<const_query_nearest_iterator> queryNearest(
+	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    Key key, Geometry&& geometry, Predicates&& predicates) const
 	{
 		return queryNearest(code(key), std::forward<Geometry>(geometry),
@@ -2112,7 +2113,7 @@ class OctreeBase
 	}
 
 	template <class Geometry, class Predicates>
-	[[nodiscard]] Query<const_query_nearest_iterator> queryNearest(
+	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    Point coord, depth_t depth, Geometry&& geometry, Predicates&& predicates) const
 	{
 		return queryNearest(code(coord, depth), std::forward<Geometry>(geometry),
@@ -2120,7 +2121,7 @@ class OctreeBase
 	}
 
 	template <class Geometry, class Predicates>
-	[[nodiscard]] Query<const_query_nearest_iterator> queryNearest(
+	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Geometry&& geometry,
 	    Predicates&& predicates) const
 	{

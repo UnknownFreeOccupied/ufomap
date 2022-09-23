@@ -47,6 +47,7 @@
 #include <ufo/container/range_map.h>
 #include <ufo/container/range_set.h>
 #include <ufo/map/semantic/semantic_label_propagation.h>
+#include <ufo/util/iterator_wrapper.h>
 #include <ufo/util/type_traits.h>
 
 // STL
@@ -67,9 +68,12 @@ namespace ufo::map
 template <std::size_t N = 1>
 class Semantics
 {
+ private:
+	static_assert(sizeof(label_t) == sizeof(value_t));
+
 	static constexpr N_H =
 	    1 + (N - 1) / 2;  // -1 half rounded up (i.e., the number of elements needed to
-	                      // store the size of the N semantic containers)
+	                      // store the sizes of the N semantic containers)
 
  public:
 	// Tags continue
@@ -105,8 +109,14 @@ class Semantics
 		if (rhs.empty()) {
 			clear();
 		} else {
-			resize(rhs.size());
-			std::copy(std::cbegin(rhs), std::cend(rhs), begin());
+			auto s = size();
+			for (std::size_t i = 0; N_H != i; ++i) {
+				data_[i].label = 0;
+				data_[i].value = reinterpret_cast<value_t>(label_t(0));
+			}
+			data_[0].label = s;
+			resize(0, rhs.size());
+			std::copy(rhs.data(), rhs.data() + rhs.allocSize(), data());
 		}
 		return *this;
 	}
@@ -117,25 +127,22 @@ class Semantics
 	// Iterators
 	//
 
-	iterator begin() noexcept { return empty() ? nullptr : std::next(data_.get(), N_H); }
+	iterator begin() noexcept { return empty() ? nullptr : data_.get() + N_H; }
 
-	const_iterator begin() const noexcept
-	{
-		return empty() ? nullptr : std::next(data_.get(), N_H);
-	}
+	const_iterator begin() const noexcept { return empty() ? nullptr : data_.get() + N_H; }
 
 	const_iterator cbegin() const noexcept { return begin(); }
 
 	iterator end() noexcept
 	{
 		auto const s = allocSize();
-		return 0 == s ? nullptr : std::next(data_.get(), s);
+		return 0 == s ? nullptr : data_.get() + s;
 	}
 
 	const_iterator end() const noexcept
 	{
 		auto const s = allocSize();
-		return 0 == s ? nullptr : std::next(data_.get(), s);
+		return 0 == s ? nullptr : data_.get() + s;
 	}
 
 	const_iterator cend() const noexcept { return end(); }
@@ -168,12 +175,12 @@ class Semantics
 
 	iterator begin(index_t const index) noexcept
 	{
-		return empty(index) ? nullptr : std::next(data_.get(), N_H + offset(index));
+		return empty(index) ? nullptr : data_.get() + N_H + offset(index);
 	}
 
 	const_iterator begin(index_t const index) const noexcept
 	{
-		return empty(index) ? nullptr : std::next(data_.get(), N_H + offset(index));
+		return empty(index) ? nullptr : data_.get() + N_H + offset(index);
 	}
 
 	const_iterator cbegin(index_t const index) const noexcept { return begin(index); }
@@ -181,13 +188,13 @@ class Semantics
 	iterator end(index_t const index) noexcept
 	{
 		auto const s = size(index);
-		return 0 == s ? nullptr : std::next(data_.get(), N_H + offset(index) + s);
+		return 0 == s ? nullptr : data_.get() + N_H + offset(index) + s;
 	}
 
 	const_iterator end(index_t const index) const noexcept
 	{
 		auto const s = size(index);
-		return 0 == s ? nullptr : std::next(data_.get(), N_H + offset(index) + s);
+		return 0 == s ? nullptr : data_.get() + N_H + offset(index) + s;
 	}
 
 	const_iterator cend(index_t const index) const noexcept { return end(index); }
@@ -222,6 +229,40 @@ class Semantics
 	}
 
 	const_reverse_iterator crend(index_t const index) const noexcept { return rend(index); }
+
+	//
+	// Iterate
+	// TODO: Come up with better name
+
+	[[nodiscard]] util::IteratorWrapper<iterator> iter(index_t const index)
+	{
+		return util::IteratorWrapper<iterator>(begin(index), end(index));
+	}
+
+	[[nodiscard]] util::IteratorWrapper<const_iterator> iter(index_t const index) const
+	{
+		return util::IteratorWrapper<const_iterator>(begin(index), end(index));
+	}
+
+	[[nodiscard]] util::IteratorWrapper<const_iterator> citer(index_t const index) const
+	{
+		return util::IteratorWrapper<const_iterator>(cbegin(index), cend(index));
+	}
+
+	[[nodiscard]] util::IteratorWrapper<iterator> riter(index_t const index)
+	{
+		return util::IteratorWrapper<iterator>(rbegin(index), rend(index));
+	}
+
+	[[nodiscard]] util::IteratorWrapper<const_iterator> riter(index_t const index) const
+	{
+		return util::IteratorWrapper<const_iterator>(rbegin(index), rend(index));
+	}
+
+	[[nodiscard]] util::IteratorWrapper<const_iterator> criter(index_t const index) const
+	{
+		return util::IteratorWrapper<const_iterator>(crbegin(index), crend(index));
+	}
 
 	//
 	// Empty
@@ -287,17 +328,16 @@ class Semantics
 		size_type cur_size = size(index);
 		if (0 == cur_size) {
 			return;
-		}
-
-		if (size() == cur_size) {
+		} else if (size() == cur_size) {
 			clear();
 			return;
 		}
 
+		auto index_first = begin(index);
 		auto index_last = end(index);
 		auto last = end();
 		if (index_last != last) {
-			std::move(index_last, last, begin(index));
+			std::move(index_last, last, index_first);
 		}
 		resize(index, 0);
 	}
@@ -307,7 +347,7 @@ class Semantics
 	//
 
 	template <class InputIt>
-	void setCombine(InputIt first, InputIt last, SemanticLabelPropagation const &prop)
+	void setCombine(InputIt first, InputIt last, SemanticPropagation const &prop)
 	{
 		switch (prop.defaultPropCriteria()) {
 			case PropagationCriteria::MAX:
@@ -524,7 +564,9 @@ class Semantics
 
 	void assign(container::RangeSet<label_t> const &range, value_t value)
 	{
-		// TODO: Implement
+		for (index_t index = 0; N != index; ++index) {
+			assign(index, range, value);
+		}
 	}
 
 	template <class UnaryFunction>
@@ -536,7 +578,9 @@ class Semantics
 	template <class UnaryFunction>
 	void assign(container::RangeSet<label_t> const &range, UnaryFunction f)
 	{
-		// TODO: Implement
+		for (index_t index = 0; N != index; ++index) {
+			assign(index, range, f);
+		}
 	}
 
 	void assign(index_t const index, container::Range<label_t> range, value_t value)
@@ -547,7 +591,13 @@ class Semantics
 	void assign(index_t const index, container::RangeSet<label_t> const &range,
 	            value_t value)
 	{
-		// TODO: Implement
+		for (auto r : range) {
+			auto lower = lower_bound(index, r.lower());
+			auto upper = upper_bound(index, r.upper());
+			for (; lower != upper; ++lower) {
+				lower->value = value;
+			}
+		}
 	}
 
 	template <class UnaryFunction>
@@ -560,32 +610,18 @@ class Semantics
 	void assign(index_t const index, container::RangeSet<label_t> const &range,
 	            UnaryFunction f)
 	{
-		// TODO: Implement
-	}
-
-	/*
-	 * Assign value to Keys present in the given Range.
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(container::Range<T> const &range, value_t value)
-	{
-		assign_values(container::RangeSet<T>(range), value);
-	}
-
-	/*
-	 * Assign value to Keys present in each Range of the RangeSet.
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	void assign_values(container::RangeSet<T> const &rangeSet, value_t value)
-	{
-		for (auto const &range : rangeSet) {
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
+		for (auto r : range) {
+			auto lower = lower_bound(index, r.lower());
+			auto upper = upper_bound(index, r.upper());
 			for (; lower != upper; ++lower) {
-				lower->setValue(value);
+				lower->value = f(std::as_const(*lower));
 			}
 		}
 	}
+
+	//
+	// Erase
+	//
 
 	iterator erase(const_iterator pos) { return erase(pos, std::next(pos, 1)); }
 
@@ -593,6 +629,8 @@ class Semantics
 
 	iterator erase(const_iterator first, const_iterator last)
 	{
+		// TODO: Implement
+
 		if (first == last || cend() == first) {
 			return end();
 		}
@@ -616,11 +654,17 @@ class Semantics
 
 	size_type erase(label_t label)
 	{
+		// TODO: Implement
 		if (iterator it = find(label); end() != it) {
 			erase(it);
 			return 1;
 		}
 		return 0;
+	}
+
+	size_type erase(index_t const index, label_t label)
+	{
+		// TODO: Implement-
 	}
 
 	/*
@@ -741,7 +785,24 @@ class Semantics
 
 	// FIXME: Not safe Semantic *data() { return std::next(data_.get(), 1); }
 
-	Semantic const *data() const { return std::next(data_.get(), 1); }
+	Semantic const *data() const { return data_.get() + N_H; }
+
+	Semantic const *data(index_t const index) const { return data() + offset(index); }
+
+	bool all()
+	{
+		// TODO: Implement
+	}
+
+	bool any()
+	{
+		// TODO: Implement
+	}
+
+	bool none()
+	{
+		// TODO: Implement
+	}
 
 	/*
 	 * True if container contains any Key present in Range.
@@ -1048,7 +1109,7 @@ class Semantics
 	}
 
 	template <class InputIt, bool Max>
-	void setCombine(InputIt first, InputIt last, SemanticLabelPropagation const &prop)
+	void setCombine(InputIt first, InputIt last, SemanticPropagation const &prop)
 	{
 		std::vector<std::size_t> sizes;
 		sizes.reserve(std::distance(first, last));

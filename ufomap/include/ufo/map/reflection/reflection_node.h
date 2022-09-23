@@ -84,6 +84,7 @@ struct ReflectionNode {
 	[[nodiscard]] constexpr bool isCollapsible(ReflectionNode const parent,
 	                                           index_t const index) const
 	{
+		// TODO: Use floor(log2(X))?
 		if constexpr (1 == N) {
 			return hits == parent.hits && misses == parent.misses;
 		} else {
