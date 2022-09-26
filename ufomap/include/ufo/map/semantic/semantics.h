@@ -71,9 +71,15 @@ class Semantics
  private:
 	static_assert(sizeof(label_t) == sizeof(value_t));
 
-	static constexpr N_H =
-	    1 + (N - 1) / 2;  // -1 half rounded up (i.e., the number of elements needed to
-	                      // store the sizes of the N semantic containers)
+	// Friends
+	template <class Derived>
+	friend class SemanticMap;
+	template <std::size_t N>
+	friend class SemanticNode;
+
+	// -1 half rounded up (i.e., the number of elements needed to store the sizes of the N
+	// semantic containers)
+	static constexpr N_H = 1 + (N - 1) / 2;
 
  public:
 	// Tags continue
@@ -1398,9 +1404,6 @@ class Semantics
 
  private:
 	std::unique_ptr<Semantic[]> data_;
-
-	template <class Derived>
-	friend class SemanticMap;
 };
 
 template <std::size_t N>
