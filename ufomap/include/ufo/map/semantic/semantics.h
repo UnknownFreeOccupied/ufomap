@@ -175,26 +175,24 @@ class Semantics
 
 	iterator begin(index_t const index) noexcept
 	{
-		return empty(index) ? nullptr : data_.get() + N_H + offset(index);
+		return empty() ? nullptr : data_.get() + N_H + offset(index);
 	}
 
 	const_iterator begin(index_t const index) const noexcept
 	{
-		return empty(index) ? nullptr : data_.get() + N_H + offset(index);
+		return empty() ? nullptr : data_.get() + N_H + offset(index);
 	}
 
 	const_iterator cbegin(index_t const index) const noexcept { return begin(index); }
 
 	iterator end(index_t const index) noexcept
 	{
-		auto const s = size(index);
-		return 0 == s ? nullptr : data_.get() + N_H + offset(index) + s;
+		return empty() ? nullptr : data_.get() + N_H + offset(index) + size(index);
 	}
 
 	const_iterator end(index_t const index) const noexcept
 	{
-		auto const s = size(index);
-		return 0 == s ? nullptr : data_.get() + N_H + offset(index) + s;
+		return empty() ? nullptr : data_.get() + N_H + offset(index) + size(index);
 	}
 
 	const_iterator cend(index_t const index) const noexcept { return end(index); }
@@ -268,20 +266,17 @@ class Semantics
 	// Empty
 	//
 
-	[[nodiscard]] bool empty() const noexcept { return 0 == size(); }
+	[[nodiscard]] bool empty() const noexcept { return nullptr == data_; }
 
-	[[nodiscard]] bool empty(index_t const index) const noexcept
-	{
-		return 0 == size(index);
-	}
+	[[nodiscard]] bool empty(index_t const index) const { return 0 == size(index); }
 
 	//
 	// Size
 	//
 
-	[[nodiscard]] size_type size() const noexcept
+	[[nodiscard]] size_type size() const
 	{
-		if (!data_) {
+		if (empty()) {
 			return 0;
 		}
 
@@ -293,18 +288,18 @@ class Semantics
 		return total_size;
 	}
 
-	[[nodiscard]] size_type size(index_t const index) const noexcept
+	[[nodiscard]] size_type size(index_t const index) const
 	{
-		return data_ ? (index % 2 ? data_[index / 2].label
-		                          : reinterpret_cast<label_t>(data_[index / 2].value))
-		             : 0;
+		return empty() ? 0
+		               : (index % 2 ? data_[index / 2].label
+		                            : reinterpret_cast<label_t>(data_[index / 2].value));
 	}
 
-	[[nodiscard]] size_type allocSize() const noexcept { return data_ ? size() + N_H : 0; }
+	[[nodiscard]] size_type allocSize() const { return empty() ? 0 : size() + N_H; }
 
-	[[nodiscard]] size_type allocSize(index_t const index) const noexcept
+	[[nodiscard]] size_type allocSize(index_t const index) const
 	{
-		return data_ ? size(index) + 1;
+		return empty() ? 0 : size(index) + 1;
 	}
 
 	[[nodiscard]] static constexpr size_type maxSize() noexcept
@@ -1079,15 +1074,7 @@ class Semantics
 		return in_stream.read(reinterpret_cast<char *>(getData()), sizeof(Semantic) * num);
 	}
 
-	friend std::ostream &operator<<(std::ostream &os, Semantics const &map)
-	{
-		if (!map.empty()) {
-			std::copy(std::begin(map), std::prev(std::end(map)),
-			          std::ostream_iterator<Semantic>(os, "; "));
-			os << *std::prev(std::end(map));
-		}
-		return os;
-	}
+	friend std::ostream &operator<<(std::ostream &os, Semantics const &map);
 
  protected:
 	//
@@ -1096,7 +1083,7 @@ class Semantics
 
 	[[nodiscard]] std::size_t offset(index_t const index) const
 	{
-		if (!data_) {
+		if (empty()) {
 			return 0;
 		}
 
@@ -1210,108 +1197,212 @@ class Semantics
 		}
 	}
 
-	enum class InsertType { NORMAL, ASSIGN, CUSTOM };
-
-	template <InsertType T>
-	std::pair<iterator, bool> insert_impl(label_t label, value_t value)
+	template <bool Assign, class UnaryFunction>
+	void insertOrAssign(label_t label, UnaryFunction f)
 	{
 		if (empty()) {
 			resize(1);
-			data_[1].label = label;
-			data_[1].value = value;
-			return {begin(), true};
+			std::fill(begin(), end(), Semantic(label, f(Semantic(label))));
+			return;
 		}
 
-		auto it = lower_bound(label);
-		if (end() != it && it->label == label) {
+		std::array<size_type, N> new_size;
+		std::array<difference_type, N> dist;
+		for (index_t index = 0; N != index; ++index) {
+			auto it = lower_bound(index, label);
+			if (end(index) != it && it->label == label) {
+				// Label already exists
+				if constexpr (Assign) {
+					it->value = f(*it);
+				}
+				new_size[index] = size(index);
+				dist[index] = 0;
+			} else {
+				new_size[index] = size(index) + 1;
+				dist[index] = std::distance(index, it);
+			}
+		}
+
+		if (0 == std::accumulate(std::begin(dist), std::end(dist))) {
+			return;
+		}
+
+		resize(new_size);
+
+		for (index_t index = 0; N != index; ++index) {
+			if (0 == dist[index]) {
+				continue;
+			}
+			auto it = begin(index) + dist[index];
+			auto last_index = end(index);
+			std::move_backward(it, last_index - 1, last_index);
+			it->label = label;
+			it->value = f(Semantic(label));
+		}
+	}
+
+	template <bool Assign, class UnaryFunction>
+	std::pair<iterator, bool> insertOrAssign(index_t const index, label_t label,
+	                                         UnaryFunction f)
+	{
+		if (empty(index)) {
+			resize(index, 1);
+			auto it = begin(index);
+			it->label = label;
+			it->value = f(Semantic(label));
+			return {it, true};
+		}
+
+		auto it = lower_bound(index, label);
+		if (end(index) != it && it->label == label) {
 			// Label already exists
-			if constexpr (InsertType::NORMAL == T) {
-				// Do nothing
-			} else if constexpr (InsertType::ASSIGN == T) {
-				// Update value
-				it->setValue(value);
-			} else if constexpr (InsertType::CUSTOM == T) {
+			if constexpr (Assign) {
 				it->value = f(*it);
 			}
 			return {it, false};
-		} else {
-			auto index = std::distance(begin(), it);
-
-			resize(size() + 1);
-
-			it = std::next(begin(), index);
-
-			std::move_backward(it, std::prev(end(), 1), end());
-
-			data_[index + 1].setLabelValue(label, value);
-
-			return {it, true};
 		}
+
+		auto i = std::distance(begin(index), it);
+		resize(index, size(index) + 1);
+		it = begin(index) + i;
+		auto last_index = end(index);
+		std::move_backward(it, last_index - 1, last_index);
+		it->label = label;
+		it->value = f(Semantic(label));
+		return {it, true};
 	}
 
-	template <InsertType T = InsertType::NORMAL>
-	std::pair<iterator, bool> insert_impl(const_iterator hint, label_t label, value_t value)
+	template <bool Assign, class UnaryFunction>
+	std::pair<iterator, bool> insertOrAssign(index_t const index, const_iterator hint,
+	                                         label_t label, UnaryFunction f)
 	{
-		if (empty()) {
-			resize(1);
-			data_[1].label = label;
-			data_[1].value = value;
-			return {begin(), true};
+		if (empty(index)) {
+			resize(index, 1);
+			auto it = begin(index);
+			it->label = label;
+			it->value = f(Semantic(label));
+			return {it, true};
 		}
 
-		auto first = cbegin() != hint && std::prev(hint, 1)->label < label ? hint : cbegin();
-		auto last = cend() != hint && hint->label >= label ? hint : cend();
-		hint = lower_bound(first, last, label);
+		auto first_index = begin(index);
+		auto last_index = end(index);
 
-		auto index = std::distance(cbegin(), hint);
+		auto first =
+		    first_index != hint && std::prev(hint, 1)->label < label ? hint : first_index;
+		auto last = last_index != hint && hint->label >= label ? hint : last_index;
+		hint = lower_bound(index, first, last, label);
 
-		if (cend() != hint && hint->label == label) {
-			auto it = std::next(begin(), index);
+		auto i = std::distance(first_index, hint);
+
+		if (last_index != hint && hint->label == label) {
 			// Label already exists
-			if constexpr (InsertType::NORMAL == T) {
-				// Do nothing
-			} else if constexpr (InsertType::ASSIGN == T) {
-				// Update value
-				it->setValue(value);
-			} else if constexpr (InsertType::MAX == T) {
-				// Set value to max
-				it->setValue(std::max(it->value, value));
+			auto it = first_index + i;
+			if constexpr (Assign) {
+				it->value = f(*it);
 			}
 			return {it, false};
-		} else {
-			resize(size() + 1);
-
-			auto it = std::next(begin(), index);
-
-			std::move_backward(it, std::prev(end(), 1), end());
-
-			data_[index + 1].setLabelValue(label, value);
-
-			return {it, true};
 		}
+
+		resize(index, size(index) + 1);
+		auto it = begin(index) + i;
+		last_index = end(index);
+		std::move_backward(it, last_index - 1, last_index);
+		it->label = label;
+		it->value = f(Semantic(label));
+		return {it, true};
 	}
 
-	template <InsertType InsertT = InsertType::NORMAL>
-	void insert_impl(std::vector<Semantic> &vec)
+	template <bool Assign, class InputIt>
+	void insertOrAssign(InputIt first, InputIt last)
 	{
+		std::vector vec(first, last);
+
 		std::sort(std::begin(vec), std::end(vec));
 
-		// Erase duplicate labels, saving the highest value for each label
+		// Erase duplicate labels, saving highest value for each label
 		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
-		                          [](auto v1, auto v2) { return v1.label == v2.label; });
+		                          [](auto a, auto b) { return a.label == b.label; });
 
 		auto first = r_last.base();
 		auto last = std::end(vec);
 
-		if (empty()) {
+		// TODO: Implement
+	}
+
+	template <bool Assign, class InputIt, class UnaryFunction>
+	void insertOrAssign(InputIt first, InputIt last, UnaryFunction f)
+	{
+		std::vector vec(first, last);
+
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate labels, saving highest value for each label
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto a, auto b) { return a == b; });
+
+		auto first = r_last.base();
+		auto last = std::end(vec);
+
+		// TODO: Implement
+	}
+
+	template <bool Assign, class InputIt>
+	void insertOrAssign(index_t const index, InputIt first, InputIt last)
+	{
+		std::vector vec(first, last);
+
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate labels, saving highest value for each label
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto a, auto b) { return a.label == b.label; });
+
+		auto first = r_last.base();
+		auto last = std::end(vec);
+
+		if (empty(index)) {
 			// Optimized insert
-			resize(std::distance(first, last));
-			std::copy(first, last, begin());
+			resize(index, std::distance(first, last));
+			std::copy(first, last, begin(index));
 		} else {
+			// FIXME: Optimize
 			// Normal insert
-			auto hint = begin();
+			auto hint = begin(index);
 			for (; first != last; ++first) {
-				hint = insert<InsertT>(hint, first->label, first->value).first;
+				hint = insertOrAssign<Assign>(hint, first->label, [v = first->value](auto) {
+					       return v;
+				       }).first;
+			}
+		}
+	}
+
+	template <bool Assign, class InputIt, class UnaryFunction>
+	void insertOrAssign(index_t const index, InputIt first, InputIt last, UnaryFunction f)
+	{
+		std::vector vec(first, last);
+
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate labels, saving highest value for each label
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto a, auto b) { return a == b; });
+
+		auto first = r_last.base();
+		auto last = std::end(vec);
+
+		if (empty(index)) {
+			// Optimized insert
+			resize(index, std::distance(first, last));
+			for (auto it = begin(index); first != last; ++it, ++first) {
+				it->label = *first;
+				it->value = f(Semantic(*first));
+			}
+		} else {
+			// FIXME: Optimize
+			// Normal insert
+			auto hint = begin(index);
+			for (; first != last; ++first) {
+				hint = insertOrAssign<Assign>(hint, *first, f).first;
 			}
 		}
 	}
@@ -1346,11 +1437,7 @@ class Semantics
 	                                                 label_t label)
 	{
 		auto it = lower_bound(first, last, label);
-		if (last == it || it->label != label) {
-			return {it, it};
-		} else {
-			return {it, std::next(it)};
-		}
+		return {it, last == it || it->label != label ? it : std::next(it)};
 	}
 
 	static std::pair<const_iterator, const_iterator> equal_range(const_iterator first,
@@ -1358,11 +1445,7 @@ class Semantics
 	                                                             label_t label)
 	{
 		auto it = lower_bound(first, last, label);
-		if (last == it || it->label != label) {
-			return {it, it};
-		} else {
-			return {it, std::next(it)};
-		}
+		return {it, last == it || it->label != label ? it : std::next(it)};
 	}
 
 	void resize(index_t const index, size_type new_size)
@@ -1381,14 +1464,22 @@ class Semantics
 
 		data_.reset(ptr_new);
 
-		if (!ptr_cur) {
+		if (ptr_cur) {
+			// Move indices after
+			auto last_index = end(index);
+			auto last = end();
+			if (last_index != last) {
+				std::move_backward(last_index, last, data_.get() + new_total_size);
+			}
+		} else {
+			// Initialize
 			for (std::size_t i = 0; N_H != i; ++i) {
 				data_[i].label = 0;
 				data_[i].value = reinterpret_cast<value_t>(label_t(0));
 			}
 		}
 
-		// Special
+		// Set new size of index
 		if (index % 2) {
 			data_[index / 2].label = new_size;
 		} else {
@@ -1402,6 +1493,18 @@ class Semantics
 	template <class Derived>
 	friend class SemanticMap;
 };
+
+template <std::size_t N>
+std::ostream &operator<<(std::ostream &os, Semantics<N> const &map)
+{
+	// TODO: Implement correctly
+	if (!map.empty()) {
+		std::copy(std::begin(map), std::prev(std::end(map)),
+		          std::ostream_iterator<Semantic>(os, "; "));
+		os << *std::prev(std::end(map));
+	}
+	return os;
+}
 
 template <std::size_t N>
 bool operator==(Semantics<N> const &lhs, Semantics<N> const &rhs)
