@@ -76,30 +76,30 @@ struct Semantic {
 	constexpr Semantic& operator=(Semantic const&) = default;
 
 	constexpr Semantic& operator=(Semantic&&) = default;
-
-	friend bool operator==(Semantic lhs, Semantic rhs)
-	{
-		return lhs.label == rhs.label && lhs.value == rhs.value;
-	}
-
-	friend bool operator!=(Semantic lhs, Semantic rhs) { return !(lhs == rhs); }
-
-	friend bool operator<(Semantic lhs, Semantic rhs)
-	{
-		return lhs.label < rhs.label || (lhs.label == rhs.label && lhs.value < rhs.value);
-	}
-
-	friend bool operator<=(Semantic lhs, Semantic rhs) { return !(rhs < lhs); }
-
-	friend bool operator>(Semantic lhs, Semantic rhs) { return rhs < lhs; }
-
-	friend bool operator>=(Semantic lhs, Semantic rhs) { return !(lhs < rhs); }
-
-	friend std::ostream& operator<<(std::ostream& out, Semantic s)
-	{
-		return out << s.label << ": " << s.value;
-	}
 };
+
+bool operator==(Semantic lhs, Semantic rhs)
+{
+	return lhs.label == rhs.label && lhs.value == rhs.value;
+}
+
+bool operator!=(Semantic lhs, Semantic rhs) { return !(lhs == rhs); }
+
+bool operator<(Semantic lhs, Semantic rhs)
+{
+	return lhs.label < rhs.label || (lhs.label == rhs.label && lhs.value < rhs.value);
+}
+
+bool operator<=(Semantic lhs, Semantic rhs) { return !(rhs < lhs); }
+
+bool operator>(Semantic lhs, Semantic rhs) { return rhs < lhs; }
+
+bool operator>=(Semantic lhs, Semantic rhs) { return !(lhs < rhs); }
+
+std::ostream& operator<<(std::ostream& out, Semantic s)
+{
+	return out << s.label << ": " << s.value;
+}
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SEMANTIC_H
