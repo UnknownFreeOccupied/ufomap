@@ -690,88 +690,176 @@ class Semantics
 		return old_size - size();
 	}
 
+	//
+	// Swap
+	//
+
 	void swap(Semantics &other) noexcept { std::swap(data_, other.data_); }
 
 	// Lookup
-	[[nodiscard]] Semantic at(label_t label) const
+	[[nodiscard]] Semantic at(index_t index, label_t label) const
 	{
-		if (auto it = find(label); end() != it) {
+		if (auto it = find(index, label); end(index) != it) {
 			return it->value;
 		}
 		throw std::out_of_range("Cannot find label " + std::to_string(label));
 	}
 
-	[[nodiscard]] Semantic getValue(label_t label) const
+	[[nodiscard]] std::optional<value_t> value(index_t index, label_t label) const
 	{
-		auto it = find(label);
-		return end() != it ? it->value : 0;
+		auto it = find(index, label);
+		return end(index) != it ? std::optional<value_t>(it->value) : std::nullopt;
 	}
 
-	[[nodiscard]] size_type count(label_t label) const { return contains(label) ? 1 : 0; }
-
-	[[nodiscard]] iterator find(label_t label)
+	[[nodiscard]] size_type count(index_t index, label_t label) const
 	{
-		auto it = lower_bound(label);
-		return end() != it && it->label == label ? it : end();
+		return contains(index, label) ? 1 : 0;
 	}
 
-	[[nodiscard]] const_iterator find(label_t label) const
+	[[nodiscard]] iterator find(index_t index, label_t label)
 	{
-		auto it = lower_bound(label);
-		return end() != it && it->label == label ? it : end();
+		auto it = lower_bound(index, label);
+		return end(index) != it && it->label == label ? it : end(index);
 	}
 
-	[[nodiscard]] bool contains(label_t label) const { return end() != find(label); }
-
-	[[nodiscard]] std::pair<iterator, iterator> equal_range(label_t label)
+	[[nodiscard]] const_iterator find(index_t index, label_t label) const
 	{
-		return equal_range(begin(), end(), label);
+		auto it = lower_bound(index, label);
+		return end(index) != it && it->label == label ? it : end(index);
 	}
 
-	[[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(label_t label) const
+	[[nodiscard]] bool contains(index_t index, label_t label) const
 	{
-		return equal_range(begin(), end(), label);
+		return end(index) != find(index, label);
 	}
 
-	[[nodiscard]] iterator lower_bound(label_t label)
+	[[nodiscard]] std::pair<iterator, iterator> equal_range(index_t index, label_t label)
 	{
-		return lower_bound(begin(), end(), label);
+		return equal_range(begin(index), end(index), label);
 	}
 
-	[[nodiscard]] const_iterator lower_bound(label_t label) const
+	[[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(index_t index,
+	                                                                    label_t label) const
 	{
-		return lower_bound(begin(), end(), label);
+		return equal_range(begin(index), end(index), label);
 	}
 
-	[[nodiscard]] iterator upper_bound(label_t label)
+	[[nodiscard]] iterator lower_bound(index_t index, label_t label)
 	{
-		return upper_bound(begin(), end(), label);
+		return lower_bound(begin(index), end(index), label);
 	}
 
-	[[nodiscard]] const_iterator upper_bound(label_t label) const
+	[[nodiscard]] const_iterator lower_bound(index_t index, label_t label) const
 	{
-		return upper_bound(begin(), end(), label);
+		return lower_bound(begin(index), end(index), label);
 	}
+
+	[[nodiscard]] iterator upper_bound(index_t index, label_t label)
+	{
+		return upper_bound(begin(index), end(index), label);
+	}
+
+	[[nodiscard]] const_iterator upper_bound(index_t index, label_t label) const
+	{
+		return upper_bound(begin(index), end(index), label);
+	}
+
+	//
+	// Data
+	//
 
 	// FIXME: Not safe Semantic *data() { return std::next(data_.get(), 1); }
 
-	Semantic const *data() const { return data_.get() + N_H; }
+	[[nodiscard]] Semantic const *data() const { return data_.get() + N_H; }
 
-	Semantic const *data(index_t const index) const { return data() + offset(index); }
-
-	bool all()
+	[[nodiscard]] Semantic const *data(index_t const index) const
 	{
-		// TODO: Implement
+		return data() + offset(index);
 	}
 
-	bool any()
+	//
+	// All
+	//
+
+	[[nodiscard]] bool all(index_t index, SemanticRange const &range) const
 	{
-		// TODO: Implement
+		return all(index, SemanticRangeSet{range});
 	}
 
-	bool none()
+	[[nodiscard]] bool all(index_t index, SemanticRangeSet const &range_set) const
 	{
-		// TODO: Implement
+		// map contains empty set of ranges
+		if (range_set.empty()) {
+			return true;
+		} else if (size(index) < range_set.numValues()) {
+			return false;
+		}
+
+		auto first = cbegin(index);
+		auto last = cend(index);
+		for (auto range : range_set) {
+			auto lower = lower_bound(first, last, range.lower());
+			auto upper = lower_bound(lower, last, range.upper());
+			auto range_dist = range.upper() - range.lower() + 1;
+			auto sem_dist = std::distance(lower, upper);
+			if (upper == last || range_dist != sem_dist) {
+				return false;
+			}
+			first = upper;
+		}
+
+		return true;
+	}
+
+	//
+	// Any
+	//
+
+	[[nodiscard]] bool any(index_t index, SemanticRange const &range) const
+	{
+		return any(index, SemanticRangeSet{range});
+	}
+
+	[[nodiscard]] bool any(index_t index, SemanticRangeSet const &range_set) const
+	{
+		// map contains empty set of ranges
+		if (range_set.empty()) {
+			return true;
+		}
+
+		if (size(index) < range_set.size()) {
+			for (auto it = cbegin(index), last = cend(index); it != last; ++it) {
+				if (range_set.contains(it->label)) {
+					return true;
+				}
+			}
+		} else {
+			auto first = cbegin(index);
+			auto last = cend(index);
+			for (auto range : range_set) {
+				first = lower_bound(first, last, range.lower());
+				if (first == last) {
+					return false;
+				} else if (first->label <= range.upper()) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	//
+	// None
+	//
+
+	[[nodiscard]] bool none(index_t index, SemanticRange const &range) const
+	{
+		return !any(index, range);
+	}
+
+	[[nodiscard]] bool none(index_t index, SemanticRangeSet const &range_set) const
+	{
+		return !any(index, range_set);
 	}
 
 	/*
@@ -1065,108 +1153,9 @@ class Semantics
 		return offset;
 	}
 
-	template <class InputIt, bool Max>
-	void setCombine(InputIt first, InputIt last, SemanticPropagation const &prop)
-	{
-		// TODO: Remove
-		std::vector<std::size_t> sizes;
-		sizes.reserve(std::distance(first, last));
-		std::transform(first, last, std::back_inserter(sizes),
-		               [](auto const &s) { return s.size(); });
-
-		std::size_t total_size =
-		    std::accumulate(std::cbegin(sizes), std::cend(sizes), std::size_t(0));
-
-		if (0 == total_size) {
-			clear();
-			return;
-		}
-
-		resize(total_size);
-
-		for (auto it_beg = begin(); first != last; ++first) {
-			it_beg = std::copy(std::cbegin(*first), std::cend(*first), it_beg);
-		}
-
-		auto it_beg = begin();
-		for (std::size_t i = 0; sizes.size() != i; ++i) {
-			if (0 == sizes[i]) {
-				continue;
-			}
-
-			auto it_end = std::next(it_beg, sizes[i]);
-			std::inplace_merge(begin(), it_beg, it_end, [](auto const &a, auto const &b) {
-				if constexpr (IsPair) {
-					return a.label < b.label;
-				} else {
-					return a < b;
-				}
-			});
-			it_beg = it_end;
-		}
-
-		if (!prop.empty() || PropagationCriteria::MEAN == prop.getDefaultPropCriteria()) {
-			for (auto it_first = begin(), it_end = end(); it_first != it_end;) {
-				auto it_last = std::find_if_not(
-				    std::next(it_first), it_end,
-				    [l = it_first->label](auto const v) { return l == v.label; });
-
-				auto value = getValue(it_first, it_last, prop.getPropCriteria(it_first->label));
-
-				if constexpr (Max) {
-					// FIXME: Improve
-					std::prev(it_last)->setValue(value);
-				} else {
-					it_first->setValue(value);
-				}
-
-				it_first = it_last;
-			}
-		}
-
-		// Remove duplicates (if duplicate, save correct value)
-		if constexpr (Max) {
-			auto new_beg = std::unique(rbegin(), rend(), [](auto const a, auto const b) {
-				               return a.label == b.label;
-			               }).base();
-			if (begin() != new_beg) {
-				std::copy(new_beg, end(), begin());
-				resize(std::distance(new_beg, end()));
-			}
-		} else {
-			auto new_end = std::unique(
-			    begin(), end(), [](auto const a, auto const b) { return a.label == b.label; });
-			if (end() != new_end) {
-				resize(std::distance(begin(), new_end));
-			}
-		}
-	}
-
-	template <class InputIt>
-	Semantic getValue(InputIt first, InputIt last, PropagationCriteria prop_criteria)
-	{
-		switch (prop_criteria) {
-			case PropagationCriteria::MAX:
-				Semantic max = std::numeric_limits<Semantic>::lowest();
-				for (; first != last; std::advance(first, 1)) {
-					max = std::max(max, first->value);
-				}
-				return max;
-			case PropagationCriteria::MIN:
-				Semantic min = std::numeric_limits<Semantic>::max();
-				for (; first != last; std::advance(first, 1)) {
-					min = std::min(min, first->value);
-				}
-				return min;
-			case PropagationCriteria::MEAN:
-				double total = 0;
-				double num_elem = std::distance(first, last);
-				for (; first != last; std::advance(first, 1)) {
-					total += first->value;
-				}
-				return total / num_elem;
-		}
-	}
+	//
+	// Insert or assign
+	//
 
 	template <bool Assign, class UnaryFunction>
 	void insertOrAssign(label_t label, UnaryFunction f)
@@ -1579,6 +1568,10 @@ class Semantics
 		}
 	}
 
+	//
+	// Lower bound
+	//
+
 	static iterator lower_bound(iterator first, iterator last, label_t label)
 	{
 		return std::lower_bound(first, last,
@@ -1592,6 +1585,10 @@ class Semantics
 		                        Semantic(label, std::numeric_limits<value_t>::lowest()));
 	}
 
+	//
+	// Upper bound
+	//
+
 	static iterator upper_bound(iterator first, iterator last, label_t label)
 	{
 		return std::upper_bound(first, last,
@@ -1604,6 +1601,10 @@ class Semantics
 		return std::upper_bound(first, last,
 		                        Semantic(label, std::numeric_limits<value_t>::max()));
 	}
+
+	//
+	// Equal range
+	//
 
 	static std::pair<iterator, iterator> equal_range(iterator first, iterator last,
 	                                                 label_t label)
@@ -1739,12 +1740,6 @@ class Semantics
 	}
 
 	//
-	// Update
-	//
-
-	// TODO: Implement
-
-	//
 	// Get value
 	//
 
@@ -1759,6 +1754,47 @@ class Semantics
 				return std::accumulate(first, last, 0.0,
 				                       [](double r, auto e) { return r + e.value; }) /
 				       std::distance(first, last);
+		}
+	}
+
+	//
+	// Update
+	//
+
+	template <class InputIt>
+	void update(IndexField indices, InputIt first, InputIt last,
+	            SemanticPropagation const &prop)
+	{
+		if (1 == N) {
+			std::vector<size_type> sizes;
+			for (auto it = first; it != last; ++it) {
+				sizes.push_back(it->size());
+			}
+
+			resize(0, std::reduce(std::cbegin(sizes), std::cend(sizes)));
+
+			for (auto it = begin(); first != last; ++first) {
+				it = std::copy(std::cbegin(*first), std::cend(*first), it);
+			}
+
+			// TODO: Implement
+		} else {
+			std::vector<Semantic> sem;
+			for (index_t i = 0; N != i; ++i, ++first) {
+				if (!indices[i]) {
+					continue;
+				}
+
+				sem.resize(first->size());
+				std::copy(std::cbegin(*first), std::cend(*first), std::begin(sem));
+
+				auto sizes = first->sizes();
+
+				// TODO: Implement
+
+				resize(i, std::distance(f, l));
+				std::copy(f, l, begin(i));
+			}
 		}
 	}
 
