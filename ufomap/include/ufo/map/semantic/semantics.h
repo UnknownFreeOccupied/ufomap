@@ -46,6 +46,7 @@
 #include <ufo/container/range.h>
 #include <ufo/container/range_map.h>
 #include <ufo/container/range_set.h>
+#include <ufo/map/index_field.h>
 #include <ufo/map/semantic/semantic_label_propagation.h>
 #include <ufo/util/iterator_wrapper.h>
 #include <ufo/util/type_traits.h>
@@ -1028,69 +1029,6 @@ class Semantics
 		return {ret_low, ret_high};
 	}
 
-	void read(std::istream &in, IndexField indices, SemanticPropagation prop)
-	{
-		uint8_t n;
-		in.read(reinterpret_cast<char *>(&n), sizeof(n));
-
-		if (N == n) {
-			std::array<size_type, N> sizes;
-			Semantic s;
-			for (index_t i = 0, j = 0; N_H != i; ++i) {
-				in.read(reinterpret_cast<char *>(&s), sizeof(s));
-				sizes[j++] = s.label;
-				sizes[j++] = s.value;
-			}
-
-			if (indices.all()) {
-				resize(sizes);
-				in.read(reinterpret_cast<char *>(begin()),
-				        std::accumulate(std::cbegin(sizes), std::cend(sizes), std::size_t(0)) *
-				            sizeof(Semantic));
-			} else {
-				auto cur_sizes = sizes();
-				for (index_t i = 0; N != i; ++i) {
-					if (!indices[i]) {
-						sizes[i] = cur_sizes[i];
-					}
-				}
-
-				resizes(sizes);
-
-				for (index_t i = 0; N != i; ++i) {
-					if (!indices[i]) {
-						// Skip forward
-						in.seekg(sizes[i] * sizeof(Semantic), std::istream::cur);
-					} else {
-						in.read(reinterpret_cast<char *>(begin(i)), sizes[i] * sizeof(Semantic));
-					}
-				}
-			}
-		} else if (1 == n) {
-			// TODO: Insert it into each index
-		} else if (1 == N) {
-			// TODO: Make into one and remove duplicates, using propagation criteria
-		} else {
-			throw std::...;
-		}
-	}
-
-	void write(std::ostream &out) const
-	{
-		constexpr uint8_t n = N;
-		out.write(reinterpret_cast<char const *>(&n), sizeof(n));
-
-		if (empty()) {
-			Semantic s(0);
-			for (index_t i = 0; N_H != i; ++i) {
-				out.write(reinterpret_cast<char const *>(&s), sizeof(s));
-			}
-			return;
-		}
-
-		out.write(reinterpret_cast<char const *>(data()), (size() + N_H) * sizeof(Semantic));
-	}
-
  protected:
 	//
 	// Sizes
@@ -1682,6 +1620,10 @@ class Semantics
 		return {it, last == it || it->label != label ? it : std::next(it)};
 	}
 
+	//
+	// Resize
+	//
+
 	void resize(std::array<size_type, N> new_sizes)
 	{
 		auto cur_sizes = sizes();
@@ -1794,6 +1736,172 @@ class Semantics
 		} else {
 			data_[index / 2].value = reinterpret_cast<value_t>(static_cast<label_t>(new_size));
 		}
+	}
+
+	//
+	// Update
+	//
+
+	// TODO: Implement
+
+	//
+	// Get value
+	//
+
+	template <class InputIt>
+	value_t getValue(InputIt first, InputIt last, PropagationCriteria prop_criteria)
+	{
+		switch (prop_criteria) {
+			case PropagationCriteria::MIN:
+			case PropagationCriteria::MAX:
+				return first->value;
+			case PropagationCriteria::MEAN:
+				return std::accumulate(first, last, 0.0,
+				                       [](double r, auto e) { return r + e.value; }) /
+				       std::distance(first, last);
+		}
+	}
+
+	//
+	// Input/Output
+	//
+
+	void read(std::istream &in, IndexField indices, SemanticPropagation const &prop)
+	{
+		uint8_t n;
+		in.read(reinterpret_cast<char *>(&n), sizeof(n));
+
+		if (N == n) {
+			std::array<size_type, N> sizes;
+			std::array<Semantic, N_H> s;
+			in.read(reinterpret_cast<char *>(s.data()), N_H * sizeof(Semantic));
+			for (index_t i = 0, j = 0; N_H != i; ++i) {
+				sizes[j++] = s[i].label;
+				sizes[j++] = s[i].value;
+			}
+
+			if (indices.all()) {
+				resize(sizes);
+				in.read(reinterpret_cast<char *>(begin()),
+				        std::accumulate(std::cbegin(sizes), std::cend(sizes), std::size_t(0)) *
+				            sizeof(Semantic));
+			} else {
+				auto cur_sizes = sizes();
+				for (index_t i = 0; N != i; ++i) {
+					if (!indices[i]) {
+						sizes[i] = cur_sizes[i];
+					}
+				}
+
+				resize(sizes);
+
+				for (index_t i = 0; N != i; ++i) {
+					if (!indices[i]) {
+						// Skip forward
+						in.seekg(sizes[i] * sizeof(Semantic), std::istream::cur);
+					} else {
+						in.read(reinterpret_cast<char *>(begin(i)), sizes[i] * sizeof(Semantic));
+					}
+				}
+			}
+		} else if (1 == n) {
+			Semantic s;
+			in.read(reinterpret_cast<char *>(&s), sizeof(s));
+
+			std::array<size_type, N> sizes;
+			sizes.fill(s.label);
+
+			resize(sizes);
+
+			in.read(reinterpret_cast<char *>(begin()), s.label * sizeof(Semantic));
+
+			auto first = begin(0);
+			auto last = end(0);
+
+			for (index i = 1; N != i; ++i) {
+				std::copy(first, last, begin(i));
+			}
+		} else if (1 == N) {
+			std::vector<size_type> sizes;
+			sizes.reserve(n + 1);
+			auto n_h = 1 + (n - 1) / 2;
+			std::vector<Semantic> s(n_h);
+			in.read(reinterpret_cast<char *>(s.data()), n_h * sizeof(Semantic));
+			for (index_t i = 0, j = 0; n_h != i; ++i) {
+				sizes[j++] = s[i].label;
+				sizes[j++] = s[i].value;
+			}
+
+			auto total_size = std::reduce(std::cbegin(sizes), std::cend(sizes));
+			resize(0, total_size);
+			in.read(reinterpret_cast<char *>(begin()), total_size + sizeof(Semantic));
+
+			// Sort
+			auto def = prop.defaultCriteria();
+			auto first = begin();
+			auto mid = first + sizes[0];
+			switch (def) {
+				case PropagationCriteria::MIN:
+					// Lowest value first
+					for (index_t i = 1; n != i; ++i) {
+						auto last = mid + sizes[i];
+						std::inplace_merge(first, mid, last);
+						mid = last;
+					}
+					break;
+				case PropagationCriteria::MAX:
+					// Highest value first
+					for (index_t i = 1; n != i; ++i) {
+						auto last = mid + sizes[i];
+						std::inplace_merge(first, mid, last, [](auto a, auto b) {
+							return a.label < b.label || (a.label == b.label && a.value > b.value)
+						});
+						mid = last;
+					}
+					break;
+				default:
+					// Order of value does not matter
+					for (index_t i = 1; n != i; ++i) {
+						auto last = mid + sizes[i];
+						std::inplace_merge(first, mid, last,
+						                   [](auto a, auto b) { return a.label < b.label });
+						mid = last;
+					}
+			}
+
+			// Remove duplicates
+			if (!prop.empty() ||
+			    (PropagationCriteria::MIN != def && PropagationCriteria::MAX != def)) {
+				for (auto first = begin(), last = end(); first != last;) {
+					auto it = std::find_if_not(std::next(first), last,
+					                           [l = first->label](auto e) { return l == e.label; });
+					it->value = getValue(first, it, prop.propCriteria(first->label));
+					first = it;
+				}
+			}
+
+			auto new_end =
+			    std::unique(begin(), end(), [](auto a, auto b) { return a.label == b.label; });
+
+			resize(0, std::distance(begin(), new_end));
+		} else {
+			throw std::invalid_argument("Wrong number of semantic indices, expected 1 or " +
+			                            std::to_string(N) + " got " + std::to_string(n) + ".");
+		}
+	}
+
+	void write(std::ostream &out) const
+	{
+		constexpr uint8_t n = N;
+		out.write(reinterpret_cast<char const *>(&n), sizeof(n));
+
+		if (empty()) {
+			std::array<Semantic, N_H> s{};
+			out.write(reinterpret_cast<char const *>(s.data()), N_H * sizeof(Semantic));
+			return;
+		}
+
+		out.write(reinterpret_cast<char const *>(data()), (size() + N_H) * sizeof(Semantic));
 	}
 
  private:
