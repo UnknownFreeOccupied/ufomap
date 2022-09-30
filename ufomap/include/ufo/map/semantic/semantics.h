@@ -1088,6 +1088,10 @@ class Semantics
 		return offset;
 	}
 
+	//
+	// Index
+	//
+
 	[[nodiscard]] index_t index(const_iterator it) const
 	{
 		auto s = sizes();
