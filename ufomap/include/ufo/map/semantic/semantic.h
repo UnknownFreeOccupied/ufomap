@@ -50,13 +50,9 @@
 
 namespace ufo::map
 {
-using label_range_t = container::Range<label_t>;
-using value_range_t = container::Range<value_t>;
-
-using label_range_set_t = container::RangeSet<label_t>;
-using value_range_set_t = container::RangeSet<value_t>;
-
-using semantic_range_map_t = container::RangeMap<label_t, value_t>;
+using SemanticRange = container::Range<label_t>;
+using SemanticRangeSet = container::RangeSet<label_t>;
+using SemanticRangeMap = container::RangeMap<label_t, value_t>;
 
 struct Semantic {
 	label_t label = 0;

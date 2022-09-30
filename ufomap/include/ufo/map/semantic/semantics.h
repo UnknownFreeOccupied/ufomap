@@ -117,9 +117,11 @@ class Semantics
 			clear();
 		} else {
 			auto s = size();
+			label_t l = 0;
+			value_t v = reinterpret_cast<value_t const &>(l);
 			for (std::size_t i = 0; N_H != i; ++i) {
-				data_[i].label = 0;
-				data_[i].value = reinterpret_cast<value_t>(label_t(0));
+				data_[i].label = l;
+				data_[i].value = v;
 			}
 			data_[0].label = s;
 			resize(0, rhs.size());
@@ -290,16 +292,17 @@ class Semantics
 		size_type total_size = 0;
 		for (std::size_t i = 0; N_H != i; ++i) {
 			total_size += data_[i].label;
-			total_size += reinterpret_cast<label_t>(data_[i].value);
+			total_size += reinterpret_cast<label_t const &>(data_[i].value);
 		}
 		return total_size;
 	}
 
 	[[nodiscard]] size_type size(index_t const index) const
 	{
-		return empty() ? 0
-		               : (index % 2 ? data_[index / 2].label
-		                            : reinterpret_cast<label_t>(data_[index / 2].value));
+		return empty()
+		           ? 0
+		           : (index % 2 ? data_[index / 2].label
+		                        : reinterpret_cast<label_t const &>(data_[index / 2].value));
 	}
 
 	[[nodiscard]] size_type allocSize() const { return empty() ? 0 : size() + N_H; }
@@ -325,41 +328,7 @@ class Semantics
 
 	void clear() noexcept { data_.reset(); }
 
-	void clear(index_t const index)
-	{
-		size_type cur_size = size(index);
-		if (0 == cur_size) {
-			return;
-		} else if (size() == cur_size) {
-			clear();
-			return;
-		}
-
-		auto index_first = begin(index);
-		auto index_last = end(index);
-		auto last = end();
-		if (index_last != last) {
-			std::move(index_last, last, index_first);
-		}
-		resize(index, 0);
-	}
-
-	//
-	// Set combine
-	//
-
-	template <class InputIt>
-	void setCombine(InputIt first, InputIt last, SemanticPropagation const &prop)
-	{
-		// TODO: Remove
-		switch (prop.defaultPropCriteria()) {
-			case PropagationCriteria::MAX:
-				setCombine<InputIt, true>(first, last, prop);
-				return;
-			default:
-				setCombine<InputIt, false>(first, last, prop);
-		}
-	}
+	void clear(index_t const index) { resize(index, 0); }
 
 	//
 	// Insert
@@ -525,66 +494,62 @@ class Semantics
 	// Assign
 	//
 
-	// TODO: Look at functions under here
-
-	void assign(container::Range<label_t> range, value_t value)
+	void assign(SemanticRange range, value_t value)
 	{
-		assign(container::RangeSet<label_t>(range), value);
+		assign(SemanticRangeSet{range}, value);
 	}
 
-	void assign(container::RangeSet<label_t> const &range, value_t value)
+	void assign(SemanticRangeSet<label_t> const &ranges, value_t value)
 	{
-		for (index_t index = 0; N != index; ++index) {
-			assign(index, range, value);
+		for (index_t i = 0; N != i; ++i) {
+			assign(i, ranges, value);
 		}
 	}
 
 	template <class UnaryFunction>
-	void assign(container::Range<label_t> range, UnaryFunction f)
+	void assign(SemanticRange range, UnaryFunction f)
 	{
-		assign(container::RangeSet<label_t>(range), f);
+		assign(SemanticRangeSet{range}, f);
 	}
 
 	template <class UnaryFunction>
-	void assign(container::RangeSet<label_t> const &range, UnaryFunction f)
+	void assign(SemanticRangeSet const &ranges, UnaryFunction f)
 	{
-		for (index_t index = 0; N != index; ++index) {
-			assign(index, range, f);
+		for (index_t i = 0; N != i; ++i) {
+			assign(i, ranges, f);
 		}
 	}
 
-	void assign(index_t const index, container::Range<label_t> range, value_t value)
+	void assign(index_t const index, SemanticRange range, value_t value)
 	{
-		assign(index, container::RangeSet<label_t>(range), value);
+		assign(index, SemanticRangeSet{range}, value);
 	}
 
-	void assign(index_t const index, container::RangeSet<label_t> const &range,
-	            value_t value)
+	void assign(index_t const index, SemanticRangeSet const &ranges, value_t value)
 	{
-		for (auto r : range) {
-			auto lower = lower_bound(index, r.lower());
-			auto upper = upper_bound(index, r.upper());
-			for (; lower != upper; ++lower) {
-				lower->value = value;
+		assign(index, ranges, [value](auto) { return value; });
+	}
+
+	template <class UnaryFunction>
+	void assign(index_t const index, SemanticRange range, UnaryFunction f)
+	{
+		assign(index, SemanticRangeSet{range}, f);
+	}
+
+	template <class UnaryFunction>
+	void assign(index_t const index, SemanticRangeSet const &ranges, UnaryFunction f)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+		for (auto range : ranges) {
+			if (first == last) {
+				break;
 			}
-		}
-	}
 
-	template <class UnaryFunction>
-	void assign(index_t const index, container::Range<label_t> range, UnaryFunction f)
-	{
-		assign(index, container::RangeSet<label_t>(range), f);
-	}
-
-	template <class UnaryFunction>
-	void assign(index_t const index, container::RangeSet<label_t> const &range,
-	            UnaryFunction f)
-	{
-		for (auto r : range) {
-			auto lower = lower_bound(index, r.lower());
-			auto upper = upper_bound(index, r.upper());
-			for (; lower != upper; ++lower) {
-				lower->value = f(std::as_const(*lower));
+			first = lower_bound(first, last, range.lower());
+			auto upper = upper_bound(first, last, range.upper());
+			for (; first != upper; ++first) {
+				first->value = f(*first);
 			}
 		}
 	}
@@ -593,101 +558,200 @@ class Semantics
 	// Erase
 	//
 
-	iterator erase(const_iterator pos) { return erase(pos, std::next(pos, 1)); }
+	iterator erase(const_iterator pos) { return erase(pos, std::next(pos)); }
 
-	iterator erase(iterator pos) { return erase(pos, std::next(pos, 1)); }
+	iterator erase(iterator pos) { return erase(pos, std::next(pos)); }
 
 	iterator erase(const_iterator first, const_iterator last)
 	{
-		// TODO: Implement
-
 		if (first == last || cend() == first) {
 			return end();
-		}
-
-		if (cbegin() == first && cend() == last) {
+		} else if (cbegin() == first && cend() == last) {
 			clear();
 			return end();
 		}
 
-		// FIXME: Is this safe with unsigned?
-		auto new_size = size() - std::distance(first, last);
+		auto s = sizes();
 
-		auto it = begin();
-		std::advance(it, std::distance<const_iterator>(it, first));
-		std::move(last, cend(), it);
+		auto first_index = index(first);
+		auto last_index = index(last);
 
-		resize(new_size);
+		size_type r_offset = offset(first_index);
 
-		return it;
+		if (first_index == last_index) {
+			s[first_index] -= std::distance(first, last);
+			if (0 != s[first_index] && cend(first_index) != last) {
+				auto beg = begin() + std::distance(cbegin(), last);
+				auto dst = begin() + std::distance(cbegin(), first);
+				auto l = std::move(beg, end(first_index), dst);
+				r_offset = std::distance(begin(), l);
+			} else {
+				r_offset = std::distance(begin(), begin(first_index));
+			}
+		} else {
+			// Handle first
+			s[first_index] -= std::distance(first, cend(first_index));
+
+			r_offset += s[first_index];
+
+			// Handle middle
+			for (; ++first_index != last_index;) {
+				s[first_index] = 0;
+			}
+
+			// Handle last
+			auto dist = std::distance(cbegin(last_index), last);
+			s[last_index] -= dist;
+			if (0 != dist && 0 != s[last_index]) {
+				auto beg = begin() + std::distance(cbegin(), last);
+				auto l = std::move(beg, end(last_index), begin(last_index));
+				r_offset += std::distance(begin(last_index), l);
+			}
+		}
+
+		resize(s);
+
+		return begin() + r_offset;
 	}
 
 	size_type erase(label_t label)
 	{
-		// TODO: Implement
-		if (iterator it = find(label); end() != it) {
-			erase(it);
-			return 1;
+		if (empty()) {
+			return 0;
 		}
-		return 0;
+
+		auto s = sizes();
+		auto sum = 0;
+		for (index_t i = 0; N != i; ++i) {
+			auto t = eraseImpl(i, label);
+			s[i] -= t;
+			sum += t;
+		}
+
+		resize(s);
+
+		return sum;
+	}
+
+	size_type erase(SemanticRange range) { return erase(SemanticRangeSet{range}); }
+
+	size_type erase(SemanticRangeSet const &range_set)
+	{
+		if (range_set.empty() || empty()) {
+			return 0;
+		}
+
+		auto s = sizes();
+		auto sum = 0;
+		for (index_t i = 0; N != i; ++i) {
+			auto t = eraseImpl(i, range_set);
+			s[i] -= t;
+			sum += t;
+		}
+
+		resize(s);
+
+		return sum;
 	}
 
 	size_type erase(index_t const index, label_t label)
 	{
-		// TODO: Implement-
+		auto s = eraseImpl(index, label);
+		resize(index, size(index) - s);
+		return s;
 	}
 
-	/*
-	 * Erases all Semantics of range which fulfills the pairwise comparison
-	 * comp(Semantic.value, value)
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(container::Range<T> const &range, value_t value, Compare comp)
+	size_type erase(index_t const index, SemanticRange range)
 	{
-		return erase(container::RangeSet<T>(range), value, comp);
+		return erase(index, SemanticRangeSet{range});
 	}
 
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(container::Range<T> const &range)
+	size_type erase(index_t const index, SemanticRangeSet const &range_set)
 	{
-		return erase(container::RangeSet<T>(range));
-	}
-
-	/*
-	 * Erases all Semantics of rangeSet which fulfills the pairwise comparison
-	 * comp(Semantic.value, value)
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(container::RangeSet<T> const &rangeSet, value_t value, Compare comp)
-	{
-		size_type old_size = size();
-		for (auto const &range : rangeSet) {
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
-			uint32_t c = 0;
-
-			while (lower != upper) {
-				if (!comp(lower->value, value)) {
-					++lower;
-				} else {
-					lower = erase(lower);
-					--upper;
-				}
-			}
+		if (range_set.empty() || empty(index)) {
+			return 0;
 		}
-		return old_size - size();
+
+		auto s = eraseImpl(index, range_set);
+		resize(index, size(index) - s);
+		return s;
 	}
 
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	size_type erase(container::RangeSet<T> const &rangeSet)
+	//
+	// Erase if
+	//
+
+	template <class UnaryPredicate>
+	size_type eraseIf(UnaryPredicate p)
 	{
-		size_type old_size = size();
-		for (auto const &range : rangeSet) {
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
-			erase(lower, upper);
+		if (empty()) {
+			return 0;
 		}
-		return old_size - size();
+
+		auto s = sizes();
+		auto sum = 0;
+		for (index_t i = 0; N != i; ++i) {
+			auto t = eraseIfImpl(i, p);
+			s[i] -= t;
+			sum += t;
+		}
+
+		resize(s);
+
+		return sum;
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIf(SemanticRange range, UnaryPredicate p)
+	{
+		return eraseIf(SemanticRangeSet{range}, p);
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIf(SemanticRangeSet const &range_set, UnaryPredicate p)
+	{
+		if (range_set.empty() || empty()) {
+			return 0;
+		}
+
+		auto s = sizes();
+		auto sum = 0;
+		for (index_t i = 0; N != i; ++i) {
+			auto t = eraseIfImpl(i, range_set, p);
+			s[i] -= t;
+			sum += t;
+		}
+
+		resize(s);
+
+		return sum;
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIf(index_t const index, UnaryPredicate p)
+	{
+		auto s = eraseIfImpl(index, p);
+		resize(index, size(index) - s);
+		return s;
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIf(index_t const index, SemanticRange range, UnaryPredicate p)
+	{
+		return eraseIf(index, SemanticRangeSet{range}, p);
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIf(index_t const index, SemanticRangeSet const &range_set,
+	                  UnaryPredicate p)
+	{
+		if (range_set.empty() || empty(index)) {
+			return 0;
+		}
+
+		auto s = eraseIfImpl(index, range_set, p);
+		resize(index, size(index) - s);
+		return s;
 	}
 
 	//
@@ -696,7 +760,10 @@ class Semantics
 
 	void swap(Semantics &other) noexcept { std::swap(data_, other.data_); }
 
-	// Lookup
+	//
+	// At
+	//
+
 	[[nodiscard]] Semantic at(index_t index, label_t label) const
 	{
 		if (auto it = find(index, label); end(index) != it) {
@@ -705,16 +772,28 @@ class Semantics
 		throw std::out_of_range("Cannot find label " + std::to_string(label));
 	}
 
+	//
+	// Value
+	//
+
 	[[nodiscard]] std::optional<value_t> value(index_t index, label_t label) const
 	{
 		auto it = find(index, label);
 		return end(index) != it ? std::optional<value_t>(it->value) : std::nullopt;
 	}
 
+	//
+	// Count
+	//
+
 	[[nodiscard]] size_type count(index_t index, label_t label) const
 	{
 		return contains(index, label) ? 1 : 0;
 	}
+
+	//
+	// Find
+	//
 
 	[[nodiscard]] iterator find(index_t index, label_t label)
 	{
@@ -728,10 +807,18 @@ class Semantics
 		return end(index) != it && it->label == label ? it : end(index);
 	}
 
+	//
+	// Contains
+	//
+
 	[[nodiscard]] bool contains(index_t index, label_t label) const
 	{
 		return end(index) != find(index, label);
 	}
+
+	//
+	// Equal range
+	//
 
 	[[nodiscard]] std::pair<iterator, iterator> equal_range(index_t index, label_t label)
 	{
@@ -744,6 +831,10 @@ class Semantics
 		return equal_range(begin(index), end(index), label);
 	}
 
+	//
+	// Lower bound
+	//
+
 	[[nodiscard]] iterator lower_bound(index_t index, label_t label)
 	{
 		return lower_bound(begin(index), end(index), label);
@@ -753,6 +844,10 @@ class Semantics
 	{
 		return lower_bound(begin(index), end(index), label);
 	}
+
+	//
+	// Upper bound
+	//
 
 	[[nodiscard]] iterator upper_bound(index_t index, label_t label)
 	{
@@ -767,8 +862,6 @@ class Semantics
 	//
 	// Data
 	//
-
-	// FIXME: Not safe Semantic *data() { return std::next(data_.get(), 1); }
 
 	[[nodiscard]] Semantic const *data() const { return data_.get() + N_H; }
 
@@ -788,7 +881,6 @@ class Semantics
 
 	[[nodiscard]] bool all(index_t index, SemanticRangeSet const &range_set) const
 	{
-		// map contains empty set of ranges
 		if (range_set.empty()) {
 			return true;
 		} else if (size(index) < range_set.numValues()) {
@@ -799,15 +891,49 @@ class Semantics
 		auto last = cend(index);
 		for (auto range : range_set) {
 			auto lower = lower_bound(first, last, range.lower());
-			auto upper = lower_bound(lower, last, range.upper());
+			first = upper_bound(lower, last, range.upper());
 			auto range_dist = range.upper() - range.lower() + 1;
-			auto sem_dist = std::distance(lower, upper);
-			if (upper == last || range_dist != sem_dist) {
+			auto sem_dist = std::distance(lower, first);
+			if (first == last || range_dist != sem_dist) {
 				return false;
 			}
-			first = upper;
+		}
+		return true;
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool all(index_t index, SemanticRange const &range,
+	                       UnaryPredicate p) const
+	{
+		return all(index, SemanticRangeSet{range}, f);
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool all(index_t index, SemanticRangeSet const &range_set,
+	                       UnaryPredicate p) const
+	{
+		if (range_set.empty()) {
+			return true;
+		} else if (size(index) < range_set.numValues()) {
+			return false;
 		}
 
+		auto first = cbegin(index);
+		auto last = cend(index);
+		for (auto range : range_set) {
+			auto lower = lower_bound(first, last, range.lower());
+			first = upper_bound(lower, last, range.upper());
+			auto range_dist = range.upper() - range.lower() + 1;
+			auto sem_dist = std::distance(lower, first);
+			if (first == last || range_dist != sem_dist) {
+				return false;
+			}
+			for (; lower != first; ++lower) {
+				if (!p(*lower)) {
+					return false;
+				}
+			}
+		}
 		return true;
 	}
 
@@ -822,7 +948,6 @@ class Semantics
 
 	[[nodiscard]] bool any(index_t index, SemanticRangeSet const &range_set) const
 	{
-		// map contains empty set of ranges
 		if (range_set.empty()) {
 			return true;
 		}
@@ -848,6 +973,44 @@ class Semantics
 		return false;
 	}
 
+	template <class UnaryPredicate>
+	[[nodiscard]] bool any(index_t index, SemanticRange const &range,
+	                       UnaryPredicate p) const
+	{
+		return any(index, SemanticRangeSet{range}, p);
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool any(index_t index, SemanticRangeSet const &range_set,
+	                       UnaryPredicate p) const
+	{
+		if (range_set.empty()) {
+			return true;
+		}
+
+		if (size(index) < range_set.size()) {
+			for (auto it = cbegin(index), last = cend(index); it != last; ++it) {
+				if (range_set.contains(it->label) && f(*it)) {
+					return true;
+				}
+			}
+		} else {
+			auto first = cbegin(index);
+			auto last = cend(index);
+			for (auto range : range_set) {
+				first = lower_bound(first, last, range.lower());
+				for (; first != last && first->label <= range.upper(); ++first) {
+					if (p(*first)) {
+						return true;
+					}
+				}
+				if (first == last) {
+					return false;
+				}
+			}
+		}
+	}
+
 	//
 	// None
 	//
@@ -862,262 +1025,29 @@ class Semantics
 		return !any(index, range_set);
 	}
 
-	/*
-	 * True if container contains any Key present in Range.
-	 * I.e., the container does not have to contain the full range.
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(container::Range<T> const &range) const
+	template <class UnaryPredicate>
+	[[nodiscard]] bool none(index_t index, SemanticRange const &range,
+	                        UnaryPredicate p) const
 	{
-		return containsAny({range});
+		return !any(index, range, p);
 	}
 
-	/*
-	 * True if container contains any Key present in Range which value fulfills the
-	 * binary comparison comp.  I.e., the container does not have to contain the full range.
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(container::Range<T> const &range, value_t value,
-	                               Compare comp) const
+	template <class UnaryPredicate>
+	[[nodiscard]] bool none(index_t index, SemanticRangeSet const &range_set,
+	                        UnaryPredicate p) const
 	{
-		return containsAny({range}, value, comp);
-	}
-
-	/*
-	 * True if container contains any Key present in any of the Ranges of the set.
-	 * I.e., the container does not have to contain the full range.
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet) const
-	{
-		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
-			return true;
-		}
-
-		if (size() < rangeSet.size()) {
-			for (auto const &element : *this) {
-				if (rangeSet.contains(element.label)) {
-					return true;
-				}
-			}
-		} else {
-			for (auto const &range : rangeSet) {
-				const_iterator lower = lower_bound(range.lower());
-				if (lower != end() && lower->label <= range.upper()) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	/*
-	 * True if container contains any Key present in any Range of the set which value
-	 * fulfills the binary comparison comp.  I.e., the container does not have to contain
-	 * the full range.
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAny(container::RangeSet<T> const &rangeSet, value_t value,
-	                               Compare comp) const
-	{
-		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
-			return true;
-		}
-
-		if (size() < rangeSet.size()) {
-			for (auto const &element : *this) {
-				if (rangeSet.contains(element.label) && comp(element.value, value)) {
-					return true;
-				}
-			}
-		} else {
-			for (auto const &range : rangeSet) {
-				auto lower = lower_bound(range.lower());
-				auto upper = upper_bound(range.upper());
-				for (; lower != upper; ++lower) {
-					if (comp(lower->value, value)) {
-						return true;
-					}
-				}
-			}
-		}
-		return false;
-	}
-
-	/*
-	 * Negated containsAny
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(container::Range<T> const &range) const
-	{
-		return containsNone({range});
-	}
-
-	/*
-	 * Negated containsAny
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(container::Range<T> const &range, value_t value,
-	                                Compare comp) const
-	{
-		return !containsAny({range}, value, comp);
-	}
-
-	/*
-	 * Negated containsAny
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet) const
-	{
-		return !containsAny(rangeSet);
-	}
-
-	/*
-	 * Negated containsAny
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsNone(container::RangeSet<T> const &rangeSet, value_t value,
-	                                Compare comp) const
-	{
-		return !containsAny(rangeSet, value, comp);
-	}
-
-	/*
-	 * True if container contains all Keys of the range and that comp(Semantic.value,
-	 * value) is true for all such elements.
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(container::Range<T> const &range, value_t value,
-	                               Compare comp) const
-	{
-		return containsAll({range}, value, comp);
-	}
-
-	/*
-	 * True if container contains all Keys of the range
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(container::Range<T> const &range) const
-	{
-		return containsAll({range});
-	}
-
-	/*
-	 * True if container contains all Keys of each range in the set and that
-	 * comp(Semantic.value, value) is true for all such elements.
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet, value_t value,
-	                               Compare comp) const
-	{
-		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
-			return true;
-		}
-		if (size() < rangeSet.size()) {
-			return false;
-		}
-		typename container::RangeSet<uint32_t>::size_type checked_elems = 0;
-		for (auto const &range : rangeSet) {
-			// Is it possible that all range elements are in the map?
-			checked_elems += (range.upper() - range.lower()) + 1;
-			if (checked_elems > size()) {
-				return false;
-			}
-
-			auto range_dist = range.upper() - range.lower() + 1;
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
-			auto dist = std::distance(lower, upper);
-			if (dist != range_dist) {
-				return false;
-			}
-
-			for (; lower != upper; ++lower) {
-				if (!comp(lower->value, value)) {
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-
-	/*
-	 * True if container contains all Keys of each Range in the set
-	 */
-	template <class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] bool containsAll(container::RangeSet<T> const &rangeSet) const
-	{
-		// map contains empty set of ranges
-		if (rangeSet.size() == size_type(0)) {
-			return true;
-		}
-		if (size() < rangeSet.size()) {
-			return false;
-		}
-		typename container::RangeSet<uint32_t>::size_type checked_elems = 0;
-		for (auto const &range : rangeSet) {
-			// Is it possible that all range elemnts are in the map?
-			checked_elems += (range.upper() - range.lower()) + 1;
-			if (checked_elems > size()) {
-				return false;
-			}
-
-			// Check if the individual range elems are here
-			auto range_dist = range.upper() - range.lower() + 1;
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
-			auto dist = std::distance(lower, upper);
-			if (dist != range_dist) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/*
-	 * Return pair of iterators to limits (min max if e.g. less) according to comp
-	 * Return (end(), end()) if none present.
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] std::pair<iterator, iterator> limits(container::Range<T> const &range,
-	                                                   Compare comp)
-	{
-		return limits({range}, comp);
-	}
-
-	/*
-	 * Return pair of iterators to limits (min max if e.g. less) according to comp
-	 * Return (end(), end()) if none present.
-	 */
-	template <class Compare, class T, class = std::enable_if_t<std::is_unsigned_v<T>>>
-	[[nodiscard]] std::pair<iterator, iterator> limits(
-	    container::RangeSet<T> const &rangeSet, Compare comp)
-	{
-		if (rangeSet.size() == 0 || size() == 0) {
-			return {end(), end()};
-		}
-		auto ret_low = end();
-		auto ret_high = end();
-
-		for (auto const &range : rangeSet) {
-			auto lower = lower_bound(range.lower());
-			auto upper = upper_bound(range.upper());
-			for (; lower != upper; ++lower) {
-				if (ret_high == end() || !comp(lower->value, ret_high->value)) {
-					ret_high = lower;
-				}
-				if (ret_low == end() || comp(lower->value, ret_low->value)) {
-					ret_low = lower;
-				}
-			}
-		}
-		return {ret_low, ret_high};
+		return !any(index, range_set, p);
 	}
 
  protected:
+	//
+	// Data
+	//
+
+	[[nodiscard]] Semantic *data() { return data_.get() + N_H; }
+
+	[[nodiscard]] Semantic *data(index_t const index) { return data() + offset(index); }
+
 	//
 	// Sizes
 	//
@@ -1129,8 +1059,13 @@ class Semantics
 		}
 
 		std::array<size_type, N> s;
-		for (index_t i = 0; N != i; ++i) {
-			s[i] = i % 2 data_[i / 2].label : reinterpret_cast<label_t>(data_[i / 2].value);
+		if constexpr (0 == N % 2) {
+			std::copy(data_.get(), data_.get() + N_H, reinterpret_cast<Semantic *>(s.data()));
+		} else {
+			for (index_t i = 0; N != i; ++i) {
+				s[i] = i % 2 data_[i / 2].label
+				    : reinterpret_cast<label_t const &>(data_[i / 2].value);
+			}
 		}
 		return s;
 	}
@@ -1139,18 +1074,29 @@ class Semantics
 	// Index offset
 	//
 
-	[[nodiscard]] std::size_t offset(index_t const index) const
+	[[nodiscard]] size_type offset(index_t const index) const
 	{
 		if (empty()) {
 			return 0;
 		}
 
-		std::size_t offset = 0;
+		size_type offset = 0;
 		for (index_t i = 0; index != i; ++i) {
-			offset +=
-			    i % 2 ? data_[i / 2].label : reinterpret_cast<label_t>(data_[i / 2].value);
+			offset += i % 2 ? data_[i / 2].label
+			                : reinterpret_cast<label_t const &>(data_[i / 2].value);
 		}
 		return offset;
+	}
+
+	[[nodiscard]] index_t index(const_iterator it) const
+	{
+		auto s = sizes();
+		auto dist = std::distance(begin(), it);
+		index_t i = 0;
+		for (auto offset = sizes[0]; N != i && offset < dist; ++i) {
+			offset += sizes[i];
+		}
+		return i;
 	}
 
 	//
@@ -1622,6 +1568,112 @@ class Semantics
 	}
 
 	//
+	// Erase
+	//
+
+	size_type eraseImpl(index_t index, label_t label)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		first = lower_bound(first, last, label);
+
+		if (first == last || first->label != label) {
+			return 0;
+		}
+
+		std::move(first + 1, last, first);
+
+		return 1;
+	}
+
+	size_type eraseImpl(index_t index, SemanticRangeSet ranges)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		size_type num = 0;
+		for (auto range : ranges) {
+			if (first == last) {
+				break;
+			}
+
+			first = lower_bound(first, last, range.lower());
+			auto upper = upper_bound(first, last, range.upper());
+
+			if (first != upper) {
+				num += std::distance(first, upper);
+				last = std::move(upper, last, first);
+			}
+		}
+
+		return num;
+	}
+
+	//
+	// Erase if
+	//
+
+	template <class UnaryPredicate>
+	size_type eraseIfImpl(index_t index, UnaryPredicate p)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		first = std::find_if(first, last, p);
+
+		if (first == last) {
+			return 0;
+		}
+
+		size_type num = 0;
+		for (auto it = first; ++it != last;) {
+			if (p(*it)) {
+				++num;
+			} else {
+				*first++ = std::move(*it);
+			}
+		}
+
+		return num;
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIfImpl(index_t index, SemanticRangeSet ranges, UnaryPredicate p)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		size_type num = 0;
+		for (auto range : ranges) {
+			if (first == last) {
+				break;
+			}
+
+			first = lower_bound(first, last, range.lower());
+			auto upper = upper_bound(first, last, range.upper());
+
+			first = std::find_if(first, upper, p);
+
+			if (first != upper) {
+				for (auto it = first; ++it != upper;) {
+					if (p(*it)) {
+						++num;
+					} else {
+						*first++ = std::move(*it);
+					}
+				}
+
+				if (first != upper) {
+					last = std::move(upper, last, first);
+				}
+			}
+		}
+
+		return num;
+	}
+
+	//
 	// Resize
 	//
 
@@ -1632,65 +1684,72 @@ class Semantics
 			return;
 		}
 
-		Semantic *ptr_cur = data_.release();
+		auto cur_size = std::accumulate(std::cbegin(cur_sizes), std::cend(cur_sizes), N_H);
+		auto new_size = std::accumulate(std::cbegin(new_sizes), std::cend(new_sizes), N_H);
 
-		auto new_total_size =
-		    std::accumulate(std::cbegin(new_sizes), std::cend(new_sizes), std::size_t(0)) +
-		    N_H;
+		for (index_t i = 0; N - 1 != i; ++i) {
+			// Reduce the indices that should be reduced
+			if (cur_sizes[i] <= new_sizes[i]) {
+				continue;
+			}
 
-		Semantic *ptr_new =
-		    static_cast<Semantic *>(realloc(ptr_cur, new_total_size * sizeof(Semantic)));
+			std::move(std::begin(i + 1), std::end(i + 1), begin(i) + new_sizes[i]);
 
-		if (!ptr_new) {
-			data_.reset(ptr_cur);
-			throw std::bad_alloc();
+			// Set size
+			if (i % 2) {
+				data_[i / 2].label = new_sizes[i];
+			} else {
+				data_[i / 2].value =
+				    reinterpret_cast<value const &>(static_cast<label_t const &>(new_sizes[i]));
+			}
 		}
 
-		data_.reset(ptr_new);
+		if (cur_size != new_size) {
+			Semantic *ptr_cur = data_.release();
 
-		if (ptr_cur) {
-			// Move to correct location and set size
-			auto last = data_.get() + new_total_size;
-			for (index_t index = N - 1; 0 != index; --index) {
-				if (0 == new_sizes[index] || 0 == cur_sizes[index]) {
-					// Set size
-					if (index % 2) {
-						data_[index / 2].label = new_sizes[index];
-					} else {
-						data_[index / 2].value =
-						    reinterpret_cast<value_t>(static_cast<label_t>(new_sizes[index]));
-					}
+			Semantic *ptr_new =
+			    static_cast<Semantic *>(realloc(ptr_cur, new_size * sizeof(Semantic)));
+
+			if (!ptr_new) {
+				data_.reset(ptr_cur);
+				throw std::bad_alloc();
+			}
+
+			data_.reset(ptr_new);
+		}
+
+		if (0 == cur_size) {
+			// Set sizes
+			for (index_t i = 0; N != i; ++i) {
+				if (i % 2) {
+					data_[i / 2].label = new_sizes[i];
+				} else {
+					data_[i / 2].value = reinterpret_cast<value_t const &>(
+					    static_cast<label_t const &>(new_sizes[i]));
+				}
+			}
+		} else {
+			// Increase the indices that should be increased
+			auto last = data_.get() + new_size;
+			for (index_t i = N - 1; 0 != i; --i) {
+				// Set size
+				if (i % 2) {
+					data_[i / 2].label = s;
+				} else {
+					data_[i / 2].value =
+					    reinterpret_cast<value const &>(static_cast<label_t const &>(s));
+				}
+
+				if (0 == new_sizes[i] || 0 == cur_sizes[i]) {
 					continue;
 				}
 
-				if (cur_sizes[index] <= new_sizes[index]) {
-					// Additional space for the index at the end
-					last -= new_sizes[index] - cur_sizes[index];
-					last = std::move_backward(begin(index), end(index), last);
+				auto first_index = begin(i);
+				auto last_index = end(i);
+				if (last != last_index) {
+					last = std::move_backward(first_index, last_index, last);
 				} else {
-					// Remove some of the last elements of the index
-					auto last_index = end(index) - (cur_sizes[index] - new_sizes[index]);
-					last = std::move_backward(begin(index), last_index, last);
-				}
-
-				// Set size
-				if (index % 2) {
-					data_[index / 2].label = new_sizes[index];
-				} else {
-					data_[index / 2].value =
-					    reinterpret_cast<value_t>(static_cast<label_t>(new_sizes[index]));
-				}
-			}
-
-			data_[0].label = new_sizes[0];
-		} else {
-			// Set sizes
-			for (index_t index = 0; N != index; ++index) {
-				if (index % 2) {
-					data_[index / 2].label = new_sizes[index];
-				} else {
-					data_[index / 2].value =
-					    reinterpret_cast<value_t>(static_cast<label_t>(new_sizes[index]));
+					last = first_index;
 				}
 			}
 		}
@@ -1698,8 +1757,19 @@ class Semantics
 
 	void resize(index_t const index, size_type new_size)
 	{
-		if (size(index) == new_size) {
+		auto const cur_size = size(index);
+		if (cur_size == new_size) {
 			return;
+		}
+
+		if (cur_size > new_size) {
+			// Move to last if size decreases
+			auto first_index = begin(index) + new_size;
+			auto last_index = end(index);
+			auto last = end();
+			if (last_index != last) {
+				std::move(last_index, last, first_index);
+			}
 		}
 
 		Semantic *ptr_cur = data_.release();
@@ -1716,18 +1786,20 @@ class Semantics
 
 		data_.reset(ptr_new);
 
-		if (ptr_cur) {
+		if (!ptr_cur) {
+			// Initialize
+			label_t l = 0;
+			value_t v = reinterpret_cast<value_t const &>(l);
+			for (std::size_t i = 0; N_H != i; ++i) {
+				data_[i].label = l;
+				data_[i].value = v;
+			}
+		} else if (cur_size < new_size) {
 			// Move indices after
 			auto last_index = end(index);
 			auto last = end();
 			if (last_index != last) {
 				std::move_backward(last_index, last, data_.get() + new_total_size);
-			}
-		} else {
-			// Initialize
-			for (std::size_t i = 0; N_H != i; ++i) {
-				data_[i].label = 0;
-				data_[i].value = reinterpret_cast<value_t>(label_t(0));
 			}
 		}
 
@@ -1735,7 +1807,8 @@ class Semantics
 		if (index % 2) {
 			data_[index / 2].label = new_size;
 		} else {
-			data_[index / 2].value = reinterpret_cast<value_t>(static_cast<label_t>(new_size));
+			data_[index / 2].value =
+			    reinterpret_cast<value_t const &>(static_cast<label_t const &>(new_size));
 		}
 	}
 
