@@ -238,7 +238,7 @@ class Semantics
 	const_reverse_iterator crend(index_t const index) const noexcept { return rend(index); }
 
 	//
-	// Iterate
+	// Query
 	// TODO: Come up with better name
 
 	[[nodiscard]] util::IteratorWrapper<iterator> iter(index_t const index)

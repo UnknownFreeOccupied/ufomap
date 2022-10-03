@@ -50,34 +50,33 @@
 
 namespace ufo::map
 {
-template <bool Single = false>
-struct SemanticNodeNew {
-	using semantic_label_t = uint32_t;
-	using semantic_value_t = float;
-	using semantic_container_t = float;  // TODO: Change
-
+template <std::size_t N = 8>
+struct SemanticNode {
 	// Data
-	semantic_container_t<Single> semantics;
+	Semantics<N> semantics;
 
-	bool operator==(SemanticNodeNew const& rhs) const { return semantics == rhs.semantics; }
+	//
+	// Size
+	//
 
-	bool operator!=(SemanticNodeNew const& rhs) const { return !(*this == rhs); }
+	[[nodiscard]] static constexpr std::size_t semanticSize() { return N; }
 
-	constexpr semantic_container_t const& getSemantics(std::size_t const index) const
+	//
+	// Fill
+	//
+
+	void fill(SemanticNode const& parent, index_t const index)
 	{
-		return semantics[index];
+		// TODO: Implement
 	}
 
-	constexpr semantic_container_t& getSemantics(std::size_t const index)
-	{
-		return semantics[index];
-	}
+	//
+	// Is collapsible
+	//
 
-	void setSemantics(semantic_container_t const& value) { semantics.fill(value); }
-
-	constexpr void setSemantics(std::size_t const index, semantic_container_t const& value)
+	[[nodiscard]] bool isCollapsible(SemanticNode const& parent, index_t const index) const
 	{
-		semantics[index] = value;
+		// TODO: Implement
 	}
 };
 }  // namespace ufo::map

@@ -39,8 +39,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEMANTIC_LABEL_PROPAGATION_H
-#define UFO_MAP_SEMANTIC_LABEL_PROPAGATION_H
+#ifndef UFO_MAP_SEMANTIC_PROPAGATION_H
+#define UFO_MAP_SEMANTIC_PROPAGATION_H
 
 // UFO
 #include <ufo/container/range.h>
@@ -57,58 +57,52 @@
 
 namespace ufo::map
 {
-class SemanticLabelPropagation
+class SemanticPropagation
 {
  public:
-	void setDefault(PropagationCriteria prop_criteria)
+	constexpr void setDefault(PropagationCriteria prop_criteria)
 	{
 		default_prop_criteria_ = prop_criteria;
 	}
 
-	void set(semantic_label_range_t label_range, PropagationCriteria prop_criteria)
+	void set(SemanticRange range, PropagationCriteria prop_criteria)
 	{
-		prop_criteria_.insert_or_assign(label_range, prop_criteria);
+		prop_criteria_.insert_or_assign(range, prop_criteria);
 	}
 
 	template <class InputIt>
 	void set(InputIt first, InputIt last, PropagationCriteria prop_criteria)
 	{
-		while (first != last) {
-			set(*first, prop_criteria);
-			std::advance(first, 1);
-		}
+		std::for_each(first, last, [prop_criteria](auto r) { set(r, prop_criteria); });
 	}
 
-	void erase(semantic_label_range_t label_range) { prop_criteria_.erase(label_range); }
+	void erase(SemanticRange range) { prop_criteria_.erase(range); }
 
 	template <class InputIt>
 	void erase(InputIt first, InputIt last)
 	{
-		while (first != last) {
-			erase(*first);
-			std::advance(first, 1);
-		}
+		std::for_each(first, last, [](auto e) { erase(e); });
 	}
 
 	void clear() { prop_criteria_.clear(); }
 
 	[[nodiscard]] bool empty() const { return prop_criteria_.empty(); }
 
-	[[nodiscard]] constexpr PropagationCriteria getDefaultPropCriteria() const noexcept
+	[[nodiscard]] constexpr PropagationCriteria defaultPropCriteria() const noexcept
 	{
 		return default_prop_criteria_;
 	}
 
-	[[nodiscard]] PropagationCriteria getPropCriteria(semantic_label_t label) const
+	[[nodiscard]] PropagationCriteria propCriteria(label_t label) const
 	{
 		auto it = prop_criteria_.find(label);
-		return prop_criteria_.end() == it ? getDefaultPropCriteria() : it->second;
+		return prop_criteria_.end() == it ? defaultPropCriteria() : it->second;
 	}
 
  private:
 	PropagationCriteria default_prop_criteria_;
-	container::RangeMap<semantic_label_t, PropagationCriteria> prop_criteria_;
+	container::RangeMap<label_t, PropagationCriteria> prop_criteria_;
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_SEMANTIC_LABEL_PROPAGATION_H
+#endif  // UFO_MAP_SEMANTIC_PROPAGATION_H

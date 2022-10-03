@@ -53,63 +53,41 @@
 
 namespace ufo::map
 {
-template <bool Single = false>
+template <std::size_t N = 8>
 struct SurfelNode {
 	using scalar_t = float;
-	std::conditional_t<Single, std::array<scalar_t, 6>,
-	                   std::array<std::array<scalar_t, 6>, 8>>
-	    sum_squares_;
-	std::conditional_t<Single, math::Vector3<scalar_t>,
-	                   std::array<math::Vector3<scalar_t>, 8>>
-	    sum_;
-	std::conditional_t<Single, math::Vector3<scalar_t>,
-	                   std::array<math::Vector3<scalar_t>, 8>>
-	    eigen_values_;
-	std::conditional_t<Single, std::uint32_t, std::array<std::uint32_t, 8>> num_points_;
+	std::array<std::array<scalar_t, 6>, N> sum_squares_;
+	std::array<math::Vector3<scalar_t>, N> sum_;
+	std::array<math::Vector3<scalar_t>, N> eigen_values_;
+	std::array<std::uint32_t, N> num_points_;
 
 	using surfel_t = Surfel<float>;
-	using surfel_type = std::conditional_t<Single, surfel_t, std::array<surfel_t, 8>>;
+	std::array<surfel_t, 8>;
 
 	surfel_type surfel;
 
-	bool operator==(SurfelNodeBlock const& rhs) const { return surfel == rhs.surfel; }
+	//
+	// Size
+	//
 
-	bool operator!=(SurfelNodeBlock const& rhs) const { return !(*this == rhs); }
+	[[nodiscard]] static constexpr std::size_t surfelSize() { return N; }
 
-	constexpr surfel_type& getSurfel(std::size_t index)
+	//
+	// Fill
+	//
+
+	void fill(SurfelNode const& parent, index_t const index)
 	{
-		if constexpr (Single) {
-			return surfel;
-		} else {
-			return surfel[index];
-		}
+		// TODO: Implement
 	}
 
-	constexpr surfel_type const& getSurfel(std::size_t index) const
-	{
-		if constexpr (Single) {
-			return surfel;
-		} else {
-			return surfel[index];
-		}
-	}
+	//
+	// Is collapsible
+	//
 
-	void setSurfel(surfel_t const& s)
+	[[nodiscard]] bool isCollapsible(SurfelNode const& parent, index_t const index) const
 	{
-		if constexpr (Single) {
-			surfel = s;
-		} else {
-			surfel.fill(s);
-		}
-	}
-
-	void setSurfel(std::size_t index, surfel_t const& s)
-	{
-		if constexpr (Single) {
-			surfel = s;
-		} else {
-			surfel[index] = s;
-		}
+		// TODO: Implement
 	}
 };
 }  // namespace ufo::map
