@@ -60,17 +60,17 @@ namespace ufo::map
 class SemanticLabelMapping
 {
  public:
-	void add(std::string const& name, semantic_label_t label)
+	void add(std::string const& name, label_t label)
 	{
 		mapping_[name].ranges.insert(label);
 	}
 
-	void add(std::string const& name, container::Range<semantic_label_t> labels)
+	void add(std::string const& name, container::Range<label_t> labels)
 	{
 		mapping_[name].ranges.insert(labels);
 	}
 
-	void add(std::string const& name, container::RangeSet<semantic_label_t> const& labels)
+	void add(std::string const& name, container::RangeSet<label_t> const& labels)
 	{
 		// TODO: Correct?
 		mapping_[name].ranges.insert(std::begin(labels), std::end(labels));
@@ -111,17 +111,17 @@ class SemanticLabelMapping
 
 	void clearColor(std::string const& name) { mapping_[name].color.clear(); }
 
-	void erase(std::string const& name, semantic_label_t label)
+	void erase(std::string const& name, label_t label)
 	{
 		mapping_[name].ranges.erase(label);
 	}
 
-	void erase(std::string const& name, container::Range<semantic_label_t> labels)
+	void erase(std::string const& name, container::Range<label_t> labels)
 	{
 		mapping_[name].ranges.erase(labels);
 	}
 
-	void erase(std::string const& name, container::RangeSet<semantic_label_t> labels)
+	void erase(std::string const& name, container::RangeSet<label_t> labels)
 	{
 		for (auto const& label : labels) {
 			mapping_[name].ranges.erase(label);
@@ -133,10 +133,10 @@ class SemanticLabelMapping
 		mapping_[name].strings.erase(other_name);
 	}
 
-	container::RangeSet<semantic_label_t> getRanges(std::string const& name) const
+	container::RangeSet<label_t> getRanges(std::string const& name) const
 	{
 		if (0 == mapping_.count(name)) {
-			return container::RangeSet<semantic_label_t>();
+			return container::RangeSet<label_t>();
 		}
 
 		std::unordered_set<std::string> names;
@@ -159,7 +159,7 @@ class SemanticLabelMapping
 			}
 		}
 
-		container::RangeSet<semantic_label_t> labels;
+		container::RangeSet<label_t> labels;
 		for (auto const& str : names) {
 			if (auto it = mapping_.find(str); mapping_.end() != it) {
 				labels.insert(std::cbegin(it->second.ranges), std::cend(it->second.ranges));
@@ -327,7 +327,7 @@ class SemanticLabelMapping
 			in_stream.read(reinterpret_cast<char*>(color), sizeof(Color));
 		}
 
-		container::RangeSet<semantic_label_t> ranges;
+		container::RangeSet<label_t> ranges;
 		std::unordered_set<std::string> strings;
 		Color color;
 	};

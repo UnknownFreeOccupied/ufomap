@@ -344,7 +344,7 @@ class Integrator
 	/*!
 	 * @return The amount the semantic value increases for a hit.
 	 */
-	[[nodiscard]] constexpr semantic_value_t getSemanticValueHit() const noexcept
+	[[nodiscard]] constexpr value_t getSemanticValueHit() const noexcept
 	{
 		return semantic_value_hit_;
 	}
@@ -352,7 +352,7 @@ class Integrator
 	/*!
 	 * @return The amount the semantic value decreases for a miss.
 	 */
-	[[nodiscard]] constexpr semantic_value_t getSemanticValueMiss() const noexcept
+	[[nodiscard]] constexpr value_t getSemanticValueMiss() const noexcept
 	{
 		return semantic_value_miss_;
 	}
@@ -382,12 +382,12 @@ class Integrator
 
 	constexpr void setTimeAutoInc(int inc) noexcept { time_auto_inc_ = inc; }
 
-	constexpr void setSemanticValueHit(semantic_value_t value) noexcept
+	constexpr void setSemanticValueHit(value_t value) noexcept
 	{
 		semantic_value_hit_ = value;
 	}
 
-	constexpr void setSemanticValueMiss(semantic_value_t value) noexcept
+	constexpr void setSemanticValueMiss(value_t value) noexcept
 	{
 		semantic_value_miss_ = value;
 	}
@@ -417,8 +417,8 @@ class Integrator
 	int time_auto_inc_ = 1;
 
 	// Semantic specific
-	semantic_value_t semantic_value_hit_ = 2;
-	semantic_value_t semantic_value_miss_ = 1;
+	value_t semantic_value_hit_ = 2;
+	value_t semantic_value_miss_ = 1;
 };
 }  // namespace ufo::map
 

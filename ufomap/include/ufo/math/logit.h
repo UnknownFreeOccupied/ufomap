@@ -54,95 +54,100 @@ namespace ufo::math
 // Floating point
 //
 
-template <typename F, typename = std::enable_if_t<std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr F logit(F probability) noexcept
+template <typename F>
+[[nodiscard]] constexpr std::enable_if_t<std::is_floating_point_v<std::decay_t<F>>, F>
+logit(F probability) noexcept
 {
-	return std::log(probability / (F(1.0) - probability));
+	return std::log(probability / (F(1) - probability));
 }
 
-template <typename F, typename = std::enable_if_t<std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr F logit(F probability, F min_logit, F max_logit) noexcept
+template <typename F>
+[[nodiscard]] constexpr std::enable_if_t<std::is_floating_point_v<std::decay_t<F>>, F>
+logit(F probability, F min_logit, F max_logit) noexcept
 {
 	return std::clamp(logit(probability), min_logit, max_logit);
 }
 
-template <typename F, typename = std::enable_if_t<std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr F probability(F logit) noexcept
+template <typename F>
+[[nodiscard]] constexpr std::enable_if_t<std::is_floating_point_v<std::decay_t<F>>, F>
+probability(F logit) noexcept
 {
-	return F(1.0) / (F(1.0) + std::exp(-logit));
+	return F(1) / (F(1) + std::exp(-logit));
 }
 
 //
 // Signed
 //
 
-template <typename S, typename F,
-          typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
-                                      std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr F convertLogit(S logit, F min_logit, F max_logit) noexcept
-{
-	// TODO: Implement
-	return ((logit * (max_logit - min_logit)) / std::numeric_limits<S>::max()) + min_logit;
-}
+// template <typename S, typename F,
+//           typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
+//                                       std::is_floating_point_v<F>>>
+// [[nodiscard]] constexpr F convertLogit(S logit, F min_logit, F max_logit) noexcept
+// {
+// 	// TODO: Implement
+// 	return ((logit * (max_logit - min_logit)) / std::numeric_limits<S>::max()) +
+// min_logit;
+// }
 
-template <typename S, typename F,
-          typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
-                                      std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr S convertLogit(F logit, F min_logit, F max_logit) noexcept
-{
-	// TODO: Implement
-	return std::llround((logit - min_logit) * std::numeric_limits<S>::max() /
-	                    (max_logit - min_logit));
-}
+// template <typename S, typename F,
+//           typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
+//                                       std::is_floating_point_v<F>>>
+// [[nodiscard]] constexpr S convertLogit(F logit, F min_logit, F max_logit) noexcept
+// {
+// 	// TODO: Implement
+// 	return std::llround((logit - min_logit) * std::numeric_limits<S>::max() /
+// 	                    (max_logit - min_logit));
+// }
 
-template <typename S, typename F,
-          typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
-                                      std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr S logit(F probability, F min_logit, F max_logit) noexcept
-{
-	// TODO: Implement
-	return convertLogit<S>(logit(probability, min_logit, max_logit), min_logit, max_logit);
-}
+// template <typename S, typename F,
+//           typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
+//                                       std::is_floating_point_v<F>>>
+// [[nodiscard]] constexpr S logit(F probability, F min_logit, F max_logit) noexcept
+// {
+// 	// TODO: Implement
+// 	return convertLogit<S>(logit(probability, min_logit, max_logit), min_logit,
+// max_logit);
+// }
 
-template <typename S, typename F,
-          typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
-                                      std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr F probability(S logit, F min_logit, F max_logit) noexcept
-{
-	// TODO: Implement
-	return probability(convertLogit(logit, min_logit, max_logit));
-}
+// template <typename S, typename F,
+//           typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
+//                                       std::is_floating_point_v<F>>>
+// [[nodiscard]] constexpr F probability(S logit, F min_logit, F max_logit) noexcept
+// {
+// 	// TODO: Implement
+// 	return probability(convertLogit(logit, min_logit, max_logit));
+// }
 
-// Call to get uint prob_hit / prob_miss
-template <typename S, typename F,
-          typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
-                                      std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr S logitChangeValue(F probability, F min_logit,
-                                           F max_logit) noexcept
-{
-	// TODO: Implement
-	return F(0.5) > probability ? logit<S>(F(0.5), min_logit, max_logit) -
-	                                  logit<S>(probability, min_logit, max_logit)
-	                            : logit<S>(probability, min_logit, max_logit) -
-	                                  logit<S>(F(0.5), min_logit, max_logit);
-}
+// // Call to get uint prob_hit / prob_miss
+// template <typename S, typename F,
+//           typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S> &&
+//                                       std::is_floating_point_v<F>>>
+// [[nodiscard]] constexpr S logitChangeValue(F probability, F min_logit,
+//                                            F max_logit) noexcept
+// {
+// 	// TODO: Implement
+// 	return F(0.5) > probability ? logit<S>(F(0.5), min_logit, max_logit) -
+// 	                                  logit<S>(probability, min_logit, max_logit)
+// 	                            : logit<S>(probability, min_logit, max_logit) -
+// 	                                  logit<S>(F(0.5), min_logit, max_logit);
+// }
 
-template <typename S,
-          typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S>>>
-[[nodiscard]] constexpr S increaseLogit(S cur, S inc) noexcept
-{
-	// TODO: Implement
-	return std::numeric_limits<S>::max() - cur > inc ? cur + inc
-	                                                 : std::numeric_limits<S>::max();
-}
+// template <typename S,
+//           typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S>>>
+// [[nodiscard]] constexpr S increaseLogit(S cur, S inc) noexcept
+// {
+// 	// TODO: Implement
+// 	return std::numeric_limits<S>::max() - cur > inc ? cur + inc
+// 	                                                 : std::numeric_limits<S>::max();
+// }
 
-template <typename S,
-          typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S>>>
-[[nodiscard]] constexpr S decreaseLogit(S cur, S dec) noexcept
-{
-	// TODO: Implement
-	return cur - std::min(cur, dec);
-}
+// template <typename S,
+//           typename = std::enable_if_t<std::is_signed_v<S> && std::is_integral_v<S>>>
+// [[nodiscard]] constexpr S decreaseLogit(S cur, S dec) noexcept
+// {
+// 	// TODO: Implement
+// 	return cur - std::min(cur, dec);
+// }
 
 //
 // Unsigned

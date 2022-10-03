@@ -47,7 +47,7 @@
 #include <ufo/container/range_map.h>
 #include <ufo/container/range_set.h>
 #include <ufo/map/index_field.h>
-#include <ufo/map/semantic/semantic_label_propagation.h>
+#include <ufo/map/semantic/semantic_propagation.h>
 #include <ufo/util/iterator_wrapper.h>
 #include <ufo/util/type_traits.h>
 
@@ -66,21 +66,23 @@
 
 namespace ufo::map
 {
+// Forward declare
+template <std::size_t N>
+class SemanticNode;
+
 template <std::size_t N = 1>
 class Semantics
 {
  private:
+	// FIXME: Make so it works if this is false
 	static_assert(sizeof(label_t) == sizeof(value_t));
 
-	// Friends
-	template <class Derived>
-	friend class SemanticMap;
-	template <std::size_t N>
-	friend class SemanticNode;
+	// Friend
+	friend class SemanticNode<N>;
 
 	// -1 half rounded up (i.e., the number of elements needed to store the sizes of the N
 	// semantic containers)
-	static constexpr N_H = 1 + (N - 1) / 2;
+	static constexpr std::size_t N_H = 1 + (N - 1) / 2;
 
  public:
 	// Tags continue
@@ -499,7 +501,7 @@ class Semantics
 		assign(SemanticRangeSet{range}, value);
 	}
 
-	void assign(SemanticRangeSet<label_t> const &ranges, value_t value)
+	void assign(SemanticRangeSet const &ranges, value_t value)
 	{
 		for (index_t i = 0; N != i; ++i) {
 			assign(i, ranges, value);
@@ -905,7 +907,7 @@ class Semantics
 	[[nodiscard]] bool all(index_t index, SemanticRange const &range,
 	                       UnaryPredicate p) const
 	{
-		return all(index, SemanticRangeSet{range}, f);
+		return all(index, SemanticRangeSet{range}, p);
 	}
 
 	template <class UnaryPredicate>
@@ -1063,8 +1065,8 @@ class Semantics
 			std::copy(data_.get(), data_.get() + N_H, reinterpret_cast<Semantic *>(s.data()));
 		} else {
 			for (index_t i = 0; N != i; ++i) {
-				s[i] = i % 2 data_[i / 2].label
-				    : reinterpret_cast<label_t const &>(data_[i / 2].value);
+				s[i] = i % 2 ? data_[i / 2].label
+				             : reinterpret_cast<label_t const &>(data_[i / 2].value);
 			}
 		}
 		return s;
@@ -1129,7 +1131,7 @@ class Semantics
 				}
 				dist[index] = 0;
 			} else {
-				++new_size[index];
+				++new_sizes[index];
 				dist[index] = std::distance(index, it);
 			}
 		}
@@ -1138,7 +1140,7 @@ class Semantics
 			return;
 		}
 
-		resize(new_size);
+		resize(new_sizes);
 
 		for (index_t index = 0; N != index; ++index) {
 			if (0 == dist[index]) {
@@ -1697,14 +1699,14 @@ class Semantics
 				continue;
 			}
 
-			std::move(std::begin(i + 1), std::end(i + 1), begin(i) + new_sizes[i]);
+			std::move(begin(i + 1), end(i + 1), begin(i) + new_sizes[i]);
 
 			// Set size
 			if (i % 2) {
 				data_[i / 2].label = new_sizes[i];
 			} else {
 				data_[i / 2].value =
-				    reinterpret_cast<value const &>(static_cast<label_t const &>(new_sizes[i]));
+				    reinterpret_cast<value_t const &>(static_cast<label_t const &>(new_sizes[i]));
 			}
 		}
 
@@ -1738,10 +1740,10 @@ class Semantics
 			for (index_t i = N - 1; 0 != i; --i) {
 				// Set size
 				if (i % 2) {
-					data_[i / 2].label = s;
+					data_[i / 2].label = new_sizes[i];
 				} else {
-					data_[i / 2].value =
-					    reinterpret_cast<value const &>(static_cast<label_t const &>(s));
+					data_[i / 2].value = reinterpret_cast<value_t const &>(
+					    static_cast<label_t const &>(new_sizes[i]));
 				}
 
 				if (0 == new_sizes[i] || 0 == cur_sizes[i]) {
@@ -1869,8 +1871,8 @@ class Semantics
 
 				// TODO: Implement
 
-				resize(i, std::distance(f, l));
-				std::copy(f, l, begin(i));
+				// resize(i, std::distance(f, l));
+				// std::copy(f, l, begin(i));
 			}
 		}
 	}
@@ -1931,7 +1933,7 @@ class Semantics
 			auto first = begin(0);
 			auto last = end(0);
 
-			for (index i = 1; N != i; ++i) {
+			for (index_t i = 1; N != i; ++i) {
 				std::copy(first, last, begin(i));
 			}
 		} else if (1 == N) {
@@ -1950,7 +1952,7 @@ class Semantics
 			in.read(reinterpret_cast<char *>(begin()), total_size + sizeof(Semantic));
 
 			// Sort
-			auto def = prop.defaultCriteria();
+			auto def = prop.defaultPropCriteria();
 			auto first = begin();
 			auto mid = first + sizes[0];
 			switch (def) {
@@ -1967,7 +1969,7 @@ class Semantics
 					for (index_t i = 1; n != i; ++i) {
 						auto last = mid + sizes[i];
 						std::inplace_merge(first, mid, last, [](auto a, auto b) {
-							return a.label < b.label || (a.label == b.label && a.value > b.value)
+							return a.label < b.label || (a.label == b.label && a.value > b.value);
 						});
 						mid = last;
 					}
@@ -1977,7 +1979,7 @@ class Semantics
 					for (index_t i = 1; n != i; ++i) {
 						auto last = mid + sizes[i];
 						std::inplace_merge(first, mid, last,
-						                   [](auto a, auto b) { return a.label < b.label });
+						                   [](auto a, auto b) { return a.label < b.label; });
 						mid = last;
 					}
 			}

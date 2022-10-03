@@ -43,11 +43,11 @@
 #define UFO_MAP_SEMANTIC_MAP_H
 
 // UFO
-#include <ufo/container/flat_map.h>
 #include <ufo/container/range_map.h>
 #include <ufo/map/semantic/semantic.h>
 #include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/semantic/semantic_predicate.h>
+#include <ufo/map/semantic/semantics.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -709,7 +709,7 @@ class SemanticMap
 	// Get label mapping
 	//
 
-	[[nodiscard]] semantic_label_range_t getLabelMapping(std::string const& name) const
+	[[nodiscard]] SemanticRange getLabelMapping(std::string const& name) const
 	{
 		// TODO: Look at
 		std::set<std::string> names;
@@ -724,7 +724,7 @@ class SemanticMap
 				}
 			}
 		}
-		container::RangeSet<semantic_label_t> labels;
+		container::RangeSet<label_t> labels;
 		for (auto const& str : names) {
 			labels.insert(std::cbegin(label_mapping_.ranges), std::cend(label_mapping_.ranges));
 		}
@@ -740,7 +740,7 @@ class SemanticMap
 		// TODO: Implement
 	}
 
-	void addLabelMapping(std::string const& name, semantic_label_range_t label_range)
+	void addLabelMapping(std::string const& name, SemanticRange label_range)
 	{
 		// TODO: Implement
 	}
@@ -1006,7 +1006,7 @@ class SemanticMap
 	}
 
 	template <class InputIt>
-	semantic_value_t getValue(PropagationCriteria prop, InputIt first, InputIt last) const
+	value_t getValue(PropagationCriteria prop, InputIt first, InputIt last) const
 	{
 		switch (prop) {
 			case PropagationCriteria::MIN:
@@ -1022,9 +1022,9 @@ class SemanticMap
 	}
 
 	template <class InputIt>
-	semantic_value_t getMinValue(InputIt first, InputIt last) const
+	value_t getMinValue(InputIt first, InputIt last) const
 	{
-		semantic_value_t min = first->value;
+		value_t min = first->value;
 		std::advance(first, 1);
 		while (first != last) {
 			min = std::min(min, first->value);
@@ -1034,9 +1034,9 @@ class SemanticMap
 	}
 
 	template <class InputIt>
-	semantic_value_t getMaxValue(InputIt first, InputIt last) const
+	value_t getMaxValue(InputIt first, InputIt last) const
 	{
-		semantic_value_t max = first->value;
+		value_t max = first->value;
 		std::advance(first, 1);
 		while (first != last) {
 			max = std::max(max, first->value);
@@ -1046,10 +1046,10 @@ class SemanticMap
 	}
 
 	template <class InputIt>
-	semantic_value_t getMeanValue(InputIt first, InputIt last) const
+	value_t getMeanValue(InputIt first, InputIt last) const
 	{
 		// FIXME: Make sure no overflow and how to round?
-		semantic_value_t total = first->value;
+		value_t total = first->value;
 		std::size_t num = 1;
 		std::advance(first, 1);
 		while (first != last) {

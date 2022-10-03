@@ -1929,7 +1929,7 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(Key key, UnaryFunction f) const
 	{
-		traverse(code(key), f);
+		traverse(toCode(key), f);
 	}
 
 	/*!
@@ -1945,7 +1945,7 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(Point coord, UnaryFunction f, depth_t depth = 0) const
 	{
-		traverse(code(coord, depth), f);
+		traverse(toCode(coord, depth), f);
 	}
 
 	/*!
@@ -1961,7 +1961,7 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(coord_t x, coord_t y, coord_t z, UnaryFunction f, depth_t depth = 0) const
 	{
-		traverse(code(x, y, z, depth), f);
+		traverse(toCode(x, y, z, depth), f);
 	}
 
 	/**************************************************************************************
@@ -2004,21 +2004,21 @@ class OctreeBase
 	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
 	    Key key, Predicates&& predicates) const
 	{
-		return query(code(key), std::forward<Predicates>(predicates));
+		return query(toCode(key), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
 	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
 	    Point coord, depth_t depth, Predicates&& predicates) const
 	{
-		return query(code(coord, depth), std::forward<Predicates>(predicates));
+		return query(toCode(coord, depth), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
 	[[nodiscard]] util::IteratorWrapper<const_query_iterator> query(
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates) const
 	{
-		return query(code(x, y, z, depth), std::forward<Predicates>(predicates));
+		return query(toCode(x, y, z, depth), std::forward<Predicates>(predicates));
 	}
 
 	//
@@ -2053,21 +2053,21 @@ class OctreeBase
 	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    Key key, Predicates&& predicates) const
 	{
-		return queryBV(code(key), std::forward<Predicates>(predicates));
+		return queryBV(toCode(key), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
 	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    Point coord, depth_t depth, Predicates&& predicates) const
 	{
-		return queryBV(code(coord, depth), std::forward<Predicates>(predicates));
+		return queryBV(toCode(coord, depth), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
 	[[nodiscard]] util::IteratorWrapper<const_bounding_volume_query_iterator> queryBV(
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates) const
 	{
-		return queryBV(code(x, y, z, depth), std::forward<Predicates>(predicates));
+		return queryBV(toCode(x, y, z, depth), std::forward<Predicates>(predicates));
 	}
 
 	//
@@ -2108,7 +2108,7 @@ class OctreeBase
 	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    Key key, Geometry&& geometry, Predicates&& predicates) const
 	{
-		return queryNearest(code(key), std::forward<Geometry>(geometry),
+		return queryNearest(toCode(key), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates));
 	}
 
@@ -2116,7 +2116,7 @@ class OctreeBase
 	[[nodiscard]] util::IteratorWrapper<const_query_nearest_iterator> queryNearest(
 	    Point coord, depth_t depth, Geometry&& geometry, Predicates&& predicates) const
 	{
-		return queryNearest(code(coord, depth), std::forward<Geometry>(geometry),
+		return queryNearest(toCode(coord, depth), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates));
 	}
 
@@ -2125,7 +2125,7 @@ class OctreeBase
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Geometry&& geometry,
 	    Predicates&& predicates) const
 	{
-		return queryNearest(code(x, y, z, depth), std::forward<Geometry>(geometry),
+		return queryNearest(toCode(x, y, z, depth), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates));
 	}
 
@@ -2172,21 +2172,21 @@ class OctreeBase
 	template <class Predicates, class OutputIt>
 	OutputIt query(Key key, Predicates&& predicates, OutputIt d_first) const
 	{
-		return query(code(key), std::forward<Predicates>(predicates), d_first);
+		return query(toCode(key), std::forward<Predicates>(predicates), d_first);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(Point coord, depth_t depth, Predicates&& predicates,
 	               OutputIt d_first) const
 	{
-		return query(code(coord, depth), std::forward<Predicates>(predicates), d_first);
+		return query(toCode(coord, depth), std::forward<Predicates>(predicates), d_first);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates,
 	               OutputIt d_first) const
 	{
-		return query(code(x, y, z, depth), std::forward<Predicates>(predicates), d_first);
+		return query(toCode(x, y, z, depth), std::forward<Predicates>(predicates), d_first);
 	}
 
 	template <class Predicates, class OutputIt>
@@ -2248,21 +2248,21 @@ class OctreeBase
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(Key key, std::size_t k, Predicates&& predicates, OutputIt d_first) const
 	{
-		return queryK(code(key), k, std::forward<Predicates>(predicates), d_first);
+		return queryK(toCode(key), k, std::forward<Predicates>(predicates), d_first);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(Point coord, depth_t depth, std::size_t k, Predicates&& predicates,
 	                OutputIt d_first) const
 	{
-		return queryK(code(coord, depth), k, std::forward<Predicates>(predicates), d_first);
+		return queryK(toCode(coord, depth), k, std::forward<Predicates>(predicates), d_first);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(coord_t x, coord_t y, coord_t z, depth_t depth, std::size_t k,
 	                Predicates&& predicates, OutputIt d_first) const
 	{
-		return queryK(code(x, y, z, depth), k, std::forward<Predicates>(predicates), d_first);
+		return queryK(toCode(x, y, z, depth), k, std::forward<Predicates>(predicates), d_first);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
@@ -2296,7 +2296,7 @@ class OctreeBase
 	OutputIt queryNearest(Key key, Geometry&& geometry, Predicates&& predicates,
 	                      OutputIt d_first, double epsilon = 0.0) const
 	{
-		return queryNearest(code(key), std::forward<Geometry>(geometry),
+		return queryNearest(toCode(key), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates), d_first, epsilon);
 	}
 
@@ -2305,7 +2305,7 @@ class OctreeBase
 	                      Predicates&& predicates, OutputIt d_first,
 	                      double epsilon = 0.0) const
 	{
-		return queryNearest(code(coord, depth), std::forward<Geometry>(geometry),
+		return queryNearest(toCode(coord, depth), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates), d_first, epsilon);
 	}
 
@@ -2314,7 +2314,7 @@ class OctreeBase
 	                      Geometry&& geometry, Predicates&& predicates, OutputIt d_first,
 	                      double epsilon = 0.0) const
 	{
-		return queryNearest(code(x, y, z, depth), std::forward<Geometry>(geometry),
+		return queryNearest(toCode(x, y, z, depth), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates), d_first, epsilon);
 	}
 
@@ -2364,7 +2364,7 @@ class OctreeBase
 	                       Predicates&& predicates, OutputIt d_first,
 	                       double epsilon = 0.0) const
 	{
-		return queryNearestK(code(key), k, std::forward<Geometry>(geometry),
+		return queryNearestK(toCode(key), k, std::forward<Geometry>(geometry),
 		                     std::forward<Predicates>(predicates), d_first, epsilon);
 	}
 
@@ -2373,7 +2373,7 @@ class OctreeBase
 	                       Predicates&& predicates, OutputIt d_first,
 	                       double epsilon = 0.0) const
 	{
-		return queryNearestK(code(coord, depth), k, std::forward<Geometry>(geometry),
+		return queryNearestK(toCode(coord, depth), k, std::forward<Geometry>(geometry),
 		                     std::forward<Predicates>(predicates), d_first, epsilon);
 	}
 
@@ -2382,7 +2382,7 @@ class OctreeBase
 	                       Geometry&& geometry, Predicates&& predicates, OutputIt d_first,
 	                       double epsilon = 0.0) const
 	{
-		return queryNearestK(code(x, y, z, depth), k, std::forward<Geometry>(geometry),
+		return queryNearestK(toCode(x, y, z, depth), k, std::forward<Geometry>(geometry),
 		                     std::forward<Predicates>(predicates), d_first, epsilon);
 	}
 
@@ -2430,14 +2430,14 @@ class OctreeBase
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(Key key, Predicates&& predicates) const
 	{
-		return beginQuery(code(key), std::forward<Predicates>(predicates));
+		return beginQuery(toCode(key), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(Point coord, depth_t depth,
 	                                              Predicates&& predicates) const
 	{
-		return beginQuery(code(coord, depth), std::forward<Predicates>(predicates));
+		return beginQuery(toCode(coord, depth), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
@@ -2445,7 +2445,7 @@ class OctreeBase
 	                                              depth_t depth,
 	                                              Predicates&& predicates) const
 	{
-		return beginQuery(code(x, y, z, depth), std::forward<Predicates>(predicates));
+		return beginQuery(toCode(x, y, z, depth), std::forward<Predicates>(predicates));
 	}
 
 	[[nodiscard]] const_query_iterator endQuery() const
@@ -2485,21 +2485,21 @@ class OctreeBase
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
 	    Key key, Predicates&& predicates) const
 	{
-		return beginQueryBV(code(key), std::forward<Predicates>(predicates));
+		return beginQueryBV(toCode(key), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
 	    Point coord, depth_t depth, Predicates&& predicates) const
 	{
-		return beginQueryBV(code(coord, depth), std::forward<Predicates>(predicates));
+		return beginQueryBV(toCode(coord, depth), std::forward<Predicates>(predicates));
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates) const
 	{
-		return beginQueryBV(code(x, y, z, depth), std::forward<Predicates>(predicates));
+		return beginQueryBV(toCode(x, y, z, depth), std::forward<Predicates>(predicates));
 	}
 
 	[[nodiscard]] const_bounding_volume_query_iterator endQueryBV() const
@@ -2548,7 +2548,7 @@ class OctreeBase
 	                                                             Predicates&& predicates,
 	                                                             double epsilon = 0.0) const
 	{
-		return beginQueryNearest(code(key), std::forward<Geometry>(geometry),
+		return beginQueryNearest(toCode(key), std::forward<Geometry>(geometry),
 		                         std::forward<Predicates>(predicates), epsilon);
 	}
 
@@ -2558,7 +2558,7 @@ class OctreeBase
 	                                                             Predicates&& predicates,
 	                                                             double epsilon = 0.0) const
 	{
-		return beginQueryNearest(code(coord, depth), std::forward<Geometry>(geometry),
+		return beginQueryNearest(toCode(coord, depth), std::forward<Geometry>(geometry),
 		                         std::forward<Predicates>(predicates), epsilon);
 	}
 
@@ -2569,7 +2569,7 @@ class OctreeBase
 	                                                             Predicates&& predicates,
 	                                                             double epsilon = 0.0) const
 	{
-		return beginQueryNearest(code(x, y, z, depth), std::forward<Geometry>(geometry),
+		return beginQueryNearest(toCode(x, y, z, depth), std::forward<Geometry>(geometry),
 		                         std::forward<Predicates>(predicates), epsilon);
 	}
 
@@ -2594,16 +2594,16 @@ class OctreeBase
 		return beginQuery(code, predicate::TRUE{});
 	}
 
-	[[nodiscard]] const_iterator begin(Key key) const { return begin(code(key)); }
+	[[nodiscard]] const_iterator begin(Key key) const { return begin(toCode(key)); }
 
 	[[nodiscard]] const_iterator begin(Point coord, depth_t depth) const
 	{
-		return begin(code(coord, depth));
+		return begin(toCode(coord, depth));
 	}
 
 	[[nodiscard]] const_iterator begin(coord_t x, coord_t y, coord_t z, depth_t depth) const
 	{
-		return begin(code(x, y, z, depth));
+		return begin(toCode(x, y, z, depth));
 	}
 
 	[[nodiscard]] const_iterator end() const { return endQuery(predicate::TRUE{}); }
@@ -2623,17 +2623,17 @@ class OctreeBase
 		return beginQueryBV(code, predicate::TRUE{});
 	}
 
-	[[nodiscard]] const_iterator beginBV(Key key) const { return beginBV(code(key)); }
+	[[nodiscard]] const_iterator beginBV(Key key) const { return beginBV(toCode(key)); }
 
 	[[nodiscard]] const_iterator beginBV(Point coord, depth_t depth) const
 	{
-		return beginBV(code(coord, depth));
+		return beginBV(toCode(coord, depth));
 	}
 
 	[[nodiscard]] const_iterator beginBV(coord_t x, coord_t y, coord_t z,
 	                                     depth_t depth) const
 	{
-		return beginBV(code(x, y, z, depth));
+		return beginBV(toCode(x, y, z, depth));
 	}
 
 	[[nodiscard]] const_bounding_volume_iterator endBV() const

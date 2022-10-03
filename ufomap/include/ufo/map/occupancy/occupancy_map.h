@@ -219,42 +219,6 @@ class OccupancyMap
 	}
 
 	//
-	// Get bounding volume containing all known, i.e., occupied and free space
-	//
-
-	[[nodiscard]] geometry::AABB knownBBX(depth_t min_depth = 0) const
-	{
-		if (!containsOccupied(derived().rootNode()) && !containsFree(derived().rootNode())) {
-			return geometry::AABB();
-		}
-
-		Point min = derived().max();
-		Point max = derived().min();
-
-		auto pred = predicate::Leaf(min_depth) &&
-		            predicate::OccupancyStates(false, true, true) &&
-		            predicate::SatisfiesInner([this, &min, &max](auto const& node) {
-			            auto node_min = derived().nodeMin(node);
-			            auto node_max = derived().nodeMax(node);
-			            return node_min.x < min.x || node_min.y < min.y || node_min.z < min.z ||
-			                   node_max.x > max.x || node_max.y > max.y || node_max.z > max.z;
-		            });
-
-		for (auto const node : derived().queryBV(pred)) {
-			auto node_min = derived().nodeMin(node);
-			auto node_max = derived().nodeMax(node);
-			min.x = std::min(min.x, node_min.x);
-			min.y = std::min(min.y, node_min.y);
-			min.z = std::min(min.z, node_min.z);
-			max.x = std::max(max.x, node_max.x);
-			max.y = std::max(max.y, node_max.y);
-			max.z = std::max(max.z, node_max.z);
-		}
-
-		return geometry::AABB(min, max);
-	}
-
-	//
 	// Get occupancy state
 	//
 
@@ -991,6 +955,14 @@ class OccupancyMap
 	[[nodiscard]] static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
 		return dataIdentifier() == identifier;
+	}
+
+	template <class InputIt>
+	[[nodiscard]] static constexpr uint8_t numData() noexcept
+	{
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
+		return node_type::occupancySize();
 	}
 
 	template <class OutputIt>

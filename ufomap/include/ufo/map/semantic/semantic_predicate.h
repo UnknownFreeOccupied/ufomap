@@ -43,8 +43,8 @@
 #define UFO_MAP_PREDICATE_SEMANTICS_H
 
 // UFO
+#include <ufo/container/range.h>
 #include <ufo/map/predicate/predicates.h>
-#include <ufo/util/ranges.h>
 
 // STL
 #include <initializer_list>
@@ -61,7 +61,7 @@ struct AnyLabels {
 	{
 	}
 
-	AnyLabels(std::initializer_list<semantic_label_t> ilist)
+	AnyLabels(std::initializer_list<label_t> ilist)
 	    : ranges(ilist), need_fetch(false)
 	{
 	}
@@ -83,7 +83,7 @@ struct AnyLabels {
 		need_fetch = strings.insert(arg).second || need_fetch;
 	}
 
-	void add(semantic_label_t label) { ranges.insert(label); }
+	void add(label_t label) { ranges.insert(label); }
 
 	template <typename Key>
 	void add(util::Range<Key> const& range)
@@ -108,7 +108,7 @@ struct AnyLabels {
 
  private:
 	std::unordered_set<std::string> strings;
-	util::RangeSet<semantic_label_t> ranges;
+	util::RangeSet<label_t> ranges;
 	bool need_fetch;
 };
 

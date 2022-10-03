@@ -75,9 +75,9 @@ struct OccupancyNode {
 	void fill(OccupancyNode const parent, std::size_t const pos)
 	{
 		if constexpr (1 == N) {
-			occupancy = other.occupancy;
+			occupancy = parent.occupancy;
 		} else {
-			occupancy.fill(other.occupancy[pos]);
+			occupancy.fill(parent.occupancy[pos]);
 		}
 	}
 
@@ -131,8 +131,7 @@ struct ContainsOccupancy {
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(ContainsOccupancy const parent,
-	                                 std::size_t const pos) const
+	[[nodiscard]] bool isCollapsible(ContainsOccupancy const, std::size_t const) const
 	{
 		return true;  // Does not matter what this is...
 	}

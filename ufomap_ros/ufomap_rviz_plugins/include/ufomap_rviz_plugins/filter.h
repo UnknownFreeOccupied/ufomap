@@ -66,8 +66,8 @@ struct Filter {
 	// Semantics
 	bool filter_semantics;
 	// TODO: Add labels
-	ufo::map::semantic_value_t min_semantic_value;
-	ufo::map::semantic_value_t max_semantic_value;
+	ufo::map::value_t min_semantic_value;
+	ufo::map::value_t max_semantic_value;
 
 	// Bounding volume
 	bool filter_bounding_volume;

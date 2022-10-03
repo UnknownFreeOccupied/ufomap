@@ -77,8 +77,8 @@ class Semantics
 {
  public:
 	// Tags
-	using label_type = semantic_label_t;
-	using value_type = semantic_value_t;
+	using label_type = label_t;
+	using value_type = value_t;
 	using size_type = label_type;
 	using difference_type = std::ptrdiff_t;
 	using reference = SemanticPair &;
