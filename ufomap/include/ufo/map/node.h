@@ -118,6 +118,14 @@ struct Node {
 	 */
 	constexpr depth_t depth() const noexcept { return code_.depth(); }
 
+	/*!
+	 * @brief Get the index of the node (i.e., the child index from the parent's
+	 * perspective).
+	 *
+	 * @return The index of the node.
+	 */
+	constexpr index_t index() const noexcept { return code_.index(); }
+
 	struct Hash {
 		static constexpr code_t hash(Node node) { return node.code().code(); }
 
@@ -146,8 +154,6 @@ struct Node {
 	 * @return The corresponding data.
 	 */
 	constexpr void const* data() const noexcept { return data_; }
-
-	constexpr std::size_t index() const noexcept { return code_.index(); }
 
  protected:
 	// Pointer to the actual node
@@ -397,8 +403,8 @@ struct NodePBV : public Node, public BV {
 // 	{
 // 	}
 
-// 	constexpr NodePsBV(Node node, geometry::AAEBB aaebb, parents_t const& parents) noexcept
-// 	    : Node(node), BV(aaebb), data_parents_(parents)
+// 	constexpr NodePsBV(Node node, geometry::AAEBB aaebb, parents_t const& parents)
+// noexcept 	    : Node(node), BV(aaebb), data_parents_(parents)
 // 	{
 // 	}
 

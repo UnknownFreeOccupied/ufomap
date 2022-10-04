@@ -119,6 +119,7 @@ class OccupancyMap
 		                            occupancyClampingThresMaxLogit());
 	}
 
+	template <class logit_t>
 	[[nodiscard]] constexpr occupancy_t toOccupancyProbability(logit_t logit) const
 	{
 		if constexpr (std::is_floating_point_v<logit_t>) {
@@ -129,6 +130,7 @@ class OccupancyMap
 		}
 	}
 
+	template <class occupancy_t>
 	[[nodiscard]] constexpr logit_t toOccupancyChangeLogit(occupancy_t probability) const
 	{
 		if constexpr (std::is_floating_point_v<logit_t>) {

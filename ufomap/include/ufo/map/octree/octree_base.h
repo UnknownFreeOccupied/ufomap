@@ -383,7 +383,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] bool isLeaf(Code code) const
 	{
-		return isPureLeaf(node) || innerNode(code).isLeafIndex(code.index());
+		return isPureLeaf(code) || innerNode(code).isLeafIndex(code.index());
 	}
 
 	/*!
@@ -809,7 +809,7 @@ class OctreeBase
 		if (isPureLeaf(node)) {
 			propagateModified(leafNode(node), node.index(), keep_modified);
 		} else {
-			propagateModified(innerNode(node), node.index() node.depth(), keep_modified,
+			propagateModified(innerNode(node), node.index(), node.depth(), keep_modified,
 			                  max_depth);
 		}
 	}
@@ -828,7 +828,7 @@ class OctreeBase
 		if (isPureLeaf(code)) {
 			propagateModified(leafNode(code), code.index(), keep_modified);
 		} else {
-			propagateModified(innerNode(code), code.index() code.depth(), keep_modified,
+			propagateModified(innerNode(code), code.index(), code.depth(), keep_modified,
 			                  max_depth);
 		}
 	}
@@ -973,7 +973,7 @@ class OctreeBase
 	 *
 	 * @return The root node with parents.
 	 */
-	[[nodiscard]] constexpr NodePs rootNodePs() const { return NodePs(rootNode()); }
+	// [[nodiscard]] constexpr NodePs rootNodePs() const { return NodePs(rootNode()); }
 
 	//
 	// Code
@@ -1492,7 +1492,8 @@ class OctreeBase
 		geometry::AAEBB aaebb(
 		    siblingCenter(node.center(), node.halfSize(), node.index(), sibling_index),
 		    node.halfSize());
-		return NodeBV(node.data(), node.code().sibling(sibling_index), aaebb);
+		return NodeBV(const_cast<void*>(node.data()), node.code().sibling(sibling_index),
+		              aaebb);
 	}
 
 	/*!
@@ -1526,8 +1527,8 @@ class OctreeBase
 	 */
 	[[nodiscard]] Node nodeChild(Node node, index_t child_index) const
 	{
-		auto& child = child(innerNode(node), node.index(), node.depth());
-		return Node(child, node.code().child(child_index));
+		auto& c = child(innerNode(node), node.index(), node.depth());
+		return Node(&c, node.code().child(child_index));
 	}
 
 	/*!
@@ -1539,13 +1540,13 @@ class OctreeBase
 	 */
 	[[nodiscard]] NodeBV nodeChild(NodeBV const& node, index_t child_index) const
 	{
-		auto& child = child(innerNode(node), node.index(), node.depth());
+		auto& c = child(innerNode(node), node.index(), node.depth());
 
 		auto const child_half_size = node.halfSize() / 2;
 		geometry::AAEBB child_aaebb(childCenter(node.center(), child_half_size, child_index),
 		                            child_half_size);
 
-		return NodeBV(&child, node.code().child(child_index), child_aaebb);
+		return NodeBV(&c, node.code().child(child_index), child_aaebb);
 	}
 
 	/*!
@@ -1897,7 +1898,7 @@ class OctreeBase
 		                             Node>) {  // FIXME: Should it be const also?
 			traverseRecurs(node, f);
 		} else {
-			traverseRecurs(nodeBV(node), f);
+			traverseRecurs(NodeBV(node, boundingVolume(node)), f);
 		}
 	}
 
@@ -1913,7 +1914,7 @@ class OctreeBase
 	void traverse(Code code, UnaryFunction f) const
 	{
 		// FIXME: Correct behaviour?
-		if (Node node = node(code); node.depth() == code.depth()) {
+		if (Node node = findNode(code); node.depth() == code.depth()) {
 			traverse(node, f);
 		}
 	}
@@ -2262,7 +2263,8 @@ class OctreeBase
 	OutputIt queryK(coord_t x, coord_t y, coord_t z, depth_t depth, std::size_t k,
 	                Predicates&& predicates, OutputIt d_first) const
 	{
-		return queryK(toCode(x, y, z, depth), k, std::forward<Predicates>(predicates), d_first);
+		return queryK(toCode(x, y, z, depth), k, std::forward<Predicates>(predicates),
+		              d_first);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
@@ -2946,10 +2948,10 @@ class OctreeBase
 		init();
 	}
 
-	template <class Derived2, class DataType2, bool ReuseNodes2, bool LockLess2,
-	          bool CountNodes2>
-	OctreeBase(
-	    OctreeBase<Derived2, DataType2, ReuseNodes2, LockLess2, CountNodes2> const& other)
+	template <class Derived2, class Data2, class InnerData2, bool ReuseNodes2,
+	          bool LockLess2, bool CountNodes2>
+	OctreeBase(OctreeBase<Derived2, Data2, InnerData2, ReuseNodes2, LockLess2,
+	                      CountNodes2> const& other)
 	    : depth_levels_(other.depth_levels_),
 	      max_value_(other.max_value_),
 	      node_size_(other.node_size_),
@@ -3017,10 +3019,10 @@ class OctreeBase
 		return *this;
 	}
 
-	template <class Derived2, class DataType2, bool ReuseNodes2, bool LockLess2,
-	          bool CountNodes2>
-	OctreeBase& operator=(
-	    OctreeBase<Derived2, DataType2, ReuseNodes2, LockLess2, CountNodes2> const& rhs)
+	template <class Derived2, class Data2, class InnerData2, bool ReuseNodes2,
+	          bool LockLess2, bool CountNodes2>
+	OctreeBase& operator=(OctreeBase<Derived2, Data2, InnerData2, ReuseNodes2, LockLess2,
+	                                 CountNodes2> const& rhs)
 	{
 		// TODO: Should this clear?
 		clear(rhs.nodeSize(), rhs.depthLevels());
@@ -3133,7 +3135,7 @@ class OctreeBase
 		}
 	}
 
-	template <class BinaryFunction, UnaryFunction,
+	template <class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
 	void apply(Code code, BinaryFunction f, UnaryFunction f2, bool const propagate)
@@ -3154,7 +3156,7 @@ class OctreeBase
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
 	void applyRecurs(InnerNode& node, depth_t depth, Code code, BinaryFunction f,
-	                 UnaryFunction2 f2)
+	                 UnaryFunction f2)
 	{
 		if (code.depth() == depth) {
 			if (leaf(node)) {
@@ -3387,8 +3389,10 @@ class OctreeBase
 			--depth;
 		}
 
-		return 0 == code.depth() && isParent(*node) ? {leafChild(*node, code.index()), 0}
-		                                            : {*node, depth};
+		return 0 == code.depth() && isParent(*node)
+		           ? std::make_pair<LeafNode const&, depth_t>(leafChild(*node, code.index()),
+		                                                      0)
+		           : std::make_pair<LeafNode const&, depth_t>(*node, depth);
 	}
 
 	[[nodiscard]] std::pair<LeafNode&, depth_t> leafNodeAndDepth(Code code)
@@ -3401,8 +3405,9 @@ class OctreeBase
 			--depth;
 		}
 
-		return 0 == code.depth() && isParent(*node) ? {leafChild(*node, code.index(0)), 0}
-		                                            : {*node, depth};
+		return 0 == code.depth() && isParent(*node)
+		           ? std::make_pair<LeafNode&, depth_t>(leafChild(*node, code.index(0)), 0)
+		           : std::make_pair<LeafNode&, depth_t>(*node, depth);
 	}
 
 	[[nodiscard]] std::pair<InnerNode const&, depth_t> innerNodeAndDepth(Code code) const
@@ -3675,35 +3680,6 @@ class OctreeBase
 
 	void resetModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
 	{
-		// TODO: Implement
-	}
-
-	//
-	// Set parents modified
-	//
-
-	void setModifiedParents(Code code)
-	{
-		setModifiedParentsRecurs(root(), rootDepth(), code);
-	}
-
-	// NOTE: Assumes code has depth higher then depth
-	void setModifiedParentsRecurs(InnerNode& node, depth_t depth, Code code)
-	{
-		auto index = code.index(depth);
-		node.setModifiedIndex(index);
-		if (code.depth() < depth - 1 && node.isParentIndex(index)) {
-			setModifiedParentsRecurs(innerChild(node, index), code.index(depth - 1), depth - 1,
-			                         code);
-		}
-	}
-
-	//
-	// Reset Children modified
-	//
-
-	void resetModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
-	{
 		if (node.isNoneModified()) {
 			// Already clear
 			return;
@@ -3728,6 +3704,26 @@ class OctreeBase
 					resetModifiedRecurs(innerNode(node, index), depth - 1, max_depth);
 				}
 			}
+		}
+	}
+
+	//
+	// Set parents modified
+	//
+
+	void setModifiedParents(Code code)
+	{
+		setModifiedParentsRecurs(root(), rootDepth(), code);
+	}
+
+	// NOTE: Assumes code has depth higher then depth
+	void setModifiedParentsRecurs(InnerNode& node, depth_t depth, Code code)
+	{
+		auto index = code.index(depth);
+		node.setModifiedIndex(index);
+		if (code.depth() < depth - 1 && node.isParentIndex(index)) {
+			setModifiedParentsRecurs(innerChild(node, index), code.index(depth - 1), depth - 1,
+			                         code);
 		}
 	}
 
@@ -3853,7 +3849,7 @@ class OctreeBase
 	IndexField prune(InnerNode& node, IndexField indices, depth_t depth)
 	{
 		indices = isCollapsible(node, indices, depth);
-		if (indices) {
+		if (indices.all()) {
 			deleteChildren(node, indices, depth);
 		}
 		return indices;
@@ -3881,7 +3877,7 @@ class OctreeBase
 			}
 		}
 
-		return node.isLeaf() | (0 == prunable ? prunable : prune(node, prunable, depth));
+		return node.isLeaf() | (prunable.none() ? prunable : prune(node, prunable, depth));
 	}
 
 	/**************************************************************************************
@@ -3958,14 +3954,14 @@ class OctreeBase
 
 		std::size_t num = 0;
 		for (index_t index = 0; 8 != index; ++index) {
-			if (0U == 1U & (indices >> index)) {
+			if (!indices[index]) {
 				continue;
 			}
 			++num;
 			leafChildren(node, index).fill(node, index);
 		}
 
-		num_leaf_nodes += 8 * num;
+		num_leaf_nodes_ += 8 * num;
 		num_inner_leaf_nodes_ -= 1 * num;
 		num_inner_nodes_ += 1 * num;
 
@@ -3985,10 +3981,10 @@ class OctreeBase
 		createInnerChildren(node, leaf(node), depth);
 	}
 
-	void createInnerChildren(InnerNode& node, index_field_t indices, depth_t depth)
+	void createInnerChildren(InnerNode& node, IndexField indices, depth_t depth)
 	{
 		indices &= leaf(node);
-		if (0U == indices) {
+		if (indices.none()) {
 			return;
 		}
 
@@ -4019,7 +4015,7 @@ class OctreeBase
 
 		std::size_t num = 0;
 		for (index_t index = 0; 8 != index; ++index) {
-			if (0U == 1U & (indices >> index)) {
+			if (!indices[index]) {
 				continue;
 			}
 			++num;
@@ -4075,11 +4071,11 @@ class OctreeBase
 		deleteLeafChildren(node, ~leaf(node), manual_pruning);
 	}
 
-	void deleteLeafChildren(InnerNode& node, index_field_t indices,
+	void deleteLeafChildren(InnerNode& node, IndexField indices,
 	                        bool manual_pruning = false)
 	{
-		index_field_t new_leaf = indices & ~leaf(node);
-		if (0 == new_leaf) {
+		IndexField new_leaf = indices & ~leaf(node);
+		if (new_leaf.none()) {
 			return;
 		}
 
@@ -4089,7 +4085,7 @@ class OctreeBase
 
 		std::size_t num = 0;
 		for (index_t index = 0; 8 != index; ++index) {
-			if (1U & (new_leaf >> index)) {
+			if (new_leaf[index]) {
 				++num;
 			}
 		}
@@ -4097,7 +4093,7 @@ class OctreeBase
 		num_inner_leaf_nodes_ += 1 * num;
 		num_inner_nodes_ -= 1 * num;
 
-		if (std::numeric_limits<index_field_t>::max() != indices) {
+		if (!indices.all()) {
 			// Can only remove if all nodes will be leaves
 			return;
 		}
@@ -4129,11 +4125,11 @@ class OctreeBase
 		deleteChildren(node, ~leaf(node), depth, manual_pruning);
 	}
 
-	void deleteChildren(InnerNode& node, index_field_t indices, depth_t const depth,
+	void deleteChildren(InnerNode& node, IndexField indices, depth_t const depth,
 	                    bool manual_pruning = false)
 	{
-		index_field_t new_leaf = indices & ~leaf(node);
-		if (0 == new_leaf) {
+		IndexField new_leaf = indices & ~leaf(node);
+		if (new_leaf.none()) {
 			return;
 		}
 
@@ -4143,14 +4139,14 @@ class OctreeBase
 
 		std::size_t num = 0;
 		for (index_t index = 0; 8 != index; ++index) {
-			if (1U & (new_leaf >> index)) {
+			if (new_leaf[index]) {
 				++num;
 			}
 		}
 		num_inner_leaf_nodes_ -= 7 * num;
 		num_inner_nodes_ -= 1 * num;
 
-		if (std::numeric_limits<index_field_t>::max() != indices) {
+		if (!indices.all()) {
 			// Can only remove if all nodes will be leaves
 			return;
 		}
@@ -4282,26 +4278,39 @@ class OctreeBase
 
 	struct NodeAndIndices {
 		std::reference_wrapper<LeafNode> node;
-		index_field_t indices;
+		IndexField indices;
 
 		NodeAndIndices() = default;
 
-		NodeAndIndices(LeafNode& node, index_field_t indices) : node(node), indices(indices)
-		{
-		}
+		NodeAndIndices(LeafNode& node, IndexField indices) : node(node), indices(indices) {}
+
+		NodeAndIndices(NodeAndIndices const&) = default;
+
+		NodeAndIndices(NodeAndIndices&&) = default;
+
+		NodeAndIndices& operator=(NodeAndIndices const&) = default;
+
+		NodeAndIndices& operator=(NodeAndIndices&&) = default;
 	};
 
-	template <bool Reference>
 	struct ConstNodeAndIndices {
-		std::conditional_t<Reference, std::reference_wrapper<LeafNode const>, LeafNode> node;
-		index_field_t indices;
+		std::reference_wrapper<LeafNode const> node;
+		IndexField indices;
 
 		ConstNodeAndIndices() = default;
 
-		ConstNodeAndIndices(LeafNode const& node, index_field_t indices)
+		ConstNodeAndIndices(LeafNode const& node, IndexField indices)
 		    : node(node), indices(indices)
 		{
 		}
+
+		ConstNodeAndIndices(ConstNodeAndIndices const&) = default;
+
+		ConstNodeAndIndices(ConstNodeAndIndices&&) = default;
+
+		ConstNodeAndIndices& operator=(ConstNodeAndIndices const&) = default;
+
+		ConstNodeAndIndices& operator=(ConstNodeAndIndices&&) = default;
 	};
 
 	[[nodiscard]] FileOptions fileOptions(bool const compress) const
@@ -4315,21 +4324,21 @@ class OctreeBase
 
 	[[nodiscard]] std::vector<NodeAndIndices> readNodes(std::istream& in)
 	{
-		auto [tree_structure, size] = readTreeStructure(in);
+		auto tree = readTreeStructure(in);
 		std::uint64_t num_nodes = readNumNodes(in);
-		return retrieveNodes(tree_structure, size);
+		return retrieveNodes(tree, num_nodes);
 	}
 
-	[[nodiscard]] std::pair<std::unique_ptr<std::uint8_t[]>, std::uint64_t>
-	readTreeStructure(std::istream& in)
+	[[nodiscard]] std::unique_ptr<IndexField[]> readTreeStructure(std::istream& in)
 	{
 		std::uint64_t num;
 		in.read(reinterpret_cast<char*>(&num), sizeof(num));
 
-		auto tree_structure = std::make_unique<std::uint8_t[]>(num);
-		in.read(reinterpret_cast<char*>(tree_structure.get()), num * sizeof(std::uint8_t));
+		auto tree = std::make_unique<IndexField[]>(num);
+		in.read(reinterpret_cast<char*>(tree.get()),
+		        num * sizeof(typename decltype(tree)::value_type));
 
-		return {std::move(tree_structure), num};
+		return tree;
 	}
 
 	[[nodiscard]] std::uint64_t readNumNodes(std::istream& in)
@@ -4340,85 +4349,82 @@ class OctreeBase
 	}
 
 	[[nodiscard]] std::vector<NodeAndIndices> retrieveNodes(
-	    std::unique_ptr<std::uint8_t[]> const& tree_structure,
-	    std::uint64_t const tree_structure_size, std::uint64_t num_nodes)
+	    std::unique_ptr<IndexField[]> const& tree, std::uint64_t num_nodes)
 	{
 		std::vector<NodeAndIndices> nodes;
 		nodes.reserve(num_nodes);
 
-		if (tree_structure[0]) {
-			nodes.emplace_back(root(), tree_structure[0]);
+		if (tree[0].any()) {
+			nodes.emplace_back(root(), tree[0]);
 			setModified(root());
-		} else if (tree_structure[1]) {
+		} else if (tree[1].any()) {
 			createInnerChildren(root(), rootIndex());
-			retrieveNodesRecurs(innerChildren(root(), rootIndex()), tree_structure[1],
-			                    rootDepth() - 1, std::next(tree_structure.get(), 2), nodes);
+			retrieveNodesRecurs(innerChildren(root(), rootIndex()), tree[1], rootDepth() - 1,
+			                    std::next(tree.get(), 2), nodes);
 		}
 
 		return nodes;
 	}
 
-	std::uint8_t const* retrieveNodesRecurs(LeafNodeBlock& node, index_field_t indices,
-	                                        std::uint8_t const* tree_structure,
-	                                        std::vector<NodeAndIndices>& nodes)
+	IndexField const* retrieveNodesRecurs(LeafNodeBlock& node, IndexField indices,
+	                                      IndexField const* tree,
+	                                      std::vector<NodeAndIndices>& nodes)
 	{
-		for (index_t index = 0; 8 != index; ++index) {
-			if (std::uint8_t(0) == std::uint8_t(1) & (indices >> index)) {
+		for (index_t i = 0; 8 != i; ++i) {
+			if (!indices[i]) {
 				continue;
 			}
 
-			index_field_t const valid_return = *tree_structure++;
-			nodes.emplace_back(node[index], valid_return);
-			setModified(node[index], valid_return);
+			IndexField const valid_return = *tree++;
+			nodes.emplace_back(node[i], valid_return);
+			setModified(node[i], valid_return);
 		}
 
-		return tree_structure;
+		return tree;
 	}
 
-	std::uint8_t const* retrieveNodesRecurs(InnerNodeBlock& node, index_field_t indices,
-	                                        depth_t const depth,
-	                                        std::uint8_t const* tree_structure,
-	                                        std::vector<NodeAndIndices>& nodes)
+	IndexField const* retrieveNodesRecurs(InnerNodeBlock& node, IndexField indices,
+	                                      depth_t const depth, IndexField const* tree,
+	                                      std::vector<NodeAndIndices>& nodes)
 	{
-		for (index_t index = 0; 8 != index; ++index) {
-			if (std::uint8_t(0) == std::uint8_t(1) & (indices >> index)) {
+		for (index_t i = 0; 8 != i; ++i) {
+			if (!indices[i]) {
 				continue;
 			}
 
-			index_field_t const valid_return = *tree_structure++;
-			index_field_t const valid_inner = *tree_structure++;
+			IndexField const valid_return = *tree++;
+			IndexField const valid_inner = *tree++;
 
 			if (valid_return) {
-				nodes.emplace_back(node[index], valid_return);
+				nodes.emplace_back(node[i], valid_return);
 			}
 
 			if (valid_inner) {
 				if (1 == depth) {
-					createLeafChildren(node[index], ...);
+					createLeafChildren(node[i], ...);
 					// TODO: Implement
 				} else {
-					createInnerChildren(node[index], ...);
+					createInnerChildren(node[i], ...);
 					// TODO: Implement
 				}
 			}
 
-			setModified(node[index], valid_return | valid_inner);
+			setModified(node[i], valid_return | valid_inner);
 		}
 
-		return tree_structure;
+		return tree;
 	}
 
-	std::uint8_t const* retrieveNodesRecurs(InnerNode& node, index_field_t indices,
-	                                        depth_t const depth,
-	                                        std::uint8_t const* tree_structure,
-	                                        std::vector<NodeAndIndices>& nodes)
+	IndexField const* retrieveNodesRecurs(InnerNode& node, IndexField indices,
+	                                      depth_t const depth, IndexField const* tree,
+	                                      std::vector<NodeAndIndices>& nodes)
 	{
 		for (index_t index = 0; 8 != index; ++index) {
-			if (std::uint8_t(0) == std::uint8_t(1) & (indices >> index)) {
+			if (!indices[index]) {
 				continue;
 			}
 
-			index_field_t const children_valid_return = *tree_structure++;
+			IndexField const children_valid_return = *tree++;
 
 			if (1 == depth) {
 				if (0 == children_valid_return) {
@@ -4427,7 +4433,7 @@ class OctreeBase
 
 				// TODO: Implement
 			} else {
-				index_field_t const children_valid_inner = *tree_structure++;
+				IndexField const children_valid_inner = *tree++;
 
 				if (0 == children_valid_return && 0 == children_valid_inner) {
 					continue;
@@ -4437,7 +4443,7 @@ class OctreeBase
 			}
 		}
 
-		return tree_structure;
+		return tree;
 
 		if (1 == depth) {
 			if (0 == children_valid_return) } else {
@@ -4447,7 +4453,7 @@ class OctreeBase
 
 		if (1 == depth) {
 			if (0 == children_valid_return) {
-				return tree_structure;
+				return tree;
 			}
 
 			setModified(node, children_valid_return);
@@ -4461,7 +4467,7 @@ class OctreeBase
 				}
 			}
 		} else {
-			std::uint8_t const child_valid_inner = *indicators++;
+			IndexField const child_valid_inner = *indicators++;
 
 			if (0 == children_valid_return && 0 == child_valid_inner) {
 				return indicators;
@@ -4486,10 +4492,10 @@ class OctreeBase
 	}
 
 	template <class Predicates>
-	[[nodiscard]] std::pair<std::vector<std::uint8_t>, std::vector<ConstNodeAndIndices>>
-	data(Predicates const& predicates) const
+	[[nodiscard]] std::pair<std::vector<IndexField>, std::vector<ConstNodeAndIndices>> data(
+	    Predicates const& predicates) const
 	{
-		std::vector<std::uint8_t> tree_structure;
+		std::vector<IndexField> tree;
 		std::vector<ConstNodeAndIndices> nodes;
 
 		std::conditional_t<predicate::contains_spatial_predicate_v<Predicates>, NodeBV, Node>
@@ -4500,97 +4506,97 @@ class OctreeBase
 		bool valid_inner = !valid_return && predicate::PredicateInnerCheck<Predicates>::apply(
 		                                        predicates, derived(), root);
 
-		tree_structure.push_back(valid_return ? 1U : 0U);
-		tree_structure.push_back(valid_inner ? 1U : 0U);
+		tree.emplace_back(valid_return ? 1U : 0U);
+		tree.emplace_back(valid_inner ? 1U : 0U);
 
 		if (valid_return) {
 			nodes.emplace_back(root(), 1U);
 		} else if (valid_inner) {
-			dataRecurs(child(root, 0), predicates, tree_structure, nodes);
+			dataRecurs(child(root, 0), predicates, tree, nodes);
 			if (nodes.empty()) {
 				//  Nothing was added
-				tree_structure.clear();
+				tree.clear();
 			}
 		}
 
-		return {std::move(tree_structure), std::move(nodes)};
+		return {std::move(tree), std::move(nodes)};
 	}
 
 	template <class Predicates, class NodeType>
 	void dataRecurs(NodeType const& node, Predicates const& predicates,
-	                std::vector<std::uint8_t>& tree_structure,
+	                std::vector<IndexField>& tree,
 	                std::vector<ConstNodeAndIndices>& nodes) const
 	{
-		std::uint8_t valid_return = 0;
+		IndexField valid_return;
 
 		if (0 == node.depth()) {
-			for (index_t index = 0; 8 != index; ++index) {
+			for (index_t i = 0; 8 != i; ++i) {
 				if (predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(),
-				                                                      sibling(node, index))) {
-					valid_return |= std::uint8_t(1) << index;
+				                                                      sibling(node, i))) {
+					valid_return[i] = true;
 				}
 			}
 
-			tree_structure.push_back(valid_return);
+			tree.push_back(valid_return);
 
 			if (valid_return) {
 				nodes.emplace_back(leafNode(node), valid_return);
 			}
 		} else {
-			std::uint8_t valid_inner = 0;
-			for (index_t index = 0; 8 != index; ++index) {
-				auto s = sibling(node, index);
+			IndexField valid_inner;
+			for (index_t i = 0; 8 != i; ++i) {
+				auto s = sibling(node, i);
 
 				if (predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(), s)) {
-					valid_return |= std::uint8_t(1) << index;
+					valid_return[i] = true;
 				} else if (predicate::PredicateInnerCheck<Predicates>::apply(predicates,
 				                                                             derived(), s)) {
-					valid_inner |= std::uint8_t(1) << index;
+					valid_inner[i] = true;
 				}
 			}
 
-			tree_structure.push_back(valid_return);
-			tree_structure.push_back(valid_inner);
+			tree.push_back(valid_return);
+			tree.push_back(valid_inner);
 
-			auto cur_tree_structure_size = tree_structure.size();
+			auto cur_tree_size = tree.size();
 			auto cur_nodes_size = nodes.size();
 
-			if (valid_return) {
+			if (valid_return.any()) {
 				nodes.emplace_back(leafNode(node), valid_return);
 			}
 
-			if (valid_inner) {
-				for (index_t index = 0; 8 != index; ++index) {
-					if (std::uint8_t(1) & (valid_inner >> index)) {
-						auto s = sibling(node, index);
-						dataRecurs(child(s, 0), predicates, tree_structure, nodes);
+			if (valid_inner.any()) {
+				for (index_t i = 0; 8 != i; ++i) {
+					if (valid_inner[i]) {
+						auto s = sibling(node, i);
+						dataRecurs(child(s, 0), predicates, tree, nodes);
 					}
 				}
 			}
 
 			if (nodes.size() == cur_nodes_size) {
-				tree_structure.resize(cur_tree_structure_size);
-				tree_structure[tree_structure.size() - 1] = 0;
-				tree_structure[tree_structure.size() - 2] = 0;
+				tree.resize(cur_tree_size);
+				tree[tree.size() - 1] = 0;
+				tree[tree.size() - 2] = 0;
 			}
 		}
 	}
 
 	template <bool Propagate>
-	[[nodiscard]] std::pair<std::vector<std::uint8_t>, std::vector<ConstNodeAndIndices>>
+	[[nodiscard]] std::pair<std::vector<IndexField>, std::vector<ConstNodeAndIndices>>
 	modifiedData()
 	{
-		std::vector<std::uint8_t> tree_structure;
+		std::vector<IndexField> tree;
 		std::vector<ConstNodeAndIndices> nodes;
 
 		InnerNode& root = root();
 		depth_t depth = rootDepth();
 
-		index_field_t valid_return = leaf(root) & modified(root);
-		index_field_t valid_inner = modified(root);
+		IndexField valid_return = leaf(root) & modified(root);
+		IndexField valid_inner = modified(root);
 
-		tree_structure.push_back(valid_return);
-		tree_structure.push_back(valid_inner);
+		tree.push_back(valid_return);
+		tree.push_back(valid_inner);
 
 		if (valid_return) {
 			nodes.emplace_back(root, valid_return);
@@ -4598,112 +4604,112 @@ class OctreeBase
 				propagate(root, valid_return);
 			}
 		} else if (valid_inner) {
-			modifiedDataRecurs<Propagate>(innerChildren(root), valid_inner, depth - 1,
-			                              tree_structure, nodes);
+			modifiedDataRecurs<Propagate>(innerChildren(root), valid_inner, depth - 1, tree,
+			                              nodes);
 			if constexpr (Propagate) {
 				propagate(root, valid_inner, depth);
 			}
 			if (nodes.empty()) {
 				//  Nothing was added
-				tree_structure.clear();
+				tree.clear();
 			}
 		}
 
 		resetModified(root, valid_inner);
 
-		return {std::move(tree_structure), std::move(nodes)};  // FIXME: Check if RVO
+		return {std::move(tree), std::move(nodes)};  // FIXME: Check if RVO
 	}
 
 	template <bool Propagate>
-	void modifiedDataRecurs(LeafNodeBlock& nodes, index_field_t indices,
-	                        std::vector<std::uint8_t>& tree_structure,
+	void modifiedDataRecurs(LeafNodeBlock& node_block, IndexField indices,
+	                        std::vector<IndexField>& tree,
 	                        std::vector<ConstNodeAndIndices>& nodes)
 	{
-		for (index_t index = 0; nodes.size() != index; ++index) {
-			if (index_field_t(0) == index_field_t(1) & (indices >> index)) {
+		for (index_t index = 0; node_block.size() != index; ++index) {
+			if (indices[index]) {
 				continue;
 			}
 
-			index_field_t m = modified(nodes[index]);
-			tree_structure.push_back(m);
+			IndexField m = modified(node_block[index]);
+			tree.push_back(m);
 
-			if (index_field_t(0) == m) {
+			if (m.none()) {
 				continue;
 			}
 
-			nodes.emplace_back(nodes[index], m);
+			nodes.emplace_back(node_block[index], m);
 
 			if constexpr (Propagate) {
-				propagate(nodes[index], m);
+				propagate(node_block[index], m);
 			}
 
-			resetModified(nodes[index]);
+			resetModified(node_block[index]);
 		}
 	}
 
 	template <bool Propagate>
-	void modifiedDataRecurs(InnerNodeBlock& nodes, index_field_t indices,
-	                        depth_t const depth, std::vector<std::uint8_t>& tree_structure,
+	void modifiedDataRecurs(InnerNodeBlock& node_block, IndexField indices,
+	                        depth_t const depth, std::vector<IndexField>& tree,
 	                        std::vector<ConstNodeAndIndices>& nodes)
 	{
-		for (index_t index = 0; nodes.size() != index; ++index) {
-			if (index_field_t(0) == index_field_t(1) & (indices >> index)) {
+		for (index_t i = 0; node_block.size() != i; ++i) {
+			if (indices[i]) {
 				continue;
 			}
 
-			index_field_t m = modified(nodes[index]);
-			index_field_t l = leaf(nodes[index]);
+			IndexField m = modified(node_block[i]);
+			IndexField l = leaf(node_block[i]);
 
-			index_field_t valid_return = m & l;
-			index_field_t valid_inner = m & ~l;
+			IndexField valid_return = m & l;
+			IndexField valid_inner = m & ~l;
 
-			tree_structure.push_back(valid_return);
-			tree_structure.push_back(valid_inner);
+			tree.push_back(valid_return);
+			tree.push_back(valid_inner);
 
-			auto const cur_tree_structure_size = tree_structure.size();
+			auto const cur_tree_size = tree.size();
 			auto const cur_nodes_size = nodes.size();
 
-			if (valid_return) {
-				nodes.emplace_back(nodes[index], valid_return);
+			if (valid_return.any()) {
+				nodes.emplace_back(node_block[i], valid_return);
 			}
 
-			if (valid_inner) {
+			if (valid_inner.any()) {
 				if (1 == depth) {
-					modifiedDataRecurs<Propagate>(leafChildren(nodes[index]), valid_inner,
-					                              tree_structure, nodes);
+					modifiedDataRecurs<Propagate>(leafChildren(node_block[i]), valid_inner, tree,
+					                              nodes);
 				} else {
-					modifiedDataRecurs<Propagate>(innerChildren(nodes[index]), valid_inner,
-					                              depth - 1, tree_structure, nodes);
+					modifiedDataRecurs<Propagate>(innerChildren(node_block[i]), valid_inner,
+					                              depth - 1, tree, nodes);
 				}
 			}
 
 			if constexpr (Propagate) {
-				propagate(nodes[index], m);
+				propagate(node_block[i], m);
 			}
 
-			resetModified(nodes[index]);
+			resetModified(node_block[i]);
 
 			if (nodes.size() == cur_nodes_size) {
-				tree_structure.resize(cur_tree_structure_size);
-				tree_structure[tree_structure.size() - 1] = 0;
-				tree_structure[tree_structure.size() - 2] = 0;
+				tree.resize(cur_tree_size);
+				tree[tree.size() - 1] = 0;
+				tree[tree.size() - 2] = 0;
 			}
 		}
 	}
 
 	template <class InputIt>
-	void write(std::ostream& out, std::vector<std::uint8_t> const& tree_structure,
-	           InputIt first, std::size_t num_nodes, bool compress,
-	           int compression_acceleration_level, int compression_level) const
+	void write(std::ostream& out, std::vector<IndexField> const& tree, InputIt first,
+	           std::size_t num_nodes, bool compress, int compression_acceleration_level,
+	           int compression_level) const
 	{
 		writeHeader(out, fileOptions(compress));
-		writeTreeStructure(out, tree_structure);
+		writeTreeStructure(out, tree);
 		writeNumNodes(out, num_nodes);
 		writeNodes(out, first, num_nodes, compress, compression_acceleration_level,
 		           compression_level);
 	}
 
-	void writeTreeStructure(std::ostream& out, std::vector<std::uint8_t> const& tree) const
+	void writeTreeStructure(std::ostream& out, std::vector<IndexField> const& tree) const
 	{
 		std::uint64_t num = tree.size();
 		out.write(reinterpret_cast<char const*>(&num), sizeof(num));

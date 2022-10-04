@@ -86,7 +86,7 @@ struct DistanceNode {
 			return distance == parent.distance;
 		} else {
 			return all_of(distance,
-			              [d = parent.distance[index]](auto const e) { return e == t; });
+			              [d = parent.distance[index]](auto const e) { return e == d; });
 		}
 	}
 
@@ -97,9 +97,9 @@ struct DistanceNode {
 	[[nodiscard]] constexpr distance_t distanceIndex(index_t const index) const
 	{
 		if constexpr (1 == N) {
-			return time[0];
+			return distance[0];
 		} else {
-			return time[index];
+			return distance[index];
 		}
 	}
 

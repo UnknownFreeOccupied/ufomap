@@ -73,7 +73,7 @@ class SemanticPropagation
 	template <class InputIt>
 	void set(InputIt first, InputIt last, PropagationCriteria prop_criteria)
 	{
-		std::for_each(first, last, [prop_criteria](auto r) { set(r, prop_criteria); });
+		std::for_each(first, last, [this, prop_criteria](auto r) { set(r, prop_criteria); });
 	}
 
 	void erase(SemanticRange range) { prop_criteria_.erase(range); }
@@ -81,7 +81,7 @@ class SemanticPropagation
 	template <class InputIt>
 	void erase(InputIt first, InputIt last)
 	{
-		std::for_each(first, last, [](auto e) { erase(e); });
+		std::for_each(first, last, [this](auto e) { erase(e); });
 	}
 
 	void clear() { prop_criteria_.clear(); }

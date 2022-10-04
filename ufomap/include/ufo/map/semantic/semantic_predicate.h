@@ -43,8 +43,8 @@
 #define UFO_MAP_PREDICATE_SEMANTICS_H
 
 // UFO
-#include <ufo/container/range.h>
 #include <ufo/map/predicate/predicates.h>
+#include <ufo/map/semantic/semantic.h>
 
 // STL
 #include <initializer_list>
@@ -56,24 +56,17 @@ namespace ufo::map::predicate
 // Predicates
 //
 
-struct AnyLabels {
-	AnyLabels(std::initializer_list<std::string> ilist) : strings(ilist), need_fetch(true)
-	{
-	}
+struct AnyLabel {
+	AnyLabel(std::initializer_list<std::string> ilist) : strings(ilist), need_fetch(true) {}
 
-	AnyLabels(std::initializer_list<label_t> ilist)
-	    : ranges(ilist), need_fetch(false)
-	{
-	}
+	AnyLabel(std::initializer_list<label_t> ilist) : ranges(ilist), need_fetch(false) {}
 
-	template <typename Key>
-	AnyLabels(std::initializer_list<util::Range<Key>> range)
-	    : ranges(range), need_fetch(false)
+	AnyLabel(std::initializer_list<SemanticRange> range) : ranges(range), need_fetch(false)
 	{
 	}
 
 	template <class... Args>
-	AnyLabels(Args&&... args)
+	AnyLabel(Args&&... args)
 	{
 		add(std::forward<Args>(args)...);
 	}
@@ -85,11 +78,7 @@ struct AnyLabels {
 
 	void add(label_t label) { ranges.insert(label); }
 
-	template <typename Key>
-	void add(util::Range<Key> const& range)
-	{
-		ranges.insert(range);
-	}
+	void add(SemanticRange range) { ranges.insert(range); }
 
 	template <class T, class... Args,
 	          typename std::enable_if<0 < sizeof...(Args), int>::type = 0>
@@ -108,20 +97,20 @@ struct AnyLabels {
 
  private:
 	std::unordered_set<std::string> strings;
-	util::RangeSet<label_t> ranges;
+	SemanticRangeSet ranges;
 	bool need_fetch;
 };
 
 struct AllLabels {
 };
 
-struct NotLabels {
+struct NotLabel {
 };
 
-struct AnyLabelsValue {
+struct AnyLabelValue {
 };
 
-struct AnyLabelsValueInterval {
+struct AnyLabelValueInterval {
 };
 
 struct AllLabelsValue {

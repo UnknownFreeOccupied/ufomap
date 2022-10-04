@@ -127,6 +127,7 @@ class Key
 	constexpr index_t index(depth_t depth) const noexcept
 	{
 		// TODO: Implement
+		return 0;
 	}
 
 	constexpr index_t index() const noexcept { return index(depth()); }

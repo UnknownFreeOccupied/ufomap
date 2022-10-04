@@ -55,6 +55,47 @@ using index_field_t = std::uint8_t;
 struct IndexField {
 	index_field_t field = 0;
 
+	struct Reference {
+		friend class IndexField;
+
+	 public:
+		~Reference() {}
+
+		constexpr Reference& operator=(bool x) noexcept
+		{
+			field_ ^= (-static_cast<index_field_t>(x) ^ field_) & index_;
+			return *this;
+		}
+
+		constexpr Reference& operator=(Reference const& x) noexcept = default;
+
+		constexpr operator bool() const noexcept
+		{
+			return index_field_t(0) != field_ & index_;
+		}
+
+		constexpr bool operator~() const noexcept
+		{
+			return index_field_t(0) == field_ & index_;
+		}
+
+		constexpr Reference& flip() noexcept
+		{
+			field_ ^= index_;
+			return *this;
+		}
+
+	 private:
+		constexpr Reference(index_field_t& field, std::size_t pos) noexcept
+		    : field_(field), index_(index_field_t(1) << pos)
+		{
+		}
+
+	 private:
+		index_field_t& field_;
+		index_field_t index_;
+	};
+
 	constexpr IndexField() noexcept = default;
 
 	constexpr IndexField(index_field_t val) noexcept : field(val) {}
@@ -86,6 +127,8 @@ struct IndexField {
 	{
 		return (field >> pos) & index_field_t(1);
 	}
+
+	[[nodiscard]] Reference operator[](std::size_t pos) { return Reference(field, pos); }
 
 	[[nodiscard]] bool test(std::size_t pos) const
 	{

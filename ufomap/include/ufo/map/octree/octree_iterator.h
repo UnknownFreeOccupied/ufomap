@@ -370,9 +370,6 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 
 	using Base = IteratorBase<Tree, NearestNode>;
 
-	using Queue =
-	    std::priority_queue<value_type, std::vector<value_type>, std::greater<value_type>>;
-
  public:
 	// Tags
 	using typename Base::const_pointer;
@@ -383,6 +380,11 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 	using typename Base::reference;
 	using typename Base::value_type;
 
+ private:
+	using Queue =
+	    std::priority_queue<value_type, std::vector<value_type>, std::greater<value_type>>;
+
+ public:
 	NearestIterator(Tree const* tree) : Base(tree) {}
 
 	NearestIterator(Tree const* tree, NodeBV const& root, Geometry const& geometry,

@@ -266,8 +266,8 @@ class DistanceMap
 	template <class InputIt>
 	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
-		using typename std::iterator_traits<InputIt>::value_type;
-		using typename value_type::node_type;
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
 		return node_type::distanceSize();
 	}
 

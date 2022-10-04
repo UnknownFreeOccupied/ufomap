@@ -105,6 +105,8 @@ class RangeSet
 
 	RangeSet(std::initializer_list<value_type> init) { insert(init); }
 
+	RangeSet(std::initializer_list<Key> init) { insert(init); }
+
 	//
 	// Destructor
 	//

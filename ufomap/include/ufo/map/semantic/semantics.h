@@ -1099,8 +1099,8 @@ class Semantics
 		auto s = sizes();
 		auto dist = std::distance(begin(), it);
 		index_t i = 0;
-		for (auto offset = sizes[0]; N != i && offset < dist; ++i) {
-			offset += sizes[i];
+		for (auto offset = s[0]; N != i && offset < dist; ++i) {
+			offset += s[i];
 		}
 		return i;
 	}

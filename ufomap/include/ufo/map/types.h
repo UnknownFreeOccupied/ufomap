@@ -67,6 +67,7 @@ using label_t = std::uint32_t;
 using value_t = float;
 using intensity_t = float;
 using count_t = std::uint32_t;
+using distance_t = float;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TYPES_H

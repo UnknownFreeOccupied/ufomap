@@ -49,7 +49,7 @@
 #include <ufo/map/io.h>
 #include <ufo/map/occupancy/occupancy_map.h>
 #include <ufo/map/octree/octree_map.h>
-#include <ufo/map/semantic/semantic_map.h>
+// #include <ufo/map/semantic/semantic_map.h>
 #include <ufo/map/surfel/surfel_map.h>
 #include <ufo/map/time/time_map.h>
 
@@ -121,7 +121,8 @@ class UFOMap
     : public OctreeMap<
           // clang-format off
 					// These should be ordered based on size
-          OctreeNodeBase<cond_node_t<MapType, SEMANTIC,    HR_SEMANTIC,    SemanticNode>,
+          OctreeNodeBase<
+					// cond_node_t<MapType, SEMANTIC,    HR_SEMANTIC,    SemanticNode>,
                          cond_node_t<MapType, SURFEL,      HR_SURFEL,      SurfelNode>,
                          cond_node_t<MapType, DISTANCE,    HR_DISTANCE,    DistanceNode>,
 												 cond_node_t<MapType, REFLECTION,  HR_REFLECTION,  ReflectionNode>,
@@ -136,7 +137,7 @@ class UFOMap
           cond_map_base<MapType & OCCUPANCY,   OCCUPANCY,   OccupancyMap>::template type,
           cond_map_base<MapType & TIME,        TIME,        TimeMap>::template type,
           cond_map_base<MapType & COLOR,       COLOR,       ColorMap>::template type,
-          cond_map_base<MapType & SEMANTIC,    SEMANTIC,    SemanticMap>::template type,
+          // cond_map_base<MapType & SEMANTIC,    SEMANTIC,    SemanticMap>::template type,
           cond_map_base<MapType & SURFEL,      SURFEL,      SurfelMap>::template type,
           cond_map_base<MapType & DISTANCE,    DISTANCE,    DistanceMap>::template type,
           cond_map_base<MapType & INTENSITY,   INTENSITY,   IntensityMap>::template type,
@@ -148,7 +149,8 @@ class UFOMap
  private:
 	using Base = OctreeMap<
 	    // clang-format off
-	    OctreeNodeBase<cond_node_t<MapType, SEMANTIC,    HR_SEMANTIC,    SemanticNode>,
+	    OctreeNodeBase<
+			// cond_node_t<MapType, SEMANTIC,    HR_SEMANTIC,    SemanticNode>,
 	                   cond_node_t<MapType, SURFEL,      HR_SURFEL,      SurfelNode>,
 	                   cond_node_t<MapType, DISTANCE,    HR_DISTANCE,    DistanceNode>,
 										 cond_node_t<MapType, REFLECTION,  HR_REFLECTION,  ReflectionNode>,
@@ -162,7 +164,7 @@ class UFOMap
 	    cond_map_base<MapType & OCCUPANCY,   OCCUPANCY,   OccupancyMap>::template type,
 	    cond_map_base<MapType & TIME,        TIME,        TimeMap>::template type,
 	    cond_map_base<MapType & COLOR,       COLOR,       ColorMap>::template type,
-	    cond_map_base<MapType & SEMANTIC,    SEMANTIC,    SemanticMap>::template type,
+	    // cond_map_base<MapType & SEMANTIC,    SEMANTIC,    SemanticMap>::template type,
 	    cond_map_base<MapType & SURFEL,      SURFEL,      SurfelMap>::template type,
 	    cond_map_base<MapType & DISTANCE,    DISTANCE,    DistanceMap>::template type,
 			cond_map_base<MapType & INTENSITY,   INTENSITY,   IntensityMap>::template type,
@@ -222,7 +224,7 @@ class UFOMap
 using OccupancyMap    = UFOMap<OCCUPANCY>;
 using TimeMap         = UFOMap<TIME>;
 using ColorMap        = UFOMap<COLOR>;
-using SemanticMap     = UFOMap<SEMANTIC>;
+// using SemanticMap     = UFOMap<SEMANTIC>;
 using SurfelMap       = UFOMap<SURFEL>;
 using DistanceMap     = UFOMap<DISTANCE>;
 using IntensityMap    = UFOMap<INTENSITY>;
