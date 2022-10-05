@@ -101,7 +101,7 @@ struct ColorNode {
 	// Get color
 	//
 
-	constexpr Color colorIndex(index_t const index) const
+	[[nodiscard]] constexpr Color color(index_t const index) const
 	{
 		if constexpr (1 == N) {
 			return Color(red[0], green[0], blue[0]);
@@ -114,22 +114,38 @@ struct ColorNode {
 	// Set color
 	//
 
-	void setColor(Color const value)
+	void setColor(color_t const r, color_t const g, color_t const b)
 	{
-		red.fill(value.red);
-		green.fill(value.green);
-		blue.fill(value.blue);
+		red.fill(r);
+		green.fill(g);
+		blue.fill(b);
 	}
 
-	void setColorIndex(index_t const index, Color const value)
+	void setColor(Color const value) { setColor(value.red, value.green, value.blue); }
+
+	void setColor(index_t const index, color_t const r, color_t const g, color_t const b)
 	{
 		if constexpr (1 == N) {
-			setColor(value);
+			setColor(r, g, b);
 		} else {
-			red[index] = value.red;
-			green[index] = value.green;
-			blue[index] = value.blue;
+			red[index] = r;
+			green[index] = g;
+			blue[index] = b;
 		}
+	}
+
+	void setColor(index_t const index, Color const value)
+	{
+		setColor(index, value.r, value.g, value.b);
+	}
+
+	//
+	// Has color
+	//
+
+	[[nodiscard]] constexpr bool hasColor(index_t const index) const
+	{
+		return 0 != red[index] || 0 != green[index] || 0 != blue[index];
 	}
 
 	//
@@ -143,7 +159,7 @@ struct ColorNode {
 		blue.fill(0);
 	}
 
-	void clearColorIndex(index_t const index)
+	void clearColor(index_t const index)
 	{
 		if constexpr (1 == N) {
 			clearColor();

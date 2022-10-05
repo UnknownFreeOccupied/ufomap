@@ -57,6 +57,35 @@ class EmptyMap
 {
  protected:
 	//
+	// Constructors
+	//
+
+	EmptyMap() = default;
+
+	EmptyMap(EmptyMap const&) = default;
+
+	EmptyMap(EmptyMap&&) = default;
+
+	template <std::uint64_t Num2, class Derived2>
+	EmptyMap(EmptyMap<Num2, Derived2> const&)
+	{
+	}
+
+	//
+	// Assignment operator
+	//
+
+	EmptyMap& operator=(EmptyMap const&) = default;
+
+	EmptyMap& operator=(EmptyMap&&) = default;
+
+	template <std::uint64_t Num2, class Derived2>
+	EmptyMap& operator=(EmptyMap<Num2, Derived2> const&)
+	{
+		return *this;
+	}
+
+	//
 	// Initilize root
 	//
 

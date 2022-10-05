@@ -59,9 +59,6 @@ namespace ufo::map
 {
 template <std::size_t N = 8>
 struct OccupancyNode {
-	// Data
-	std::array<occupancy_t, N> occupancy;
-
 	//
 	// Size
 	//
@@ -69,32 +66,115 @@ struct OccupancyNode {
 	[[nodiscard]] static constexpr std::size_t occupancySize() { return N; }
 
 	//
+	// Data
+	//
+
+	[[nodiscard]] constexpr logit_t const* occupancyData() const noexcept
+	{
+		return occupancy_.data();
+	}
+
+	[[nodiscard]] constexpr logit_t* occupancyData() noexcept { return occupancy_.data(); }
+
+	//
+	// Iterators
+	//
+
+	[[nodiscard]] constexpr auto beginOccupancy() noexcept { return occupancy_.begin(); }
+
+	[[nodiscard]] constexpr auto beginOccupancy() const noexcept
+	{
+		return occupancy_.begin();
+	}
+
+	[[nodiscard]] constexpr auto cbeginOccupancy() const noexcept
+	{
+		return occupancy_.cbegin();
+	}
+
+	[[nodiscard]] constexpr auto endOccupancy() noexcept { return occupancy_.end(); }
+
+	[[nodiscard]] constexpr auto endOccupancy() const noexcept { return occupancy_.end(); }
+
+	[[nodiscard]] constexpr auto cendOccupancy() const noexcept
+	{
+		return occupancy_.cend();
+	}
+
+	[[nodiscard]] constexpr auto rbeginOccupancy() noexcept { return occupancy_.rbegin(); }
+
+	[[nodiscard]] constexpr auto rbeginOccupancy() const noexcept
+	{
+		return occupancy_.rbegin();
+	}
+
+	[[nodiscard]] constexpr auto crbeginOccupancy() const noexcept
+	{
+		return occupancy_.crbegin();
+	}
+
+	[[nodiscard]] constexpr auto rendOccupancy() noexcept { return occupancy_.rend(); }
+
+	[[nodiscard]] constexpr auto rendOccupancy() const noexcept
+	{
+		return occupancy_.rend();
+	}
+
+	[[nodiscard]] constexpr auto crendOccupancy() const noexcept
+	{
+		return occupancy_.crend();
+	}
+
+	//
 	// Fill
 	//
 
-	void fill(OccupancyNode const parent, std::size_t const pos)
+	void fill(OccupancyNode const parent, index_t const index)
 	{
-		if constexpr (1 == N) {
-			occupancy = parent.occupancy;
-		} else {
-			occupancy.fill(parent.occupancy[pos]);
-		}
+		setOccupancy(parent.occupancy(index));
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(OccupancyNode const parent,
-	                                 std::size_t const pos) const
+	[[nodiscard]] bool isCollapsible(OccupancyNode const parent, index_t const index) const
+	{
+		return all_of(occupancy_,
+		              [p = parent.occupancy(index)](auto const x) { return x == p; });
+	}
+
+	//
+	// Get occupancy
+	//
+
+	[[nodiscard]] constexpr logit_t occupancy(index_t const index) const
 	{
 		if constexpr (1 == N) {
-			return occupancy == parent.occupancy;
+			return occupancy_[0];
 		} else {
-			return all_of(occupancy,
-			              [p = parent.occupancy[pos]](auto const x) { return x == p; });
+			return occupancy_[index];
 		}
 	}
+
+	//
+	// Set occupancy
+	//
+
+	void setOccupancy(logit_t const value) { occupancy_.fill(value); }
+
+	void setOccupancy(index_t const index, logit_t const value)
+	{
+		if constexpr (1 == N) {
+			setOccupancy(value);
+		} else {
+			occupancy_[index] = value;
+		}
+	}
+
+ private:
+	// Data
+	std::array<logit_t, N> occupancy_;
 };
 
 template <std::size_t N>

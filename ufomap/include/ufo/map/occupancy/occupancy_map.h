@@ -66,6 +66,287 @@ class OccupancyMap
 {
  public:
 	//
+	// Get occupancy logit
+	//
+
+	[[nodiscard]] logit_t occupancyLogit(Node node) const
+	{
+		return derived().leafNode(node).occupancy(node.index());
+	}
+
+	[[nodiscard]] logit_t occupancyLogit(Code code) const
+	{
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		return n.occupancy(code.index(d));
+	}
+
+	[[nodiscard]] logit_t occupancyLogit(Key key) const
+	{
+		return occupancyLogit(derived().toCode(key));
+	}
+
+	[[nodiscard]] logit_t occupancyLogit(Point coord, depth_t depth = 0) const
+	{
+		return occupancyLogit(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] logit_t occupancyLogit(coord_t x, coord_t y, coord_t z,
+	                                     depth_t depth = 0) const
+	{
+		return occupancyLogit(derived().toCode(x, y, z, depth));
+	}
+
+	//
+	// Get occupancy
+	//
+
+	[[nodiscard]] occupancy_t occupancy(Node node) const
+	{
+		return toOccupancyProbability(occupancyLogit(node));
+	}
+
+	[[nodiscard]] occupancy_t occupancy(Code code) const
+	{
+		return toOccupancyProbability(occupancyLogit(code));
+	}
+
+	[[nodiscard]] occupancy_t occupancy(Key key) const
+	{
+		return occupancy(derived().toCode(key));
+	}
+
+	[[nodiscard]] occupancy_t occupancy(Point coord, depth_t depth = 0) const
+	{
+		return occupancy(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] occupancy_t occupancy(coord_t x, coord_t y, coord_t z,
+	                                    depth_t depth = 0) const
+	{
+		return occupancy(derived().toCode(x, y, z, depth));
+	}
+
+	//
+	// Set occupancy logit
+	//
+
+	void setOccupancyLogit(Node node, logit_t logit, bool propagate = true)
+	{
+		derived().apply(
+		    node, [logit](auto& node, index_t index) { node.setOccupancy(index, logit); },
+		    [logit](auto& node) { node.setOccupancy(logit); }, propagate);
+	}
+
+	void setOccupancyLogit(Code code, logit_t logit, bool propagate = true)
+	{
+		derived().apply(
+		    code, [logit](auto& node, index_t index) { node.setOccupancy(index, logit); },
+		    [logit](auto& node) { node.setOccupancy(logit); }, propagate);
+	}
+
+	void setOccupancyLogit(Key key, logit_t logit, bool propagate = true)
+	{
+		setOccupancyLogit(derived().toCode(key), logit, propagate);
+	}
+
+	void setOccupancyLogit(Point coord, logit_t logit, bool propagate = true,
+	                       depth_t depth = 0)
+	{
+		setOccupancyLogit(derived().toCode(coord, depth), logit, propagate);
+	}
+
+	void setOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t logit,
+	                       bool propagate = true, depth_t depth = 0)
+	{
+		setOccupancyLogit(derived().toCode(x, y, z, depth), logit, propagate);
+	}
+
+	//
+	// Set occupancy
+	//
+
+	void setOccupancy(Node node, occupancy_t occupancy, bool propagate = true)
+	{
+		setOccupancyLogit(node, toOccupancyLogit(occupancy), propagate);
+	}
+
+	void setOccupancy(Code code, occupancy_t occupancy, bool propagate = true)
+	{
+		setOccupancyLogit(code, toOccupancyLogit(occupancy), propagate);
+	}
+
+	void setOccupancy(Key key, occupancy_t occupancy, bool propagate = true)
+	{
+		setOccupancy(derived().toCode(key), occupancy, propagate);
+	}
+
+	void setOccupancy(Point coord, occupancy_t occupancy, bool propagate = true,
+	                  depth_t depth = 0)
+	{
+		setOccupancy(derived().toCode(coord, depth), occupancy, propagate);
+	}
+
+	void setOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t occupancy,
+	                  bool propagate = true, depth_t depth = 0)
+	{
+		setOccupancy(derived().toCode(x, y, z, depth), occupancy, propagate);
+	}
+
+	//
+	// Increase occupancy logit
+	//
+
+	void increaseOccupancyLogit(Node node, logit_t inc, bool propagate = true)
+	{
+		// TODO: Implement
+
+		derived().apply(
+		    node,
+		    [this, inc](auto& node, index_t const index) {
+			    increaseOccupancyLogit(node, index, inc);
+		    },
+		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
+	}
+
+	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
+	{
+		// TODO: Implement
+
+		derived().apply(
+		    code,
+		    [this, inc](auto& node, index_t const index) {
+			    increaseOccupancyLogit(node, index, inc);
+		    },
+		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
+	}
+
+	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
+	{
+		increaseOccupancyLogit(derived().toCode(key), inc, propagate);
+	}
+
+	void increaseOccupancyLogit(Point coord, logit_t inc, bool propagate = true,
+	                            depth_t depth = 0)
+	{
+		increaseOccupancyLogit(derived().toCode(coord, depth), inc, propagate);
+	}
+
+	void increaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t inc,
+	                            bool propagate = true, depth_t depth = 0)
+	{
+		increaseOccupancyLogit(derived().toCode(x, y, z, depth), inc, propagate);
+	}
+
+	//
+	// Decrease occupancy logit
+	//
+
+	void decreaseOccupancyLogit(Node node, logit_t dec, bool propagate = true)
+	{
+		// TODO: Implement
+
+		derived().apply(
+		    node,
+		    [this, dec](auto& node, index_t const index) {
+			    decreaseOccupancyLogit(node, index, dec);
+		    },
+		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
+	}
+
+	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
+	{
+		// TODO: Implement
+
+		derived().apply(
+		    code,
+		    [this, dec](auto& node, index_t const index) {
+			    decreaseOccupancyLogit(node, index, dec);
+		    },
+		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
+	}
+
+	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
+	{
+		decreaseOccupancyLogit(derived().toCode(key), dec, propagate);
+	}
+
+	void decreaseOccupancyLogit(Point coord, logit_t dec, bool propagate = true,
+	                            depth_t depth = 0)
+	{
+		decreaseOccupancyLogit(derived().toCode(coord, depth), dec, propagate);
+	}
+
+	void decreaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t dec,
+	                            bool propagate = true, depth_t depth = 0)
+	{
+		decreaseOccupancyLogit(derived().toCode(x, y, z, depth), dec, propagate);
+	}
+
+	//
+	// Increase occupancy
+	//
+
+	// TODO: This and decrease can be same function, maybe 'updateOccupancy'?
+
+	void increaseOccupancy(Node node, occupancy_t inc, bool propagate = true)
+	{
+		increaseOccupancyLogit(node, toOccupancyChangeLogit(inc), propagate);
+	}
+
+	void increaseOccupancy(Code code, occupancy_t inc, bool propagate = true)
+	{
+		increaseOccupancyLogit(code, toOccupancyChangeLogit(inc), propagate);
+	}
+
+	void increaseOccupancy(Key key, occupancy_t inc, bool propagate = true)
+	{
+		increaseOccupancy(derived().toCode(key), inc, propagate);
+	}
+
+	void increaseOccupancy(Point coord, occupancy_t inc, bool propagate = true,
+	                       depth_t depth = 0)
+	{
+		increaseOccupancy(derived().toCode(coord, depth), inc, propagate);
+	}
+
+	void increaseOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t inc,
+	                       bool propagate = true, depth_t depth = 0)
+	{
+		increaseOccupancy(derived().toCode(x, y, z, depth), inc, propagate);
+	}
+
+	//
+	// Decrease occupancy
+	//
+
+	void decreaseOccupancy(Node node, occupancy_t dec, bool propagate = true)
+	{
+		decreaseOccupancyLogit(node, toOccupancyChangeLogit(dec), propagate);
+	}
+
+	void decreaseOccupancy(Code code, occupancy_t dec, bool propagate = true)
+	{
+		decreaseOccupancyLogit(code, toOccupancyChangeLogit(dec), propagate);
+	}
+
+	void decreaseOccupancy(Key key, occupancy_t dec, bool propagate = true)
+	{
+		decreaseOccupancy(derived().toCode(key), dec, propagate);
+	}
+
+	void decreaseOccupancy(Point coord, occupancy_t dec, bool propagate = true,
+	                       depth_t depth = 0)
+	{
+		decreaseOccupancy(derived().toCode(coord, depth), dec, propagate);
+	}
+
+	void decreaseOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t dec,
+	                       bool propagate = true, depth_t depth = 0)
+	{
+		decreaseOccupancy(derived().toCode(x, y, z, depth), dec, propagate);
+	}
+
+	//
 	// Sensor model
 	//
 
@@ -488,284 +769,6 @@ class OccupancyMap
 		return containsOccupied(derived().toCode(x, y, z, depth));
 	}
 
-	//
-	// Get occupancy
-	//
-
-	[[nodiscard]] occupancy_t occupancy(Node node) const
-	{
-		return occupancy(derived().leafNode(node), node.index());
-	}
-
-	[[nodiscard]] occupancy_t occupancy(Code code) const
-	{
-		return occupancy(derived().leafNode(code), code.index());
-	}
-
-	[[nodiscard]] occupancy_t occupancy(Key key) const
-	{
-		return occupancy(derived().toCode(key));
-	}
-
-	[[nodiscard]] occupancy_t occupancy(Point coord, depth_t depth = 0) const
-	{
-		return occupancy(derived().toCode(coord, depth));
-	}
-
-	[[nodiscard]] occupancy_t occupancy(coord_t x, coord_t y, coord_t z,
-	                                    depth_t depth = 0) const
-	{
-		return occupancy(derived().toCode(x, y, z, depth));
-	}
-
-	//
-	// Get occupancy logit
-	//
-
-	[[nodiscard]] logit_t occupancyLogit(Node node) const
-	{
-		return occupancyLogit(derived().leafNode(node), node.index());
-	}
-
-	[[nodiscard]] logit_t occupancyLogit(Code code) const
-	{
-		return occupancyLogit(derived().leafNode(code), code.index());
-	}
-
-	[[nodiscard]] logit_t occupancyLogit(Key key) const
-	{
-		return occupancyLogit(derived().toCode(key));
-	}
-
-	[[nodiscard]] logit_t occupancyLogit(Point coord, depth_t depth = 0) const
-	{
-		return occupancyLogit(derived().toCode(coord, depth));
-	}
-
-	[[nodiscard]] logit_t occupancyLogit(coord_t x, coord_t y, coord_t z,
-	                                     depth_t depth = 0) const
-	{
-		return occupancyLogit(derived().toCode(x, y, z, depth));
-	}
-
-	//
-	// Set occupancy
-	//
-
-	void setOccupancy(Node node, occupancy_t occupancy, bool propagate = true)
-	{
-		logit_t logit = toOccupancyLogit(occupancy);
-		setOccupancyLogit(node, logit, propagate);
-	}
-
-	void setOccupancy(Code code, occupancy_t occupancy, bool propagate = true)
-	{
-		logit_t logit = toOccupancyLogit(occupancy);
-		setOccupancyLogit(code, logit, propagate);
-	}
-
-	void setOccupancy(Key key, occupancy_t occupancy, bool propagate = true)
-	{
-		setOccupancy(derived().toCode(key), occupancy, propagate);
-	}
-
-	void setOccupancy(Point coord, occupancy_t occupancy, bool propagate = true,
-	                  depth_t depth = 0)
-	{
-		setOccupancy(derived().toCode(coord, depth), occupancy, propagate);
-	}
-
-	void setOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t occupancy,
-	                  bool propagate = true, depth_t depth = 0)
-	{
-		setOccupancy(derived().toCode(x, y, z, depth), occupancy, propagate);
-	}
-
-	//
-	// Set occupancy logit
-	//
-
-	void setOccupancyLogit(Node node, logit_t logit, bool propagate = true)
-	{
-		derived().apply(
-		    node,
-		    [this, logit](auto& node, index_t const index) {
-			    setOccupancyLogit(node, index, logit);
-		    },
-		    [this, logit](auto& node) { setOccupancyLogit(node, logit); }, propagate);
-	}
-
-	void setOccupancyLogit(Code code, logit_t logit, bool propagate = true)
-	{
-		derived().apply(
-		    code,
-		    [this, logit](auto& node, index_t const index) {
-			    setOccupancyLogit(node, index, logit);
-		    },
-		    [this, logit](auto& node) { setOccupancyLogit(node, logit); }, propagate);
-	}
-
-	void setOccupancyLogit(Key key, logit_t logit, bool propagate = true)
-	{
-		setOccupancyLogit(derived().toCode(key), logit, propagate);
-	}
-
-	void setOccupancyLogit(Point coord, logit_t logit, bool propagate = true,
-	                       depth_t depth = 0)
-	{
-		setOccupancyLogit(derived().toCode(coord, depth), logit, propagate);
-	}
-
-	void setOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t logit,
-	                       bool propagate = true, depth_t depth = 0)
-	{
-		setOccupancyLogit(derived().toCode(x, y, z, depth), logit, propagate);
-	}
-
-	//
-	// Increase occupancy logit
-	//
-
-	void increaseOccupancyLogit(Node node, logit_t inc, bool propagate = true)
-	{
-		derived().apply(
-		    node,
-		    [this, inc](auto& node, index_t const index) {
-			    increaseOccupancyLogit(node, index, inc);
-		    },
-		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
-	}
-
-	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
-	{
-		derived().apply(
-		    code,
-		    [this, inc](auto& node, index_t const index) {
-			    increaseOccupancyLogit(node, index, inc);
-		    },
-		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
-	}
-
-	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
-	{
-		increaseOccupancyLogit(derived().toCode(key), inc, propagate);
-	}
-
-	void increaseOccupancyLogit(Point coord, logit_t inc, bool propagate = true,
-	                            depth_t depth = 0)
-	{
-		increaseOccupancyLogit(derived().toCode(coord, depth), inc, propagate);
-	}
-
-	void increaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t inc,
-	                            bool propagate = true, depth_t depth = 0)
-	{
-		increaseOccupancyLogit(derived().toCode(x, y, z, depth), inc, propagate);
-	}
-
-	//
-	// Decrease occupancy logit
-	//
-
-	void decreaseOccupancyLogit(Node node, logit_t dec, bool propagate = true)
-	{
-		derived().apply(
-		    node,
-		    [this, dec](auto& node, index_t const index) {
-			    decreaseOccupancyLogit(node, index, dec);
-		    },
-		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
-	}
-
-	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
-	{
-		derived().apply(
-		    code,
-		    [this, dec](auto& node, index_t const index) {
-			    decreaseOccupancyLogit(node, index, dec);
-		    },
-		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
-	}
-
-	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
-	{
-		decreaseOccupancyLogit(derived().toCode(key), dec, propagate);
-	}
-
-	void decreaseOccupancyLogit(Point coord, logit_t dec, bool propagate = true,
-	                            depth_t depth = 0)
-	{
-		decreaseOccupancyLogit(derived().toCode(coord, depth), dec, propagate);
-	}
-
-	void decreaseOccupancyLogit(coord_t x, coord_t y, coord_t z, logit_t dec,
-	                            bool propagate = true, depth_t depth = 0)
-	{
-		decreaseOccupancyLogit(derived().toCode(x, y, z, depth), dec, propagate);
-	}
-
-	//
-	// Increase occupancy
-	//
-
-	void increaseOccupancy(Node node, occupancy_t inc, bool propagate = true)
-	{
-		increaseOccupancyLogit(node, toOccupancyChangeLogit(inc), propagate);
-	}
-
-	void increaseOccupancy(Code code, occupancy_t inc, bool propagate = true)
-	{
-		increaseOccupancyLogit(code, toOccupancyChangeLogit(inc), propagate);
-	}
-
-	void increaseOccupancy(Key key, occupancy_t inc, bool propagate = true)
-	{
-		increaseOccupancy(derived().toCode(key), inc, propagate);
-	}
-
-	void increaseOccupancy(Point coord, occupancy_t inc, bool propagate = true,
-	                       depth_t depth = 0)
-	{
-		increaseOccupancy(derived().toCode(coord, depth), inc, propagate);
-	}
-
-	void increaseOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t inc,
-	                       bool propagate = true, depth_t depth = 0)
-	{
-		increaseOccupancy(derived().toCode(x, y, z, depth), inc, propagate);
-	}
-
-	//
-	// Decrease occupancy
-	//
-
-	void decreaseOccupancy(Node node, occupancy_t dec, bool propagate = true)
-	{
-		decreaseOccupancyLogit(node, toOccupancyChangeLogit(dec), propagate);
-	}
-
-	void decreaseOccupancy(Code code, occupancy_t dec, bool propagate = true)
-	{
-		decreaseOccupancyLogit(code, toOccupancyChangeLogit(dec), propagate);
-	}
-
-	void decreaseOccupancy(Key key, occupancy_t dec, bool propagate = true)
-	{
-		decreaseOccupancy(derived().toCode(key), dec, propagate);
-	}
-
-	void decreaseOccupancy(Point coord, occupancy_t dec, bool propagate = true,
-	                       depth_t depth = 0)
-	{
-		decreaseOccupancy(derived().toCode(coord, depth), dec, propagate);
-	}
-
-	void decreaseOccupancy(coord_t x, coord_t y, coord_t z, occupancy_t dec,
-	                       bool propagate = true, depth_t depth = 0)
-	{
-		decreaseOccupancy(derived().toCode(x, y, z, depth), dec, propagate);
-	}
-
  protected:
 	//
 	// Constructors
@@ -822,7 +825,8 @@ class OccupancyMap
 	void initRoot()
 	{
 		auto const occ = toOccupancyLogit(0.5);
-		derived().root().setOccupancyIndex(derived().rootIndex(), occ);
+		derived().root().setOccupancy(derived().rootIndex(), occ);
+		// TODO: Update
 		derived().root().setContainsUnknownIndex(derived().rootIndex(), isUnknown(occ));
 		derived().root().setContainsFreeIndex(derived().rootIndex(), isFree(occ));
 		derived().root().setContainsOccupiedIndex(derived().rootIndex(), isOccupied(occ));
@@ -835,9 +839,11 @@ class OccupancyMap
 	template <std::size_t N, class T>
 	void updateNode(OccupancyNode<N>& node, IndexField const indices, T const& children)
 	{
+		auto prop = occupancyPropagationCriteria();
+
 		if constexpr (1 == N) {
 			auto fun = [](OccupancyNode<1> const node) { return node.occupancy[0]; };
-			switch (prop_criteria_) {
+			switch (prop) {
 				case PropagationCriteria::MIN:
 					node.occupancy[0] = min(children, fun);
 					break;
@@ -861,7 +867,7 @@ class OccupancyMap
 					continue;
 				}
 
-				switch (prop_criteria_) {
+				switch (prop) {
 					case PropagationCriteria::MIN:
 						node.occupancy[index] = min(children[index].occupancy);
 						break;

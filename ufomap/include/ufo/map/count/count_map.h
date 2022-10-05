@@ -44,8 +44,8 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/counter/counter_node.h>
-#include <ufo/map/counter/counter_predicate.h>
+#include <ufo/map/count/count_node.h>
+#include <ufo/map/count/count_predicate.h>
 
 // STL
 #include <cstdint>
@@ -60,77 +60,77 @@ class CountMap
 {
  public:
 	//
-	// Get counter
+	// Get count
 	//
 
-	constexpr counter_t getCounter(Node node) const noexcept
+	[[nodiscard]] count_t count(Node node) const
 	{
-		return getCounter(derived().getLeafNode(node));
+		return derived().leafNode(node).count(node.index());
 	}
 
-	counter_t getCounter(Code code) const
+	[[nodiscard]] count_t count(Code code) const
 	{
-		return getCounter(derived().getLeafNode(code));
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		return n.count(code.index(d));
 	}
 
-	counter_t getCounter(Key key) const { return getCounter(Derived::toCode(key)); }
+	[[nodiscard]] count_t count(Key key) const { return count(derived().toCode(key)); }
 
-	counter_t getCounter(Point coord, depth_t depth = 0) const
+	[[nodiscard]] count_t count(Point coord, depth_t depth = 0) const
 	{
-		return getCounter(derived().toCode(coord, depth));
+		return count(derived().toCode(coord, depth));
 	}
 
-	counter_t getCounter(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	[[nodiscard]] count_t count(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
-		return getCounter(derived().toCode(x, y, z, depth));
+		return count(derived().toCode(x, y, z, depth));
 	}
 
 	//
-	// Set counter
+	// Set count
 	//
 
-	void setCounter(Node node, counter_t counter, bool propagate = true)
+	void setCount(Node node, count_t count, bool propagate = true)
 	{
 		derived().apply(
-		    node, [this, counter](auto const& node) { setCounter(node, counter); },
-		    propagate);
+		    node, [count](auto& node, index_t index) { node.setCount(index, count); },
+		    [count](auto& node) { node.setCount(count); }, propagate);
 	}
 
-	void setCounter(Code code, counter_t counter, bool propagate = true)
+	void setCount(Code code, count_t count, bool propagate = true)
 	{
 		derived().apply(
-		    code, [this, counter](auto const& node) { setCounter(node, counter); },
-		    propagate);
+		    code, [count](auto& node, index_t index) { node.setCount(index, count); },
+		    [count](auto& node) { node.setCount(count); }, propagate);
 	}
 
-	void setCounter(Key key, counter_t counter, bool propagate = true)
+	void setCount(Key key, count_t count, bool propagate = true)
 	{
-		setCounter(Derived::toCode(key), counter, propagate);
+		setCount(derived().toCode(key), count, propagate);
 	}
 
-	void setCounter(Point coord, counter_t counter, bool propagate = true,
-	                depth_t depth = 0)
+	void setCount(Point coord, count_t count, bool propagate = true, depth_t depth = 0)
 	{
-		setCounter(derived().toCode(coord, depth), counter, propagate);
+		setCount(derived().toCode(coord, depth), count, propagate);
 	}
 
-	void setCounter(coord_t x, coord_t y, coord_t z, counter_t counter,
-	                bool propagate = true, depth_t depth = 0)
+	void setCount(coord_t x, coord_t y, coord_t z, count_t count, bool propagate = true,
+	              depth_t depth = 0)
 	{
-		setCounter(derived().toCode(x, y, z, depth), counter, propagate);
+		setCount(derived().toCode(x, y, z, depth), count, propagate);
 	}
 
 	//
 	// Propagation criteria
 	//
 
-	constexpr PropagationCriteria counterPropagationCriteria() const noexcept
+	[[nodiscard]] constexpr PropagationCriteria countPropagationCriteria() const noexcept
 	{
 		return prop_criteria_;
 	}
 
-	constexpr void setCounterPropagationCriteria(PropagationCriteria prop_criteria,
-	                                             bool propagate = true) noexcept
+	void setCountPropagationCriteria(PropagationCriteria prop_criteria,
+	                                 bool propagate = true)
 	{
 		if (prop_criteria_ == prop_criteria) {
 			return;
@@ -149,129 +149,191 @@ class CountMap
 
  protected:
 	//
+	// Constructors
+	//
+
+	CountMap() = default
+
+	    CountMap(CountMap const&) = default;
+
+	CountMap(CountMap&&) = default;
+
+	template <class Derived2>
+	CountMap(CountMap<Derived2> const&)
+	{
+	}
+
+	//
+	// Assignment operator
+	//
+
+	CountMap& operator=(CountMap const&) = default;
+
+	CountMap& operator=(CountMap&&) = default;
+
+	template <class Derived2>
+	CountMap& operator=(CountMap<Derived2> const&)
+	{
+		return *this;
+	}
+
+	//
 	// Derived
 	//
 
-	constexpr Derived& derived() { return *static_cast<Derived*>(this); }
+	[[nodiscard]] constexpr Derived& derived() { return *static_cast<Derived*>(this); }
 
-	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
+	[[nodiscard]] constexpr Derived const& derived() const
+	{
+		return *static_cast<Derived const*>(this);
+	}
 
 	//
 	// Initilize root
 	//
 
-	void initRoot()
-	{
-		// FIXME: What should this be?
-		setCounter(derived().getRoot(), 0);
-	}
-
-	//
-	// Get distance
-	//
-
-	static constexpr counter_t getCounter(LeafNode const& node) { return node.counter; }
-
-	//
-	// Set distance
-	//
-
-	static constexpr void setDistance(LeafNode& node, distance_t distance)
-	{
-		node.distance = distance;
-	}
+	void initRoot() { derived().root().setCount(derived().rootIndex(), 0); }
 
 	//
 	// Update node
 	//
 
-	void updateNode(DistanceNode) {}
-
-	template <class T>
-	void updateNode(DistanceNode& node, T const& children)
+	template <std::size_t N, class T>
+	void updateNode(CountMap<N>& node, IndexField const indices, T const& children)
 	{
-		switch (distance_prop_criteria_) {
-			case PropagationCriteria::MIN:
-				setDistance(node, minChildDistance(children));
-				break;
-			case PropagationCriteria::MAX:
-				setDistance(node, maxChildDistance(children));
-				break;
-			case PropagationCriteria::MEAN:
-				setDistance(node, averageChildDistance(children));
-				break;
+		auto prop = countPropagationCriteria();
+		if constexpr (1 == N) {
+			std::array<count_t, children.size()> child_count;
+			for (std::size_t i = 0; children.size() != i; ++i) {
+				child_count[i] = children[i].count(0);
+			}
+			switch (prop) {
+				case PropagationCriteria::MIN:
+					node.setCount(min(child_count));
+					break;
+				case PropagationCriteria::MAX:
+					node.setCount(max(child_count));
+					break;
+				case PropagationCriteria::MEAN:
+					node.setCount(mean(child_count));
+					break;
+			}
+		} else {
+			for (std::size_t i = 0; children.size() != i; ++i) {
+				if (indices[i]) {
+					switch (prop) {
+						case PropagationCriteria::MIN:
+							node.setCount(i, min(children[i].beginCount(), children[i].endCound()));
+							break;
+						case PropagationCriteria::MAX:
+							node.setCount(i, max(children[i].beginCount(), children[i].endCount()));
+							break;
+						case PropagationCriteria::MEAN:
+							node.setCount(i, mean(children[i].beginCount(), children[i].endCount()));
+							break;
+					}
+				}
+			}
 		}
-	}
-
-	//
-	// Min child distance
-	//
-
-	template <class T>
-	constexpr distance_t minChildDistance(T const& children) const
-	{
-		// TODO: Implement
-	}
-
-	//
-	// Max child distance
-	//
-
-	template <class T>
-	constexpr distance_t maxChildDistance(T const& children) const
-	{
-		// TODO: Implement
-	}
-
-	//
-	// Average child distance
-	//
-
-	template <class T>
-	constexpr distance_t averageChildDistance(T const& children) const
-	{
-		// TODO: Implement
 	}
 
 	//
 	// Input/output (read/write)
 	//
 
-	static constexpr DataIdentifier dataIdentifier() noexcept
+	[[nodiscard]] static constexpr DataIdentifier dataIdentifier() noexcept
 	{
-		return DataIdentifier::DISTANCE;
+		return DataIdentifier::COUNT;
 	}
 
-	static constexpr bool canReadData(DataIdentifier identifier) noexcept
+	[[nodiscard]] static constexpr bool canReadData(DataIdentifier identifier) noexcept
 	{
 		return dataIdentifier() == identifier;
 	}
 
 	template <class InputIt>
-	void readNodes(std::istream& in, InputIt first, InputIt last)
+	[[nodiscard]] static constexpr std::size_t numData() noexcept
 	{
-		auto const num_nodes = std::distance(first, last);
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
+		return node_type::countSize();
+	}
 
-		auto data = std::make_unique<distance_t[]>(num_nodes);
+	template <class OutputIt>
+	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	{
+		std::uint8_t n;
+		in.read(reinterpret_cast<char*>(&n), sizeof(n));
+		num_nodes *= n;
+
+		auto data = std::make_unique<count_t[]>(num_nodes);
 		in.read(reinterpret_cast<char*>(data.get()),
 		        num_nodes * sizeof(typename decltype(data)::element_type));
 
-		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			setDistance(*first, data[i]);
+		auto const d = data.get();
+		if constexpr (1 == numData<OutputIt>()) {
+			if (1 == n) {
+				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
+					first->node.setCount(*(d + i));
+				}
+			} else {
+				auto prop = countPropagationCriteria();
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
+					switch (prop) {
+						case PropagationCriteria::MIN:
+							first->node.setCount(min(d + i, d + i + 8));
+							break;
+						case PropagationCriteria::MAX:
+							first->node.setCount(max(d + i, d + i + 8));
+							break;
+						case PropagationCriteria::MEAN:
+							first->node.setCount(mean(d + i, d + i + 8));
+							break;
+					}
+				}
+			}
+		} else {
+			if (1 == n) {
+				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
+					if (first->index_field.all()) {
+						first->node.setCount(*(d + i));
+					} else {
+						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
+							if (first->index_field[index]) {
+								first->node.setCount(index, *(d + i));
+							}
+						}
+					}
+				}
+			} else {
+				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
+					if (first->index_field.all()) {
+						std::copy(d + i, d + i + 8, first->node.countData());
+					} else {
+						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
+							if (first->index_field[index]) {
+								first->node.setCount(index, *(d + i + index));
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool compress,
-	                int compression_acceleration_level, int compression_level) const
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
 	{
-		auto const num_nodes = std::distance(first, last);
+		constexpr std::uint8_t const n = numData<InputIt>();
+		num_nodes *= n;
 
-		auto data = std::make_unique<distance_t[]>(num_nodes);
-		for (std::size_t i = 0; num_nodes != i; ++i, std::advance(first, 1)) {
-			data[i] = getDistance(*first);
+		auto data = std::make_unique<count_t[]>(num_nodes);
+		auto d = data.get();
+		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
+			std::copy((first->node.beginCount(), first->node.endCount(), d + i);
 		}
 
+		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}

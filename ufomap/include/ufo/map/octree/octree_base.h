@@ -4377,7 +4377,7 @@ class OctreeBase
 
 			IndexField const valid_return = *tree++;
 			nodes.emplace_back(node[i], valid_return);
-			setModified(node[i], valid_return);
+			node[i].modified = valid_return;
 		}
 
 		return tree;
@@ -4419,15 +4419,15 @@ class OctreeBase
 	                                      depth_t const depth, IndexField const* tree,
 	                                      std::vector<NodeAndIndices>& nodes)
 	{
-		for (index_t index = 0; 8 != index; ++index) {
-			if (!indices[index]) {
+		for (index_t i = 0; 8 != i; ++i) {
+			if (!indices[i]) {
 				continue;
 			}
 
 			IndexField const children_valid_return = *tree++;
 
 			if (1 == depth) {
-				if (0 == children_valid_return) {
+				if (children_valid_return.none()) {
 					continue;
 				}
 
@@ -4435,7 +4435,7 @@ class OctreeBase
 			} else {
 				IndexField const children_valid_inner = *tree++;
 
-				if (0 == children_valid_return && 0 == children_valid_inner) {
+				if (children_valid_return.none() && children_valid_inner.none()) {
 					continue;
 				}
 
@@ -4446,22 +4446,22 @@ class OctreeBase
 		return tree;
 
 		if (1 == depth) {
-			if (0 == children_valid_return) } else {
+			if (children_valid_return.none()) } else {
 		}
 
 		// TODO: Implement
 
 		if (1 == depth) {
-			if (0 == children_valid_return) {
+			if (children_valid_return.none()) {
 				return tree;
 			}
 
-			setModified(node, children_valid_return);
+			node.modified = children_valid_return;
 
 			createLeafChildren(node);
 
 			for (std::size_t i = 0; 8 != i; ++i) {
-				if ((children_valid_return >> i) & 1U) {
+				if (children_valid_return[i]) {
 					nodes.push_back(
 					    std::ref(leafChild(node, i)));  // TODO: push_back or emplace_back?
 				}
@@ -4469,19 +4469,19 @@ class OctreeBase
 		} else {
 			IndexField const child_valid_inner = *indicators++;
 
-			if (0 == children_valid_return && 0 == child_valid_inner) {
+			if (children_valid_return.none() && child_valid_inner.none()) {
 				return indicators;
 			}
 
-			setModified(node, true);
+			node.modified = ...;
 
 			createInnerChildren(node, depth);
 
 			for (std::size_t i = 0; 8 != i; ++i) {
-				if ((children_valid_return >> i) & 1U) {
+				if (children_valid_return[i]) {
 					nodes.push_back(std::ref(static_cast<LeafNode&>(
 					    innerChild(node, i))));  // TODO: push_back or emplace_back?
-				} else if ((child_valid_inner >> i) & 1U) {
+				} else if (child_valid_inner[i]) {
 					indicators =
 					    retrieveNodesRecurs(indicators, nodes, innerChild(node, i), depth - 1);
 				}
@@ -4592,8 +4592,8 @@ class OctreeBase
 		InnerNode& root = root();
 		depth_t depth = rootDepth();
 
-		IndexField valid_return = leaf(root) & modified(root);
-		IndexField valid_inner = modified(root);
+		IndexField valid_return = root.leaf & root.modified;
+		IndexField valid_inner = root.modified;
 
 		tree.push_back(valid_return);
 		tree.push_back(valid_inner);
@@ -4615,7 +4615,7 @@ class OctreeBase
 			}
 		}
 
-		resetModified(root, valid_inner);
+		root.modified.reset();
 
 		return {std::move(tree), std::move(nodes)};  // FIXME: Check if RVO
 	}
@@ -4625,25 +4625,25 @@ class OctreeBase
 	                        std::vector<IndexField>& tree,
 	                        std::vector<ConstNodeAndIndices>& nodes)
 	{
-		for (index_t index = 0; node_block.size() != index; ++index) {
-			if (indices[index]) {
+		for (index_t i = 0; node_block.size() != i; ++i) {
+			if (indices[i]) {
 				continue;
 			}
 
-			IndexField m = modified(node_block[index]);
+			IndexField m = node_block[i].modified;
 			tree.push_back(m);
 
 			if (m.none()) {
 				continue;
 			}
 
-			nodes.emplace_back(node_block[index], m);
+			nodes.emplace_back(node_block[i], m);
 
 			if constexpr (Propagate) {
-				propagate(node_block[index], m);
+				propagate(node_block[i], m);
 			}
 
-			resetModified(node_block[index]);
+			node_block[i].modified.reset();
 		}
 	}
 
@@ -4657,8 +4657,8 @@ class OctreeBase
 				continue;
 			}
 
-			IndexField m = modified(node_block[i]);
-			IndexField l = leaf(node_block[i]);
+			IndexField m = node_block[i].modified;
+			IndexField l = node_block[i].leaf;
 
 			IndexField valid_return = m & l;
 			IndexField valid_inner = m & ~l;
@@ -4687,7 +4687,7 @@ class OctreeBase
 				propagate(node_block[i], m);
 			}
 
-			resetModified(node_block[i]);
+			node_block[i].modified.reset();
 
 			if (nodes.size() == cur_nodes_size) {
 				tree.resize(cur_tree_size);

@@ -63,12 +63,20 @@ struct Color {
 	{
 	}
 
-	constexpr bool operator==(Color const rhs) const
-	{
-		return rhs.red == red && rhs.green == green && rhs.blue == blue;
-	}
+	constexpr Color(Color const&) = default;
 
-	constexpr bool operator!=(Color const rhs) const { return !(*this == rhs); }
+	constexpr Color(Color&&) = default;
+
+	Color& operator=(Color const&) = default;
+
+	Color& operator=(Color&&) = default;
+
+	constexpr void swap(Color& other) noexcept
+	{
+		std::swap(red, other.red);
+		std::swap(green, other.green);
+		std::swap(blue, other.blue);
+	}
 
 	[[nodiscard]] constexpr bool isSet() const
 	{
@@ -78,6 +86,22 @@ struct Color {
 	constexpr void clear() { red = green = blue = 0; }
 };
 
+constexpr bool operator==(Color const lhs, Color const rhs)
+{
+	return lhs.red == rhs.red && lhs.green == rhs.green && lhs.blue == rhs.blue;
+}
+
+constexpr bool operator!=(Color const lhs, Color const rhs) { return !(lhs == rhs); }
+
 }  // namespace ufo::map
+
+namespace std
+{
+constexpr void swap(ufo::map::Color& lhs,
+                    ufo::map::Color& rhs) noexcept(noexcept(lhs.swap(rhs)))
+{
+	lhs.swap(rhs);
+}
+}  // namespace std
 
 #endif  // UFO_MAP_COLOR_H

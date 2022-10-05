@@ -63,132 +63,149 @@ class ColorMap
 	// Get color
 	//
 
-	[[nodiscard]] constexpr Color color(Node node) const
+	[[nodiscard]] Color color(Node node) const
 	{
-		return derived().leafNode(node).colorIndex(node.index());
+		return derived().leafNode(node).color(node.index());
 	}
 
-	[[nodiscard]] constexpr Color color(Code code) const
+	[[nodiscard]] Color color(Code code) const
 	{
 		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.colorIndex(code.index(d));
+		return n.color(code.index(d));
 	}
 
-	[[nodiscard]] constexpr Color color(Key key) const
-	{
-		return color(Derived::toCode(key));
-	}
+	[[nodiscard]] Color color(Key key) const { return color(derived().toCode(key)); }
 
-	[[nodiscard]] constexpr Color color(Point coord, depth_t depth = 0) const
+	[[nodiscard]] Color color(Point coord, depth_t depth = 0) const
 	{
 		return color(derived().toCode(coord, depth));
 	}
 
-	[[nodiscard]] constexpr Color color(coord_t x, coord_t y, coord_t z,
-	                                    depth_t depth = 0) const
+	[[nodiscard]] Color color(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return color(derived().toCode(x, y, z, depth));
 	}
-
-	// TODO: Add has color?
 
 	//
 	// Set color
 	//
 
-	constexpr void setColor(Node node, Color color, bool propagate = true)
+	void setColor(Node node, Color color, bool propagate = true)
 	{
 		derived().apply(
-		    node,
-		    [color](auto& node, index_t const index) { node.setColorIndex(index, color); },
+		    node, [color](auto& node, index_t index) { node.setColor(index, color); },
 		    [color](auto& node) { node.setColor(color); }, propagate);
 	}
 
-	constexpr void setColor(Node node, color_t red, color_t green, color_t blue,
-	                        bool propagate = true)
+	void setColor(Node node, color_t red, color_t green, color_t blue,
+	              bool propagate = true)
 	{
 		setColor(node, Color(red, green, blue), propagate);
 	}
 
-	constexpr void setColor(Code code, Color color, bool propagate = true)
+	void setColor(Code code, Color color, bool propagate = true)
 	{
 		derived().apply(
-		    code,
-		    [color](auto& node, index_t const index) { node.setColorIndex(index, color); },
+		    code, [color](auto& node, index_t index) { node.setColor(index, color); },
 		    [color](auto& node) { node.setColor(color); }, propagate);
 	}
 
-	constexpr void setColor(Code code, color_t red, color_t green, color_t blue,
-	                        bool propagate = true)
+	void setColor(Code code, color_t red, color_t green, color_t blue,
+	              bool propagate = true)
 	{
 		setColor(code, Color(red, green, blue), propagate);
 	}
 
-	constexpr void setColor(Key key, Color color, bool propagate = true)
+	void setColor(Key key, Color color, bool propagate = true)
 	{
-		setColor(Derived::toCode(key), color, propagate);
+		setColor(derived().toCode(key), color, propagate);
 	}
 
-	constexpr void setColor(Key key, color_t red, color_t green, color_t blue,
-	                        bool propagate = true)
+	void setColor(Key key, color_t red, color_t green, color_t blue, bool propagate = true)
 	{
 		setColor(key, Color(red, green, blue), propagate);
 	}
 
-	constexpr void setColor(Point coord, Color color, bool propagate = true,
-	                        depth_t depth = 0)
+	void setColor(Point coord, Color color, bool propagate = true, depth_t depth = 0)
 	{
 		setColor(derived().toCode(coord, depth), color, propagate);
 	}
 
-	constexpr void setColor(Point coord, color_t red, color_t green, color_t blue,
-	                        bool propagate = true, depth_t depth = 0)
+	void setColor(Point coord, color_t red, color_t green, color_t blue,
+	              bool propagate = true, depth_t depth = 0)
 	{
 		setColor(coord, Color(red, green, blue), propagate, depth);
 	}
 
-	constexpr void setColor(coord_t x, coord_t y, coord_t z, Color color,
-	                        bool propagate = true, depth_t depth = 0)
+	void setColor(coord_t x, coord_t y, coord_t z, Color color, bool propagate = true,
+	              depth_t depth = 0)
 	{
 		setColor(derived().toCode(x, y, z, depth), color, propagate);
 	}
 
-	constexpr void setColor(coord_t x, coord_t y, coord_t z, color_t red, color_t green,
-	                        color_t blue, bool propagate = true, depth_t depth = 0)
+	void setColor(coord_t x, coord_t y, coord_t z, color_t red, color_t green, color_t blue,
+	              bool propagate = true, depth_t depth = 0)
 	{
 		setColor(x, y, z, Color(red, green, blue), propagate, depth);
+	}
+
+	//
+	// Has color
+	//
+
+	[[nodiscard]] bool hasColor(Node node) const
+	{
+		return derived().leafNode(node).hasColor(node.index());
+	}
+
+	[[nodiscard]] bool hasColor(Code code) const
+	{
+		auto [n, d] = derived().leafNodeAndDepth(code);
+		return n.hasColor(code.index(d));
+	}
+
+	[[nodiscard]] bool hasColor(Key key) const { return hasColor(derived().toCode(key)); }
+
+	[[nodiscard]] bool hasColor(Point coord, depth_t depth = 0) const
+	{
+		return hasColor(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] bool hasColor(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	{
+		return hasColor(derived().toCode(x, y, z, depth));
 	}
 
 	//
 	// Clear color
 	//
 
-	constexpr void clearColor(Node node, bool propagate = true)
+	void clearColor(Node node, bool propagate = true)
 	{
 		derived().apply(
-		    node, [](auto& node, index_t const index) { node.clearColorIndex(index); },
+		    node, [](auto& node, index_t index) { node.clearColor(index); },
 		    [](auto& node) { node.clearColor(); }, propagate);
 	}
 
-	constexpr void clearColor(Code code, bool propagate = true)
+	void clearColor(Code code, bool propagate = true)
 	{
 		derived().apply(
-		    code, [](auto& node, index_t const index) { node.clearColorIndex(index); },
+		    code, [](auto& node, index_t index) { node.clearColor(index); },
 		    [](auto& node) { node.clearColor(); }, propagate);
 	}
 
-	constexpr void clearColor(Key key, bool propagate = true)
+	void clearColor(Key key, bool propagate = true)
 	{
-		clearColor(Derived::toCode(key), propagate);
+		clearColor(derived().toCode(key), propagate);
 	}
 
-	constexpr void clearColor(Point coord, bool propagate = true, depth_t depth = 0)
+	void clearColor(Point coord, bool propagate = true, depth_t depth = 0)
 	{
 		clearColor(derived().toCode(coord, depth), propagate);
 	}
 
-	constexpr void clearColor(coord_t x, coord_t y, coord_t z, bool propagate = true,
-	                          depth_t depth = 0)
+	void clearColor(coord_t x, coord_t y, coord_t z, bool propagate = true,
+	                depth_t depth = 0)
 	{
 		clearColor(derived().toCode(x, y, z, depth), propagate);
 	}
@@ -200,12 +217,12 @@ class ColorMap
 
 	ColorMap() = default;
 
-	ColorMap(ColorMap const& other) = default;
+	ColorMap(ColorMap const&) = default;
 
-	ColorMap(ColorMap&& other) = default;
+	ColorMap(ColorMap&&) = default;
 
 	template <class Derived2>
-	ColorMap(ColorMap<Derived2> const& other)
+	ColorMap(ColorMap<Derived2> const&)
 	{
 	}
 
@@ -213,12 +230,12 @@ class ColorMap
 	// Assignment operator
 	//
 
-	ColorMap& operator=(ColorMap const& rhs) = default;
+	ColorMap& operator=(ColorMap const&) = default;
 
-	ColorMap& operator=(ColorMap&& rhs) = default;
+	ColorMap& operator=(ColorMap&&) = default;
 
 	template <class Derived2>
-	ColorMap& operator=(ColorMap<Derived2> const& rhs)
+	ColorMap& operator=(ColorMap<Derived2> const&)
 	{
 		return *this;
 	}
@@ -238,7 +255,7 @@ class ColorMap
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().clearColorIndex(derived().rootIndex()); }
+	void initRoot() { derived().root().clearColor(derived().rootIndex()); }
 
 	//
 	// Update node
@@ -256,30 +273,15 @@ class ColorMap
 				green[i] = children[i].green[0];
 				blue[i] = children[i].blue[0];
 			}
-			node.red[0] = average(red);
-			node.green[0] = average(green);
-			node.blue[0] = average(blue);
+			node.setColor(mean(red), mean(green), mean(blue));
 		} else {
-			for (std::size_t index = 0; children.size() != index; ++index) {
-				if (indices[index]) {
-					node.red[index] = average(children[index].red);
-					node.green[index] = average(children[index].green);
-					node.blue[index] = average(children[index].blue);
+			for (std::size_t i = 0; children.size() != i; ++i) {
+				if (indices[i]) {
+					node.setColor(i, mean(children[i].red), mean(children[i].green),
+					              mean(children[i].blue));
 				}
 			}
 		}
-	}
-
-	template <class Container>
-	[[nodiscard]] static constexpr color_t average(Container const& c)
-	{
-		return average(std::cbegin(c), std::cend(c));
-	}
-
-	template <class InputIt>
-	[[nodiscard]] static constexpr color_t average(InputIt first, InputIt last)
-	{
-		return std::reduce(first, last, 0.0) / double(std::distance(first, last));
 	}
 
 	//
@@ -297,7 +299,7 @@ class ColorMap
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr uint8_t numData() noexcept
+	[[nodiscard]] static constexpr std::size_t numData() noexcept
 	{
 		using value_type = typename std::iterator_traits<InputIt>::value_type;
 		using node_type = typename value_type::node_type;
@@ -307,7 +309,7 @@ class ColorMap
 	template <class OutputIt>
 	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
 	{
-		uint8_t n;
+		std::uint8_t n;
 		in.read(reinterpret_cast<char*>(&n), sizeof(n));
 		std::size_t const s = 3 * n;
 		num_nodes *= s;
@@ -320,30 +322,23 @@ class ColorMap
 		if constexpr (1 == numData<OutputIt>()) {
 			if (1 == n) {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 3) {
-					first->node.red[0] = *(d + i);
-					first->node.green[0] = *(d + i + 1);
-					first->node.blue[0] = *(d + i + 2);
+					first->node.setColor(*(d + i), *(d + i + 1), *(d + i + 2));
 				}
 			} else {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 24) {
-					first->node.red[0] = average(d + i, d + i + 8);
-					first->node.green[0] = average(d + i + 8, d + i + 16);
-					first->node.blue[0] = average(d + i + 16, d + i + 24);
+					first->node.setColor(mean(d + i, d + i + 8), mean(d + i + 8, d + i + 16),
+					                     mean(d + i + 16, d + i + 24));
 				}
 			}
 		} else {
 			if (1 == n) {
 				for (std::size_t i = 0; i != num_nodes; ++first, i += 3) {
 					if (first->index_field.all()) {
-						first->node.red.fill(*(d + i));
-						first->node.green.fill(*(d + i + 1));
-						first->node.blue.fill(*(d + i + 2));
+						first->node.setColor(*(d + i), *(d + i + 1), *(d + i + 2));
 					} else {
-						for (std::size_t index = 0; first->node.red.size() != index; ++index) {
-							if (first.index_field[index]) {
-								first->node.red[index] = *(d + i);
-								first->node.green[index] = *(d + i + 1);
-								first->node.blue[index] = *(d + i + 2);
+						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
+							if (first->index_field[index]) {
+								first->node.setColor(index, *(d + i), *(d + i + 1), *(d + i + 2));
 							}
 						}
 					}
@@ -355,11 +350,10 @@ class ColorMap
 						std::copy(d + i + 8, d + i + 16, first->node.green.data());
 						std::copy(d + i + 16, d + i + 24, first->node.blue.data());
 					} else {
-						for (std::size_t index = 0; first->node.red.size() != index; ++index) {
-							if (first.index_field[index]) {
-								first->node.red[index] = *(d + i + index);
-								first->node.green[index] = *(d + i + index + 8);
-								first->node.blue[index] = *(d + i + index + 16);
+						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
+							if (first->index_field[index]) {
+								first->node.setColor(index, *(d + i + index), *(d + i + index + 8),
+								                     *(d + i + index + 16));
 							}
 						}
 					}
@@ -369,9 +363,9 @@ class ColorMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
 	{
-		constexpr uint8_t const n = numData<InputIt>();
+		constexpr std::uint8_t const n = numData<InputIt>();
 		constexpr std::size_t const s = 3 * n;
 		num_nodes *= s;
 

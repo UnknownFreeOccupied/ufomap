@@ -42,6 +42,9 @@
 #ifndef UFO_MAP_EMPTY_NODE_H
 #define UFO_MAP_EMPTY_NODE_H
 
+// UFO
+#include <ufo/map/types.h>
+
 // STL
 #include <cstdint>
 
@@ -49,10 +52,10 @@ namespace ufo::map
 {
 template <std::size_t N>
 struct EmptyNode {
-	constexpr void fill(EmptyNode const, index_t const) const noexcept {}
+	static constexpr void fill(EmptyNode const, index_t const) noexcept {}
 
-	[[nodiscard]] constexpr bool isCollapsible(EmptyNode const,
-	                                           index_t const) const noexcept
+	[[nodiscard]] static constexpr bool isCollapsible(EmptyNode const,
+	                                                  index_t const) noexcept
 	{
 		return true;
 	}
