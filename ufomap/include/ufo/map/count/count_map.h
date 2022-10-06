@@ -203,19 +203,16 @@ class CountMap
 	{
 		auto prop = countPropagationCriteria();
 		if constexpr (1 == N) {
-			std::array<count_t, children.size()> child_count;
-			for (std::size_t i = 0; children.size() != i; ++i) {
-				child_count[i] = children[i].count(0);
-			}
+			auto fun = [](TimeNode<1> node) { return node.count(0); };
 			switch (prop) {
 				case PropagationCriteria::MIN:
-					node.setCount(min(child_count));
+					node.setCount(min(children, fun));
 					break;
 				case PropagationCriteria::MAX:
-					node.setCount(max(child_count));
+					node.setCount(max(children, fun));
 					break;
 				case PropagationCriteria::MEAN:
-					node.setCount(mean(child_count));
+					node.setCount(mean(children, fun));
 					break;
 			}
 		} else {

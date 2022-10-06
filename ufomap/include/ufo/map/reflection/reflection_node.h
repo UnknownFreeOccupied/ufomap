@@ -52,10 +52,6 @@ namespace ufo::map
 {
 template <std::size_t N = 8>
 struct ReflectionNode {
-	// Data
-	std::array<count_t, N> hits;
-	std::array<count_t, N> misses;
-
 	//
 	// Size
 	//
@@ -68,13 +64,8 @@ struct ReflectionNode {
 
 	void fill(ReflectionNode const parent, index_t const index)
 	{
-		if constexpr (1 == N) {
-			hits = parent.hits;
-			misses = parent.misses;
-		} else {
-			hits.fill(parent.hits[index]);
-			misses.fill(parent.misses[index]);
-		}
+		setHits(parent.hits(index));
+		setMisses(parent.misses(index));
 	}
 
 	//
@@ -85,24 +76,20 @@ struct ReflectionNode {
 	                                           index_t const index) const
 	{
 		// TODO: Use floor(log2(X))?
-		if constexpr (1 == N) {
-			return hits == parent.hits && misses == parent.misses;
-		} else {
-			return all_of(hits, [p = parent.hits[index]](auto const e) { return e == p; }) &&
-			       all_of(misses, [p = parent.misses[index]](auto const e) { return e == p; });
-		}
+		return all_of(hits_, [p = parent.hits(index)](auto const e) { return e == p; }) &&
+		       all_of(misses_, [p = parent.misses(index)](auto const e) { return e == p; });
 	}
 
 	//
 	// Get hits
 	//
 
-	[[nodiscard]] constexpr count_t hitsIndex(index_t const index) const
+	[[nodiscard]] constexpr count_t hits(index_t const index) const
 	{
 		if constexpr (1 == N) {
-			return hits[0];
+			return hits_[0];
 		} else {
-			return hits[index];
+			return hits_[index];
 		}
 	}
 
@@ -110,14 +97,14 @@ struct ReflectionNode {
 	// Set hits
 	//
 
-	void setHits(count_t const value) { hits.fill(value); }
+	void setHits(count_t const value) { hits_.fill(value); }
 
-	void setHitsIndex(index_t const index, count_t const value)
+	void setHits(index_t const index, count_t const value)
 	{
 		if constexpr (1 == N) {
 			setHits(value);
 		} else {
-			hits[index] = value;
+			hits_[index] = value;
 		}
 	}
 
@@ -125,12 +112,12 @@ struct ReflectionNode {
 	// Get misses
 	//
 
-	[[nodiscard]] constexpr count_t missesIndex(index_t const index) const
+	[[nodiscard]] constexpr count_t misses(index_t const index) const
 	{
 		if constexpr (1 == N) {
-			return misses[0];
+			return misses_[0];
 		} else {
-			return misses[index];
+			return misses_[index];
 		}
 	}
 
@@ -138,16 +125,21 @@ struct ReflectionNode {
 	// Set misses
 	//
 
-	void setMisses(count_t const value) { misses.fill(value); }
+	void setMisses(count_t const value) { misses_.fill(value); }
 
-	void setMissesIndex(index_t const index, count_t const value)
+	void setMisses(index_t const index, count_t const value)
 	{
 		if constexpr (1 == N) {
 			setMisses(value);
 		} else {
-			misses[index] = value;
+			misses_[index] = value;
 		}
 	}
+
+ private:
+	// Data
+	std::array<count_t, N> hits_;
+	std::array<count_t, N> misses_;
 };
 }  // namespace ufo::map
 

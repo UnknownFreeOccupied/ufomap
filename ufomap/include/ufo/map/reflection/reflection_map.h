@@ -60,18 +60,18 @@ class ReflectionMap
 	// Get hits
 	//
 
-	[[nodiscard]] constexpr count_t hits(Node node) const
+	[[nodiscard]] count_t hits(Node node) const
 	{
-		return derived().leafNode(node).hitsIndex(node.index());
+		return derived().leafNode(node).hits(node.index());
 	}
 
 	[[nodiscard]] count_t hits(Code code) const
 	{
 		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.hitsIndex(code.index(d));
+		return n.hits(code.index(d));
 	}
 
-	[[nodiscard]] count_t hits(Key key) const { return hits(Derived::toCode(key)); }
+	[[nodiscard]] count_t hits(Key key) const { return hits(derived().toCode(key)); }
 
 	[[nodiscard]] count_t hits(Point coord, depth_t depth = 0) const
 	{
@@ -90,20 +90,20 @@ class ReflectionMap
 	void setHits(Node node, count_t hits, bool propagate = true)
 	{
 		derived().apply(
-		    node, [hits](auto& node, index_t const index) { node.setHitsIndex(index, hits); },
+		    node, [hits](auto& node, index_t index) { node.setHits(index, hits); },
 		    [hits](auto& node) { node.setHits(hits); }, propagate);
 	}
 
 	void setHits(Code code, count_t hits, bool propagate = true)
 	{
 		derived().apply(
-		    code, [hits](auto& node, index_t const index) { node.setHitsIndex(index, hits); },
+		    code, [hits](auto& node, index_t index) { node.setHits(index, hits); },
 		    [hits](auto& node) { node.setHits(hits); }, propagate);
 	}
 
 	void setHits(Key key, count_t hits, bool propagate = true)
 	{
-		setHits(Derived::toCode(key), hits, propagate);
+		setHits(derived().toCode(key), hits, propagate);
 	}
 
 	void setHits(Point coord, count_t hits, bool propagate = true, depth_t depth = 0)
@@ -124,22 +124,20 @@ class ReflectionMap
 	void incrementHits(Node node, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node,
-		    [inc](auto& node, index_t const index) { node.incrementHitsIndex(index, inc); },
+		    node, [inc](auto& node, index_t index) { node.incrementHits(index, inc); },
 		    [inc](auto& node) { node.incrementHits(inc); }, propagate);
 	}
 
 	void incrementHits(Code code, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code,
-		    [inc](auto& node, index_t const index) { node.incrementHitsIndex(index, inc); },
+		    code, [inc](auto& node, index_t index) { node.incrementHits(index, inc); },
 		    [inc](auto& node) { node.incrementHits(inc); }, propagate);
 	}
 
 	void incrementHits(Key key, count_t inc, bool propagate = true)
 	{
-		incrementHits(Derived::toCode(key), inc, propagate);
+		incrementHits(derived().toCode(key), inc, propagate);
 	}
 
 	void incrementHits(Point coord, count_t inc, bool propagate = true, depth_t depth = 0)
@@ -160,22 +158,20 @@ class ReflectionMap
 	void decrementHits(Node node, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    node,
-		    [dec](auto& node, index_t const index) { node.decrementHitsIndex(index, dec); },
+		    node, [dec](auto& node, index_t index) { node.decrementHits(index, dec); },
 		    [dec](auto& node) { node.decrementHits(dec); }, propagate);
 	}
 
 	void decrementHits(Code code, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    code,
-		    [dec](auto& node, index_t const index) { node.decrementHitsIndex(index, dec); },
+		    code, [dec](auto& node, index_t index) { node.decrementHits(index, dec); },
 		    [dec](auto& node) { node.decrementHits(dec); }, propagate);
 	}
 
 	void decrementHits(Key key, count_t dec, bool propagate = true)
 	{
-		decrementHits(Derived::toCode(key), dec, propagate);
+		decrementHits(derived().toCode(key), dec, propagate);
 	}
 
 	void decrementHits(Point coord, count_t dec, bool propagate = true, depth_t depth = 0)
@@ -193,18 +189,18 @@ class ReflectionMap
 	// Get misses
 	//
 
-	[[nodiscard]] constexpr count_t misses(Node node) const
+	[[nodiscard]] count_t misses(Node node) const
 	{
-		return derived().leafNode(node).missesIndex(node.index());
+		return derived().leafNode(node).misses(node.index());
 	}
 
 	[[nodiscard]] count_t misses(Code code) const
 	{
 		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.missesIndex(code.index(d));
+		return n.misses(code.index(d));
 	}
 
-	[[nodiscard]] count_t misses(Key key) const { return misses(Derived::toCode(key)); }
+	[[nodiscard]] count_t misses(Key key) const { return misses(derived().toCode(key)); }
 
 	[[nodiscard]] count_t misses(Point coord, depth_t depth = 0) const
 	{
@@ -223,22 +219,20 @@ class ReflectionMap
 	void setMisses(Node node, count_t misses, bool propagate = true)
 	{
 		derived().apply(
-		    node,
-		    [misses](auto& node, index_t const index) { node.setMissesIndex(index, misses); },
+		    node, [misses](auto& node, index_t index) { node.setMisses(index, misses); },
 		    [misses](auto& node) { node.setMisses(misses); }, propagate);
 	}
 
 	void setMisses(Code code, count_t misses, bool propagate = true)
 	{
 		derived().apply(
-		    code,
-		    [misses](auto& node, index_t const index) { node.setMissesIndex(index, misses); },
+		    code, [misses](auto& node, index_t index) { node.setMisses(index, misses); },
 		    [misses](auto& node) { node.setMisses(misses); }, propagate);
 	}
 
 	void setMisses(Key key, count_t misses, bool propagate = true)
 	{
-		setMisses(Derived::toCode(key), misses, propagate);
+		setMisses(derived().toCode(key), misses, propagate);
 	}
 
 	void setMisses(Point coord, count_t misses, bool propagate = true, depth_t depth = 0)
@@ -259,22 +253,20 @@ class ReflectionMap
 	void incrementMisses(Node node, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node,
-		    [inc](auto& node, index_t const index) { node.incrementMissesIndex(index, inc); },
+		    node, [inc](auto& node, index_t index) { node.incrementMisses(index, inc); },
 		    [inc](auto& node) { node.incrementMisses(inc); }, propagate);
 	}
 
 	void incrementMisses(Code code, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code,
-		    [inc](auto& node, index_t const index) { node.incrementMissesIndex(index, inc); },
+		    code, [inc](auto& node, index_t index) { node.incrementMisses(index, inc); },
 		    [inc](auto& node) { node.incrementMisses(inc); }, propagate);
 	}
 
 	void incrementMisses(Key key, count_t inc, bool propagate = true)
 	{
-		incrementMisses(Derived::toCode(key), inc, propagate);
+		incrementMisses(derived().toCode(key), inc, propagate);
 	}
 
 	void incrementMisses(Point coord, count_t inc, bool propagate = true, depth_t depth = 0)
@@ -295,22 +287,20 @@ class ReflectionMap
 	void decrementMisses(Node node, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    node,
-		    [dec](auto& node, index_t const index) { node.decrementMissesIndex(index, dec); },
+		    node, [dec](auto& node, index_t index) { node.decrementMisses(index, dec); },
 		    [dec](auto& node) { node.decrementMisses(dec); }, propagate);
 	}
 
 	void decrementMisses(Code code, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    code,
-		    [dec](auto& node, index_t const index) { node.decrementMissesIndex(index, dec); },
+		    code, [dec](auto& node, index_t index) { node.decrementMisses(index, dec); },
 		    [dec](auto& node) { node.decrementMisses(dec); }, propagate);
 	}
 
 	void decrementMisses(Key key, count_t dec, bool propagate = true)
 	{
-		decrementMisses(Derived::toCode(key), dec, propagate);
+		decrementMisses(derived().toCode(key), dec, propagate);
 	}
 
 	void decrementMisses(Point coord, count_t dec, bool propagate = true, depth_t depth = 0)
@@ -328,25 +318,27 @@ class ReflectionMap
 	// Get reflectiveness
 	//
 
-	[[nodiscard]] constexpr double reflectiveness(Node node) const
+	[[nodiscard]] double reflectiveness(Node node) const
 	{
 		auto const& n = derived().leafNode(node);
-		double const hits = n.hitsIndex(node.index());
-		double const misses = n.missesIndex(node.index());
+		auto const index = node.index();
+		double const hits = n.hits(index);
+		double const misses = n.misses(index);
 		return hits / (hits + misses);
 	}
 
 	[[nodiscard]] double reflectiveness(Code code) const
 	{
 		auto [n, d] = derived().leafNodeAndDepth(code);
-		double const hits = n.hitsIndex(code.index(d));
-		double const misses = n.missesIndex(code.index(d));
+		auto const index = code.index(d);
+		double const hits = n.hits(index);
+		double const misses = n.misses(index);
 		return hits / (hits + misses);
 	}
 
 	[[nodiscard]] double reflectiveness(Key key) const
 	{
-		return reflectiveness(Derived::toCode(key));
+		return reflectiveness(derived().toCode(key));
 	}
 
 	[[nodiscard]] double reflectiveness(Point coord, depth_t depth = 0) const
@@ -437,8 +429,8 @@ class ReflectionMap
 
 	void initRoot()
 	{
-		derived().root().setHitsIndex(derived().rootIndex(), 0);
-		derived().root().setMissesIndex(derived().rootIndex(), 0);
+		derived().root().setHits(derived().rootIndex(), 0);
+		derived().root().setMisses(derived().rootIndex(), 0);
 	}
 
 	//

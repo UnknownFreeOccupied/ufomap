@@ -198,26 +198,33 @@ class OccupancyMap
 
 	void increaseOccupancyLogit(Node node, logit_t inc, bool propagate = true)
 	{
-		// TODO: Implement
-
 		derived().apply(
 		    node,
-		    [this, inc](auto& node, index_t const index) {
-			    increaseOccupancyLogit(node, index, inc);
+		    [inc](auto& node, index_t index) {
+			    // TODO: Implement
+			    node.setOccupancy(index, increaseLogit(node.occupancy(index), inc));
 		    },
-		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
+		    [inc](auto& node) {
+			    // TODO: Implement
+			    for (auto it = node.beginOccupancy(), last = node.endOccupancy(); it != last;
+			         ++it) {
+				    *it = increaseLogit(*it, inc);
+			    }
+		    },
+		    propagate);
 	}
 
 	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
 	{
-		// TODO: Implement
-
 		derived().apply(
 		    code,
-		    [this, inc](auto& node, index_t const index) {
-			    increaseOccupancyLogit(node, index, inc);
+		    [inc](auto& node, index_t index) {
+			    // TODO: Implement
 		    },
-		    [this, inc](auto& node) { increaseOccupancyLogit(node, inc); }, propagate);
+		    [inc](auto& node) {
+			    // TODO: Implement
+		    },
+		    propagate);
 	}
 
 	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
@@ -243,26 +250,28 @@ class OccupancyMap
 
 	void decreaseOccupancyLogit(Node node, logit_t dec, bool propagate = true)
 	{
-		// TODO: Implement
-
 		derived().apply(
 		    node,
-		    [this, dec](auto& node, index_t const index) {
-			    decreaseOccupancyLogit(node, index, dec);
+		    [inc](auto& node, index_t index) {
+			    // TODO: Implement
 		    },
-		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
+		    [inc](auto& node) {
+			    // TODO: Implement
+		    },
+		    propagate);
 	}
 
 	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
 	{
-		// TODO: Implement
-
 		derived().apply(
 		    code,
-		    [this, dec](auto& node, index_t const index) {
-			    decreaseOccupancyLogit(node, index, dec);
+		    [inc](auto& node, index_t index) {
+			    // TODO: Implement
 		    },
-		    [this, dec](auto& node) { decreaseOccupancyLogit(node, dec); }, propagate);
+		    [inc](auto& node) {
+			    // TODO: Implement
+		    },
+		    propagate);
 	}
 
 	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
@@ -1038,14 +1047,13 @@ class OccupancyMap
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
 	{
-		constexpr uint8_t const n = numData<InputIt>();
+		constexpr std::uint8_t const n = numData<InputIt>();
 		num_nodes *= n;
 
 		auto data = std::make_unique<logit_t[]>(num_nodes);
 		auto d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(std::cbegin(first->node.occupancy), std::cend(first->node.occupancy),
-			          d + i);
+			std::copy(first->node.beginOccupancy(), first->node.endOccupancy(), d + i);
 		}
 
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));

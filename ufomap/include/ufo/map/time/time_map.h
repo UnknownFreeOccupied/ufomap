@@ -66,16 +66,16 @@ class TimeMap
 
 	[[nodiscard]] constexpr time_t time(Node node) const
 	{
-		return derived().leafNode(node).timeIndex(node.index());
+		return derived().leafNode(node).time(node.index());
 	}
 
 	[[nodiscard]] time_t time(Code code) const
 	{
 		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.timeIndex(code.index(d));
+		return n.time(code.index(d));
 	}
 
-	[[nodiscard]] time_t time(Key key) const { return time(Derived::toCode(key)); }
+	[[nodiscard]] time_t time(Key key) const { return time(derived().toCode(key)); }
 
 	[[nodiscard]] time_t time(Point coord, depth_t depth = 0) const
 	{
@@ -94,20 +94,20 @@ class TimeMap
 	void setTime(Node node, time_t time, bool propagate = true)
 	{
 		derived().apply(
-		    node, [time](auto& node, index_t const index) { node.setTimeIndex(index, time); },
+		    node, [time](auto& node, index_t index) { node.setTime(index, time); },
 		    [time](auto& node) { node.setTime(time); }, propagate);
 	}
 
 	void setTime(Code code, time_t time, bool propagate = true)
 	{
 		derived().apply(
-		    code, [time](auto& node, index_t const index) { node.setTimeIndex(index, time); },
+		    code, [time](auto& node, index_t index) { node.setTime(index, time); },
 		    [time](auto& node) { node.setTime(time); }, propagate);
 	}
 
 	void setTime(Key key, time_t time, bool propagate = true)
 	{
-		setTime(Derived::toCode(key), time, propagate);
+		setTime(derived().toCode(key), time, propagate);
 	}
 
 	void setTime(Point coord, time_t time, bool propagate = true, depth_t depth = 0)
@@ -195,7 +195,7 @@ class TimeMap
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().setTimeIndex(derived().rootIndex(), 0); }
+	void initRoot() { derived().root().setTime(derived().rootIndex(), 0); }
 
 	//
 	// Update node
@@ -204,9 +204,10 @@ class TimeMap
 	template <std::size_t N, class T>
 	void updateNode(TimeNode<N>& node, IndexField const indices, T const& children)
 	{
+		auto prop = timePropagationCriteria();
 		if constexpr (1 == N) {
 			auto fun = [](TimeNode<1> const node) { return node.time[0]; };
-			switch (prop_criteria_) {
+			switch (prop) {
 				case PropagationCriteria::MIN:
 					node.time[0] = min(children, fun);
 					break;
@@ -218,17 +219,17 @@ class TimeMap
 					break;
 			}
 		} else {
-			for (std::size_t index = 0; children.size() != index; ++index) {
-				if (indices[index]) {
-					switch (prop_criteria_) {
+			for (std::size_t i = 0; children.size() != i; ++i) {
+				if (indices[i]) {
+					switch (prop) {
 						case PropagationCriteria::MIN:
-							node.time[index] = min(children[index].time);
+							node.setTime(index, min(children[i].beginTime(), children[i].endTime()));
 							break;
 						case PropagationCriteria::MAX:
-							node.time[index] = max(children[index].time);
+							node.setTime(index, max(children[i].beginTime(), children[i].endTime()));
 							break;
 						case PropagationCriteria::MEAN:
-							node.time[index] = mean(children[index].time);
+							node.setTime(index, mean(children[i].beginTime(), children[i].endTime()));
 							break;
 					}
 				}
@@ -253,8 +254,8 @@ class TimeMap
 	template <class InputIt>
 	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
-		using typename std::iterator_traits<InputIt>::value_type;
-		using typename value_type::node_type;
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
 		return node_type::timeSize();
 	}
 
@@ -333,11 +334,9 @@ class TimeMap
 		auto data = std::make_unique<time_t[]>(num_nodes);
 		auto d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(std::cbegin(first->node.time), std::cend(first->node.time), d + i);
+			std::copy(first->node.beginTime(), first->node.endTime(), d + i);
 		}
 
-		std::uint8_t const dt = dataType<time_t>();
-		out.write(reinterpret_cast<char const*>(&dt), sizeof(dt));
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_nodes * sizeof(typename decltype(data)::element_type));
