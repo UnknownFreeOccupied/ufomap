@@ -58,6 +58,12 @@ struct Surfel {
 
 	constexpr Surfel() = default;
 
+	constexpr Surfel(math::Vector3<surfel_scalar_t> sum,
+	                 std::array<surfel_scalar_t, 6> sum_squares, std::uint32_t num_points)
+	    : sum_(sum), sum_squares_(sum_squares), num_points_(num_points)
+	{
+	}
+
 	constexpr Surfel(math::Vector3<scalar_t> point) : num_points_(1), sum_(point) {}
 
 	template <class InputIt>
