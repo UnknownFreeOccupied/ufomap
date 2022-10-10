@@ -208,7 +208,7 @@ struct SurfelNode {
 
 	void clear()
 	{
-		setSum(math::Vector3<surfel_scslar_t>());
+		setSum(math::Vector3<surfel_scalar_t>());
 		setSumSquares({0, 0, 0, 0, 0, 0});
 		setNumPoints(0);
 	}
@@ -218,7 +218,7 @@ struct SurfelNode {
 		if constexpr (1 == N) {
 			clear();
 		} else {
-			setSum(index, math::Vector3<surfel_scslar_t>());
+			setSum(index, math::Vector3<surfel_scalar_t>());
 			setSumSquares(index, {0, 0, 0, 0, 0, 0});
 			setNumPoints(index, 0);
 		}

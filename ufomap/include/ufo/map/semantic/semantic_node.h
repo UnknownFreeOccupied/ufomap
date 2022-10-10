@@ -46,15 +46,13 @@
 #include <ufo/map/semantic/semantics.h>
 
 // STL
+#include <algorithm>
 #include <array>
 
 namespace ufo::map
 {
 template <std::size_t N = 8>
 struct SemanticNode {
-	// Data
-	Semantics<N> semantics;
-
 	//
 	// Size
 	//
@@ -76,8 +74,54 @@ struct SemanticNode {
 
 	[[nodiscard]] bool isCollapsible(SemanticNode const& parent, index_t const index) const
 	{
+		if (N * parent.semantics_.size(index) != semantics_.size()) {
+			return false;
+		}
+
+		auto first = parent.semantics_.cbegin(index);
+		auto last = parent.semantics_.cend(index);
+		for (std::size_t i = 0; N != i; ++i) {
+			if (!std::equal(first, last, semantics_.cbegin(i), semantics_.cend(i))) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	//
+	// Get semantics
+	//
+
+	[[nodiscard]] Semantics semantics(index_t const index) const
+	{
+		if constexpr (1 == N) {
+			return semantics_[0];
+		} else {
+			return semantics_[index];
+		}
+	}
+
+	//
+	// Set semantics
+	//
+
+	void setSemantics(Semantics const& value)
+	{
 		// TODO: Implement
 	}
+
+	void setSemantics(index_t const index, Semantics const& value)
+	{
+		if constexpr (1 == N) {
+			setSemantics(value);
+		} else {
+			// TODO: Implement
+		}
+	}
+
+ private:
+	// Data
+	Semantics<N> semantics_;
 };
 }  // namespace ufo::map
 
