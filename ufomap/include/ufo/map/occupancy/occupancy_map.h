@@ -436,19 +436,19 @@ class OccupancyMap
 	// Set sensor model
 	//
 
-	void setOccupiedFreeThres(occupancy_t new_occupied_thres, occupancy_t new_free_thres,
-	                          bool propagate = true)
+	void setOccupancyThres(occupancy_t new_occupied_thres, occupancy_t new_free_thres,
+	                       bool propagate = true)
 	{
 		// FIXME: Should add a warning that these are very computational expensive to
 		// call since the whole tree has to be updated
 
-		setOccupiedFreeThresLogit(toOccupancyLogit(new_occupied_thres),
-		                          toOccupancyLogit(new_free_thres), propagate);
+		setOccupancyThresLogit(toOccupancyLogit(new_occupied_thres),
+		                       toOccupancyLogit(new_free_thres), propagate);
 	}
 
 	// FIXME: Look at
-	void setOccupiedFreeThresLogit(logit_t new_occupied_thres, logit_t new_free_thres,
-	                               bool propagate = true)
+	void setOccupancyThresLogit(logit_t new_occupied_thres, logit_t new_free_thres,
+	                            bool propagate = true)
 	{
 		// FIXME: Should add a warning that these are very computational expensive to
 		// call since the whole tree has to be updated
