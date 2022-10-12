@@ -71,13 +71,9 @@ struct ColorNode {
 	void fill(ColorNode const parent, index_t const index)
 	{
 		if constexpr (1 == N) {
-			red = parent.red;
-			green = parent.green;
-			blue = parent.blue;
+			setColor(parent.red[0], parent.green[0], parent.blue[0]);
 		} else {
-			red.fill(parent.red[index]);
-			green.fill(parent.green[index]);
-			blue.fill(parent.blue[index]);
+			setColor(parent.red[index], parent.green[index], parent.blue[index]);
 		}
 	}
 
@@ -89,7 +85,8 @@ struct ColorNode {
 	                                           index_t const index) const
 	{
 		if constexpr (1 == N) {
-			return red == parent.red && green == parent.green && blue == parent.blue;
+			return red[0] == parent.red[0] && green[0] == parent.green[0] &&
+			       blue[0] == parent.blue[0];
 		} else {
 			return all_of(red, [r = parent.red[index]](auto const c) { return c == r; }) &&
 			       all_of(green, [g = parent.green[index]](auto const c) { return c == g; }) &&
@@ -145,30 +142,20 @@ struct ColorNode {
 
 	[[nodiscard]] constexpr bool hasColor(index_t const index) const
 	{
-		return 0 != red[index] || 0 != green[index] || 0 != blue[index];
+		if constexpr (1 == N) {
+			return 0 != red[0] || 0 != green[0] || 0 != blue[0];
+		} else {
+			return 0 != red[index] || 0 != green[index] || 0 != blue[index];
+		}
 	}
 
 	//
 	// Clear color
 	//
 
-	void clearColor()
-	{
-		red.fill(0);
-		green.fill(0);
-		blue.fill(0);
-	}
+	void clearColor() { setColor(0, 0, 0); }
 
-	void clearColor(index_t const index)
-	{
-		if constexpr (1 == N) {
-			clearColor();
-		} else {
-			red[index] = 0;
-			green[index] = 0;
-			blue[index] = 0;
-		}
-	}
+	void clearColor(index_t const index) { setColor(index, 0, 0, 0); }
 };
 }  // namespace ufo::map
 

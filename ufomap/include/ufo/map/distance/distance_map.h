@@ -63,19 +63,20 @@ class DistanceMap
 	// Get distance
 	//
 
-	[[nodiscard]] constexpr distance_t distance(Node node) const noexcept
+	[[nodiscard]] distance_t distance(Node node) const
 	{
-		return derived().leafNode(node).distanceIndex(node.index());
+		return derived().leafNode(node).distance(node.index());
 	}
 
 	[[nodiscard]] distance_t distance(Code code) const
 	{
-		return derived().leafNode(code).distanceIndex(code.index());
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		return node.distance(code.index(depth));
 	}
 
 	[[nodiscard]] distance_t distance(Key key) const
 	{
-		return distance(Derived::toCode(key));
+		return distance(derived().toCode(key));
 	}
 
 	[[nodiscard]] distance_t distance(Point coord, depth_t depth = 0) const
@@ -97,9 +98,7 @@ class DistanceMap
 	{
 		derived().apply(
 		    node,
-		    [distance](auto& node, index_t const index) {
-			    node.setDistanceIndex(index, distance);
-		    },
+		    [distance](auto& node, index_t index) { node.setDistance(index, distance); },
 		    [distance](auto& node) { node.setDistance(distance); }, propagate);
 	}
 
@@ -107,15 +106,13 @@ class DistanceMap
 	{
 		derived().apply(
 		    code,
-		    [distance](auto& node, index_t const index) {
-			    node.setDistanceIndex(index, distance);
-		    },
+		    [distance](auto& node, index_t index) { node.setDistance(index, distance); },
 		    [distance](auto& node) { node.setDistance(distance); }, propagate);
 	}
 
 	void setDistance(Key key, distance_t distance, bool propagate = true)
 	{
-		setDistance(Derived::toCode(key), distance, propagate);
+		setDistance(derived().toCode(key), distance, propagate);
 	}
 
 	void setDistance(Point coord, distance_t distance, bool propagate = true,
@@ -204,44 +201,42 @@ class DistanceMap
 	// Initilize root
 	//
 
-	void initRoot()
-	{
-		// FIXME: What should this be?
-		derived().root().setDistanceIndex(derived().rootIndex(), 0);
-	}
+	// FIXME: What should this be?
+	void initRoot() { derived().root().setDistance(derived().rootIndex(), 0); }
 
 	//
 	// Update node
 	//
 
-	template <std::size_t N, class T>
-	void updateNode(DistanceNode<N>& node, IndexField const indices, T const& children)
+	template <std::size_t N, class InputIt>
+	void updateNode(DistanceNode<N>& node, IndexField indices, InputIt first, InputIt last)
 	{
+		auto const prop = distancePropagationCriteria();
 		if constexpr (1 == N) {
-			auto fun = [](DistanceNode<1> const node) { return node.distance[0]; };
-			switch (prop_criteria_) {
+			auto fun = [](DistanceNode<N> node) { return node.distance(0); };
+			switch (prop) {
 				case PropagationCriteria::MIN:
-					node.distance[0] = min(children, fun);
+					node.setDistance(min(first, last, fun));
 					break;
 				case PropagationCriteria::MAX:
-					node.distance[0] = max(children, fun);
+					node.setDistance(max(first, last, fun));
 					break;
 				case PropagationCriteria::MEAN:
-					node.distance[0] = mean(children, fun);
+					node.setDistance(mean(first, last, fun));
 					break;
 			}
 		} else {
-			for (std::size_t index = 0; children.size() != index; ++index) {
-				if (indices[index]) {
-					switch (prop_criteria_) {
+			for (index_t i = 0; first != last; ++first, ++i) {
+				if (indices[i]) {
+					switch (prop) {
 						case PropagationCriteria::MIN:
-							node.distance[index] = min(children[index].distance);
+							node.setDistance(i, min(first->beginDistance(), first->endDistance()));
 							break;
 						case PropagationCriteria::MAX:
-							node.distance[index] = max(children[index].distance);
+							node.setDistance(i, max(first->beginDistance(), first->endDistance()));
 							break;
 						case PropagationCriteria::MEAN:
-							node.distance[index] = mean(children[index].distance);
+							node.setDistance(i, mean(first->beginDistance(), first->endDistance()));
 							break;
 					}
 				}
@@ -342,8 +337,7 @@ class DistanceMap
 		auto data = std::make_unique<distance_t[]>(num_nodes);
 		auto d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(std::cbegin(first->node.distance), std::cend(first->node.distance),
-			          d + i);
+			std::copy(first->node.beginDistance(), first->node.endDistance(), d + i);
 		}
 
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));

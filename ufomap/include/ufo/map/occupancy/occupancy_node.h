@@ -53,6 +53,7 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <type_traits>
 
 namespace ufo::map
@@ -172,6 +173,59 @@ struct OccupancyNode {
 		}
 	}
 
+	//
+	// Increase occupancy
+	//
+
+	void increaseOccupancy(logit_t const value)
+	{
+		for (auto& occ : occupancy_) {
+			occ = std::numeric_limits<logit_t>::max() - value > occ
+			          ? occ + value
+			          : std::numeric_limits<logit_t>::max();
+		}
+	}
+
+	void increaseOccupancy(index_t const index, logit_t const value)
+	{
+		if constexpr (1 == N) {
+			occupancy_[0] = std::numeric_limits<logit_t>::max() - value > occupancy_[0]
+			                    ? occupancy_[0] + value
+			                    : std::numeric_limits<logit_t>::max();
+		} else {
+			occupancy_[index] = std::numeric_limits<logit_t>::max() - value > occupancy_[index]
+			                        ? occupancy_[index] + value
+			                        : std::numeric_limits<logit_t>::max();
+		}
+	}
+
+	//
+	// Decrease occupancy
+	//
+
+	void decreaseOccupancy(logit_t const value)
+	{
+		for (auto& occ : occupancy_) {
+			occ = std::numeric_limits<logit_t>::lowest() + value < occ
+			          ? occ - value
+			          : std::numeric_limits<logit_t>::lowest();
+		}
+	}
+
+	void decreaseOccupancy(index_t const index, logit_t const value)
+	{
+		if constexpr (1 == N) {
+			occupancy_[0] = std::numeric_limits<logit_t>::lowest() + value < occupancy_[0]
+			                    ? occupancy_[0] - value
+			                    : std::numeric_limits<logit_t>::lowest();
+		} else {
+			occupancy_[index] =
+			    std::numeric_limits<logit_t>::lowest() + value < occupancy_[index]
+			        ? occupancy_[index] - value
+			        : std::numeric_limits<logit_t>::lowest();
+		}
+	}
+
  private:
 	// Data
 	std::array<logit_t, N> occupancy_;
@@ -215,6 +269,87 @@ struct ContainsOccupancy {
 	{
 		return true;  // Does not matter what this is...
 	}
+
+	//
+	// Get contains unknown
+	//
+
+	[[nodiscard]] constexpr bool containsUnknown(index_t const index) const
+	{
+		return contains_unknown[index];
+	}
+
+	//
+	// Set contains unknown
+	//
+
+	constexpr void setContainsUnknown(bool const value)
+	{
+		if (value) {
+			contains_unknown.set();
+		} else {
+			contains_unknown.reset();
+		}
+	}
+
+	constexpr void setContainsUnknown(index_t const index, bool const value)
+	{
+		contains_unknown.set(index, value);
+	}
+
+	//
+	// Get contains free
+	//
+
+	[[nodiscard]] constexpr bool containsFree(index_t const index) const
+	{
+		return contains_free[index];
+	}
+
+	//
+	// Set contains free
+	//
+
+	constexpr void setContainsFree(bool const value)
+	{
+		if (value) {
+			contains_free.set();
+		} else {
+			contains_free.reset();
+		}
+	}
+
+	constexpr void setContainsFree(index_t const index, bool const value)
+	{
+		contains_free.set(index, value);
+	}
+
+	//
+	// Get contains occupied
+	//
+
+	[[nodiscard]] constexpr bool containsOccupied(index_t const index) const
+	{
+		return contains_occupied[index];
+	}
+
+	//
+	// Set contains occupied
+	//
+
+	constexpr void setContainsOccupied(bool const value)
+	{
+		if (value) {
+			contains_occupied.set();
+		} else {
+			contains_occupied.reset();
+		}
+	}
+
+	constexpr void setContainsOccupied(index_t const index, bool const value)
+	{
+		contains_occupied.set(index, value);
+	}
 };
 
 template <>
@@ -242,6 +377,66 @@ struct ContainsOccupancy<1> {
 	[[nodiscard]] bool isCollapsible(ContainsOccupancy const, std::size_t const) const
 	{
 		return true;  // Does not matter what this is...
+	}
+
+	//
+	// Get contains unknown
+	//
+
+	[[nodiscard]] constexpr bool containsUnknown(index_t const index) const
+	{
+		return contains_unknown;
+	}
+
+	//
+	// Set contains unknown
+	//
+
+	constexpr void setContainsUnknown(bool const value) { contains_unknown = value; }
+
+	constexpr void setContainsUnknown(index_t const index, bool const value)
+	{
+		setContainsUnknown(value);
+	}
+
+	//
+	// Get contains free
+	//
+
+	[[nodiscard]] constexpr bool containsFree(index_t const index) const
+	{
+		return contains_free;
+	}
+
+	//
+	// Set contains free
+	//
+
+	constexpr void setContainsFree(bool const value) { contains_free = value; }
+
+	constexpr void setContainsFree(index_t const index, bool const value)
+	{
+		setContainsFree(value);
+	}
+
+	//
+	// Get contains occupied
+	//
+
+	[[nodiscard]] constexpr bool containsOccupied(index_t const index) const
+	{
+		return contains_occupied;
+	}
+
+	//
+	// Set contains occupied
+	//
+
+	constexpr void setContainsOccupied(bool const value) { contains_occupied = value; }
+
+	constexpr void setContainsOccupied(index_t const index, bool const value)
+	{
+		setContainsOccupied(value);
 	}
 };
 }  // namespace ufo::map

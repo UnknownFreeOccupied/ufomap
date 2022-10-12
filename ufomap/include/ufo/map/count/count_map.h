@@ -70,8 +70,8 @@ class CountMap
 
 	[[nodiscard]] count_t count(Code code) const
 	{
-		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.count(code.index(d));
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		return node.count(code.index(depth));
 	}
 
 	[[nodiscard]] count_t count(Key key) const { return count(derived().toCode(key)); }
@@ -152,14 +152,14 @@ class CountMap
 	// Constructors
 	//
 
-	CountMap() = default
+	CountMap() = default;
 
-	    CountMap(CountMap const&) = default;
+	CountMap(CountMap const&) = default;
 
 	CountMap(CountMap&&) = default;
 
 	template <class Derived2>
-	CountMap(CountMap<Derived2> const&)
+	CountMap(CountMap<Derived2> const&) : prop_criteria_(other.countPropagationCriteria())
 	{
 	}
 
@@ -185,6 +185,7 @@ class CountMap
 
 	[[nodiscard]] constexpr Derived const& derived() const
 	{
+		prop_criteria_ = rhs.countPropagationCriteria();
 		return *static_cast<Derived const*>(this);
 	}
 
@@ -198,35 +199,35 @@ class CountMap
 	// Update node
 	//
 
-	template <std::size_t N, class T>
-	void updateNode(CountMap<N>& node, IndexField const indices, T const& children)
+	template <std::size_t N, class InputIt>
+	void updateNode(CountMap<N>& node, IndexField indices, InputIt first, InputIt last)
 	{
-		auto prop = countPropagationCriteria();
+		auto const prop = countPropagationCriteria();
 		if constexpr (1 == N) {
-			auto fun = [](TimeNode<1> node) { return node.count(0); };
+			auto fun = [](TimeNode<N> node) { return node.count(0); };
 			switch (prop) {
 				case PropagationCriteria::MIN:
-					node.setCount(min(children, fun));
+					node.setCount(min(first, last, fun));
 					break;
 				case PropagationCriteria::MAX:
-					node.setCount(max(children, fun));
+					node.setCount(max(first, last, fun));
 					break;
 				case PropagationCriteria::MEAN:
-					node.setCount(mean(children, fun));
+					node.setCount(mean(first, last, fun));
 					break;
 			}
 		} else {
-			for (std::size_t i = 0; children.size() != i; ++i) {
+			for (index_t i = 0; first != last; ++first, ++i) {
 				if (indices[i]) {
 					switch (prop) {
 						case PropagationCriteria::MIN:
-							node.setCount(i, min(children[i].beginCount(), children[i].endCound()));
+							node.setCount(i, min(first->beginCount(), first->endCound()));
 							break;
 						case PropagationCriteria::MAX:
-							node.setCount(i, max(children[i].beginCount(), children[i].endCount()));
+							node.setCount(i, max(first->beginCount(), first->endCount()));
 							break;
 						case PropagationCriteria::MEAN:
-							node.setCount(i, mean(children[i].beginCount(), children[i].endCount()));
+							node.setCount(i, mean(first->beginCount(), first->endCount()));
 							break;
 					}
 				}
@@ -327,7 +328,7 @@ class CountMap
 		auto data = std::make_unique<count_t[]>(num_nodes);
 		auto d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy((first->node.beginCount(), first->node.endCount(), d + i);
+			std::copy(first->node.beginCount(), first->node.endCount(), d + i);
 		}
 
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
