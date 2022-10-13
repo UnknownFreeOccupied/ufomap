@@ -3739,9 +3739,11 @@ class OctreeBase
 	void updateNode(InnerNode& node, IndexField indices, depth_t const depth)
 	{
 		if (1 == depth) {
-			derived().updateNode(node, indices, leafChildren(node));
+			derived().updateNode(node, indices, std::cbegin(leafChildren(node)),
+			                     std::cend(leafChildren(node)));
 		} else {
-			derived().updateNode(node, indices, innerChildren(node));
+			derived().updateNode(node, indices, std::cbegin(innerChildren(node)),
+			                     std::cend(innerChildren(node)));
 		}
 
 		prune(node, indices, depth);

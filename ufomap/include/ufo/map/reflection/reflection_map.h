@@ -67,8 +67,8 @@ class ReflectionMap
 
 	[[nodiscard]] count_t hits(Code code) const
 	{
-		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.hits(code.index(d));
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		return node.hits(code.index(depth));
 	}
 
 	[[nodiscard]] count_t hits(Key key) const { return hits(derived().toCode(key)); }
@@ -196,8 +196,8 @@ class ReflectionMap
 
 	[[nodiscard]] count_t misses(Code code) const
 	{
-		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.misses(code.index(d));
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		return node.misses(code.index(depth));
 	}
 
 	[[nodiscard]] count_t misses(Key key) const { return misses(derived().toCode(key)); }
@@ -329,10 +329,10 @@ class ReflectionMap
 
 	[[nodiscard]] double reflectiveness(Code code) const
 	{
-		auto [n, d] = derived().leafNodeAndDepth(code);
-		auto const index = code.index(d);
-		double const hits = n.hits(index);
-		double const misses = n.misses(index);
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		auto const index = code.index(depth);
+		double const hits = node.hits(index);
+		double const misses = node.misses(index);
 		return hits / (hits + misses);
 	}
 
@@ -437,43 +437,46 @@ class ReflectionMap
 	// Update node
 	//
 
-	template <std::size_t N, class T>
-	void updateNode(ReflectionNode<N>& node, IndexField const indices, T const& children)
+	template <std::size_t N, class InputIt>
+	void updateNode(ReflectionNode<N>& node, IndexField indices, InputIt first,
+	                InputIt last)
 	{
+		prop = reflectionPropagationCriteria();
 		if constexpr (1 == N) {
-			auto hits_fun = [](ReflectionNode<1> const node) { return node.hits[0]; };
-			auto misses_fun = [](ReflectionNode<1> const node) { return node.misses[0]; };
-			switch (prop_criteria_) {
+			auto hits_fun = [](ReflectionNode<N> node) { return node.hits[0]; };
+			auto misses_fun = [](ReflectionNode<N> node) { return node.misses[0]; };
+			switch (prop) {
 				case PropagationCriteria::MIN:
-					node.hits[0] = min(children, hits_fun);
-					node.misses[0] = min(children, misses_fun);
+					node.setHits(min(first, last, hits_fun));
+					node.setMisses(min(first, last, misses_fun));
 					break;
 				case PropagationCriteria::MAX:
-					node.hits[0] = max(children, hits_fun);
-					node.misses[0] = max(children, misses_fun);
+					node.setHits(max(first, last, hits_fun));
+					node.setMisses(max(first, last, misses_fun));
 					break;
 				case PropagationCriteria::MEAN:
-					node.hits[0] = mean(children, hits_fun);
-					node.misses[0] = mean(children, misses_fun);
+					node.setHits(mean(first, last, hits_fun));
+					node.setMisses(mean(first, last, misses_fun));
 					break;
 			}
 		} else {
-			for (std::size_t index = 0; children.size() != index; ++index) {
-				if (indices[index]) {
-					switch (prop_criteria_) {
-						case PropagationCriteria::MIN:
-							node.hits[index] = min(children[index].hits);
-							node.misses[index] = min(children[index].misses);
-							break;
-						case PropagationCriteria::MAX:
-							node.hits[index] = max(children[index].hits);
-							node.misses[index] = max(children[index].misses);
-							break;
-						case PropagationCriteria::MEAN:
-							node.hits[index] = mean(children[index].hits);
-							node.misses[index] = mean(children[index].misses);
-							break;
-					}
+			for (index_t i = 0; first != last; ++first, ++i) {
+				if (!indices[i]) {
+					continue;
+				}
+				switch (prop) {
+					case PropagationCriteria::MIN:
+						node.setHits(i, min(first->beginHits(), first->endHits()));
+						node.setMisses(i, min(first->beginMisses(), first->endMisses()));
+						break;
+					case PropagationCriteria::MAX:
+						node.setHits(i, max(first->beginHits(), first->endHits()));
+						node.setMisses(i, max(first->beginMisses(), first->endMisses()));
+						break;
+					case PropagationCriteria::MEAN:
+						node.setHits(i, mean(first->beginHits(), first->endHits()));
+						node.setMisses(i, mean(first->beginMisses(), first->endMisses()));
+						break;
 				}
 			}
 		}
@@ -496,8 +499,8 @@ class ReflectionMap
 	template <class InputIt>
 	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
-		using typename std::iterator_traits<InputIt>::value_type;
-		using typename value_type::node_type;
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
 		return node_type::reflectionSize();
 	}
 
@@ -582,9 +585,8 @@ class ReflectionMap
 		auto data = std::make_unique<count_t[]>(num_nodes);
 		auto d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += s) {
-			std::copy(std::cbegin(first->node.hits), std::cend(first->node.hits), d + i);
-			std::copy(std::cbegin(first->node.misses), std::cend(first->node.misses),
-			          d + i + n);
+			std::copy(first->node.beginHits(), first->node.endHits(), d + i);
+			std::copy(first->node.beginMisses(), first->node.endMisses(), d + i + n);
 		}
 
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));

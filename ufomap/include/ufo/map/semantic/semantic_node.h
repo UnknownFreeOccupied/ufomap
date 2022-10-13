@@ -74,18 +74,26 @@ struct SemanticNode {
 
 	[[nodiscard]] bool isCollapsible(SemanticNode const& parent, index_t const index) const
 	{
-		if (N * parent.semantics_.size(index) != semantics_.size()) {
-			return false;
-		}
-
-		auto first = parent.semantics_.cbegin(index);
-		auto last = parent.semantics_.cend(index);
-		for (std::size_t i = 0; N != i; ++i) {
-			if (!std::equal(first, last, semantics_.cbegin(i), semantics_.cend(i))) {
-				return false;
+		if constexpr (1 == N) {
+			return std::equal(parent.semantics_.cbegin(0), parent.semantics_.cend(0),
+			                  semantics_.cbegin(0), semantics_.cend(0));
+		} else {
+			auto s = parent.semantics_.size(index);
+			for (std::size_t i = 0; N != i; ++i) {
+				if (semantics_.size(i) != s) {
+					return false;
+				}
 			}
+
+			auto first = parent.semantics_.cbegin(index);
+			auto last = parent.semantics_.cend(index);
+			for (std::size_t i = 0; N != i; ++i) {
+				if (!std::equal(first, last, semantics_.cbegin(i), semantics_.cend(i))) {
+					return false;
+				}
+			}
+			return true;
 		}
-		return true;
 	}
 
 	//

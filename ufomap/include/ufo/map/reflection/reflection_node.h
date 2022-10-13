@@ -59,6 +59,65 @@ struct ReflectionNode {
 	[[nodiscard]] static constexpr std::size_t reflectionSize() { return N; }
 
 	//
+	// Hits iterators
+	//
+
+	[[nodiscard]] constexpr auto beginHits() noexcept { return hits_.begin(); }
+
+	[[nodiscard]] constexpr auto beginHits() const noexcept { return hits_.begin(); }
+
+	[[nodiscard]] constexpr auto cbeginHits() const noexcept { return hits_.cbegin(); }
+
+	[[nodiscard]] constexpr auto endHits() noexcept { return hits_.end(); }
+
+	[[nodiscard]] constexpr auto endHits() const noexcept { return hits_.end(); }
+
+	[[nodiscard]] constexpr auto cendHits() const noexcept { return hits_.cend(); }
+
+	[[nodiscard]] constexpr auto rbeginHits() noexcept { return hits_.rbegin(); }
+
+	[[nodiscard]] constexpr auto rbeginHits() const noexcept { return hits_.rbegin(); }
+
+	[[nodiscard]] constexpr auto crbeginHits() const noexcept { return hits_.crbegin(); }
+
+	[[nodiscard]] constexpr auto rendHits() noexcept { return hits_.rend(); }
+
+	[[nodiscard]] constexpr auto rendHits() const noexcept { return hits_.rend(); }
+
+	[[nodiscard]] constexpr auto crendHits() const noexcept { return hits_.crend(); }
+
+	//
+	// Misses iterators
+	//
+
+	[[nodiscard]] constexpr auto beginMisses() noexcept { return misses_.begin(); }
+
+	[[nodiscard]] constexpr auto beginMisses() const noexcept { return misses_.begin(); }
+
+	[[nodiscard]] constexpr auto cbeginMisses() const noexcept { return misses_.cbegin(); }
+
+	[[nodiscard]] constexpr auto endMisses() noexcept { return misses_.end(); }
+
+	[[nodiscard]] constexpr auto endMisses() const noexcept { return misses_.end(); }
+
+	[[nodiscard]] constexpr auto cendMisses() const noexcept { return misses_.cend(); }
+
+	[[nodiscard]] constexpr auto rbeginMisses() noexcept { return misses_.rbegin(); }
+
+	[[nodiscard]] constexpr auto rbeginMisses() const noexcept { return misses_.rbegin(); }
+
+	[[nodiscard]] constexpr auto crbeginMisses() const noexcept
+	{
+		return misses_.crbegin();
+	}
+
+	[[nodiscard]] constexpr auto rendMisses() noexcept { return misses_.rend(); }
+
+	[[nodiscard]] constexpr auto rendMisses() const noexcept { return misses_.rend(); }
+
+	[[nodiscard]] constexpr auto crendMisses() const noexcept { return misses_.crend(); }
+
+	//
 	// Fill
 	//
 
