@@ -324,44 +324,7 @@ struct NodeP : public Node {
 	friend class OctreeBase;
 };
 
-// struct NodePs : public Node {
-//  public:
-// 	using parents_t = std::vector<void*>;
-
-// 	constexpr NodePs() = default;
-
-//  protected:
-// 	constexpr NodePs(void* data, Code code, parents_t const& parents) noexcept
-// 	    : Node(data, code), data_parents_(parents)
-// 	{
-// 	}
-
-// 	constexpr NodePs(Node node, parents_t const& parents) noexcept
-// 	    : Node(node), data_parents_(parents)
-// 	{
-// 	}
-
-// 	constexpr NodePs(Node&& node, parents_t parents) noexcept
-// 	    : Node(std::forward<Node>(node)), data_parents_(parents)
-// 	{
-// 	}
-
-// 	constexpr NodePs() {}
-
-// 	constexpr void* parentsData() noexcept { return data_parents_; }
-
-// 	constexpr void const* parentsData() const noexcept { return data_parents_; }
-
-//  protected:
-// 	// Pointers to the parents
-// 	parents_t data_parents_;  // TODO: What should this be?
-
-// 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-// 	          bool CountNodes>
-// 	friend class OctreeBase;
-// };
-
-struct NodePBV : public Node, public BV {
+struct NodePBV : public NodeP, public BV {
  public:
 	constexpr NodePBV() = default;
 
@@ -381,50 +344,10 @@ struct NodePBV : public Node, public BV {
 	{
 	}
 
- protected:
-	// Pointer to the parent
-	void* data_parent_ = nullptr;
-
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>
 	friend class OctreeBase;
 };
-
-// struct NodePsBV : public Node, public BV {
-//  public:
-// 	using parents_t = std::vector<void*>;
-
-// 	constexpr NodePsBV() = default;
-
-//  protected:
-// 	constexpr NodePsBV(void* data, Code code, geometry::AAEBB aaebb,
-// 	                   parents_t const& parents) noexcept
-// 	    : Node(data, code), BV(aaebb), data_parents_(parents)
-// 	{
-// 	}
-
-// 	constexpr NodePsBV(Node node, geometry::AAEBB aaebb, parents_t const& parents)
-// noexcept 	    : Node(node), BV(aaebb), data_parents_(parents)
-// 	{
-// 	}
-
-// 	constexpr NodePsBV(Node&& node, geometry::AAEBB aaebb, parents_t parents) noexcept
-// 	    : Node(std::forward<Node>(node)), BV(aaebb), data_parents_(parents)
-// 	{
-// 	}
-
-// 	constexpr void* parentsData() noexcept { return data_parents_; }
-
-// 	constexpr void const* parentsData() const noexcept { return data_parents_; }
-
-//  protected:
-// 	// Pointers to the parents
-// 	parents_t data_parents_;  // TODO: What should this be?
-
-// 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-// 	          bool CountNodes>
-// 	friend class OctreeBase;
-// };
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_OCTREE_NODE_H
