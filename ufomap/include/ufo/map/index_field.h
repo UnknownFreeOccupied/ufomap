@@ -67,16 +67,16 @@ struct IndexField {
 			return *this;
 		}
 
-		constexpr Reference& operator=(Reference const& x) noexcept = default;
+		constexpr Reference& operator=(Reference const& x) noexcept { return operator=(!!x); }
 
 		constexpr operator bool() const noexcept
 		{
-			return index_field_t(0) != field_ & index_;
+			return index_field_t(0) != (field_ & index_);
 		}
 
 		constexpr bool operator~() const noexcept
 		{
-			return index_field_t(0) == field_ & index_;
+			return index_field_t(0) == (field_ & index_);
 		}
 
 		constexpr Reference& flip() noexcept

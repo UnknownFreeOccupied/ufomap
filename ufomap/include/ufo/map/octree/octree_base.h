@@ -631,7 +631,7 @@ class OctreeBase
 				auto [node, depth] = innerNodeAndDepth(code);
 				setModified(node, code.index(depth), depth, min_depth);
 			}
-			setModifiedParents(code().toDepth(min_depth));
+			setModifiedParents(code.toDepth(min_depth));
 		}
 	}
 
@@ -2435,7 +2435,7 @@ class OctreeBase
 		if constexpr (predicate::contains_spatial_predicate_v<std::decay_t<Predicates>>) {
 			return const_query_iterator(
 			    new Iterator<Node, Derived, NodeBV, std::decay_t<Predicates>>(
-			        &derived(), nodeBV(node), std::forward<Predicates>(predicates)));
+			        &derived(), toNodeBV(node), std::forward<Predicates>(predicates)));
 		} else {
 			return const_query_iterator(
 			    new Iterator<Node, Derived, Node, std::decay_t<Predicates>>(
@@ -2493,7 +2493,7 @@ class OctreeBase
 	{
 		return const_bounding_volume_query_iterator(
 		    new Iterator<NodeBV, Derived, NodeBV, Predicates>(
-		        &derived(), nodeBV(node), std::forward<Predicates>(predicates)));
+		        &derived(), toNodeBV(node), std::forward<Predicates>(predicates)));
 	}
 
 	template <class Predicates>
@@ -2550,7 +2550,7 @@ class OctreeBase
 	                                                             double epsilon = 0.0) const
 	{
 		return const_query_nearest_iterator(
-		    new NearestIterator(&derived(), nodeBV(node), std::forward<Geometry>(geometry),
+		    new NearestIterator(&derived(), toNodeBV(node), std::forward<Geometry>(geometry),
 		                        std::forward<Predicates>(predicates), epsilon));
 	}
 
@@ -3183,7 +3183,7 @@ class OctreeBase
 		}
 
 		if (propagate) {
-			updateModifiedNodes();
+			propagateModified();
 		}
 	}
 
@@ -3200,7 +3200,7 @@ class OctreeBase
 		applyRecurs(root(), rootDepth(), code, f, f2);
 
 		if (propagate) {
-			updateModifiedNodes();
+			propagateModified();
 		}
 	}
 
@@ -4412,7 +4412,7 @@ class OctreeBase
 
 		auto tree = std::make_unique<IndexField[]>(num);
 		in.read(reinterpret_cast<char*>(tree.get()),
-		        num * sizeof(typename decltype(tree)::value_type));
+		        num * sizeof(typename decltype(tree)::element_type));
 
 		return tree;
 	}
@@ -4471,11 +4471,11 @@ class OctreeBase
 			IndexField const valid_return = *tree++;
 			IndexField const valid_inner = *tree++;
 
-			if (valid_return) {
+			if (valid_return.any()) {
 				nodes.emplace_back(node[i], valid_return);
 			}
 
-			if (valid_inner) {
+			if (valid_inner.any()) {
 				if (1 == depth) {
 					createLeafChildren(node[i], ...);
 					// TODO: Implement

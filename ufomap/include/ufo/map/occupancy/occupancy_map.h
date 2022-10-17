@@ -820,12 +820,12 @@ class OccupancyMap
 	//
 
 	template <class T, class InputIt>
-	void updateNode(T& node, IndexField indicies, InputIt first, InputIt last)
+	void updateNode(T& node, IndexField indices, InputIt first, InputIt last)
 	{
 		auto prop = occupancyPropagationCriteria();
 
 		if constexpr (std::is_base_of_v<OccupancyNode<1>, T>) {
-			auto fun = [](OccupancyNode<N> node) { return node.occupancy(0); };
+			auto fun = [](OccupancyNode<1> node) { return node.occupancy(0); };
 			switch (prop) {
 				case PropagationCriteria::MIN:
 					node.setOccupancy(min(first, last, fun));
@@ -873,7 +873,7 @@ class OccupancyMap
 				}
 			}
 		} else {
-			static_assert(false);
+			// static_assert(false);
 		}
 	}
 

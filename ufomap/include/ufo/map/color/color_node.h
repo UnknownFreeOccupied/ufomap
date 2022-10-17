@@ -133,7 +133,7 @@ struct ColorNode {
 
 	void setColor(index_t const index, Color const value)
 	{
-		setColor(index, value.r, value.g, value.b);
+		setColor(index, value.red, value.green, value.blue);
 	}
 
 	//
