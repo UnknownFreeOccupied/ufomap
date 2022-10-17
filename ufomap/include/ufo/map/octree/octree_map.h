@@ -148,6 +148,16 @@ class OctreeMap
 
 	OctreeMap& operator=(OctreeMap&& rhs) = default;
 
+	//
+	// Swap
+	//
+
+	void swap(OctreeMap& other)  // TODO: Add noexcept thing
+	{
+		Octree::swap(other);
+		(Bases<OctreeMap>::swap(other), ...);
+	}
+
  protected:
 	//
 	// Read from other map

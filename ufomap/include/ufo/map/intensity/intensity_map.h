@@ -191,6 +191,15 @@ class IntensityMap
 	}
 
 	//
+	// Swap
+	//
+
+	constexpr void swap(IntensityMap& other) noexcept
+	{
+		std::swap(prop_criteria_, other.prop_criteria_);
+	}
+
+	//
 	// Derived
 	//
 

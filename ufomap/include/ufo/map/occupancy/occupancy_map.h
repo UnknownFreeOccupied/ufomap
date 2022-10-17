@@ -779,6 +779,19 @@ class OccupancyMap
 	}
 
 	//
+	// Swap
+	//
+
+	constexpr void swap(OccupancyMap& other) noexcept
+	{
+		std::swap(clamping_thres_min_logit_, other.clamping_thres_min_logit_);
+		std::swap(clamping_thres_max_logit_, other.clamping_thres_max_logit_);
+		std::swap(occupied_thres_logit_, other.occupied_thres_logit_);
+		std::swap(free_thres_logit_, other.free_thres_logit_);
+		std::swap(prop_criteria_, other.prop_criteria_);
+	}
+
+	//
 	// Derived
 	//
 

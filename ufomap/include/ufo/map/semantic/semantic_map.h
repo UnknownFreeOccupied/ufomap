@@ -801,6 +801,47 @@ class SemanticMap
 
  protected:
 	//
+	// Constructors
+	//
+
+	SemanticMap() = default;
+
+	SemanticMap(SemanticMap const& other) = default;
+
+	SemanticMap(SemanticMap&& other) = default;
+
+	template <class Derived2>
+	SemanticMap(SemanticMap<Derived2> const& other)
+	    : // TODO: Fill in
+	{
+	}
+
+	//
+	// Assignment operator
+	//
+
+	SemanticMap& operator=(SemanticMap const& rhs) = default;
+
+	SemanticMap& operator=(SemanticMap&& rhs) = default;
+
+	template <class Derived2>
+	SemanticMap& operator=(SemanticMap<Derived2> const& rhs)
+	{
+		// TODO: Fill in
+		return *this;
+	}
+
+	//
+	// Swap
+	//
+
+	constexpr void swap(SemanticMap& other) noexcept
+	{
+		std::swap(label_mapping_, other.label_mapping_);
+		std::swap(label_propagation_, other.label_propagation_);
+	}
+
+	//
 	// Derived
 	//
 

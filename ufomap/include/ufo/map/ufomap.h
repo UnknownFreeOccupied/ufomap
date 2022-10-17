@@ -214,6 +214,12 @@ class UFOMap
 	}
 
 	UFOMap& operator=(UFOMap&& rhs) = default;
+
+	//
+	// Swap
+	//
+
+	void swap(UFOMap& other) noexcept(noexcept(Base::swap(other))) { Base::swap(other); }
 };
 
 //
@@ -232,5 +238,16 @@ using CountMap        = UFOMap<COUNT>;
 using ReflectionMap   = UFOMap<REFLECTION>;
 // clang-format on
 }  // namespace ufo::map
+
+namespace std
+{
+template <ufo::map::mt_t MapType, bool ReuseNodes, bool LockLess, bool CountNodes>
+void swap(UFOMap<MapType, ReuseNodes, LockLess, CountNodes>& lhs,
+          UFOMap<MapType, ReuseNodes, LockLess, CountNodes>&
+              rhs) noexcept(noexcept(lhs.swap(rhs)))
+{
+	lhs.swap(rhs);
+}
+}  // namespace std
 
 #endif  // UFO_MAP_UFO_MAP_H

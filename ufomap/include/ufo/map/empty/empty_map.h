@@ -86,6 +86,12 @@ class EmptyMap
 	}
 
 	//
+	// Swap
+	//
+
+	constexpr void swap(EmptyMap&) noexcept {}
+
+	//
 	// Initilize root
 	//
 

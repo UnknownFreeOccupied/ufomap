@@ -247,6 +247,12 @@ class ColorMap
 	}
 
 	//
+	// Swap
+	//
+
+	constexpr void swap(ColorMap&) noexcept {}
+
+	//
 	// Derived
 	//
 

@@ -2693,12 +2693,12 @@ class OctreeBase
 			clear(header.leaf_size, header.depth_levels);
 		}
 
-		auto nodes = nodes(in);
+		auto nodes = readNodes(in);
 
 		derived().readNodes(in, std::begin(nodes), nodes.size(), header.compressed);
 
 		if (propagate) {
-			propagate();
+			propagateModified();
 		}
 	}
 
@@ -3060,6 +3060,35 @@ class OctreeBase
 
 	/**************************************************************************************
 	|                                                                                     |
+	|                                         Swap                                        |
+	|                                                                                     |
+	**************************************************************************************/
+
+	void swap(OctreeBase& other)
+	{
+		std::swap(depth_levels_, other.depth_levels_);
+		std::swap(max_value_, other.max_value_);
+		std::swap(root_, other.root_);
+		std::swap(node_size_, other.node_size_);
+		std::swap(node_size_factor_, other.node_size_factor_);
+		std::swap(automatic_prune_, other.automatic_prune_);
+		// TODO: Check locks
+		std::swap(free_inner_blocks_, other.free_inner_blocks_);
+		std::swap(free_leaf_blocks_, other.free_leaf_blocks_);
+
+		num_inner_nodes_ = other.num_inner_nodes_.exchange(num_inner_nodes_);
+		num_inner_leaf_nodes_ = other.num_inner_leaf_nodes_.exchange(num_inner_leaf_nodes_);
+		num_leaf_nodes_ = other.num_leaf_nodes_.exchange(num_leaf_nodes_);
+		num_allocated_inner_nodes_ =
+		    other.num_allocated_inner_nodes_.exchange(num_allocated_inner_nodes_);
+		num_allocated_inner_leaf_nodes_ =
+		    other.num_allocated_inner_leaf_nodes_.exchange(num_allocated_inner_leaf_nodes_);
+		num_allocated_leaf_nodes_ =
+		    other.num_allocated_leaf_nodes_.exchange(num_allocated_leaf_nodes_);
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
 	|                                       Derived                                       |
 	|                                                                                     |
 	**************************************************************************************/
@@ -3113,8 +3142,8 @@ class OctreeBase
 
 	void initRoot()
 	{
-		root()->setLeaf();
-		root()->resetModified();
+		root().leaf.set();
+		root().modified.reset();
 	}
 
 	[[nodiscard]] constexpr InnerNode const& root() const noexcept { return root_; }
