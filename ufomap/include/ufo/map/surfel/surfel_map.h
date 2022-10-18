@@ -742,8 +742,8 @@ class SurfelMap
 		}
 	}
 
-	template <class InputIt>
-	void readNodes(std::istream& in, InputIt first, InputIt last, std::size_t num_nodes)
+	template <class OutputIt>
+	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
 	{
 		// TODO: Implement
 
@@ -776,8 +776,7 @@ class SurfelMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last,
-	                std::size_t num_nodes) const
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
 	{
 		// TODO: Implement
 

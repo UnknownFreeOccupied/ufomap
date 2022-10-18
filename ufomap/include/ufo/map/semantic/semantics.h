@@ -66,6 +66,10 @@
 
 namespace ufo::map
 {
+// Forward declare
+template <std::size_t N>
+class SemanticNode;
+
 class Semantics
 {
  public:
@@ -91,6 +95,13 @@ class Semantics
 	Semantics(Semantics const &other) { *this = other; }
 
 	Semantics(Semantics &&other) noexcept = default;
+
+	template <std::size_t N>
+	Semantics(SemanticNode<N> const &node, index_t index)
+	{
+		resize(node.size(index));
+		std::copy(node.begin(index), node.end(index), begin());
+	}
 
 	//
 	// Assignment operator
@@ -1294,10 +1305,6 @@ class Semantics
  private:
 	std::unique_ptr<Semantic[]> data_;
 };
-
-// Forward declare
-template <std::size_t N>
-class SemanticNode;
 
 template <std::size_t N = 1>
 class Semantics

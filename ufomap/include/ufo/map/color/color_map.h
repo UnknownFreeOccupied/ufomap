@@ -274,12 +274,17 @@ class ColorMap
 	//
 
 	template <std::size_t N, class InputIt>
-	void updateNode(ColorNode<N>& node, IndexField indices, InputIt first, InputIt last)
+	void updateNode(ColorNode<N>& node, IndexField const indices, InputIt first,
+	                InputIt last)
 	{
 		if constexpr (1 == N) {
 			node.setColor(mean(first, last, [](ColorNode<N> child) { return child.red[0]; }),
 			              mean(first, last, [](ColorNode<N> child) { return child.green[0]; }),
 			              mean(first, last, [](ColorNode<N> child) { return child.blue[0]; }));
+		} else if (indices.all()) {
+			for (index_t i = 0; first != last; ++first, ++i) {
+				node.setColor(i, mean(first->red), mean(first->green), mean(first->blue));
+			}
 		} else {
 			for (index_t i = 0; first != last; ++first, ++i) {
 				if (indices[i]) {

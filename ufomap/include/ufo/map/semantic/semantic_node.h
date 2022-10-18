@@ -103,9 +103,9 @@ struct SemanticNode {
 	[[nodiscard]] Semantics semantics(index_t const index) const
 	{
 		if constexpr (1 == N) {
-			return semantics_[0];
+			return Semantics(*this, 0);
 		} else {
-			return semantics_[index];
+			return Semantics(*this, index);
 		}
 	}
 
@@ -126,6 +126,10 @@ struct SemanticNode {
 			// TODO: Implement
 		}
 	}
+
+	// 
+	// Iterators
+	// 
 
  private:
 	// Data

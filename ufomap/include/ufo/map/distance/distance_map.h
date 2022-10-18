@@ -338,7 +338,7 @@ class DistanceMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
 	{
 		constexpr uint8_t const n = numData<InputIt>();
 		num_nodes *= n;

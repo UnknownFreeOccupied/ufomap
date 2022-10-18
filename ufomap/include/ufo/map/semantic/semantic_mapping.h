@@ -60,69 +60,109 @@ namespace ufo::map
 class SemanticLabelMapping
 {
  public:
-	void add(std::string const& name, label_t label)
+	void add(std::string const& name, label_t label) { add(name, SemanticRange(label)); }
+
+	void add(std::string const& name, SemanticRange labels)
 	{
-		mapping_[name].ranges.insert(label);
+		add(name, SemanticRangeSet(labels));
 	}
 
-	void add(std::string const& name, container::Range<label_t> labels)
+	void add(std::string const& name, SemanticRangeSet const& labels)
 	{
-		mapping_[name].ranges.insert(labels);
-	}
-
-	void add(std::string const& name, container::RangeSet<label_t> const& labels)
-	{
-		// TODO: Correct?
-		mapping_[name].ranges.insert(std::begin(labels), std::end(labels));
+		// FIXME: Correct?
+		if (consumer_mapping_[name].ranges.insert(std::begin(labels), std::end(labels))) {
+			if (mapping_[name].ranges.insert(std::begin(labels), std::end(labels))) {
+				changed_ = true;
+			}
+		}
 	}
 
 	void add(std::string const& name, std::string const& other_name)
 	{
-		mapping_[name].strings.insert(other_name);
+		// FIXME: Correct?
+		if (consumer_mapping_[name].strings.insert(other_name).second) {
+			if (mapping_[name].strings.insert(other_name).second) {
+				changed_ = true;
+			}
+		}
 	}
 
-	void setColor(std::string const& name, Color color) { mapping_[name].color = color; }
+	void setColor(std::string const& name, Color color)
+	{
+		// FIXME: Correct?
+		if (0 == consumer_mapping_.count(name) || consumer_mapping_[name].color != color) {
+			consumer_mapping_[name].color = color;
+			if (0 == mapping_.count(name) || mapping_[name].color != color) {
+				mapping_[name].color = color;
+				changed_ = true;
+			}
+		}
+	}
 
-	void clear() { mapping_.clear(); }
+	void clear()
+	{
+		// TODO: Implement
+	}
 
-	void clear(std::string const& name) { mapping_[name].clear(); }
+	void clear(std::string const& name)
+	{
+		// TODO: Implement
+	}
 
 	void clearLabel()
 	{
+		// TODO: Implement
 		std::for_each(std::begin(mapping_), std::end(mapping_),
 		              [](auto const& m) { m.ranges.clear(); });
 	}
 
-	void clearLabel(std::string const& name) { mapping_[name].ranges.clear(); }
+	void clearLabel(std::string const& name)
+	{
+		// TODO: Implement
+		mapping_[name].ranges.clear();
+	}
 
 	void clearString()
 	{
+		// TODO: Implement
 		std::for_each(std::begin(mapping_), std::end(mapping_),
 		              [](auto const& m) { m.strings.clear(); });
 	}
 
-	void clearString(std::string const& name) { mapping_[name].strings.clear(); }
+	void clearString(std::string const& name)
+	{
+		// TODO: Implement
+		mapping_[name].strings.clear();
+	}
 
 	void clearColor()
 	{
+		// TODO: Implement
 		std::for_each(std::begin(mapping_), std::end(mapping_),
 		              [](auto const& m) { m.color.clear(); });
 	}
 
-	void clearColor(std::string const& name) { mapping_[name].color.clear(); }
+	void clearColor(std::string const& name)
+	{
+		// TODO: Implement
+		mapping_[name].color.clear();
+	}
 
 	void erase(std::string const& name, label_t label)
 	{
+		// TODO: Implement
 		mapping_[name].ranges.erase(label);
 	}
 
 	void erase(std::string const& name, container::Range<label_t> labels)
 	{
+		// TODO: Implement
 		mapping_[name].ranges.erase(labels);
 	}
 
 	void erase(std::string const& name, container::RangeSet<label_t> labels)
 	{
+		// TODO: Implement
 		for (auto const& label : labels) {
 			mapping_[name].ranges.erase(label);
 		}
@@ -130,11 +170,13 @@ class SemanticLabelMapping
 
 	void erase(std::string const& name, std::string const& other_name)
 	{
+		// TODO: Implement
 		mapping_[name].strings.erase(other_name);
 	}
 
 	container::RangeSet<label_t> getRanges(std::string const& name) const
 	{
+		// TODO: Implement
 		if (0 == mapping_.count(name)) {
 			return container::RangeSet<label_t>();
 		}
@@ -170,6 +212,7 @@ class SemanticLabelMapping
 
 	std::unordered_set<std::string> getStrings(std::string const& name) const
 	{
+		// TODO: Implement
 		if (auto it = mapping_.find(name); mapping_.end() != it) {
 			return it->second.strings;
 		}
@@ -178,30 +221,46 @@ class SemanticLabelMapping
 
 	Color getColor(std::string const& name) const
 	{
+		// TODO: Implement
 		if (auto it = mapping_.find(name); mapping_.end() != it) {
 			return it->second.color;
 		}
 		return Color();
 	}
 
-	std::ostream& writeData(std::ostream& out_stream) const
+	void read(std::istream& in)
 	{
-		// Total
-		uint64_t size = mapping_.size();
-		out_stream.write(reinterpret_cast<char*>(&size), sizeof(uint64_t));
+		std::uint64_t size;
+		in.read(reinterpret_cast<char*>(&size), sizeof(size));
+		std::vector<char> producer_serialized(size);
+		in.read(producer_serialized.data(), size);
 
-		for (auto const& [str, data] : mapping_) {
-			// String label
-			uint64_t length = str.length();
-			out_stream.write(reinterpret_cast<char*>(&length), sizeof(uint64_t));
-			out_stream.write(str.data(), length);
-
-			data.writeData(out_stream);
+		if (producer_serialized == producer_serialized_) {
+			return;
 		}
-	}
 
-	std::istream& readData(std::istream& in_stream)
-	{
+		producer_serialized_.swap(producer_serialized);
+
+		producer_mapping_.clear();
+		// TODO: Fill producer_mapping_
+
+		mapping_ = producer_mapping_;
+
+		// NOTE: Important that consumer is after producer so it overwrites
+		for (auto const& [name, data] : consumer_mapping_) {
+			auto& mapping_data = mapping_[name];
+
+			mapping_data.ranges.insert(std::begin(data.ranges), std::end(data.ranges));
+			mapping_data.strings.insert(std::begin(data.strings), std::end(data.strings));
+			if (data.color.set()) {
+				mapping_data.color = data.color;
+			}
+		}
+
+		changed_ = true;
+
+		// TODO: Old below
+
 		// Total
 		uint64_t size;
 		in_stream.read(reinterpret_cast<char*>(&size), sizeof(uint64_t));
@@ -263,7 +322,32 @@ class SemanticLabelMapping
 		return in_stream;
 	}
 
-	constexpr uint64_t getSerializedSize() const { return serialized_size_; }
+	void write(std::ostream& out) const
+	{
+		if (!changed_) {
+			std::uint64_t size = mapping_serialized_.size();
+			out.write(reinterpret_cast<char const*>(&size), sizeof(size));
+			out.write(mapping_serialized_.data(), mapping_serialized_.size());
+			return;
+		}
+
+		changed_ = false;
+
+		// TODO: Implement
+
+		// Total
+		uint64_t size = mapping_.size();
+		out_stream.write(reinterpret_cast<char*>(&size), sizeof(uint64_t));
+
+		for (auto const& [str, data] : mapping_) {
+			// String label
+			uint64_t length = str.length();
+			out_stream.write(reinterpret_cast<char*>(&length), sizeof(uint64_t));
+			out_stream.write(str.data(), length);
+
+			data.writeData(out_stream);
+		}
+	}
 
 	friend std::ostream& operator<<(std::ostream& os, SemanticLabelMapping const& mapping)
 	{
@@ -279,6 +363,13 @@ class SemanticLabelMapping
 
  private:
 	struct Data {
+		SemanticRangeSet ranges;
+		SemanticRangeSet removed_ranges;
+		std::unordered_set<std::string> strings;
+		std::unordered_set<std::string> removed_strings;
+		Color color;
+		bool removed_color = false;
+
 		void clear()
 		{
 			ranges.clear();
@@ -286,62 +377,63 @@ class SemanticLabelMapping
 			color.clear();
 		}
 
-		std::ostream& writeData(std::ostream& out_stream) const
+		void read(std::istream& in)
 		{
 			// Ranges
-			ranges.writeData(out_stream);
+			ranges.clear();
+			std::uint64_t size;
+			in.read(reinterpret_cast<char*>(&size), sizeof(size));
+			// TODO: Implement
 
 			// Strings
-			uint64_t size = strings.size();
-			out_stream.write(reinterpret_cast<char*>(&size), sizeof(uint64_t));
+			strings.clear();
+			in.read(reinterpret_cast<char*>(&size), sizeof(size));
+			for (std::uint64_t i = 0; i != size; ++i) {
+				std::uint64_t length;
+				in.read(reinterpret_cast<char*>(&length), sizeof(length));
+				auto str = std::make_unique<char[]>(length);
+				in.read(reinterpret_cast<char*>(str.get()), length);
+				strings.emplace(str.get(), length);
+			}
+
+			// Color
+			in.read(reinterpret_cast<char*>(&color), sizeof(color));
+		}
+
+		void write(std::ostream& out) const
+		{
+			// Ranges
+			std::uint64_t size = ranges.size();
+			out.write(reinterpret_cast<char*>(&size), sizeof(size));
+			out.write(reinterpret_cast<char*>(ranges.data()),
+			          size * sizeof(SemanticRangeSet::value_type));
+
+			// Strings
+			size = strings.size();
+			out.write(reinterpret_cast<char*>(&size), sizeof(size));
 			for (auto const& str : strings) {
-				uint64_t length = str.length();
-				out_stream.write(reinterpret_cast<char*>(&length), sizeof(uint64_t));
-				out_stream.write(str.data(), length);
+				size = str.length();
+				out.write(reinterpret_cast<char*>(&size), sizeof(size));
+				out.write(str.data(), size);
 			}
 
 			// Color
-			out_stream.write(reinterpret_cast<char const*>(&color), sizeof(Color));
+			out.write(reinterpret_cast<char const*>(&color), sizeof(color));
 		}
-
-		std::istream& readData(std::istream& in_stream)
-		{
-			// Ranges
-			ranges.readData(in_stream);
-
-			// Strings
-			std::vector<char> tmp;
-			uint64_t size;
-			in_stream.read(reinterpret_cast<char*>(&size), sizeof(uint64_t));
-			for (uint64_t i = 0; i != size; ++i) {
-				uint64_t length;
-				in_stream.read(reinterpret_cast<char*>(&length), sizeof(uint64_t));
-				tmp.resize(length);
-				in_stream.read(tmp.data(), length);
-				std::string str;
-				str.assign(tmp.data(), length);
-				strings.insert(std::move(str));
-			}
-
-			// Color
-			in_stream.read(reinterpret_cast<char*>(color), sizeof(Color));
-		}
-
-		container::RangeSet<label_t> ranges;
-		std::unordered_set<std::string> strings;
-		Color color;
 	};
 
-	// Combined mapping
-	std::unordered_map<std::string, Data> mapping_;
-
+ private:
 	// Updated by consumer
 	std::unordered_map<std::string, Data> consumer_mapping_;
 	// Updated by producer
 	std::unordered_map<std::string, Data> producer_mapping_;
+	// Combined mapping
+	std::unordered_map<std::string, Data> mapping_;
 
-	// Size taken
-	uint64_t serialized_size_ = 0;
+	// Producer mapping serialized form
+	std::vector<char> producer_serialized_;
+	// Combined mapping serialized form
+	std::vector<char> mapping_serialized_;
 
 	// Change detection
 	bool changed_ = false;

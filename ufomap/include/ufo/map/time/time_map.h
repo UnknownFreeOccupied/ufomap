@@ -184,10 +184,7 @@ class TimeMap
 	// Swap
 	//
 
-	void swap(CountMap& other) noexcept
-	{
-		std::swap(prop_criteria_, other.prop_criteria_);
-	}
+	void swap(CountMap& other) noexcept { std::swap(prop_criteria_, other.prop_criteria_); }
 
 	//
 	// Derived
@@ -335,7 +332,7 @@ class TimeMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
+	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
 	{
 		constexpr std::uint8_t const n = numData<InputIt>();
 		num_nodes *= n;
