@@ -129,7 +129,7 @@ struct SemanticNode {
 
  private:
 	// Data
-	Semantics<N> semantics_;
+	std::unique_ptr<Semantic[]> semantics_;
 };
 }  // namespace ufo::map
 

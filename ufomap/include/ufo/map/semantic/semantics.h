@@ -45,7 +45,7 @@
 // UFO
 #include <ufo/container/range.h>
 #include <ufo/container/range_map.h>
-#include <ufo/container/range_set.h>
+#include <ufo/container/ranges.h>
 #include <ufo/map/index_field.h>
 #include <ufo/map/semantic/semantic_propagation.h>
 #include <ufo/util/iterator_wrapper.h>
@@ -66,6 +66,1235 @@
 
 namespace ufo::map
 {
+class Semantics
+{
+ public:
+	//  Tags
+	using size_type = std::size_t;
+	using difference_type = std::ptrdiff_t;
+	using reference = Semantic &;  // TODO: Make label const
+	using const_reference = Semantic const &;
+	// using pointer = typename std::allocator_traits<Allocator>::pointer;
+	// using const_pointer = typename
+	// std::allocator_traits<Allocator>::const_pointer;
+	using iterator = Semantic *;  // TODO: Make label const
+	using const_iterator = Semantic const *;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	//
+	// Constructors
+	//
+
+	constexpr Semantics() = default;
+
+	Semantics(Semantics const &other) { *this = other; }
+
+	Semantics(Semantics &&other) noexcept = default;
+
+	//
+	// Assignment operator
+	//
+
+	Semantics &operator=(Semantics const &rhs)
+	{
+		if (rhs.empty()) {
+			clear();
+		} else {
+			resize(rhs.size());
+			std::copy(std::begin(rhs), std::end(rhs), begin());
+		}
+		return *this;
+	}
+
+	Semantics &operator=(Semantics &&rhs) noexcept = default;
+
+	//
+	// Iterators
+	//
+
+	iterator begin() noexcept { return empty() ? nullptr : data_.get() + 1; }
+
+	const_iterator begin() const noexcept { return empty() ? nullptr : data_.get() + 1; }
+
+	const_iterator cbegin() const noexcept { return begin(); }
+
+	iterator end() noexcept { return empty() ? nullptr : data_.get() + allocSize(); }
+
+	const_iterator end() const noexcept
+	{
+		return empty() ? nullptr : data_.get() + allocSize();
+	}
+
+	const_iterator cend() const noexcept { return end(); }
+
+	//
+	// Reverse iterators
+	//
+
+	reverse_iterator rbegin() noexcept { return std::make_reverse_iterator(end()); }
+
+	const_reverse_iterator rbegin() const noexcept
+	{
+		return std::make_reverse_iterator(end());
+	}
+
+	const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+
+	reverse_iterator rend() noexcept { return std::make_reverse_iterator(begin()); }
+
+	const_reverse_iterator rend() const noexcept
+	{
+		return std::make_reverse_iterator(begin());
+	}
+
+	const_reverse_iterator crend() const noexcept { return rend(); }
+
+	//
+	// Empty
+	//
+
+	[[nodiscard]] bool empty() const noexcept { return nullptr == data_; }
+
+	//
+	// Size
+	//
+
+	[[nodiscard]] size_type size() const { return empty() ? 0 : data_[0].label; }
+
+	[[nodiscard]] size_type allocSize() const { return empty() ? 0 : data_[0].label + 1; }
+
+	[[nodiscard]] static constexpr size_type maxSize() noexcept
+	{
+		return std::numeric_limits<label_t>::max();
+	}
+
+	//
+	// Clear
+	//
+
+	void clear() noexcept { data_.reset(); }
+
+	//
+	// Insert
+	//
+
+	void insert(Semantic semantic) { return insert(semantic.label, semantic.value); }
+
+	void insert(label_t label, value_t value)
+	{
+		return insertOrAssign<false>(label, [value](auto) { return value; });
+	}
+
+	template <class InputIt>
+	void insert(InputIt first, InputIt last)
+	{
+		insertOrAssign<false>(first, last);
+	}
+
+	void insert(std::initializer_list<Semantic> ilist)
+	{
+		insert(std::cbegin(ilist), std::cend(ilist));
+	}
+
+	//
+	// Insert or assign
+	//
+
+	void insertOrAssign(Semantic semantic)
+	{
+		return insertOrAssign(semantic.label, semantic.value);
+	}
+
+	void insertOrAssign(label_t label, value_t value)
+	{
+		return insertOrAssign<true>(label, [value](auto) { return value; });
+	}
+
+	template <class InputIt>
+	void insertOrAssign(InputIt first, InputIt last)
+	{
+		insertOrAssign<true>(first, last);
+	}
+
+	void insertOrAssign(std::initializer_list<Semantic> ilist)
+	{
+		insertOrAssign(std::cbegin(ilist), std::cend(ilist));
+	}
+
+	//
+	// Insert or assign custom function
+	//
+
+	template <class UnaryFunction>
+	void insertOrAssign(label_t label, UnaryFunction f)
+	{
+		insertOrAssign<true>(label, f);
+	}
+
+	template <class InputIt, class UnaryFunction>
+	void insertOrAssign(InputIt first, InputIt last, UnaryFunction f)
+	{
+		insertOrAssign<true>(first, last, f);
+	}
+
+	template <class UnaryFunction>
+	void insertOrAssign(std::initializer_list<label_t> ilist, UnaryFunction f)
+	{
+		insertOrAssign(std::cbegin(ilist), std::cend(ilist), f);
+	}
+
+	//
+	// Assign
+	//
+
+	void assign(SemanticRange range, value_t value)
+	{
+		assign(SemanticRangeSet{range}, value);
+	}
+
+	void assign(SemanticRangeSet const &ranges, value_t value)
+	{
+		assign(ranges, [value](auto) { return value; });
+	}
+
+	template <class UnaryFunction>
+	void assign(SemanticRange range, UnaryFunction f)
+	{
+		assign(SemanticRangeSet{range}, f);
+	}
+
+	template <class UnaryFunction>
+	void assign(SemanticRangeSet const &ranges, UnaryFunction f)
+	{
+		auto first = begin();
+		auto last = end();
+		for (auto range : ranges) {
+			if (first == last) {
+				break;
+			}
+
+			first = lower_bound(first, last, range.lower());
+			auto upper = upper_bound(first, last, range.upper());
+			for (; first != upper; ++first) {
+				first->value = f(*first);
+			}
+		}
+	}
+
+	//
+	// Erase
+	//
+
+	iterator erase(const_iterator pos) { return erase(pos, std::next(pos)); }
+
+	iterator erase(iterator pos) { return erase(pos, std::next(pos)); }
+
+	iterator erase(const_iterator first, const_iterator last)
+	{
+		if (first == last || cend() == first) {
+			return end();
+		} else if (cbegin() == first && cend() == last) {
+			clear();
+			return end();
+		} else if (cend() == last) {
+			resize(size() - std::distance(first, last));
+			return end();
+		}
+
+		// TODO: Implement
+
+		resize(...);
+	}
+
+	size_type erase(label_t label)
+	{
+		auto p = find(label);
+		return p == end() ? 0 : erase(p), 1;
+	}
+
+	size_type erase(SemanticRange range) { return erase(SemanticRangeSet{range}); }
+
+	size_type erase(SemanticRangeSet const &ranges)
+	{
+		if (ranges.empty() || empty()) {
+			return 0;
+		}
+
+		auto first = begin();
+		auto last = end();
+		size_type sum = 0;
+		for (auto range : ranges) {
+			first = lower_bound(first, last, range.lower());
+			auto upper = upper_bound(first, last, range.upper());
+			sum += std::distance(first, upper);
+			erase(first, upper);
+			first = upper;
+		}
+
+		return sum;
+	}
+
+	//
+	// Erase if
+	//
+
+	template <class UnaryPredicate>
+	size_type eraseIf(UnaryPredicate p)
+	{
+		if (empty()) {
+			return 0;
+		}
+
+		auto s = sizes();
+		auto sum = 0;
+		for (index_t i = 0; N != i; ++i) {
+			auto t = eraseIfImpl(i, p);
+			s[i] -= t;
+			sum += t;
+		}
+
+		resize(s);
+
+		return sum;
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIf(SemanticRange range, UnaryPredicate p)
+	{
+		return eraseIf(SemanticRangeSet{range}, p);
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIf(SemanticRangeSet const &ranges, UnaryPredicate p)
+	{
+		if (ranges.empty() || empty()) {
+			return 0;
+		}
+
+		auto s = sizes();
+		auto sum = 0;
+		for (index_t i = 0; N != i; ++i) {
+			auto t = eraseIfImpl(i, ranges, p);
+			s[i] -= t;
+			sum += t;
+		}
+
+		resize(s);
+
+		return sum;
+	}
+
+	//
+	// Swap
+	//
+
+	void swap(Semantics &other) noexcept { std::swap(data_, other.data_); }
+
+	//
+	// At
+	//
+
+	[[nodiscard]] Semantic at(label_t label) const
+	{
+		if (auto it = find(label); end() != it) {
+			return *it;
+		}
+		throw std::out_of_range("Cannot find label " + std::to_string(label));
+	}
+
+	//
+	// Value
+	//
+
+	[[nodiscard]] std::optional<value_t> value(label_t label) const
+	{
+		auto it = find(label);
+		return end() != it ? std::optional<value_t>(it->value) : std::nullopt;
+	}
+
+	//
+	// Count
+	//
+
+	[[nodiscard]] size_type count(label_t label) const { return contains(label) ? 1 : 0; }
+
+	//
+	// Find
+	//
+
+	[[nodiscard]] iterator find(label_t label)
+	{
+		auto it = lower_bound(label);
+		return end() != it && it->label == label ? it : end();
+	}
+
+	[[nodiscard]] const_iterator find(label_t label) const
+	{
+		auto it = lower_bound(label);
+		return end() != it && it->label == label ? it : end();
+	}
+
+	//
+	// Contains
+	//
+
+	[[nodiscard]] bool contains(label_t label) const { return end() != find(label); }
+
+	//
+	// Equal range
+	//
+
+	[[nodiscard]] std::pair<iterator, iterator> equal_range(label_t label)
+	{
+		return equal_range(begin(), end(), label);
+	}
+
+	[[nodiscard]] std::pair<const_iterator, const_iterator> equal_range(label_t label) const
+	{
+		return equal_range(begin(), end(), label);
+	}
+
+	//
+	// Lower bound
+	//
+
+	[[nodiscard]] iterator lower_bound(label_t label)
+	{
+		return lower_bound(begin(), end(), label);
+	}
+
+	[[nodiscard]] const_iterator lower_bound(label_t label) const
+	{
+		return lower_bound(begin(), end(), label);
+	}
+
+	//
+	// Upper bound
+	//
+
+	[[nodiscard]] iterator upper_bound(label_t label)
+	{
+		return upper_bound(begin(), end(), label);
+	}
+
+	[[nodiscard]] const_iterator upper_bound(label_t label) const
+	{
+		return upper_bound(begin(), end(), label);
+	}
+
+	//
+	// Data
+	//
+
+	[[nodiscard]] Semantic const *data() const { return data_.get() + 1; }
+
+	//
+	// All
+	//
+
+	[[nodiscard]] bool all(SemanticRange const &range) const
+	{
+		return all(SemanticRangeSet{range});
+	}
+
+	[[nodiscard]] bool all(SemanticRangeSet const &ranges) const
+	{
+		if (ranges.empty()) {
+			return true;
+		} else if (size(index) < ranges.numValues()) {
+			return false;
+		}
+
+		auto first = cbegin(index);
+		auto last = cend(index);
+		for (auto range : ranges) {
+			auto lower = lower_bound(first, last, range.lower());
+			first = upper_bound(lower, last, range.upper());
+			auto range_dist = range.upper() - range.lower() + 1;
+			auto sem_dist = std::distance(lower, first);
+			if (first == last || range_dist != sem_dist) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool all(SemanticRange const &range, UnaryPredicate p) const
+	{
+		return all(SemanticRangeSet{range}, p);
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool all(SemanticRangeSet const &ranges, UnaryPredicate p) const
+	{
+		if (ranges.empty()) {
+			return true;
+		} else if (size(index) < ranges.numValues()) {
+			return false;
+		}
+
+		auto first = cbegin(index);
+		auto last = cend(index);
+		for (auto range : ranges) {
+			auto lower = lower_bound(first, last, range.lower());
+			first = upper_bound(lower, last, range.upper());
+			auto range_dist = range.upper() - range.lower() + 1;
+			auto sem_dist = std::distance(lower, first);
+			if (first == last || range_dist != sem_dist) {
+				return false;
+			}
+			for (; lower != first; ++lower) {
+				if (!p(*lower)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	//
+	// Any
+	//
+
+	[[nodiscard]] bool any(SemanticRange const &range) const
+	{
+		return any(index, SemanticRangeSet{range});
+	}
+
+	[[nodiscard]] bool any(SemanticRangeSet const &ranges) const
+	{
+		if (ranges.empty()) {
+			return true;
+		}
+
+		if (size(index) < ranges.size()) {
+			for (auto it = cbegin(index), last = cend(index); it != last; ++it) {
+				if (ranges.contains(it->label)) {
+					return true;
+				}
+			}
+		} else {
+			auto first = cbegin(index);
+			auto last = cend(index);
+			for (auto range : ranges) {
+				first = lower_bound(first, last, range.lower());
+				if (first == last) {
+					return false;
+				} else if (first->label <= range.upper()) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool any(SemanticRange const &range, UnaryPredicate p) const
+	{
+		return any(index, SemanticRangeSet{range}, p);
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool any(SemanticRangeSet const &ranges, UnaryPredicate p) const
+	{
+		if (ranges.empty()) {
+			return true;
+		}
+
+		if (size(index) < ranges.size()) {
+			for (auto it = cbegin(index), last = cend(index); it != last; ++it) {
+				if (ranges.contains(it->label) && f(*it)) {
+					return true;
+				}
+			}
+		} else {
+			auto first = cbegin(index);
+			auto last = cend(index);
+			for (auto range : ranges) {
+				first = lower_bound(first, last, range.lower());
+				for (; first != last && first->label <= range.upper(); ++first) {
+					if (p(*first)) {
+						return true;
+					}
+				}
+				if (first == last) {
+					return false;
+				}
+			}
+		}
+	}
+
+	//
+	// None
+	//
+
+	[[nodiscard]] bool none(SemanticRange const &range) const { return !any(index, range); }
+
+	[[nodiscard]] bool none(SemanticRangeSet const &ranges) const
+	{
+		return !any(index, ranges);
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool none(SemanticRange const &range, UnaryPredicate p) const
+	{
+		return !any(index, range, p);
+	}
+
+	template <class UnaryPredicate>
+	[[nodiscard]] bool none(SemanticRangeSet const &ranges, UnaryPredicate p) const
+	{
+		return !any(index, ranges, p);
+	}
+
+ protected:
+	//
+	// Data
+	//
+
+	[[nodiscard]] Semantic *data() { return data_.get() + 1; }
+
+	//
+	// Insert or assign
+	//
+
+	template <bool Assign, class UnaryFunction>
+	void insertOrAssign(label_t label, UnaryFunction f)
+	{
+		if (empty()) {
+			std::array<size_type, N> s;
+			s.fill(1);
+			resize(s);
+			std::fill(begin(), end(), Semantic(label, f(Semantic(label))));
+			return;
+		}
+
+		std::array<size_type, N> new_sizes = sizes();
+		std::array<difference_type, N> dist;
+		for (index_t index = 0; N != index; ++index) {
+			auto it = lower_bound(index, label);
+			if (end(index) != it && it->label == label) {
+				// Label already exists
+				if constexpr (Assign) {
+					it->value = f(*it);
+				}
+				dist[index] = 0;
+			} else {
+				++new_sizes[index];
+				dist[index] = std::distance(index, it);
+			}
+		}
+
+		if (0 == std::accumulate(std::begin(dist), std::end(dist))) {
+			return;
+		}
+
+		resize(new_sizes);
+
+		for (index_t index = 0; N != index; ++index) {
+			if (0 == dist[index]) {
+				continue;
+			}
+			auto it = begin(index) + dist[index];
+			auto last_index = end(index);
+			std::move_backward(it, last_index - 1, last_index);
+			it->label = label;
+			it->value = f(Semantic(label));
+		}
+	}
+
+	template <bool Assign, class UnaryFunction>
+	std::pair<iterator, bool> insertOrAssign(index_t const index, label_t label,
+	                                         UnaryFunction f)
+	{
+		if (empty(index)) {
+			resize(index, 1);
+			auto it = begin(index);
+			it->label = label;
+			it->value = f(Semantic(label));
+			return {it, true};
+		}
+
+		auto it = lower_bound(index, label);
+		if (end(index) != it && it->label == label) {
+			// Label already exists
+			if constexpr (Assign) {
+				it->value = f(*it);
+			}
+			return {it, false};
+		}
+
+		auto i = std::distance(begin(index), it);
+		resize(index, size(index) + 1);
+		it = begin(index) + i;
+		auto last_index = end(index);
+		std::move_backward(it, last_index - 1, last_index);
+		it->label = label;
+		it->value = f(Semantic(label));
+		return {it, true};
+	}
+
+	template <bool Assign, class UnaryFunction>
+	iterator insertOrAssign(index_t const index, const_iterator hint, label_t label,
+	                        UnaryFunction f)
+	{
+		if (empty(index)) {
+			resize(index, 1);
+			auto it = begin(index);
+			it->label = label;
+			it->value = f(Semantic(label));
+			return it;
+		}
+
+		auto first_index = begin(index);
+		auto last_index = end(index);
+
+		auto first =
+		    first_index != hint && std::prev(hint, 1)->label < label ? hint : first_index;
+		auto last = last_index != hint && hint->label >= label ? hint : last_index;
+		hint = lower_bound(first, last, label);
+
+		auto i = std::distance(first_index, hint);
+
+		if (last_index != hint && hint->label == label) {
+			// Label already exists
+			auto it = first_index + i;
+			if constexpr (Assign) {
+				it->value = f(*it);
+			}
+			return it;
+		}
+
+		resize(index, size(index) + 1);
+		auto it = begin(index) + i;
+		last_index = end(index);
+		std::move_backward(it, last_index - 1, last_index);
+		it->label = label;
+		it->value = f(Semantic(label));
+		return it;
+	}
+
+	template <class InputIt>
+	size_type numAlreadyExists(index_t const index, InputIt first, InputIt last) const
+	{
+		size_type num = 0;
+
+		auto first_index = cbegin(index);
+		auto last_index = cend(index);
+		for (; first != last && first_index != last_index; ++first) {
+			label_t label;
+			if constexpr (std::is_same_v<Semantic,
+			                             typename std::iterator_traits<InputIt>::value_type>) {
+				label = first->label;
+			} else {
+				label = *first;
+			}
+			first_index = lower_bound(first_index, last_index, label);
+			if (first_index != last_index && first_index->label == label) {
+				++num;
+			}
+		}
+
+		return num;
+	}
+
+	/*!
+	 * @brief
+	 *
+	 * @note Memory assumed already allocated
+	 *
+	 * @param index
+	 * @param cur_size
+	 * @param new_size
+	 * @param first
+	 * @param last
+	 */
+	template <bool Assign, class InputIt>
+	void insertOrAssign(index_t index, size_type cur_size, size_type new_size,
+	                    InputIt first, InputIt last)
+	{
+		if (0 == new_size) {
+			return;
+		} else if (0 == cur_size) {
+			std::copy(first, last, begin(index));
+			return;
+		}
+
+		if constexpr (!Assign) {
+			if (cur_size == new_size) {
+				return;
+			}
+		}
+
+		auto cur = end(index);
+		auto first_index = begin(index);
+		auto last_index = first_index + cur_size;
+		while (first != last && first_index != last_index) {
+			if constexpr (Assign) {
+				if ((last_index - 1)->label == (last - 1)->label) {
+					(--cur)->label = (--last_index)->label;
+					cur->value = (--last)->value;
+					continue;
+				}
+			}
+			if ((last_index - 1)->label < (last - 1)->label) {
+				*(--cur) = *(--last);
+				if constexpr (!Assign) {
+					++cur_size;
+					// FIXME: Does this actually improve performance?
+					if (cur_size == new_size) {
+						return;
+					}
+				}
+			} else {
+				// FIXME: Can this be a move? What happens if it is the same?
+				*(--cur) = *(--last_index);
+			}
+		}
+
+		// Copy the remaining to the beginning
+		std::copy(first, last, first_index);
+	}
+
+	/*!
+	 * @brief
+	 *
+	 * @note Memory assumed already allocated
+	 *
+	 * @param index
+	 * @param cur_size
+	 * @param new_size
+	 * @param first
+	 * @param last
+	 * @param f
+	 */
+	template <bool Assign, class InputIt, class UnaryFunction>
+	void insertOrAssign(index_t index, size_type cur_size, size_type new_size,
+	                    InputIt first, InputIt last, UnaryFunction f)
+	{
+		if (0 == new_size) {
+			return;
+		} else if (0 == cur_size) {
+			for (auto it = begin(index); first != last; ++it, ++first) {
+				it->label = *first;
+				it->value = f(Semantic(*first));
+			}
+			return;
+		}
+
+		if constexpr (!Assign) {
+			if (cur_size == new_size) {
+				return;
+			}
+		}
+
+		auto cur = end(index);
+		auto first_index = begin(index);
+		auto last_index = first_index + cur_size;
+		while (first != last && first_index != last_index) {
+			if constexpr (Assign) {
+				if ((last_index - 1)->label == *(last - 1)) {
+					(--cur)->label = (--last_index)->label;
+					cur->value = f(*cur);
+					continue;
+				}
+			}
+			if ((last_index - 1)->label < *(last - 1)) {
+				--cur;
+				cur->label = *(--last);
+				cur->value = f(Semantic(cur->label));
+				if constexpr (!Assign) {
+					++cur_size;
+					// FIXME: Does this actually improve performance?
+					if (cur_size == new_size) {
+						return;
+					}
+				}
+			} else {
+				// FIXME: Can this be a move? What happens if it is the same?
+				*(--cur) = *(--last_index);
+			}
+		}
+
+		// Copy the remaining to the beginning
+		for (auto it = begin(index); first != last; ++it, ++first) {
+			it->label = *first;
+			it->value = f(Semantic(*first));
+		}
+	}
+
+	template <bool Assign, class InputIt>
+	void insertOrAssign(InputIt first, InputIt last)
+	{
+		std::vector vec(first, last);
+
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate labels, saving highest value for each label
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto a, auto b) { return a.label == b.label; });
+
+		auto f = r_last.base();
+		auto l = std::end(vec);
+		auto s = std::distance(f, l);
+
+		std::array<size_type, N> new_sizes;
+		new_sizes.fill(s);
+
+		if (empty()) {
+			resize(new_sizes);
+			for (index_t index = 0; N != index; ++index) {
+				std::copy(f, l, begin(index));
+			}
+		} else {
+			for (index_t index = 0; N != index; ++index) {
+				new_sizes -= numAlreadyExists(index, f, l);
+			}
+
+			std::array<size_type, N> cur_sizes = sizes();
+			resize(new_sizes);
+
+			// Do insert where memory already has been allocated
+			for (index_t index = 0; N != index; ++index) {
+				insertOrAssign<Assign>(index, cur_sizes[index], new_sizes[index], f, l);
+			}
+		}
+	}
+
+	template <bool Assign, class InputIt, class UnaryFunction>
+	void insertOrAssign(InputIt first, InputIt last, UnaryFunction fun)
+	{
+		std::vector vec(first, last);
+
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate labels
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto a, auto b) { return a == b; });
+
+		auto f = r_last.base();
+		auto l = std::end(vec);
+		auto s = std::distance(f, l);
+
+		std::array<size_type, N> new_sizes;
+		new_sizes.fill(s);
+
+		if (empty()) {
+			// Optimized insert
+			std::vector<Semantic> sem;
+			sem.reserve(s);
+			for (; f != l; ++first) {
+				sem.emplace_back(*f, fun(Semantic(*f)));
+			}
+			resize(new_sizes);
+			for (index_t index = 0; N != index; ++index) {
+				std::copy(std::cbegin(sem), std::cend(sem), begin(index));
+			}
+		} else {
+			// Calculate how many elements already exists per index
+			for (index_t index = 0; N != index; ++index) {
+				new_sizes -= numAlreadyExists(index, f, l);
+			}
+
+			std::array<size_type, N> cur_sizes = sizes();
+			resize(new_sizes);
+
+			// Do insert where memory already has been allocated
+			for (index_t index = 0; N != index; ++index) {
+				insertOrAssign<Assign>(index, cur_sizes[index], new_sizes[index], f, l, fun);
+			}
+		}
+	}
+
+	template <bool Assign, class InputIt>
+	void insertOrAssign(index_t const index, InputIt first, InputIt last)
+	{
+		std::vector vec(first, last);
+
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate labels, saving highest value for each label
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto a, auto b) { return a.label == b.label; });
+
+		auto f = r_last.base();
+		auto l = std::end(vec);
+		auto s = std::distance(f, l);
+
+		if (empty(index)) {
+			// Optimized insert
+			resize(index, s);
+			std::copy(f, l, begin(index));
+		} else {
+			auto new_size = s - numAlreadyExists(index, f, l);
+			auto cur_size = size(index);
+
+			resize(index, new_size);
+
+			// Do insert where memory already has been allocated
+			insertOrAssign<Assign>(index, cur_size, new_size, f, l);
+		}
+	}
+
+	template <bool Assign, class InputIt, class UnaryFunction>
+	void insertOrAssign(index_t const index, InputIt first, InputIt last, UnaryFunction fun)
+	{
+		std::vector vec(first, last);
+
+		std::sort(std::begin(vec), std::end(vec));
+
+		// Erase duplicate labels, saving highest value for each label
+		auto r_last = std::unique(std::rbegin(vec), std::rend(vec),
+		                          [](auto a, auto b) { return a == b; });
+
+		auto f = r_last.base();
+		auto l = std::end(vec);
+		auto s = std::distance(f, l);
+
+		if (empty(index)) {
+			// Optimized insert
+			resize(index, s);
+			for (auto it = begin(index); f != l; ++it, ++f) {
+				it->label = *f;
+				it->value = fun(Semantic(*f));
+			}
+		} else {
+			auto new_size = s - numAlreadyExists(index, f, l);
+			auto cur_size = size(index);
+
+			resize(index, new_size);
+
+			// Do insert where memory already has been allocated
+			insertOrAssign<Assign>(index, cur_size, new_size, f, l, fun);
+		}
+	}
+
+	//
+	// Lower bound
+	//
+
+	static iterator lower_bound(iterator first, iterator last, label_t label)
+	{
+		return std::lower_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::lowest()));
+	}
+
+	static const_iterator lower_bound(const_iterator first, const_iterator last,
+	                                  label_t label)
+	{
+		return std::lower_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::lowest()));
+	}
+
+	//
+	// Upper bound
+	//
+
+	static iterator upper_bound(iterator first, iterator last, label_t label)
+	{
+		return std::upper_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::max()));
+	}
+
+	static const_iterator upper_bound(const_iterator first, const_iterator last,
+	                                  label_t label)
+	{
+		return std::upper_bound(first, last,
+		                        Semantic(label, std::numeric_limits<value_t>::max()));
+	}
+
+	//
+	// Equal range
+	//
+
+	static std::pair<iterator, iterator> equal_range(iterator first, iterator last,
+	                                                 label_t label)
+	{
+		auto it = lower_bound(first, last, label);
+		return {it, last == it || it->label != label ? it : std::next(it)};
+	}
+
+	static std::pair<const_iterator, const_iterator> equal_range(const_iterator first,
+	                                                             const_iterator last,
+	                                                             label_t label)
+	{
+		auto it = lower_bound(first, last, label);
+		return {it, last == it || it->label != label ? it : std::next(it)};
+	}
+
+	//
+	// Erase
+	//
+
+	size_type eraseImpl(index_t index, label_t label)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		first = lower_bound(first, last, label);
+
+		if (first == last || first->label != label) {
+			return 0;
+		}
+
+		std::move(first + 1, last, first);
+
+		return 1;
+	}
+
+	size_type eraseImpl(index_t index, SemanticRangeSet ranges)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		size_type num = 0;
+		for (auto range : ranges) {
+			if (first == last) {
+				break;
+			}
+
+			first = lower_bound(first, last, range.lower());
+			auto upper = upper_bound(first, last, range.upper());
+
+			if (first != upper) {
+				num += std::distance(first, upper);
+				last = std::move(upper, last, first);
+			}
+		}
+
+		return num;
+	}
+
+	//
+	// Erase if
+	//
+
+	template <class UnaryPredicate>
+	size_type eraseIfImpl(index_t index, UnaryPredicate p)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		first = std::find_if(first, last, p);
+
+		if (first == last) {
+			return 0;
+		}
+
+		size_type num = 0;
+		for (auto it = first; ++it != last;) {
+			if (p(*it)) {
+				++num;
+			} else {
+				*first++ = std::move(*it);
+			}
+		}
+
+		return num;
+	}
+
+	template <class UnaryPredicate>
+	size_type eraseIfImpl(index_t index, SemanticRangeSet ranges, UnaryPredicate p)
+	{
+		auto first = begin(index);
+		auto last = end(index);
+
+		size_type num = 0;
+		for (auto range : ranges) {
+			if (first == last) {
+				break;
+			}
+
+			first = lower_bound(first, last, range.lower());
+			auto upper = upper_bound(first, last, range.upper());
+
+			first = std::find_if(first, upper, p);
+
+			if (first != upper) {
+				for (auto it = first; ++it != upper;) {
+					if (p(*it)) {
+						++num;
+					} else {
+						*first++ = std::move(*it);
+					}
+				}
+
+				if (first != upper) {
+					last = std::move(upper, last, first);
+				}
+			}
+		}
+
+		return num;
+	}
+
+	//
+	// Resize
+	//
+
+	void resize(size_type new_size)
+	{
+		auto const cur_size = size(index);
+		if (cur_size == new_size) {
+			return;
+		}
+
+		if (cur_size > new_size) {
+			// Move to last if size decreases
+			auto first_index = begin(index) + new_size;
+			auto last_index = end(index);
+			auto last = end();
+			if (last_index != last) {
+				std::move(last_index, last, first_index);
+			}
+		}
+
+		Semantic *ptr_cur = data_.release();
+
+		auto new_total_size = new_size + size() - size(index) + N_H;
+
+		Semantic *ptr_new =
+		    static_cast<Semantic *>(realloc(ptr_cur, new_total_size * sizeof(Semantic)));
+
+		if (!ptr_new) {
+			data_.reset(ptr_cur);
+			throw std::bad_alloc();
+		}
+
+		data_.reset(ptr_new);
+
+		if (!ptr_cur) {
+			// Initialize
+			label_t l = 0;
+			value_t v = reinterpret_cast<value_t const &>(l);
+			for (std::size_t i = 0; N_H != i; ++i) {
+				data_[i].label = l;
+				data_[i].value = v;
+			}
+		} else if (cur_size < new_size) {
+			// Move indices after
+			auto last_index = end(index);
+			auto last = end();
+			if (last_index != last) {
+				std::move_backward(last_index, last, data_.get() + new_total_size);
+			}
+		}
+
+		// Set new size of index
+		if (index % 2) {
+			data_[index / 2].label = new_size;
+		} else {
+			data_[index / 2].value =
+			    reinterpret_cast<value_t const &>(static_cast<label_t const &>(new_size));
+		}
+	}
+
+ private:
+	std::unique_ptr<Semantic[]> data_;
+};
+
 // Forward declare
 template <std::size_t N>
 class SemanticNode;
@@ -637,16 +1866,16 @@ class Semantics
 
 	size_type erase(SemanticRange range) { return erase(SemanticRangeSet{range}); }
 
-	size_type erase(SemanticRangeSet const &range_set)
+	size_type erase(SemanticRangeSet const &ranges)
 	{
-		if (range_set.empty() || empty()) {
+		if (ranges.empty() || empty()) {
 			return 0;
 		}
 
 		auto s = sizes();
 		auto sum = 0;
 		for (index_t i = 0; N != i; ++i) {
-			auto t = eraseImpl(i, range_set);
+			auto t = eraseImpl(i, ranges);
 			s[i] -= t;
 			sum += t;
 		}
@@ -668,13 +1897,13 @@ class Semantics
 		return erase(index, SemanticRangeSet{range});
 	}
 
-	size_type erase(index_t const index, SemanticRangeSet const &range_set)
+	size_type erase(index_t const index, SemanticRangeSet const &ranges)
 	{
-		if (range_set.empty() || empty(index)) {
+		if (ranges.empty() || empty(index)) {
 			return 0;
 		}
 
-		auto s = eraseImpl(index, range_set);
+		auto s = eraseImpl(index, ranges);
 		resize(index, size(index) - s);
 		return s;
 	}
@@ -710,16 +1939,16 @@ class Semantics
 	}
 
 	template <class UnaryPredicate>
-	size_type eraseIf(SemanticRangeSet const &range_set, UnaryPredicate p)
+	size_type eraseIf(SemanticRangeSet const &ranges, UnaryPredicate p)
 	{
-		if (range_set.empty() || empty()) {
+		if (ranges.empty() || empty()) {
 			return 0;
 		}
 
 		auto s = sizes();
 		auto sum = 0;
 		for (index_t i = 0; N != i; ++i) {
-			auto t = eraseIfImpl(i, range_set, p);
+			auto t = eraseIfImpl(i, ranges, p);
 			s[i] -= t;
 			sum += t;
 		}
@@ -744,14 +1973,13 @@ class Semantics
 	}
 
 	template <class UnaryPredicate>
-	size_type eraseIf(index_t const index, SemanticRangeSet const &range_set,
-	                  UnaryPredicate p)
+	size_type eraseIf(index_t const index, SemanticRangeSet const &ranges, UnaryPredicate p)
 	{
-		if (range_set.empty() || empty(index)) {
+		if (ranges.empty() || empty(index)) {
 			return 0;
 		}
 
-		auto s = eraseIfImpl(index, range_set, p);
+		auto s = eraseIfImpl(index, ranges, p);
 		resize(index, size(index) - s);
 		return s;
 	}
@@ -881,17 +2109,17 @@ class Semantics
 		return all(index, SemanticRangeSet{range});
 	}
 
-	[[nodiscard]] bool all(index_t index, SemanticRangeSet const &range_set) const
+	[[nodiscard]] bool all(index_t index, SemanticRangeSet const &ranges) const
 	{
-		if (range_set.empty()) {
+		if (ranges.empty()) {
 			return true;
-		} else if (size(index) < range_set.numValues()) {
+		} else if (size(index) < ranges.numValues()) {
 			return false;
 		}
 
 		auto first = cbegin(index);
 		auto last = cend(index);
-		for (auto range : range_set) {
+		for (auto range : ranges) {
 			auto lower = lower_bound(first, last, range.lower());
 			first = upper_bound(lower, last, range.upper());
 			auto range_dist = range.upper() - range.lower() + 1;
@@ -911,18 +2139,18 @@ class Semantics
 	}
 
 	template <class UnaryPredicate>
-	[[nodiscard]] bool all(index_t index, SemanticRangeSet const &range_set,
+	[[nodiscard]] bool all(index_t index, SemanticRangeSet const &ranges,
 	                       UnaryPredicate p) const
 	{
-		if (range_set.empty()) {
+		if (ranges.empty()) {
 			return true;
-		} else if (size(index) < range_set.numValues()) {
+		} else if (size(index) < ranges.numValues()) {
 			return false;
 		}
 
 		auto first = cbegin(index);
 		auto last = cend(index);
-		for (auto range : range_set) {
+		for (auto range : ranges) {
 			auto lower = lower_bound(first, last, range.lower());
 			first = upper_bound(lower, last, range.upper());
 			auto range_dist = range.upper() - range.lower() + 1;
@@ -948,22 +2176,22 @@ class Semantics
 		return any(index, SemanticRangeSet{range});
 	}
 
-	[[nodiscard]] bool any(index_t index, SemanticRangeSet const &range_set) const
+	[[nodiscard]] bool any(index_t index, SemanticRangeSet const &ranges) const
 	{
-		if (range_set.empty()) {
+		if (ranges.empty()) {
 			return true;
 		}
 
-		if (size(index) < range_set.size()) {
+		if (size(index) < ranges.size()) {
 			for (auto it = cbegin(index), last = cend(index); it != last; ++it) {
-				if (range_set.contains(it->label)) {
+				if (ranges.contains(it->label)) {
 					return true;
 				}
 			}
 		} else {
 			auto first = cbegin(index);
 			auto last = cend(index);
-			for (auto range : range_set) {
+			for (auto range : ranges) {
 				first = lower_bound(first, last, range.lower());
 				if (first == last) {
 					return false;
@@ -983,23 +2211,23 @@ class Semantics
 	}
 
 	template <class UnaryPredicate>
-	[[nodiscard]] bool any(index_t index, SemanticRangeSet const &range_set,
+	[[nodiscard]] bool any(index_t index, SemanticRangeSet const &ranges,
 	                       UnaryPredicate p) const
 	{
-		if (range_set.empty()) {
+		if (ranges.empty()) {
 			return true;
 		}
 
-		if (size(index) < range_set.size()) {
+		if (size(index) < ranges.size()) {
 			for (auto it = cbegin(index), last = cend(index); it != last; ++it) {
-				if (range_set.contains(it->label) && f(*it)) {
+				if (ranges.contains(it->label) && f(*it)) {
 					return true;
 				}
 			}
 		} else {
 			auto first = cbegin(index);
 			auto last = cend(index);
-			for (auto range : range_set) {
+			for (auto range : ranges) {
 				first = lower_bound(first, last, range.lower());
 				for (; first != last && first->label <= range.upper(); ++first) {
 					if (p(*first)) {
@@ -1022,9 +2250,9 @@ class Semantics
 		return !any(index, range);
 	}
 
-	[[nodiscard]] bool none(index_t index, SemanticRangeSet const &range_set) const
+	[[nodiscard]] bool none(index_t index, SemanticRangeSet const &ranges) const
 	{
-		return !any(index, range_set);
+		return !any(index, ranges);
 	}
 
 	template <class UnaryPredicate>
@@ -1035,10 +2263,10 @@ class Semantics
 	}
 
 	template <class UnaryPredicate>
-	[[nodiscard]] bool none(index_t index, SemanticRangeSet const &range_set,
+	[[nodiscard]] bool none(index_t index, SemanticRangeSet const &ranges,
 	                        UnaryPredicate p) const
 	{
-		return !any(index, range_set, p);
+		return !any(index, ranges, p);
 	}
 
  protected:

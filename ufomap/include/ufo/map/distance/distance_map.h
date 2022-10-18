@@ -190,7 +190,7 @@ class DistanceMap
 	// Swap
 	//
 
-	constexpr void swap(DistanceMap& other) noexcept
+	void swap(DistanceMap& other) noexcept
 	{
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}

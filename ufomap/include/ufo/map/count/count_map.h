@@ -181,7 +181,7 @@ class CountMap
 	// Swap
 	//
 
-	constexpr void swap(CountMap& other) noexcept
+	void swap(CountMap& other) noexcept
 	{
 		std::swap(distance_prop_criteria_, other.distance_prop_criteria_);
 	}

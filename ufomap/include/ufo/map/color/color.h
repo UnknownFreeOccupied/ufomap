@@ -71,7 +71,7 @@ struct Color {
 
 	Color& operator=(Color&&) = default;
 
-	constexpr void swap(Color& other) noexcept
+	void swap(Color& other) noexcept
 	{
 		std::swap(red, other.red);
 		std::swap(green, other.green);
@@ -97,8 +97,7 @@ constexpr bool operator!=(Color const lhs, Color const rhs) { return !(lhs == rh
 
 namespace std
 {
-constexpr void swap(ufo::map::Color& lhs,
-                    ufo::map::Color& rhs) noexcept(noexcept(lhs.swap(rhs)))
+void swap(ufo::map::Color& lhs, ufo::map::Color& rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }

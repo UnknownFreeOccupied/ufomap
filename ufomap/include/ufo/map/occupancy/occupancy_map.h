@@ -782,7 +782,7 @@ class OccupancyMap
 	// Swap
 	//
 
-	constexpr void swap(OccupancyMap& other) noexcept
+	void swap(OccupancyMap& other) noexcept
 	{
 		std::swap(clamping_thres_min_logit_, other.clamping_thres_min_logit_);
 		std::swap(clamping_thres_max_logit_, other.clamping_thres_max_logit_);

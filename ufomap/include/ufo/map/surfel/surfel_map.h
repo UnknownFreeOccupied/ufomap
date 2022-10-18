@@ -479,7 +479,7 @@ class SurfelMap
 	// Swap
 	//
 
-	constexpr void swap(SurfelMap&) noexcept {}
+	void swap(SurfelMap&) noexcept {}
 
 	//
 	// Derived

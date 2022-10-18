@@ -73,7 +73,7 @@ struct Node {
 
 	constexpr Node& operator=(Node&&) = default;
 
-	constexpr void swap(Node& other) noexcept
+	void swap(Node& other) noexcept
 	{
 		std::swap(data_, other.data_);
 		std::swap(code_, other.code_);
@@ -196,7 +196,7 @@ struct BV {
 
 	constexpr BV& operator=(BV&&) = default;
 
-	constexpr void swap(BV& other) noexcept { std::swap(aaebb_, other.aaebb_); }
+	void swap(BV& other) noexcept { std::swap(aaebb_, other.aaebb_); }
 
 	friend constexpr bool operator==(BV const& lhs, BV const& rhs) noexcept
 	{
@@ -299,7 +299,7 @@ struct NodeBV : public Node, public BV {
 
 	constexpr NodeBV& operator=(NodeBV&&) = default;
 
-	constexpr void swap(NodeBV& other)
+	void swap(NodeBV& other)
 	{
 		std::swap(static_cast<Node&>(*this), static_cast<Node&>(other));
 		std::swap(static_cast<BV&>(*this), static_cast<BV&>(other));
@@ -340,7 +340,7 @@ struct NodeP : public Node {
 
 	NodeP& operator=(NodeP&&) = default;
 
-	constexpr void swap(NodeP& other)
+	void swap(NodeP& other)
 	{
 		std::swap(static_cast<Node&>(*this), static_cast<Node&>(other));
 		std::swap(data_parent_, other.data_parent_);
@@ -378,7 +378,7 @@ struct NodePBV : public NodeP, public BV {
 
 	NodePBV& operator=(NodePBV&&) = default;
 
-	constexpr void swap(NodePBV& other)
+	void swap(NodePBV& other)
 	{
 		std::swap(static_cast<NodeP&>(*this), static_cast<NodeP&>(other));
 		std::swap(static_cast<BV&>(*this), static_cast<BV&>(other));

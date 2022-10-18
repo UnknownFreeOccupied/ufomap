@@ -835,7 +835,7 @@ class SemanticMap
 	// Swap
 	//
 
-	constexpr void swap(SemanticMap& other) noexcept
+	void swap(SemanticMap& other) noexcept
 	{
 		std::swap(label_mapping_, other.label_mapping_);
 		std::swap(label_propagation_, other.label_propagation_);

@@ -416,7 +416,7 @@ class ReflectionMap
 	// Swap
 	//
 
-	constexpr void swap(ReflectionMap& other) noexcept
+	void swap(ReflectionMap& other) noexcept
 	{
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}

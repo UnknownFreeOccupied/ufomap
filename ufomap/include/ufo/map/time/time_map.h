@@ -184,7 +184,7 @@ class TimeMap
 	// Swap
 	//
 
-	constexpr void swap(CountMap& other) noexcept
+	void swap(CountMap& other) noexcept
 	{
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
