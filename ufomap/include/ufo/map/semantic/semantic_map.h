@@ -875,21 +875,29 @@ class SemanticMap
 	template <class OutputIt>
 	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
 	{
-		// TODO: Implement
+		mapping_.read(in);
+
+		for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
+			first->node.read(in, first->indices, propagation_);
+		}
 	}
 
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
 	{
-		// TODO: Implement
+		mapping_.write(out);
+
+		for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
+			first->node.write(out);
+		}
 	}
 
  protected:
 	// Label mapping
-	SemanticLabelMapping label_mapping_;
+	SemanticMapping mapping_;
 
 	// Propagation
-	SemanticLabelPropagation label_propagation_;
+	SemanticPropagation propagation_;
 };
 }  // namespace ufo::map
 
