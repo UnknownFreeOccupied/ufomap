@@ -1069,8 +1069,6 @@ class OctreeBase
 	|                                                                                     |
 	**************************************************************************************/
 
-	// TODO: Check functions in this block
-
 	//
 	// Size
 	//
@@ -1898,8 +1896,8 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(UnaryFunction f) const
 	{
-		if constexpr (std::is_same_v<util::argument<UnaryFunction, 0>,
-		                             Node>) {  // FIXME: Should it be const also?
+		if constexpr (std::is_base_of_v<util::argument<UnaryFunction, 0>,
+		                                Node>) {  // FIXME: Should it be const also?
 			traverseRecurs(rootNode(), f);
 		} else {
 			traverseRecurs(rootNodeBV(), f);
@@ -1986,6 +1984,98 @@ class OctreeBase
 	void traverse(coord_t x, coord_t y, coord_t z, UnaryFunction f, depth_t depth = 0) const
 	{
 		traverse(toCode(x, y, z, depth), f);
+	}
+	/*! TODO: Update info for all nearest
+	 * @brief Traverse the octree in the orderDepth first traversal of the octree, starting
+	 * at the root node. The function 'f' will be called for each node traverse. If 'f'
+	 * returns false then the children of the node will also be traverse, otherwise they
+	 * will not.
+	 *
+	 * @param f The callback function to be called for each node traversed.
+	 */
+	template <class Geometry, class UnaryFunction>
+	void traverseNearest(Geometry const& g, UnaryFunction f) const
+	{
+		traverseNearestRecurs(rootNodeBV(), g, f);
+	}
+
+	/*!
+	 * @brief Depth first traversal of the octree, starting at the node. The function 'f'
+	 * will be called for each node traverse. If 'f' returns false then the children of the
+	 * node will also be traverse, otherwise they will not.
+	 *
+	 * @param node The node where to start the traversal.
+	 * @param f The callback function to be called for each node traversed.
+	 */
+	template <class Geometry, class UnaryFunction>
+	void traverseNearest(Node node, Geometry const& g, UnaryFunction f) const
+	{
+		traverseNearestRecurs(NodeBV(node, boundingVolume(node)), g, f);
+	}
+
+	/*!
+	 * @brief Depth first traversal of the octree, starting at the node corresponding to the
+	 * code. The function 'f' will be called for each node traverse. If 'f' returns false
+	 * then the children of the node will also be traverse, otherwise they will not.
+	 *
+	 * @param code The code to the node where to start the traversal.
+	 * @param f The callback function to be called for each node traversed.
+	 */
+	template <class Geometry, class UnaryFunction>
+	void traverseNearest(Code code, Geometry const& g, UnaryFunction f) const
+	{
+		// FIXME: Correct behaviour?
+		if (Node node = findNode(code); node.depth() == code.depth()) {
+			traverseNearest(node, g, f);
+		}
+	}
+
+	/*!
+	 * @brief Depth first traversal of the octree, starting at the node corresponding to the
+	 * key. The function 'f' will be called for each node traverse. If 'f' returns false
+	 * then the children of the node will also be traverse, otherwise they will not.
+	 *
+	 * @param key The key to the node where to start the traversal.
+	 * @param f The callback function to be called for each node traversed.
+	 */
+	template <class Geometry, class UnaryFunction>
+	void traverseNearest(Key key, Geometry const& g, UnaryFunction f) const
+	{
+		traverseNearest(toCode(key), g, f);
+	}
+
+	/*!
+	 * @brief Depth first traversal of the octree, starting at the node corresponding to the
+	 * coordinate at a specified depth. The function 'f' will be called for each node
+	 * traverse. If 'f' returns false then the children of the node will also be traverse,
+	 * otherwise they will not.
+	 *
+	 * @param coord The coord to the node where to start the traversal.
+	 * @param f The callback function to be called for each node traversed.
+	 * @param depth The depth of the node.
+	 */
+	template <class Geometry, class UnaryFunction>
+	void traverseNearest(Point coord, Geometry const& g, UnaryFunction f,
+	                     depth_t depth = 0) const
+	{
+		traverseNearest(toCode(coord, depth), g, f);
+	}
+
+	/*!
+	 * @brief Depth first traversal of the octree, starting at the node corresponding to the
+	 * coordinate at a specified depth. The function 'f' will be called for each node
+	 * traverse. If 'f' returns false then the children of the node will also be traverse,
+	 * otherwise they will not.
+	 *
+	 * @param x,y,z The coord to the node where to start the traversal.
+	 * @param f The callback function to be called for each node traversed.
+	 * @param depth The depth of the node.
+	 */
+	template <class Geometry, class UnaryFunction>
+	void traverseNearest(coord_t x, coord_t y, coord_t z, Geometry const& g,
+	                     UnaryFunction f, depth_t depth = 0) const
+	{
+		traverseNearest(toCode(x, y, z, depth), g, f);
 	}
 
 	/**************************************************************************************
@@ -3264,7 +3354,7 @@ class OctreeBase
 	// TODO: Add comment
 
 	template <class NodeType, class UnaryFunction>
-	void traverseRecurs(NodeType node, UnaryFunction f) const
+	void traverseRecurs(NodeType const& node, UnaryFunction f) const
 	{
 		if (f(node) || isLeaf(node)) {
 			return;
@@ -3274,6 +3364,12 @@ class OctreeBase
 		for (index_t index = 0; 8 != index; ++index) {
 			traverseRecurs(nodeSibling(node, index), f);
 		}
+	}
+
+	template <class Geometry, class UnaryFunction>
+	void traverseNearestRecurs(NodeBV const& node, Geometry const& g, UnaryFunction f) const
+	{
+		// TODO: Implement
 	}
 
 	/**************************************************************************************

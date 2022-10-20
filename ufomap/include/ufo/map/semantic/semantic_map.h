@@ -877,8 +877,12 @@ class SemanticMap
 	{
 		mapping_.read(in);
 
+
+		uint8_t n;
+		in.read(reinterpret_cast<char*>(&n), sizeof(n));
+
 		for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-			first->node.read(in, first->indices, propagation_);
+			first->node.read(in, first->indices, propagation_, n);
 		}
 	}
 
@@ -886,6 +890,9 @@ class SemanticMap
 	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
 	{
 		mapping_.write(out);
+
+		constexpr uint8_t const n = numData<InputIt>();
+		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 
 		for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
 			first->node.write(out);

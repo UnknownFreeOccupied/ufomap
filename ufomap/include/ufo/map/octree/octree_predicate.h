@@ -58,6 +58,14 @@ namespace ufo::map::predicate
 // Predicates
 //
 
+struct Index {
+	constexpr Index(index_t index) noexcept : index(index) {}
+
+	// TODO: Implement
+	
+	index_t index;
+};
+
 struct PureLeaf {
 };
 
