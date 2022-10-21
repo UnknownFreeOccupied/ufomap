@@ -180,30 +180,34 @@ struct Node {
 	friend class OctreeBase;
 };
 
-struct BV {
+struct NodeBV : public Node, public BV {
  public:
 	//
 	// Constructor
 	//
 
-	constexpr BV() = default;
+	constexpr NodeBV() = default;
 
-	constexpr BV(BV const&) = default;
+	constexpr NodeBV(NodeBV const&) = default;
 
-	constexpr BV(BV&&) = default;
+	constexpr NodeBV(NodeBV&&) = default;
 
-	constexpr BV& operator=(BV const&) = default;
+	constexpr NodeBV& operator=(NodeBV const&) = default;
 
-	constexpr BV& operator=(BV&&) = default;
+	constexpr NodeBV& operator=(NodeBV&&) = default;
 
-	void swap(BV& other) noexcept { std::swap(aaebb_, other.aaebb_); }
-
-	friend constexpr bool operator==(BV const& lhs, BV const& rhs) noexcept
+	void swap(NodeBV& other)
 	{
-		return lhs.aaebb_ == rhs.aaebb_;
+		std::swap(static_cast<Node&>(*this), static_cast<Node&>(other));
+		std::swap(static_cast<BV&>(*this), static_cast<BV&>(other));
 	}
 
-	friend constexpr bool operator!=(BV const& lhs, BV const& rhs) noexcept
+	friend constexpr bool operator==(NodeBV const& lhs, NodeBV const& rhs) noexcept
+	{
+		return static_cast<Node>(lhs) == static_cast<Node>(rhs);
+	}
+
+	friend constexpr bool operator!=(NodeBV const& lhs, NodeBV const& rhs) noexcept
 	{
 		return !(lhs == rhs);
 	}
@@ -272,133 +276,18 @@ struct BV {
 	constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	constexpr BV(geometry::AAEBB aaebb) noexcept : aaebb_(aaebb) {}
+	constexpr NodeBV(void* data, Code code, geometry::AAEBB aaebb) noexcept
+	    : Node(data, code), aaebb_(aaebb)
+	{
+	}
 
- protected:
+	constexpr NodeBV(Node node, geometry::AAEBB aaebb) noexcept : Node(node), aaebb_(aaebb)
+	{
+	}
+
+ private:
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
-
-	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-	          bool CountNodes>
-	friend class OctreeBase;
-};
-
-struct NodeBV : public Node, public BV {
- public:
-	//
-	// Constructor
-	//
-
-	constexpr NodeBV() = default;
-
-	constexpr NodeBV(NodeBV const&) = default;
-
-	constexpr NodeBV(NodeBV&&) = default;
-
-	constexpr NodeBV& operator=(NodeBV const&) = default;
-
-	constexpr NodeBV& operator=(NodeBV&&) = default;
-
-	void swap(NodeBV& other)
-	{
-		std::swap(static_cast<Node&>(*this), static_cast<Node&>(other));
-		std::swap(static_cast<BV&>(*this), static_cast<BV&>(other));
-	}
-
-	friend constexpr bool operator==(NodeBV const& lhs, NodeBV const& rhs) noexcept
-	{
-		return static_cast<Node>(lhs) == static_cast<Node>(rhs);
-	}
-
-	friend constexpr bool operator!=(NodeBV const& lhs, NodeBV const& rhs) noexcept
-	{
-		return !(lhs == rhs);
-	}
-
- protected:
-	constexpr NodeBV(void* data, Code code, geometry::AAEBB aaebb) noexcept
-	    : Node(data, code), BV(aaebb)
-	{
-	}
-
-	constexpr NodeBV(Node node, geometry::AAEBB aaebb) noexcept : Node(node), BV(aaebb) {}
-
-	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-	          bool CountNodes>
-	friend class OctreeBase;
-};
-
-struct NodeP : public Node {
- public:
-	constexpr NodeP() = default;
-
-	constexpr NodeP(NodeP const&) = default;
-
-	constexpr NodeP(NodeP&&) = default;
-
-	NodeP& operator=(NodeP const&) = default;
-
-	NodeP& operator=(NodeP&&) = default;
-
-	void swap(NodeP& other)
-	{
-		std::swap(static_cast<Node&>(*this), static_cast<Node&>(other));
-		std::swap(data_parent_, other.data_parent_);
-	}
-
- protected:
-	constexpr NodeP(void* data, Code code, void* parent = nullptr) noexcept
-	    : Node(data, code), data_parent_(parent)
-	{
-	}
-
-	constexpr NodeP(Node node, void* parent = nullptr) noexcept
-	    : Node(node), data_parent_(parent)
-	{
-	}
-
- protected:
-	// Pointer to the parent
-	void* data_parent_ = nullptr;
-
-	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-	          bool CountNodes>
-	friend class OctreeBase;
-};
-
-struct NodePBV : public NodeP, public BV {
- public:
-	constexpr NodePBV() = default;
-
-	constexpr NodePBV(NodePBV const&) = default;
-
-	constexpr NodePBV(NodePBV&&) = default;
-
-	NodePBV& operator=(NodePBV const&) = default;
-
-	NodePBV& operator=(NodePBV&&) = default;
-
-	void swap(NodePBV& other)
-	{
-		std::swap(static_cast<NodeP&>(*this), static_cast<NodeP&>(other));
-		std::swap(static_cast<BV&>(*this), static_cast<BV&>(other));
-	}
-
- protected:
-	constexpr NodePBV(void* data, Code code, geometry::AAEBB aaebb,
-	                  void* parent = nullptr) noexcept
-	    : NodeP(data, code, parent), BV(aaebb)
-	{
-	}
-
-	constexpr NodePBV(Node node, geometry::AAEBB aaebb, void* parent = nullptr) noexcept
-	    : NodeP(node, parent), BV(aaebb)
-	{
-	}
-
-	constexpr NodePBV(NodeP node, geometry::AAEBB aaebb) noexcept : NodeP(node), BV(aaebb)
-	{
-	}
 
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>

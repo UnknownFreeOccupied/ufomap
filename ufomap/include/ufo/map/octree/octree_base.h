@@ -985,18 +985,6 @@ class OctreeBase
 		return NodeBV(rootNode(), rootBoundingVolume());
 	}
 
-	/*!
-	 * @brief Get the root node with parent.
-	 *
-	 * @return The root node with parent.
-	 */
-	[[nodiscard]] constexpr NodeP rootNodeP() const { return NodeP(rootNode()); }
-
-	[[nodiscard]] constexpr NodePBV rootNodePBV() const
-	{
-		return NodePBV(rootNodeP(), rootBoundingVolume());
-	}
-
 	//
 	// Code
 	//
@@ -1098,7 +1086,7 @@ class OctreeBase
 	template <class NodeType>
 	[[nodiscard]] Point nodeCenter(NodeType const& node) const
 	{
-		if constexpr (std::is_base_of_v<BV, NodeType>) {
+		if constexpr (std::is_same_as_v<NodeBV, NodeType>) {
 			return node.center();
 		} else {
 			return coord(node.code());
@@ -1118,7 +1106,7 @@ class OctreeBase
 	template <class NodeType>
 	[[nodiscard]] geometry::AAEBB nodeBoundingVolume(NodeType const& node) const
 	{
-		if constexpr (std::is_base_of_v<BV, NodeType>) {
+		if constexpr (std::is_same_as_v<NodeBV, NodeType>) {
 			return node.boundingVolume();
 
 		} else {
@@ -1283,8 +1271,6 @@ class OctreeBase
 	{
 		return findNodeChecked(Point(x, y, z), depth);
 	}
-
-	// FIXME: Add findNodeBV, findNodeP, findNodePBV
 
 	//
 	// Function call operator
@@ -1483,8 +1469,6 @@ class OctreeBase
 	{
 		return createNodeChecked(toCode(x, y, z, depth), set_modified);
 	}
-
-	// FIXME: Add createNodeBV, createNodeP, createNodePBV
 
 	//
 	// Sibling
@@ -1897,8 +1881,9 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(UnaryFunction f) const
 	{
-		if constexpr (std::is_base_of_v<util::argument<UnaryFunction, 0>,
-		                                Node>) {  // FIXME: Should it be const also?
+		if constexpr (std::is_same_as_v<
+		                  Node, util::argument<UnaryFunction, 0>>) {  // FIXME: Should it be
+			                                                            // const also?
 			traverseRecurs(rootNode(), f);
 		} else {
 			traverseRecurs(rootNodeBV(), f);
@@ -3261,11 +3246,10 @@ class OctreeBase
 
 	// TODO: Add comments
 
-	template <class NodeType, class BinaryFunction, class UnaryFunction,
+	template <class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
-	void apply(NodeType const& node, BinaryFunction f, UnaryFunction f2,
-	           bool const propagate)
+	void apply(Node node, BinaryFunction f, UnaryFunction f2, bool const propagate)
 	{
 		if (isLeaf(node)) {
 			f(leafNode(node), node.index());
@@ -3273,15 +3257,11 @@ class OctreeBase
 			applyAllRecurs(innerNode(node), node.index(), node.depth(), f, f2);
 		}
 
-		if constexpr (std::is_base_of_v<NodeP, NodeType>) {
-			if (!isModified(parentNode(node))) {
-				setModifiedParents(node.code());
-			}
-			leafNode(node).modified.set(node.index());
-		} else if (!isModified(node)) {
+		if (leafNode(node).modified.none()) {
 			setModifiedParents(node.code());
-			leafNode(node).modified.set(node.index());
 		}
+
+		leafNode(node).modified.set(node.index());
 
 		if (propagate) {
 			propagateModified();
