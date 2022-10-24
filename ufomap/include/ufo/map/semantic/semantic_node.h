@@ -53,6 +53,22 @@ namespace ufo::map
 {
 template <std::size_t N>
 struct SemanticNode {
+	// Tags
+	using size_type = label_t;
+	using difference_type = std::ptrdiff_t;
+	using reference = Semantic &;  // TODO: Make label const
+	using const_reference = Semantic const &;
+	using pointer = Semantic *;
+	using const_pointer = Semantic const *;
+	using iterator = Semantic *;  // TODO: Make label const
+	using const_iterator = Semantic const *;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	// -1 half rounded up (i.e., the number of elements needed to store the sizes of the N
+	// semantic containers)
+	static constexpr std::size_t N_H = 1 + (N - 1) / 2;
+
 	// Data
 	std::unique_ptr<Semantic[]> semantics;
 
@@ -66,7 +82,7 @@ struct SemanticNode {
 	// Fill
 	//
 
-	void fill(SemanticNode const& parent, index_t const index)
+	void fill(SemanticNode const &parent, index_t const index)
 	{
 		resize(parent.size(index));
 		auto first = parent.begin(index);
@@ -80,7 +96,7 @@ struct SemanticNode {
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(SemanticNode const& parent, index_t const index) const
+	[[nodiscard]] bool isCollapsible(SemanticNode const &parent, index_t const index) const
 	{
 		auto first = parent.begin(index);
 		auto last = parent.end(index);
@@ -96,25 +112,259 @@ struct SemanticNode {
 	// Iterators
 	//
 
+	iterator begin() noexcept { return empty() ? nullptr : semantics.get() + N_H; }
+
+	const_iterator begin() const noexcept
+	{
+		return empty() ? nullptr : semantics.get() + N_H;
+	}
+
+	const_iterator cbegin() const noexcept { return begin(); }
+
+	iterator end() noexcept
+	{
+		auto const s = allocSize();
+		return 0 == s ? nullptr : semantics.get() + s;
+	}
+
+	const_iterator end() const noexcept
+	{
+		auto const s = allocSize();
+		return 0 == s ? nullptr : semantics.get() + s;
+	}
+
+	const_iterator cend() const noexcept { return end(); }
+
+	//
+	// Reverse iterators
+	//
+
+	reverse_iterator rbegin() noexcept { return std::make_reverse_iterator(end()); }
+
+	const_reverse_iterator rbegin() const noexcept
+	{
+		return std::make_reverse_iterator(end());
+	}
+
+	const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+
+	reverse_iterator rend() noexcept { return std::make_reverse_iterator(begin()); }
+
+	const_reverse_iterator rend() const noexcept
+	{
+		return std::make_reverse_iterator(begin());
+	}
+
+	const_reverse_iterator crend() const noexcept { return rend(); }
+
+	//
+	// Index iterators
+	//
+
+	iterator begin(index_t const index) noexcept
+	{
+		return empty() ? nullptr : semantics.get() + N_H + offset(index);
+	}
+
+	const_iterator begin(index_t const index) const noexcept
+	{
+		return empty() ? nullptr : semantics.get() + N_H + offset(index);
+	}
+
+	const_iterator cbegin(index_t const index) const noexcept { return begin(index); }
+
+	iterator end(index_t const index) noexcept
+	{
+		return empty() ? nullptr : semantics.get() + N_H + offset(index) + size(index);
+	}
+
+	const_iterator end(index_t const index) const noexcept
+	{
+		return empty() ? nullptr : semantics.get() + N_H + offset(index) + size(index);
+	}
+
+	const_iterator cend(index_t const index) const noexcept { return end(index); }
+
+	//
+	// Reverse index iterators
+	//
+
+	reverse_iterator rbegin(index_t const index) noexcept
+	{
+		return std::make_reverse_iterator(end(index));
+	}
+
+	const_reverse_iterator rbegin(index_t const index) const noexcept
+	{
+		return std::make_reverse_iterator(end(index));
+	}
+
+	const_reverse_iterator crbegin(index_t const index) const noexcept
+	{
+		return rbegin(index);
+	}
+
+	reverse_iterator rend(index_t const index) noexcept
+	{
+		return std::make_reverse_iterator(begin(index));
+	}
+
+	const_reverse_iterator rend(index_t const index) const noexcept
+	{
+		return std::make_reverse_iterator(begin(index));
+	}
+
+	const_reverse_iterator crend(index_t const index) const noexcept { return rend(index); }
+
+	//
+	// Empty
+	//
+
+	[[nodiscard]] bool empty() const noexcept { return nullptr == semantics; }
+
+	[[nodiscard]] bool empty(index_t const index) const { return 0 == size(index); }
+
+	//
+	// Size
+	//
+
+	[[nodiscard]] std::size_t size() const
+	{
+		auto const s = sizes();
+		return std::accumulate(std::begin(s), std::end(s), std::size_t(0));
+	}
+
+	[[nodiscard]] size_type size(index_t const index) const
+	{
+		return empty()
+		           ? 0
+		           : (index % 2
+		                  ? semantics[index / 2].label
+		                  : reinterpret_cast<label_t const &>(semantics[index / 2].value));
+	}
+
+	[[nodiscard]] std::array<size_type, N> sizes() const
+	{
+		if (empty()) {
+			return std::array<size_type, N>{};
+		}
+
+		std::array<size_type, N> s;
+		std::copy(semantics.get(), semantics.get() + N_H,
+		          reinterpret_cast<Semantic *>(s.data()));
+		return s;
+	}
+
+	//
+	// Offset
+	//
+
+	[[nodiscard]] std::size_t offset(index_t const index) const
+	{
+		auto const s = sizes();
+		return std::accumulate(std::begin(s), std::begin(s) + index + 1, std::size_t(0));
+	}
+
+	//
+	// Clear
+	//
+
+	void clear() noexcept { semantics.reset(); }
+
+	void clear(index_t const index) { resize(index, 0); }
+
 	//
 	// Resize
 	//
 
-	void resize(std::array<std::size_t, N> const& sizes)
+	/*!
+	 * @brief Set the Size
+	 *
+	 * @note Only call if already allocated.
+	 *
+	 * @param index
+	 * @param size
+	 */
+	void setSize(index_t const index, label_t const size)
 	{
-		// TODO: Implement
+		if (index % 2) {
+			semantics[index / 2].label = size;
+		} else {
+			semantics[index / 2].value = reinterpret_cast<value_t const &>(size);
+		}
 	}
 
-	void resize(std::size_t const size)
+	void resize(std::array<size_type, N> const &sizes)
 	{
-		std::array<std::size_t, N> sizes;
+		auto const new_size = std::accumulate(std::begin(sizes), std::end(sizes), N_H);
+		if (0 == new_size) {
+			clear();
+			return;
+		}
+
+		auto const cur_sizes = sizes();
+		if (cur_sizes == sizes) {
+			return;
+		}
+
+		for (int i = N - 1; 0 <= i; --i) {
+			// Reduce the indices that should be reduced
+			if (cur_sizes[i] <= sizes[i]) {
+				continue;
+			}
+
+			std::move(end(i), end(), begin(i) + sizes[i]);
+			setSize(i, sizes[i]);
+		}
+
+		if (std::accumulate(std::begin(cur_sizes), std::end(cur_sizes), N_H) != new_size) {
+			Semantic *ptr_cur = data_.release();
+
+			Semantic *ptr_new =
+			    static_cast<Semantic *>(realloc(ptr_cur, new_size * sizeof(Semantic)));
+
+			if (!ptr_new) {
+				data_.reset(ptr_cur);
+				throw std::bad_alloc();
+			}
+
+			data_.reset(ptr_new);
+		}
+
+		if (0 == cur_size) {
+			for (index_t i = 0; N != i; ++i) {
+				setSize(i, sizes[i]);
+			}
+		} else {
+			// Increase the indices that should be increased
+			auto last = data_.get() + new_size;
+			for (index_t i = N - 1; 0 != i; --i) {
+				setSize(i, sizes[i]);
+
+				if (0 == sizes[i] || 0 == cur_sizes[i]) {
+					continue;
+				}
+
+				auto first_i = begin(i);
+				auto last_i = end(i);
+				last = last != last_i ? std::move_backward(first_i, last_i, last) : first_i;
+			}
+		}
+	}
+
+	void resize(size_type const size)
+	{
+		std::array<size_type, N> sizes;
 		sizes.fill(size);
 		resize(sizes);
 	}
 
-	void resize(index_t const index, std::size_t const size)
+	void resize(index_t const index, std::size_t const new_size)
 	{
-		// TODO: Implement
+		// FIXME: Optimize
+		std::array<size_type, N> s = sizes();
+		s[index] = new_size;
+		resize(s);
 	}
 };
 }  // namespace ufo::map

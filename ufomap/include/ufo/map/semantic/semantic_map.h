@@ -48,6 +48,7 @@
 #include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/semantic/semantic_predicate.h>
 #include <ufo/map/semantic/semantics.h>
+#include <ufo/map/semantic/semantics_reference.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -66,63 +67,31 @@ class SemanticMap
 	// Get semantics
 	//
 
-	[[nodiscard]] Semantics semantics(Node node) const
+	[[nodiscard]] SemanticsReference semantics(Node node) const
 	{
-		return derived().leafNode(node).semantics(node.index());
+		return SemanticsReference(derived().leafNode(node), node.index());
 	}
 
-	[[nodiscard]] Semantics semantics(Code code) const
+	[[nodiscard]] SemanticsReference semantics(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.semantics(code.index(depth));
+		return SemanticsReference(node, code.index(depth));
 	}
 
-	[[nodiscard]] Semantics semantics(Key key) const
+	[[nodiscard]] SemanticsReference semantics(Key key) const
 	{
 		return semantics(derived().toCode(key));
 	}
 
-	[[nodiscard]] Semantics semantics(Point coord, depth_t depth = 0) const
+	[[nodiscard]] SemanticsReference semantics(Point coord, depth_t depth = 0) const
 	{
 		return semantics(derived().toCode(coord, depth));
 	}
 
-	[[nodiscard]] Semantics semantics(coord_t x, coord_t y, coord_t z,
-	                                  depth_t depth = 0) const
+	[[nodiscard]] SemanticsReference semantics(coord_t x, coord_t y, coord_t z,
+	                                           depth_t depth = 0) const
 	{
 		return semantics(derived().toCode(x, y, z, depth));
-	}
-
-	//
-	// Get semantic
-	//
-
-	[[nodiscard]] std::optional<Semantic> semantic(Node node, label_t label) const
-	{
-		return semanticNode(derived().leafNode(node)).at(node.index(), label);
-	}
-
-	[[nodiscard]] std::optional<Semantic> semantic(Code code, label_t label) const
-	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return semanticNode(node).at(code.index(depth), label);
-	}
-
-	[[nodiscard]] std::optional<Semantic> semantic(Key key, label_t label) const
-	{
-		return semantic(derived().toCode(key), label);
-	}
-
-	[[nodiscard]] std::optional<Semantic> semantic(Point coord, label_t label,
-	                                               depth_t depth = 0) const
-	{
-		return semantic(derived().toCode(coord, depth), label);
-	}
-
-	[[nodiscard]] std::optional<Semantic> semantic(coord_t x, coord_t y, coord_t z,
-	                                               label_t label, depth_t depth = 0) const
-	{
-		return semantic(derived().toCode(x, y, z, depth), label);
 	}
 
 	//
@@ -407,8 +376,6 @@ class SemanticMap
 		insertOrAssignSemantics(node, std::cbegin(label), std::cend(labels), f, propagate);
 	}
 
-	
-
 	//
 	// TODO: Assign
 	//
@@ -461,99 +428,6 @@ class SemanticMap
 
 	//
 	// TODO: Clear
-	//
-
-	//
-	// TODO: Contains
-	//
-
-	[[nodiscard]] bool containsAllSemantics(...) const
-	{
-		// TODO: Implement
-	}
-
-	[[nodiscard]] bool containsAnySemantics(...) const
-	{
-		// TODO: Implement
-	}
-
-	[[nodiscard]] bool containsNoneSemantics(...) const
-	{
-		// TODO: Implement
-	}
-
-	//
-	// TODO: Counts
-	//
-
-	//
-	// TODO: Size
-	//
-
-	[[nodiscard]] std::size_t semanticsSize(Node node) const
-	{
-		return semanticNode(derived().leafNode(node)).size(node.index());
-	}
-
-	[[nodiscard]] std::size_t semanticsSize(Code code) const
-	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return semanticNode(node).size(code.index(depth));
-	}
-
-	[[nodiscard]] std::size_t semanticsSize(Key key) const
-	{
-		return semanticsSize(derived().toCode(key));
-	}
-
-	[[nodiscard]] std::size_t semanticsSize(Point coord, depth_t depth = 0) const
-	{
-		return semanticsSize(derived().toCode(coord, depth));
-	}
-
-	[[nodiscard]] std::size_t semanticsSize(coord_t x, coord_t y, coord_t z,
-	                                        depth_t depth = 0) const
-	{
-		return semanticsSize(derived().toCode(x, y, z, depth));
-	}
-
-	//
-	// Empty
-	//
-
-	[[nodiscard]] bool semanticsEmpty(Node node) const
-	{
-		return semanticNode(derived().leafNode(node)).empty(node.index());
-	}
-
-	[[nodiscard]] bool semanticsEmpty(Code code) const
-	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return semanticNode(node).empty(code.index(depth));
-	}
-
-	[[nodiscard]] bool semanticsEmpty(Key key) const
-	{
-		return semanticsEmpty(derived().toCode(key));
-	}
-
-	[[nodiscard]] bool semanticsEmpty(Point coord, depth_t depth = 0) const
-	{
-		return semanticsEmpty(derived().toCode(coord, depth));
-	}
-
-	[[nodiscard]] bool semanticsEmpty(coord_t x, coord_t y, coord_t z,
-	                                  depth_t depth = 0) const
-	{
-		return semanticsEmpty(derived().toCode(x, y, z, depth));
-	}
-
-	//
-	// TODO: Iterators
-	//
-
-	//
-	// TODO: Find, lower/upper bound
 	//
 
 	//
