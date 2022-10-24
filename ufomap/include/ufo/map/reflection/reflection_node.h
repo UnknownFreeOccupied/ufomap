@@ -50,72 +50,11 @@
 
 namespace ufo::map
 {
-template <std::size_t N = 8>
+template <std::size_t N>
 struct ReflectionNode {
-	//
-	// Size
-	//
-
-	[[nodiscard]] static constexpr std::size_t reflectionSize() { return N; }
-
-	//
-	// Hits iterators
-	//
-
-	[[nodiscard]] constexpr auto beginHits() noexcept { return hits_.begin(); }
-
-	[[nodiscard]] constexpr auto beginHits() const noexcept { return hits_.begin(); }
-
-	[[nodiscard]] constexpr auto cbeginHits() const noexcept { return hits_.cbegin(); }
-
-	[[nodiscard]] constexpr auto endHits() noexcept { return hits_.end(); }
-
-	[[nodiscard]] constexpr auto endHits() const noexcept { return hits_.end(); }
-
-	[[nodiscard]] constexpr auto cendHits() const noexcept { return hits_.cend(); }
-
-	[[nodiscard]] constexpr auto rbeginHits() noexcept { return hits_.rbegin(); }
-
-	[[nodiscard]] constexpr auto rbeginHits() const noexcept { return hits_.rbegin(); }
-
-	[[nodiscard]] constexpr auto crbeginHits() const noexcept { return hits_.crbegin(); }
-
-	[[nodiscard]] constexpr auto rendHits() noexcept { return hits_.rend(); }
-
-	[[nodiscard]] constexpr auto rendHits() const noexcept { return hits_.rend(); }
-
-	[[nodiscard]] constexpr auto crendHits() const noexcept { return hits_.crend(); }
-
-	//
-	// Misses iterators
-	//
-
-	[[nodiscard]] constexpr auto beginMisses() noexcept { return misses_.begin(); }
-
-	[[nodiscard]] constexpr auto beginMisses() const noexcept { return misses_.begin(); }
-
-	[[nodiscard]] constexpr auto cbeginMisses() const noexcept { return misses_.cbegin(); }
-
-	[[nodiscard]] constexpr auto endMisses() noexcept { return misses_.end(); }
-
-	[[nodiscard]] constexpr auto endMisses() const noexcept { return misses_.end(); }
-
-	[[nodiscard]] constexpr auto cendMisses() const noexcept { return misses_.cend(); }
-
-	[[nodiscard]] constexpr auto rbeginMisses() noexcept { return misses_.rbegin(); }
-
-	[[nodiscard]] constexpr auto rbeginMisses() const noexcept { return misses_.rbegin(); }
-
-	[[nodiscard]] constexpr auto crbeginMisses() const noexcept
-	{
-		return misses_.crbegin();
-	}
-
-	[[nodiscard]] constexpr auto rendMisses() noexcept { return misses_.rend(); }
-
-	[[nodiscard]] constexpr auto rendMisses() const noexcept { return misses_.rend(); }
-
-	[[nodiscard]] constexpr auto crendMisses() const noexcept { return misses_.crend(); }
+	// Data
+	std::array<count_t, N> hits;
+	std::array<count_t, N> misses;
 
 	//
 	// Fill
@@ -123,82 +62,22 @@ struct ReflectionNode {
 
 	void fill(ReflectionNode const parent, index_t const index)
 	{
-		setHits(parent.hits(index));
-		setMisses(parent.misses(index));
+		hits.fill(parent.hits[index]);
+		misses.fill(parent.misses[index]);
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(ReflectionNode const parent,
-	                                           index_t const index) const
+	[[nodiscard]] bool isCollapsible() const
 	{
 		// TODO: Use floor(log2(X))?
-		return all_of(hits_, [p = parent.hits(index)](auto const e) { return e == p; }) &&
-		       all_of(misses_, [p = parent.misses(index)](auto const e) { return e == p; });
+		return std::all_of(std::begin(hits) + 1, std::end(hits),
+		                   [p = hits.front()](auto e) { return e == p; }) &&
+		       std::all_of(std::begin(misses) + 1, std::end(misses),
+		                   [p = misses.front()](auto e) { return e == p; });
 	}
-
-	//
-	// Get hits
-	//
-
-	[[nodiscard]] constexpr count_t hits(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return hits_[0];
-		} else {
-			return hits_[index];
-		}
-	}
-
-	//
-	// Set hits
-	//
-
-	void setHits(count_t const value) { hits_.fill(value); }
-
-	void setHits(index_t const index, count_t const value)
-	{
-		if constexpr (1 == N) {
-			setHits(value);
-		} else {
-			hits_[index] = value;
-		}
-	}
-
-	//
-	// Get misses
-	//
-
-	[[nodiscard]] constexpr count_t misses(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return misses_[0];
-		} else {
-			return misses_[index];
-		}
-	}
-
-	//
-	// Set misses
-	//
-
-	void setMisses(count_t const value) { misses_.fill(value); }
-
-	void setMisses(index_t const index, count_t const value)
-	{
-		if constexpr (1 == N) {
-			setMisses(value);
-		} else {
-			misses_[index] = value;
-		}
-	}
-
- private:
-	// Data
-	std::array<count_t, N> hits_;
-	std::array<count_t, N> misses_;
 };
 }  // namespace ufo::map
 

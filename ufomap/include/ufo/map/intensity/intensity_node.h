@@ -68,53 +68,17 @@ struct IntensityNode {
 
 	void fill(IntensityNode const parent, index_t const index)
 	{
-		if constexpr (1 == N) {
-			intensity = parent.intensity;
-		} else {
-			intensity.fill(parent.intensity[index]);
-		}
+		intensity.fill(parent.intensity[index]);
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(IntensityNode const parent,
-	                                           index_t const index) const
+	[[nodiscard]] constexpr bool isCollapsible() const
 	{
-		if constexpr (1 == N) {
-			return intensity == parent.intensity;
-		} else {
-			return all_of(intensity, [t = parent.intensity[index]](auto const e) { return e == t; });
-		}
-	}
-
-	//
-	// Get intensity
-	//
-
-	[[nodiscard]] constexpr intensity_t intensityIndex(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return intensity[0];
-		} else {
-			return intensity[index];
-		}
-	}
-
-	//
-	// Set intensity
-	//
-
-	void setIntensity(intensity_t const value) { intensity.fill(value); }
-
-	void setIntensityIndex(index_t const index, intensity_t const value)
-	{
-		if constexpr (1 == N) {
-			setIntensity(value);
-		} else {
-			intensity[index] = value;
-		}
+		return std::all_of(std::begin(intensity) + 1, std::end(intensity),
+		                   [t = intensity.front()](auto e) { return e == t; });
 	}
 };
 }  // namespace ufo::map

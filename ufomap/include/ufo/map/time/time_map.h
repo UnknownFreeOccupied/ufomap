@@ -66,13 +66,13 @@ class TimeMap
 
 	[[nodiscard]] constexpr time_t time(Node node) const
 	{
-		return derived().leafNode(node).time(node.index());
+		return derived().leafNode(node).time[node.index()];
 	}
 
 	[[nodiscard]] time_t time(Code code) const
 	{
 		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.time(code.index(d));
+		return n.time[code.index(d)];
 	}
 
 	[[nodiscard]] time_t time(Key key) const { return time(derived().toCode(key)); }
@@ -94,15 +94,15 @@ class TimeMap
 	void setTime(Node node, time_t time, bool propagate = true)
 	{
 		derived().apply(
-		    node, [time](auto& node, index_t index) { node.setTime(index, time); },
-		    [time](auto& node) { node.setTime(time); }, propagate);
+		    node, [time](auto& node, index_t index) { node.time[index] = time; },
+		    [time](auto& node) { node.time.fill(time); }, propagate);
 	}
 
 	void setTime(Code code, time_t time, bool propagate = true)
 	{
 		derived().apply(
-		    code, [time](auto& node, index_t index) { node.setTime(index, time); },
-		    [time](auto& node) { node.setTime(time); }, propagate);
+		    code, [time](auto& node, index_t index) { node.time[index] = time; },
+		    [time](auto& node) { node.time.fill(time); }, propagate);
 	}
 
 	void setTime(Key key, time_t time, bool propagate = true)
@@ -207,37 +207,23 @@ class TimeMap
 	// Update node
 	//
 
-	template <std::size_t N, class T>
-	void updateNode(TimeNode<N>& node, IndexField const indices, T const& children)
+	template <std::size_t N, class InputIt>
+	void updateNode(TimeNode<N>& node, IndexField const indices, InputIt first,
+	                InputIt last)
 	{
-		auto prop = timePropagationCriteria();
-		if constexpr (1 == N) {
-			auto fun = [](TimeNode<1> const node) { return node.time[0]; };
-			switch (prop) {
-				case PropagationCriteria::MIN:
-					node.time[0] = min(children, fun);
-					break;
-				case PropagationCriteria::MAX:
-					node.time[0] = max(children, fun);
-					break;
-				case PropagationCriteria::MEAN:
-					node.time[0] = mean(children, fun);
-					break;
-			}
-		} else {
-			for (std::size_t i = 0; children.size() != i; ++i) {
-				if (indices[i]) {
-					switch (prop) {
-						case PropagationCriteria::MIN:
-							node.setTime(index, min(children[i].beginTime(), children[i].endTime()));
-							break;
-						case PropagationCriteria::MAX:
-							node.setTime(index, max(children[i].beginTime(), children[i].endTime()));
-							break;
-						case PropagationCriteria::MEAN:
-							node.setTime(index, mean(children[i].beginTime(), children[i].endTime()));
-							break;
-					}
+		auto const prop = timePropagationCriteria();
+		for (index_t i = 0; first != last; ++first, ++i) {
+			if (indices[i]) {
+				switch (prop) {
+					case PropagationCriteria::MIN:
+						node.time[i] = min(first->time);
+						break;
+					case PropagationCriteria::MAX:
+						node.time[i] = max(first->time);
+						break;
+					case PropagationCriteria::MEAN:
+						node.time[i] = mean(first->time);
+						break;
 				}
 			}
 		}
@@ -257,74 +243,29 @@ class TimeMap
 		return dataIdentifier() == identifier;
 	}
 
-	template <class InputIt>
-	[[nodiscard]] static constexpr uint8_t numData() noexcept
-	{
-		using value_type = typename std::iterator_traits<InputIt>::value_type;
-		using node_type = typename value_type::node_type;
-		return node_type::timeSize();
-	}
-
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		std::uint8_t dt;
-		in.read(reinterpret_cast<char*>(&dt), sizeof(dt));
-		// TODO: Do something with data type
+		if (first == last) {
+			return;
+		}
 
-		std::uint8_t n;
-		in.read(reinterpret_cast<char*>(&n), sizeof(n));
-		num_nodes *= n;
+		auto const N = first->node.time.size();
 
-		auto data = std::make_unique<time_t[]>(num_nodes);
+		auto size = std::distance(first, last) * N;
+
+		auto data = std::make_unique<time_t[]>(size);
 		in.read(reinterpret_cast<char*>(data.get()),
-		        num_nodes * sizeof(typename decltype(data)::element_type));
+		        size * sizeof(typename decltype(data)::element_type));
 
 		auto const d = data.get();
-		if constexpr (1 == numData<OutputIt>()) {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					first->node.time[0] = *(d + i);
-				}
+		for (; first != last; ++first, d += N) {
+			if (first->index_field.all()) {
+				std::copy(d, d + N, first->node.time.data());
 			} else {
-				auto const prop_criteria = prop_criteria_;
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					switch (prop_criteria) {
-						case PropagationCriteria::MIN:
-							first->node.time[0] = min(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MAX:
-							first->node.time[0] = max(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MEAN:
-							first->node.time[0] = mean(d + i, d + i + 8);
-							break;
-					}
-				}
-			}
-		} else {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (first->index_field.all()) {
-						first->node.time.fill(*(d + i));
-					} else {
-						for (std::size_t index = 0; first->node.time.size() != index; ++index) {
-							if (first.index_field[index]) {
-								first->node.time[index] = *(d + i);
-							}
-						}
-					}
-				}
-			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (first->index_field.all()) {
-						std::copy(d + i, d + i + 8, first->node.time.data());
-					} else {
-						for (index_t index = 0; first->node.time.size() != index; ++i, ++index) {
-							if (first.index_field[index]) {
-								first->node.time[index] = *(d + i + index);
-							}
-						}
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						first->node.time[i] = *(d + i);
 					}
 				}
 			}
@@ -332,20 +273,22 @@ class TimeMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
+	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr std::uint8_t const n = numData<InputIt>();
-		num_nodes *= n;
-
-		auto data = std::make_unique<time_t[]>(num_nodes);
-		auto d = data.get();
-		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(first->node.beginTime(), first->node.endTime(), d + i);
+		if (first == last) {
+			return;
 		}
 
-		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
+		auto size = std::distance(first, last) * first->node.time.size();
+
+		auto data = std::make_unique<time_t[]>(size);
+		auto d = data.get();
+		for (; first != last; ++first) {
+			d = std::copy(std::begin(first->node.time), std::end(first->node.time), d);
+		}
+
 		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_nodes * sizeof(typename decltype(data)::element_type));
+		          size * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:

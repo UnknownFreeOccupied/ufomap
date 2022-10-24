@@ -51,67 +51,10 @@
 
 namespace ufo::map
 {
-template <std::size_t N = 8>
+template <std::size_t N>
 struct DistanceNode {
-	//
-	// Size
-	//
-
-	[[nodiscard]] static constexpr std::size_t distanceSize() { return N; }
-
-	//
 	// Data
-	//
-
-	[[nodiscard]] constexpr distance_t const* distanceData() const noexcept
-	{
-		return distance_.data();
-	}
-
-	[[nodiscard]] constexpr distance_t* distanceData() noexcept { return distance_.data(); }
-
-	//
-	// Iterators
-	//
-
-	[[nodiscard]] constexpr auto beginDistance() noexcept { return distance_.begin(); }
-
-	[[nodiscard]] constexpr auto beginDistance() const noexcept
-	{
-		return distance_.begin();
-	}
-
-	[[nodiscard]] constexpr auto cbeginDistance() const noexcept
-	{
-		return distance_.cbegin();
-	}
-
-	[[nodiscard]] constexpr auto endDistance() noexcept { return distance_.end(); }
-
-	[[nodiscard]] constexpr auto endDistance() const noexcept { return distance_.end(); }
-
-	[[nodiscard]] constexpr auto cendDistance() const noexcept { return distance_.cend(); }
-
-	[[nodiscard]] constexpr auto rbeginDistance() noexcept { return distance_.rbegin(); }
-
-	[[nodiscard]] constexpr auto rbeginDistance() const noexcept
-	{
-		return distance_.rbegin();
-	}
-
-	[[nodiscard]] constexpr auto crbeginDistance() const noexcept
-	{
-		return distance_.crbegin();
-	}
-
-	[[nodiscard]] constexpr auto rendDistance() noexcept { return distance_.rend(); }
-
-	[[nodiscard]] constexpr auto rendDistance() const noexcept { return distance_.rend(); }
-
-	[[nodiscard]] constexpr auto crendDistance() const noexcept
-	{
-		return distance_.crend();
-	}
+	std::array<distance_t, N> distance;
 
 	//
 	// Fill
@@ -119,51 +62,18 @@ struct DistanceNode {
 
 	void fill(DistanceNode const parent, index_t const index)
 	{
-		setDistance(parent.distance(index));
+		distance.fill(parent.distance[index]);
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(DistanceNode const parent,
-	                                           index_t const index) const
+	[[nodiscard]] constexpr bool isCollapsible() const
 	{
-		return all_of(distance_,
-		              [a = parent.distance(index)](auto const b) { return a == b; });
+		return std::all_of(std::begin(distance) + 1, std::end(distance),
+		                   [a = distance.front()](auto b) { return a == b; });
 	}
-
-	//
-	// Get distance
-	//
-
-	[[nodiscard]] constexpr distance_t distance(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return distance_[0];
-		} else {
-			return distance_[index];
-		}
-	}
-
-	//
-	// Set distance
-	//
-
-	void setDistance(distance_t const value) { distance_.fill(value); }
-
-	void setDistance(index_t const index, distance_t const value)
-	{
-		if constexpr (1 == N) {
-			setDistance(value);
-		} else {
-			distance_[index] = value;
-		}
-	}
-
- private:
-	// Data
-	std::array<distance_t, N> distance_;
 };
 }  // namespace ufo::map
 

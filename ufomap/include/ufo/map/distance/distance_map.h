@@ -211,41 +211,43 @@ class DistanceMap
 	//
 
 	// FIXME: What should this be?
-	void initRoot() { derived().root().setDistance(derived().rootIndex(), 0); }
+	void initRoot() { derived().root().distance[derived().rootIndex()] = 0; }
 
 	//
 	// Update node
 	//
 
 	template <std::size_t N, class InputIt>
-	void updateNode(DistanceNode<N>& node, IndexField indices, InputIt first, InputIt last)
+	void updateNode(DistanceNode<N>& node, IndexField const indices, InputIt first,
+	                InputIt last)
 	{
 		auto const prop = distancePropagationCriteria();
-		if constexpr (1 == N) {
-			auto fun = [](DistanceNode<N> node) { return node.distance(0); };
-			switch (prop) {
-				case PropagationCriteria::MIN:
-					node.setDistance(min(first, last, fun));
-					break;
-				case PropagationCriteria::MAX:
-					node.setDistance(max(first, last, fun));
-					break;
-				case PropagationCriteria::MEAN:
-					node.setDistance(mean(first, last, fun));
-					break;
+		if (indices.all()) {
+			for (index_t i = 0; first != last; ++first, ++i) {
+				switch (prop) {
+					case PropagationCriteria::MIN:
+						node.distance[i] = min(first->distance);
+						break;
+					case PropagationCriteria::MAX:
+						node.distance[i] = max(first->distance);
+						break;
+					case PropagationCriteria::MEAN:
+						node.distance[i] = mean(first->distance);
+						break;
+				}
 			}
 		} else {
 			for (index_t i = 0; first != last; ++first, ++i) {
 				if (indices[i]) {
 					switch (prop) {
 						case PropagationCriteria::MIN:
-							node.setDistance(i, min(first->beginDistance(), first->endDistance()));
+							node.distance[i] = min(first->distance);
 							break;
 						case PropagationCriteria::MAX:
-							node.setDistance(i, max(first->beginDistance(), first->endDistance()));
+							node.distance[i] = max(first->distance);
 							break;
 						case PropagationCriteria::MEAN:
-							node.setDistance(i, mean(first->beginDistance(), first->endDistance()));
+							node.distance[i] = mean(first->distance);
 							break;
 					}
 				}
@@ -276,7 +278,7 @@ class DistanceMap
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
 		uint8_t n;
 		in.read(reinterpret_cast<char*>(&n), sizeof(n));
@@ -287,50 +289,13 @@ class DistanceMap
 		        num_nodes * sizeof(typename decltype(data)::element_type));
 
 		auto const d = data.get();
-		if constexpr (1 == numData<OutputIt>()) {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					first->node.distance[0] = *(d + i);
-				}
+		for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
+			if (first->index_field.all()) {
+				std::copy(d + i, d + i + 8, first->node.distance.data());
 			} else {
-				auto const prop_criteria = prop_criteria_;
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					switch (prop_criteria) {
-						case PropagationCriteria::MIN:
-							first->node.distance[0] = min(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MAX:
-							first->node.distance[0] = max(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MEAN:
-							first->node.distance[0] = mean(d + i, d + i + 8);
-							break;
-					}
-				}
-			}
-		} else {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (first->index_field.all()) {
-						first->node.distance.fill(*(d + i));
-					} else {
-						for (std::size_t index = 0; first->node.distance.size() != index; ++index) {
-							if (first.index_field[index]) {
-								first->node.distance[index] = *(d + i);
-							}
-						}
-					}
-				}
-			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (first->index_field.all()) {
-						std::copy(d + i, d + i + 8, first->node.distance.data());
-					} else {
-						for (index_t index = 0; first->node.distance.size() != index; ++i, ++index) {
-							if (first.index_field[index]) {
-								first->node.distance[index] = *(d + i + index);
-							}
-						}
+				for (index_t index = 0; first->node.distance.size() != index; ++i, ++index) {
+					if (first.index_field[index]) {
+						first->node.distance[index] = *(d + i + index);
 					}
 				}
 			}
@@ -338,7 +303,7 @@ class DistanceMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
+	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
 		constexpr uint8_t const n = numData<InputIt>();
 		num_nodes *= n;

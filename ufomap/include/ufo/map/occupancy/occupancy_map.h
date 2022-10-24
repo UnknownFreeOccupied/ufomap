@@ -72,13 +72,13 @@ class OccupancyMap
 
 	[[nodiscard]] logit_t occupancyLogit(Node node) const
 	{
-		return derived().leafNode(node).occupancy(node.index());
+		return derived().leafNode(node).occupancy[node.index()];
 	}
 
 	[[nodiscard]] logit_t occupancyLogit(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.occupancy(code.index(depth));
+		return node.occupancy[code.index(depth)];
 	}
 
 	[[nodiscard]] logit_t occupancyLogit(Key key) const
@@ -134,15 +134,15 @@ class OccupancyMap
 	void setOccupancyLogit(Node node, logit_t logit, bool propagate = true)
 	{
 		derived().apply(
-		    node, [logit](auto& node, index_t index) { node.setOccupancy(index, logit); },
-		    [logit](auto& node) { node.setOccupancy(logit); }, propagate);
+		    node, [logit](auto& node, index_t index) { node.occupancy[index] = logit; },
+		    [logit](auto& node) { node.occupancy.fill(logit); }, propagate);
 	}
 
 	void setOccupancyLogit(Code code, logit_t logit, bool propagate = true)
 	{
 		derived().apply(
-		    code, [logit](auto& node, index_t index) { node.setOccupancy(index, logit); },
-		    [logit](auto& node) { node.setOccupancy(logit); }, propagate);
+		    code, [logit](auto& node, index_t index) { node.occupancy[index] = logit; },
+		    [logit](auto& node) { node.occupancy.fill(logit); }, propagate);
 	}
 
 	void setOccupancyLogit(Key key, logit_t logit, bool propagate = true)
@@ -200,15 +200,41 @@ class OccupancyMap
 	void increaseOccupancyLogit(Node node, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node, [inc](auto& node, index_t index) { node.increaseOccupancy(index, inc); },
-		    [inc](auto& node) { node.increaseOccupancy(inc); }, propagate);
+		    node,
+		    [inc](auto& node, index_t index) {
+			    node.occupancy[index] =
+			        std::numeric_limits<logit_t>::max() - inc > node.occupancy[index]
+			            ? node.occupancy[index] + inc
+			            : std::numeric_limits<logit_t>::max();
+		    },
+		    [inc](auto& node) {
+			    for (auto& occ : node.occupancy) {
+				    occ = std::numeric_limits<logit_t>::max() - inc > occ
+				              ? occ + inc
+				              : std::numeric_limits<logit_t>::max();
+			    }
+		    },
+		    propagate);
 	}
 
 	void increaseOccupancyLogit(Code code, logit_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code, [inc](auto& node, index_t index) { node.increaseOccupancy(index, inc); },
-		    [inc](auto& node) { node.increaseOccupancy(inc); }, propagate);
+		    code,
+		    [inc](auto& node, index_t index) {
+			    node.occupancy[index] =
+			        std::numeric_limits<logit_t>::max() - inc > node.occupancy[index]
+			            ? node.occupancy[index] + inc
+			            : std::numeric_limits<logit_t>::max();
+		    },
+		    [inc](auto& node) {
+			    for (auto& occ : node.occupancy) {
+				    occ = std::numeric_limits<logit_t>::max() - inc > occ
+				              ? occ + inc
+				              : std::numeric_limits<logit_t>::max();
+			    }
+		    },
+		    propagate);
 	}
 
 	void increaseOccupancyLogit(Key key, logit_t inc, bool propagate = true)
@@ -235,15 +261,41 @@ class OccupancyMap
 	void decreaseOccupancyLogit(Node node, logit_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    node, [dec](auto& node, index_t index) { node.decreaseOccupancy(index, dec); },
-		    [dec](auto& node) { node.decreaseOccupancy(dec); }, propagate);
+		    node,
+		    [dec](auto& node, index_t index) {
+			    node.occupancy[index] =
+			        std::numeric_limits<logit_t>::lowest() + dec < node.occupancy[index]
+			            ? node.occupancy[index] - dec
+			            : std::numeric_limits<logit_t>::lowest();
+		    },
+		    [dec](auto& node) {
+			    for (auto& occ : node.occupancy) {
+				    occ = std::numeric_limits<logit_t>::lowest() + dec < occ
+				              ? occ - dec
+				              : std::numeric_limits<logit_t>::lowest();
+			    }
+		    },
+		    propagate);
 	}
 
 	void decreaseOccupancyLogit(Code code, logit_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    code, [dec](auto& node, index_t index) { node.decreaseOccupancy(index, dec); },
-		    [dec](auto& node) { node.decreaseOccupancy(dec); }, propagate);
+		    code,
+		    [dec](auto& node, index_t index) {
+			    node.occupancy[index] =
+			        std::numeric_limits<logit_t>::lowest() + dec < node.occupancy[index]
+			            ? node.occupancy[index] - dec
+			            : std::numeric_limits<logit_t>::lowest();
+		    },
+		    [dec](auto& node) {
+			    for (auto& occ : node.occupancy) {
+				    occ = std::numeric_limits<logit_t>::lowest() + dec < occ
+				              ? occ - dec
+				              : std::numeric_limits<logit_t>::lowest();
+			    }
+		    },
+		    propagate);
 	}
 
 	void decreaseOccupancyLogit(Key key, logit_t dec, bool propagate = true)
@@ -308,11 +360,10 @@ class OccupancyMap
 
 	[[nodiscard]] OccupancyState occupancyState(Node node) const
 	{
-		auto const& leaf_node = derived().leafNode(node);
-		auto const index = node.index();
-		if (isUnknown(leaf_node, index)) {
+		auto occ = occupancyLogit(node);
+		if (isUnknown(occ)) {
 			return OccupancyState::UNKNOWN;
-		} else if (isFree(leaf_node, index)) {
+		} else if (isFree(occ)) {
 			return OccupancyState::FREE;
 		} else {
 			return OccupancyState::OCCUPIED;
@@ -321,11 +372,10 @@ class OccupancyMap
 
 	[[nodiscard]] OccupancyState occupancyState(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		auto const index = code.index(depth);
-		if (isUnknown(node, index)) {
+		auto occ = occupancyLogit(code);
+		if (isUnknown(occ)) {
 			return OccupancyState::UNKNOWN;
-		} else if (isFree(node, index)) {
+		} else if (isFree(occ)) {
 			return OccupancyState::FREE;
 		} else {
 			return OccupancyState::OCCUPIED;
@@ -399,13 +449,12 @@ class OccupancyMap
 
 	[[nodiscard]] bool isUnknown(Node node) const
 	{
-		return isUnknown(derived().leafNode(node).occupancy(node.index()));
+		return isUnknown(occupancyLogit(node));
 	}
 
 	[[nodiscard]] bool isUnknown(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return isUnknown(node.occupancy(code.index(depth)));
+		return isUnknown(occupancyLogit(code));
 	}
 
 	[[nodiscard]] bool isUnknown(Key key) const { return isUnknown(derived().toCode(key)); }
@@ -424,16 +473,9 @@ class OccupancyMap
 	// Is free
 	//
 
-	[[nodiscard]] bool isFree(Node node) const
-	{
-		return isFree(derived().leafNode(node).occupancy(node.index()));
-	}
+	[[nodiscard]] bool isFree(Node node) const { return isFree(occupancyLogit(node)); }
 
-	[[nodiscard]] bool isFree(Code code) const
-	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return isFree(node.occupancy(code.index(depth)));
-	}
+	[[nodiscard]] bool isFree(Code code) const { return isFree(occupancyLogit(code)); }
 
 	[[nodiscard]] bool isFree(Key key) const { return isFree(derived().toCode(key)); }
 
@@ -453,13 +495,12 @@ class OccupancyMap
 
 	[[nodiscard]] bool isOccupied(Node node) const
 	{
-		return isOccupied(derived().leafNode(node).occupancy(node.index()));
+		return isOccupied(occupancyLogit(node));
 	}
 
 	[[nodiscard]] bool isOccupied(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return isOccupied(node.occupancy(code.index(depth)));
+		return isOccupied(occupancyLogit(code));
 	}
 
 	[[nodiscard]] bool isOccupied(Key key) const
@@ -808,11 +849,13 @@ class OccupancyMap
 
 	void initRoot()
 	{
-		auto const occ = toOccupancyLogit(0.5);
-		derived().root().setOccupancy(derived().rootIndex(), occ);
-		derived().root().setContainsUnknown(derived().rootIndex(), isUnknown(occ));
-		derived().root().setContainsFree(derived().rootIndex(), isFree(occ));
-		derived().root().setContainsOccupied(derived().rootIndex(), isOccupied(occ));
+		derived().root().occupancy[derived().rootIndex()] = toOccupancyLogit(0.5);
+		// auto const occ = toOccupancyLogit(0.5);
+		// auto const index = derived().rootIndex();
+		// derived().root().occupancy[index] = occ;
+		// derived().root().contains_unknown.set(index, isUnknown(occ));
+		// derived().root().contains_free.set(index, isFree(occ));
+		// derived().root().contains_occupied.set(index, isOccupied(occ));
 	}
 
 	//
@@ -820,35 +863,28 @@ class OccupancyMap
 	//
 
 	template <class T, class InputIt>
-	void updateNode(T& node, IndexField indices, InputIt first, InputIt last)
+	void updateNode(T& node, IndexField const indices, InputIt first, InputIt last)
 	{
 		auto prop = occupancyPropagationCriteria();
+		if (indices.all()) {
+			for (index_t i = 0; first != last; ++first, ++i) {
+				switch (prop) {
+					case PropagationCriteria::MIN:
+						node.occupancy[i] = min(first->occupancy);
+						break;
+					case PropagationCriteria::MAX:
+						node.occupancy[i] = max(first->occupancy);
+						break;
+					case PropagationCriteria::MEAN:
+						node.occupancy[i] = mean(first->occupancy);
+						break;
+				}
 
-		if constexpr (std::is_base_of_v<OccupancyNode<1>, T>) {
-			auto fun = [](OccupancyNode<1> node) { return node.occupancy(0); };
-			switch (prop) {
-				case PropagationCriteria::MIN:
-					node.setOccupancy(min(first, last, fun));
-					break;
-				case PropagationCriteria::MAX:
-					node.setOccupancy(max(first, last, fun));
-					break;
-				case PropagationCriteria::MEAN:
-					node.setOccupancy(mean(first, last, fun));
-					break;
+				node.contains_unknown.set(i, );
+				node.contains_free.set(i, );
+				node.contains_occupied.set(i, );
 			}
-
-			if constexpr (std::is_base_of_v<ContainsOccupancy<1>, T>) {
-				node.setContainsUnknown(std::any_of(first, last, [this](auto const& child) {
-					return containsUnknown(0, child);
-				}));
-				node.setContainsFree(std::any_of(
-				    first, last, [this](auto const& child) { return containsFree(0, child); }));
-				node.setContainsOccupied(std::any_of(first, last, [this](auto const& child) {
-					return containsOccupied(0, child);
-				}));
-			}
-		} else if constexpr (util::is_base_of_template_v<OccupancyNode, T>) {
+		} else {
 			for (index_t i = 0; first != last; ++first, ++i) {
 				if (!indices[i]) {
 					continue;
@@ -856,24 +892,20 @@ class OccupancyMap
 
 				switch (prop) {
 					case PropagationCriteria::MIN:
-						node.setOccupancy(i, min(first->beginOccupancy(), first->endOccupancy()));
+						node.occupancy[i] = min(first->occupancy);
 						break;
 					case PropagationCriteria::MAX:
-						node.setOccupancy(i, max(first->beginOccupancy(), first->endOccupancy()));
+						node.occupancy[i] = max(first->occupancy);
 						break;
 					case PropagationCriteria::MEAN:
-						node.setOccupancy(i, mean(first->beginOccupancy(), first->endOccupancy()));
+						node.occupancy[i] = mean(first->occupancy);
 						break;
 				}
 
-				if constexpr (util::is_base_of_template_v<ContainsOccupancy, T>) {
-					node.setContainsUnknown(i, *first);
-					node.setContainsFree(i, *first);
-					node.setContainsOccupied(i, *first);
-				}
+				node.contains_unknown.set(i, containsUnknown(*first));
+				node.contains_free.set(i, containsFree(*first));
+				node.contains_occupied.set(i, containsOccupied(*first));
 			}
-		} else {
-			// static_assert(false);
 		}
 	}
 
@@ -903,145 +935,97 @@ class OccupancyMap
 	template <class T>
 	[[nodiscard]] bool containsUnknown(T const& node) const
 	{
-		if constexpr (util::is_base_of_template_v<ContainsOccupancy, T>) {
+		if constexpr (std::is_base_of_v<ContainsOccupancy<T::occupancySize()>, T>) {
 			if (node.leaf.all()) {
-				return std::any_of(node.beginOccupancy(), node.endOccupancy(),
-				                   [this](auto occ) { return isUnknown(occ); });
+				return any_of(node.occupancy, [this](auto occ) { return isUnknown(occ); });
+			} else if ((node.contains_unknown & ~node.leaf).any()) {
+				return true;
 			}
 
-			if constexpr (1 == T::occupancySize()) {
-				return node.contains_unknown;
-			} else {
-				if (node.leaf.none()) {
-					return node.contains_unknown.any();
+			for (index_t i = 0; T::occupancySize() != i; ++i) {
+				if (node.leaf[i] && isUnknown(node.occupancy[i])) {
+					return true;
 				}
-
-				for (index_t i = 0; T::occupancySize() != i; ++i) {
-					if (node.leaf[i]) {
-						if (isUnknown(node.occupancy(i))) {
-							return true;
-						}
-					} else {
-						if (containsUnknown(i)) {
-							return true;
-						}
-					}
-				}
-
-				return false;
 			}
+			return false;
 		} else {
-			return std::any_of(node.beginOccupancy(), node.endOccupancy(),
-			                   [this](auto occ) { return isUnknown(occ); });
+			return any_of(node.occupancy, [this](auto occ) { return isUnknown(occ); });
 		}
 	}
 
 	template <class T>
 	[[nodiscard]] bool containsUnknown(index_t const index, T const& node) const
 	{
-		if constexpr (util::is_base_of_template_v<ContainsOccupancy, T>) {
+		if constexpr (std::is_base_of_v<ContainsOccupancy<T::occupancySize()>, T>) {
 			if (!node.leaf[index]) {
-				return node.containsUnknown(index);
+				return node.contains_unknown[index];
 			}
 		}
-
-		return isUnknown(node.occupancy(index));
+		return isUnknown(node.occupancy[index]);
 	}
 
 	template <class T>
 	[[nodiscard]] bool containsFree(T const& node) const
 	{
-		if constexpr (util::is_base_of_template_v<ContainsOccupancy, T>) {
+		if constexpr (std::is_base_of_v<ContainsOccupancy<T::occupancySize()>, T>) {
 			if (node.leaf.all()) {
-				return std::any_of(node.beginOccupancy(), node.endOccupancy(),
-				                   [this](auto occ) { return isFree(occ); });
+				return any_of(node.occupancy, [this](auto occ) { return isFree(occ); });
+			} else if ((node.contains_free & ~node.leaf).any()) {
+				return true;
 			}
 
-			if constexpr (1 == T::occupancySize()) {
-				return node.contains_free;
-			} else {
-				if (node.leaf.none()) {
-					return node.contains_free.any();
+			for (index_t i = 0; T::occupancySize() != i; ++i) {
+				if (node.leaf[i] && isFree(node.occupancy[i])) {
+					return true;
 				}
-
-				for (index_t i = 0; T::occupancySize() != i; ++i) {
-					if (node.leaf[i]) {
-						if (isFree(node.occupancy(i))) {
-							return true;
-						}
-					} else {
-						if (containsFree(i)) {
-							return true;
-						}
-					}
-				}
-
-				return false;
 			}
+			return false;
 		} else {
-			return std::any_of(node.beginOccupancy(), node.endOccupancy(),
-			                   [this](auto occ) { return isFree(occ); });
+			return any_of(node.occupancy, [this](auto occ) { return isFree(occ); });
 		}
 	}
 
 	template <class T>
 	[[nodiscard]] bool containsFree(index_t const index, T const& node) const
 	{
-		if constexpr (util::is_base_of_template_v<ContainsOccupancy, T>) {
+		if constexpr (std::is_base_of_v<ContainsOccupancy<T::occupancySize()>, T>) {
 			if (!node.leaf[index]) {
-				return node.containsFree(index);
+				return node.contains_free[index];
 			}
 		}
-
-		return isFree(node.occupancy(index));
+		return isFree(node.occupancy[index]);
 	}
 
 	template <class T>
 	[[nodiscard]] bool containsOccupied(T const& node) const
 	{
-		if constexpr (util::is_base_of_template_v<ContainsOccupancy, T>) {
+		if constexpr (std::is_base_of_v<ContainsOccupancy<T::occupancySize()>, T>) {
 			if (node.leaf.all()) {
-				return std::any_of(node.beginOccupancy(), node.endOccupancy(),
-				                   [this](auto occ) { return isOccupied(occ); });
+				return any_of(node.occupancy, [this](auto occ) { return isOccupied(occ); });
+			} else if ((node.contains_occupied & ~node.leaf).any()) {
+				return true;
 			}
 
-			if constexpr (1 == T::occupancySize()) {
-				return node.contains_occupied;
-			} else {
-				if (node.leaf.none()) {
-					return node.contains_occupied.any();
+			for (index_t i = 0; T::occupancySize() != i; ++i) {
+				if (node.leaf[i] && isOccupied(node.occupancy[i])) {
+					return true;
 				}
-
-				for (index_t i = 0; T::occupancySize() != i; ++i) {
-					if (node.leaf[i]) {
-						if (isOccupied(node.occupancy(i))) {
-							return true;
-						}
-					} else {
-						if (containsOccupied(i)) {
-							return true;
-						}
-					}
-				}
-
-				return false;
 			}
+			return false;
 		} else {
-			return std::any_of(node.beginOccupancy(), node.endOccupancy(),
-			                   [this](auto occ) { return isOccupied(occ); });
+			return any_of(node.occupancy, [this](auto occ) { return isOccupied(occ); });
 		}
 	}
 
 	template <class T>
 	[[nodiscard]] bool containsOccupied(index_t const index, T const& node) const
 	{
-		if constexpr (util::is_base_of_template_v<ContainsOccupancy, T>) {
+		if constexpr (std::is_base_of_v<ContainsOccupancy<T::occupancySize()>, T>) {
 			if (!node.leaf[index]) {
-				return node.containsOccupied(index);
+				return node.contains_occupied[index];
 			}
 		}
-
-		return isOccupied(node.occupancy(index));
+		return isOccupied(node.occupancy[index]);
 	}
 
 	//
@@ -1066,61 +1050,51 @@ class OccupancyMap
 		return node_type::occupancySize();
 	}
 
-	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	template <typename T>
+	static bool equal(T a, T b)
 	{
-		uint8_t n;
-		in.read(reinterpret_cast<char*>(&n), sizeof(n));
-		num_nodes *= n;
+		return (std::abs(a - b) <=
+		        std::numeric_limits<T>::epsilon() * std::max(std::abs(a), std::abs(b)));
+	}
 
-		auto data = std::make_unique<logit_t[]>(num_nodes);
+	template <class OutputIt>
+	void readNodes(std::istream& in, OutputIt first, OutputIt last)
+	{
+		double clamping_thres_min_logit;
+		double clamping_thres_max_logit;
+		in.read(reinterpret_cast<char*>(&clamping_thres_min_logit),
+		        sizeof(clamping_thres_min_logit));
+		in.read(reinterpret_cast<char*>(&clamping_thres_max_logit),
+		        sizeof(clamping_thres_max_logit));
+
+		constexpr uint8_t const N = numData<OutputIt>();
+		auto const num_data = std::distance(first, last) * N;
+		auto data = std::make_unique<logit_t[]>(num_data);
 		in.read(reinterpret_cast<char*>(data.get()),
-		        num_nodes * sizeof(typename decltype(data)::element_type));
-
-		auto const d = data.get();
-		if constexpr (1 == numData<OutputIt>()) {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					first->node.occupancy[0] = *(d + i);
-				}
-			} else {
-				auto const prop_criteria = prop_criteria_;
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					switch (prop_criteria) {
-						case PropagationCriteria::MIN:
-							first->node.occupancy[0] = min(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MAX:
-							first->node.occupancy[0] = max(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MEAN:
-							first->node.occupancy[0] = mean(d + i, d + i + 8);
-							break;
+		        num_data * sizeof(typename decltype(data)::element_type));
+		if (!equal(clamping_thres_min_logit, clamping_thres_min_logit_) ||
+		    !equal(clamping_thres_max_logit, clamping_thres_max_logit_)) {
+			for (auto d = data.get(); first != last; ++first, d += N) {
+				if (first->index_field.all()) {
+					std::copy(d, d + N, first->node.occupancy.data());
+					// TODO: Implement
+				} else {
+					for (index_t i = 0; N != i; ++i) {
+						if (first->index_field[i]) {
+							first->node.occupancy[i] = *(d + i);
+							// TODO: Implement
+						}
 					}
 				}
 			}
 		} else {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (first->index_field.all()) {
-						first->node.occupancy.fill(*(d + i));
-					} else {
-						for (std::size_t index = 0; first->node.occupancy.size() != index; ++index) {
-							if (first.index_field[index]) {
-								first->node.occupancy[index] = *(d + i);
-							}
-						}
-					}
-				}
-			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (first->index_field.all()) {
-						std::copy(d + i, d + i + 8, first->node.occupancy.data());
-					} else {
-						for (index_t index = 0; first->node.occupancy.size() != index; ++i, ++index) {
-							if (first.index_field[index]) {
-								first->node.occupancy[index] = *(d + i + index);
-							}
+			for (auto d = data.get(); first != last; ++first, d += N) {
+				if (first->index_field.all()) {
+					std::copy(d, d + N, first->node.occupancy.data());
+				} else {
+					for (index_t i = 0; N != i; ++i) {
+						if (first->index_field[i]) {
+							first->node.occupancy[i] = *(d + i);
 						}
 					}
 				}
@@ -1129,20 +1103,20 @@ class OccupancyMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
+	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr std::uint8_t const n = numData<InputIt>();
-		num_nodes *= n;
-
-		auto data = std::make_unique<logit_t[]>(num_nodes);
-		auto d = data.get();
-		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(first->node.beginOccupancy(), first->node.endOccupancy(), d + i);
+		constexpr uint8_t const N = numData<InputIt>();
+		auto const num_data = std::distance(first, last) * N;
+		auto data = std::make_unique<logit_t[]>(num_data);
+		for (auto d = data.get(); first != last; ++first) {
+			d = copy(first->node.occupancy, d);
 		}
-
-		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
+		out.write(reinterpret_cast<char const*>(&clamping_thres_min_logit_),
+		          sizeof(clamping_thres_min_logit_));
+		out.write(reinterpret_cast<char const*>(&clamping_thres_max_logit_),
+		          sizeof(clamping_thres_max_logit_));
 		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_nodes * sizeof(typename decltype(data)::element_type));
+		          num_data * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:

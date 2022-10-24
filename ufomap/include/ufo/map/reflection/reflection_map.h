@@ -447,7 +447,7 @@ class ReflectionMap
 	//
 
 	template <std::size_t N, class InputIt>
-	void updateNode(ReflectionNode<N>& node, IndexField indices, InputIt first,
+	void updateNode(ReflectionNode<N>& node, IndexField const indices, InputIt first,
 	                InputIt last)
 	{
 		prop = reflectionPropagationCriteria();

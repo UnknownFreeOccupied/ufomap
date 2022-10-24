@@ -50,52 +50,16 @@
 
 namespace ufo::map
 {
-template <std::size_t N = 8>
+template <std::size_t N>
 struct CountNode {
+	// Data
+	std::array<count_t, N> count;
+
 	//
 	// Size
 	//
 
-	[[nodiscard]] static constexpr std::size_t countSize() { return N; }
-
-	//
-	// Data
-	//
-
-	[[nodiscard]] constexpr count_t const* countData() const noexcept
-	{
-		return count_.data();
-	}
-
-	[[nodiscard]] constexpr count_t* countData() noexcept { return count_.data(); }
-
-	//
-	// Iterators
-	//
-
-	[[nodiscard]] constexpr auto beginCount() noexcept { return count_.begin(); }
-
-	[[nodiscard]] constexpr auto beginCount() const noexcept { return count_.begin(); }
-
-	[[nodiscard]] constexpr auto cbeginCount() const noexcept { return count_.cbegin(); }
-
-	[[nodiscard]] constexpr auto endCount() noexcept { return count_.end(); }
-
-	[[nodiscard]] constexpr auto endCount() const noexcept { return count_.end(); }
-
-	[[nodiscard]] constexpr auto cendCount() const noexcept { return count_.cend(); }
-
-	[[nodiscard]] constexpr auto rbeginCount() noexcept { return count_.rbegin(); }
-
-	[[nodiscard]] constexpr auto rbeginCount() const noexcept { return count_.rbegin(); }
-
-	[[nodiscard]] constexpr auto crbeginCount() const noexcept { return count_.crbegin(); }
-
-	[[nodiscard]] constexpr auto rendCount() noexcept { return count_.rend(); }
-
-	[[nodiscard]] constexpr auto rendCount() const noexcept { return count_.rend(); }
-
-	[[nodiscard]] constexpr auto crendCount() const noexcept { return count_.crend(); }
+	[[nodiscard]] static constexpr std::size_t countSize() noexcept { return N; }
 
 	//
 	// Fill
@@ -103,50 +67,18 @@ struct CountNode {
 
 	void fill(CountNode const parent, index_t const index)
 	{
-		setCount(parent.count(index));
+		count.fill(parent.count[index]);
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(CountNode const parent,
-	                                           index_t const index) const
+	[[nodiscard]] constexpr bool isCollapsible() const
 	{
-		return all_of(count_, [a = parent.count(index)](auto const b) { return a == b; });
+		return std::all_of(std::begin(count) + 1, std::end(count),
+		                   [a = count.front()](auto b) { return a == b; });
 	}
-
-	//
-	// Get count
-	//
-
-	[[nodiscard]] constexpr count_t count(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return count_[0];
-		} else {
-			return count_[index];
-		}
-	}
-
-	//
-	// Set count
-	//
-
-	void setCount(count_t const value) { count_.fill(value); }
-
-	void setCount(index_t const index, count_t const value)
-	{
-		if constexpr (1 == N) {
-			setCount(value);
-		} else {
-			count_[index] = value;
-		}
-	}
-
- private:
-	// Data
-	std::array<count_t, N> count_;
 };
 }  // namespace ufo::map
 

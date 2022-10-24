@@ -53,96 +53,24 @@ namespace ufo::map
 {
 template <std::size_t N>
 struct TimeNode {
-	//
-	// Size
-	//
-
-	[[nodiscard]] static constexpr std::size_t timeSize() { return N; }
-
-	//
 	// Data
-	//
-
-	[[nodiscard]] constexpr time_t const* timeData() const noexcept { return time_.data(); }
-
-	[[nodiscard]] constexpr time_t* timeData() noexcept { return time_.data(); }
-
-	//
-	// Iterators
-	//
-
-	[[nodiscard]] constexpr auto beginTime() noexcept { return time_.begin(); }
-
-	[[nodiscard]] constexpr auto beginTime() const noexcept { return time_.begin(); }
-
-	[[nodiscard]] constexpr auto cbeginTime() const noexcept { return time_.cbegin(); }
-
-	[[nodiscard]] constexpr auto endTime() noexcept { return time_.end(); }
-
-	[[nodiscard]] constexpr auto endTime() const noexcept { return time_.end(); }
-
-	[[nodiscard]] constexpr auto cendTime() const noexcept { return time_.cend(); }
-
-	[[nodiscard]] constexpr auto rbeginTime() noexcept { return time_.rbegin(); }
-
-	[[nodiscard]] constexpr auto rbeginTime() const noexcept { return time_.rbegin(); }
-
-	[[nodiscard]] constexpr auto crbeginTime() const noexcept { return time_.crbegin(); }
-
-	[[nodiscard]] constexpr auto rendTime() noexcept { return time_.rend(); }
-
-	[[nodiscard]] constexpr auto rendTime() const noexcept { return time_.rend(); }
-
-	[[nodiscard]] constexpr auto crendTime() const noexcept { return time_.crend(); }
+	std::array<time_t, N> time;
 
 	//
 	// Fill
 	//
 
-	void fill(TimeNode const parent, index_t const index) { setTime(parent.time(index)); }
+	void fill(TimeNode const parent, index_t const index) { time.fill(parent.time[index]); }
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(TimeNode const parent,
-	                                           index_t const index) const
+	[[nodiscard]] bool isCollapsible() const
 	{
-		return all_of(time_, [t = parent.time(index)](auto const e) { return e == t; });
+		return std::all_of(std::begin(time) + 1, std::end(time),
+		                   [t = time.front()](auto e) { return e == t; });
 	}
-
-	//
-	// Get time
-	//
-
-	[[nodiscard]] constexpr time_t time(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return time_[0];
-		} else {
-			return time_[index];
-		}
-	}
-
-	//
-	// Set time
-	//
-
-	void setTime(time_t const value) { time_.fill(value); }
-
-	void setTime(index_t const index, time_t const value)
-	{
-		if constexpr (1 == N) {
-			setTime(value);
-		} else {
-			time_[index] = value;
-		}
-	}
-
- private:
-	// Data
-	std::array<time_t, N> time_;
-};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TIME_NODE_H

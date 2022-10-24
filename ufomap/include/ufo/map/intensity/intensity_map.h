@@ -65,17 +65,18 @@ class IntensityMap
 
 	[[nodiscard]] constexpr intensity_t intensity(Node node) const
 	{
-		return derived().leafNode(node).intensityIndex(node.index());
+		return derived().leafNode(node).intensity[node.index()];
 	}
 
 	[[nodiscard]] intensity_t intensity(Code code) const
 	{
-		return derived().leafNode(code).intensityIndex(code.index());
+		auto [node, depth] = derived().leafNodeAndDepth();
+		return node.intensity[code.index(depth)];
 	}
 
 	[[nodiscard]] intensity_t intensity(Key key) const
 	{
-		return intensity(Derived::toCode(key));
+		return intensity(derived().toCode(key));
 	}
 
 	[[nodiscard]] intensity_t intensity(Point coord, depth_t depth = 0) const
@@ -97,25 +98,21 @@ class IntensityMap
 	{
 		derived().apply(
 		    node,
-		    [intensity](auto& node, index_t const index) {
-			    node.setIntensityIndex(index, intensity);
-		    },
-		    [intensity](auto& node) { node.setIntensity(intensity); }, propagate);
+		    [intensity](auto& node, index_t index) { node.intensity[index] = intensity; },
+		    [intensity](auto& node) { node.intensity.fill(intensity); }, propagate);
 	}
 
 	void setIntensity(Code code, intensity_t intensity, bool propagate = true)
 	{
 		derived().apply(
 		    code,
-		    [intensity](auto& node, index_t const index) {
-			    node.setIntensityIndex(index, intensity);
-		    },
-		    [intensity](auto& node) { node.setIntensity(intensity); }, propagate);
+		    [intensity](auto& node, index_t index) { node.intensity[index] = intensity; },
+		    [intensity](auto& node) { node.intensity.fill(intensity); }, propagate);
 	}
 
 	void setIntensity(Key key, intensity_t intensity, bool propagate = true)
 	{
-		setIntensity(Derived::toCode(key), intensity, propagate);
+		setIntensity(derived().toCode(key), intensity, propagate);
 	}
 
 	void setIntensity(Point coord, intensity_t intensity, bool propagate = true,
@@ -214,128 +211,48 @@ class IntensityMap
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().setIntensityIndex(derived().rootIndex(), 0); }
+	void initRoot() { derived().root().intensity[derived().rootIndex()] = 0; }
 
 	//
 	// Update node
 	//
 
-	template <std::size_t N, class T>
-	void updateNode(IntensityNode<N>& node, IndexField const indices, T const& children)
+	template <std::size_t N, class InputIt>
+	void updateNode(IntensityNode<N>& node, IndexField const indices, InputIt first,
+	                InputIt last)
 	{
-		if constexpr (1 == N) {
-			switch (prop_criteria_) {
-				case PropagationCriteria::MIN:
-					node.intensity[0] = minIntensity(children);
-					break;
-				case PropagationCriteria::MAX:
-					node.intensity[0] = maxIntensity(children);
-					break;
-				case PropagationCriteria::MEAN:
-					node.intensity[0] = averageIntensity(children);
-					break;
+		auto const prop = intensityPropagationCriteria();
+		if (indices.all()) {
+			for (index_t i = 0; first != last; ++first, ++i) {
+				switch (prop) {
+					case PropagationCriteria::MIN:
+						node.intensity[i] = min(first->intensity);
+						break;
+					case PropagationCriteria::MAX:
+						node.intensity[i] = max(first->intensity);
+						break;
+					case PropagationCriteria::MEAN:
+						node.intensity[i] = mean(first->intensity);
+						break;
+				}
 			}
 		} else {
-			for (index_t index = 0; children.size() != index; ++index) {
-				if (indices[index]) {
-					switch (prop_criteria_) {
+			for (index_t i = 0; first != last; ++first, ++i) {
+				if (indices[i]) {
+					switch (prop) {
 						case PropagationCriteria::MIN:
-							node.intensity[index] = minIntensity(children[index]);
+							node.intensity[i] = min(first->intensity);
 							break;
 						case PropagationCriteria::MAX:
-							node.intensity[index] = maxIntensity(children[index]);
+							node.intensity[i] = max(first->intensity);
 							break;
 						case PropagationCriteria::MEAN:
-							node.intensity[index] = averageIntensity(children[index]);
+							node.intensity[i] = mean(first->intensity);
 							break;
 					}
 				}
 			}
 		}
-	}
-
-	//
-	// Min child intensity
-	//
-
-	template <class T>
-	[[nodiscard]] constexpr intensity_t minIntensity(T const& nodes) const
-	{
-		intensity_t min = std::numeric_limits<intensity_t>::max();
-		for (auto const& node : nodes) {
-			min = std::min(min, node.intensity[0]);
-		}
-		return min;
-	}
-
-	[[nodiscard]] constexpr intensity_t minIntensity(IntensityNode<8> const& node) const
-	{
-		return minIntensity(std::cbegin(node.intensity), std::cend(node.intensity));
-	}
-
-	template <class InputIt>
-	[[nodiscard]] constexpr intensity_t minIntensity(InputIt first, InputIt last) const
-	{
-		intensity_t min = std::numeric_limits::max();
-		for (; first != last; ++first) {
-			min = std::min(min, *first);
-		}
-		return min;
-	}
-
-	//
-	// Max child intensity
-	//
-
-	template <class T>
-	[[nodiscard]] constexpr intensity_t maxIntensity(T const& nodes) const
-	{
-		intensity_t max = std::numeric_limits<intensity_t>::lowest();
-		for (auto const& node : nodes) {
-			max = std::max(max, node.intensity[0]);
-		}
-		return max;
-	}
-
-	[[nodiscard]] constexpr intensity_t maxIntensity(IntensityNode<8> const& node) const
-	{
-		return maxIntensity(std::cbegin(node.intensity), std::cend(node.intensity));
-	}
-
-	template <class InputIt>
-	[[nodiscard]] constexpr intensity_t maxIntensity(InputIt first, InputIt last) const
-	{
-		intensity_t max = std::numeric_limits::lowest();
-		for (; first != last; ++first) {
-			max = std::max(max, *first);
-		}
-		return max;
-	}
-
-	//
-	// Average child intensity
-	//
-
-	template <class T>
-	[[nodiscard]] static constexpr intensity_t averageIntensity(T const& nodes)
-	{
-		return std::accumulate(std::cbegin(nodes), std::cend(nodes), 0.0,
-		                       [](double cur, IntensityNode<1> node) {
-			                       return cur + node.intensity[0];
-		                       }) /
-		       double(nodes.size());
-	}
-
-	[[nodiscard]] static constexpr intensity_t averageIntensity(
-	    IntensityNode<8> const& node)
-	{
-		return averageIntensity(std::cbegin(node.intensity), std::cend(node.intensity));
-	}
-
-	template <class InputIt>
-	[[nodiscard]] static constexpr intensity_t averageIntensity(InputIt first, InputIt last)
-	{
-		return std::reduce(first, last, 0.0) / double(std::distance(first, last));
 	}
 
 	//
@@ -355,67 +272,26 @@ class IntensityMap
 	template <class InputIt>
 	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
-		using typename std::iterator_traits<InputIt>::value_type;
-		using typename value_type::node_type;
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
 		return node_type::intensitySize();
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		uint8_t n;
-		in.read(reinterpret_cast<char*>(&n), sizeof(n));
-		num_nodes *= n;
-
-		auto data = std::make_unique<intensity_t[]>(num_nodes);
+		constexpr uint8_t const N = numData<OutputIt>();
+		auto const num_data = std::distance(first, last) * N;
+		auto data = std::make_unique<intensity_t[]>(num_data);
 		in.read(reinterpret_cast<char*>(data.get()),
-		        num_nodes * sizeof(typename decltype(data)::element_type));
-
-		auto const d = data.get();
-		if constexpr (1 == numData<OutputIt>()) {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					first->node.intensity[0] = *(d + i);
-				}
+		        num_data * sizeof(typename decltype(data)::element_type));
+		for (auto d = data.get(); first != last; ++first, d += N) {
+			if (first->index_field.all()) {
+				std::copy(d, d + N, first->node.intensity.data());
 			} else {
-				auto const prop_criteria = prop_criteria_;
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					switch (prop_criteria) {
-						case PropagationCriteria::MIN:
-							first->node.intensity[0] = minIntensity(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MAX:
-							first->node.intensity[0] = maxIntensity(d + i, d + i + 8);
-							break;
-						case PropagationCriteria::MEAN:
-							first->node.intensity[0] = averageIntensity(d + i, d + i + 8);
-							break;
-					}
-				}
-			}
-		} else {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (first->index_field.all()) {
-						first->node.intensity.fill(*(d + i));
-					} else {
-						for (std::size_t index = 0; first->node.intensity.size() != index; ++index) {
-							if (first.index_field[index]) {
-								first->node.intensity[index] = *(d + i);
-							}
-						}
-					}
-				}
-			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (first->index_field.all()) {
-						std::copy(d + i, d + i + 8, first->node.intensity.data());
-					} else {
-						for (index_t index = 0; first->node.intensity.size() != index; ++i, ++index) {
-							if (first.index_field[index]) {
-								first->node.intensity[index] = *(d + i + index);
-							}
-						}
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						first->node.intensity[i] = *(d + i);
 					}
 				}
 			}
@@ -423,21 +299,16 @@ class IntensityMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
+	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr uint8_t const n = numData<InputIt>();
-		num_nodes *= n;
-
-		auto data = std::make_unique<intensity_t[]>(num_nodes);
-		auto d = data.get();
-		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(std::cbegin(first->node.intensity), std::cend(first->node.intensity),
-			          d + i);
+		constexpr uint8_t const N = numData<InputIt>();
+		auto const num_data = std::distance(first, last) * N;
+		auto data = std::make_unique<intensity_t[]>(num_data);
+		for (auto d = data.get(); first != last; ++first) {
+			d = copy(first->node.intensity, d);
 		}
-
-		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_nodes * sizeof(typename decltype(data)::element_type));
+		          num_data * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:

@@ -58,73 +58,15 @@
 
 namespace ufo::map
 {
-template <std::size_t N = 8>
+template <std::size_t N>
 struct OccupancyNode {
+	std::array<logit_t, N> occupancy;
+
 	//
 	// Size
 	//
 
-	[[nodiscard]] static constexpr std::size_t occupancySize() { return N; }
-
-	//
-	// Data
-	//
-
-	[[nodiscard]] constexpr logit_t const* occupancyData() const noexcept
-	{
-		return occupancy_.data();
-	}
-
-	[[nodiscard]] constexpr logit_t* occupancyData() noexcept { return occupancy_.data(); }
-
-	//
-	// Iterators
-	//
-
-	[[nodiscard]] constexpr auto beginOccupancy() noexcept { return occupancy_.begin(); }
-
-	[[nodiscard]] constexpr auto beginOccupancy() const noexcept
-	{
-		return occupancy_.begin();
-	}
-
-	[[nodiscard]] constexpr auto cbeginOccupancy() const noexcept
-	{
-		return occupancy_.cbegin();
-	}
-
-	[[nodiscard]] constexpr auto endOccupancy() noexcept { return occupancy_.end(); }
-
-	[[nodiscard]] constexpr auto endOccupancy() const noexcept { return occupancy_.end(); }
-
-	[[nodiscard]] constexpr auto cendOccupancy() const noexcept
-	{
-		return occupancy_.cend();
-	}
-
-	[[nodiscard]] constexpr auto rbeginOccupancy() noexcept { return occupancy_.rbegin(); }
-
-	[[nodiscard]] constexpr auto rbeginOccupancy() const noexcept
-	{
-		return occupancy_.rbegin();
-	}
-
-	[[nodiscard]] constexpr auto crbeginOccupancy() const noexcept
-	{
-		return occupancy_.crbegin();
-	}
-
-	[[nodiscard]] constexpr auto rendOccupancy() noexcept { return occupancy_.rend(); }
-
-	[[nodiscard]] constexpr auto rendOccupancy() const noexcept
-	{
-		return occupancy_.rend();
-	}
-
-	[[nodiscard]] constexpr auto crendOccupancy() const noexcept
-	{
-		return occupancy_.crend();
-	}
+	[[nodiscard]] static constexpr std::size_t occupancySize() noexcept { return N; }
 
 	//
 	// Fill
@@ -132,103 +74,18 @@ struct OccupancyNode {
 
 	void fill(OccupancyNode const parent, index_t const index)
 	{
-		setOccupancy(parent.occupancy(index));
+		occupancy.fill(parent.occupancy[index]);
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(OccupancyNode const parent, index_t const index) const
+	[[nodiscard]] constexpr bool isCollapsible() const
 	{
-		return all_of(occupancy_,
-		              [p = parent.occupancy(index)](auto const x) { return x == p; });
+		return std::all_of(std::begin(occupancy) + 1, std::end(occupancy),
+		                   [p = occupancy.front()](auto x) { return x == p; });
 	}
-
-	//
-	// Get occupancy
-	//
-
-	[[nodiscard]] constexpr logit_t occupancy(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return occupancy_[0];
-		} else {
-			return occupancy_[index];
-		}
-	}
-
-	//
-	// Set occupancy
-	//
-
-	void setOccupancy(logit_t const value) { occupancy_.fill(value); }
-
-	void setOccupancy(index_t const index, logit_t const value)
-	{
-		if constexpr (1 == N) {
-			setOccupancy(value);
-		} else {
-			occupancy_[index] = value;
-		}
-	}
-
-	//
-	// Increase occupancy
-	//
-
-	void increaseOccupancy(logit_t const value)
-	{
-		for (auto& occ : occupancy_) {
-			occ = std::numeric_limits<logit_t>::max() - value > occ
-			          ? occ + value
-			          : std::numeric_limits<logit_t>::max();
-		}
-	}
-
-	void increaseOccupancy(index_t const index, logit_t const value)
-	{
-		if constexpr (1 == N) {
-			occupancy_[0] = std::numeric_limits<logit_t>::max() - value > occupancy_[0]
-			                    ? occupancy_[0] + value
-			                    : std::numeric_limits<logit_t>::max();
-		} else {
-			occupancy_[index] = std::numeric_limits<logit_t>::max() - value > occupancy_[index]
-			                        ? occupancy_[index] + value
-			                        : std::numeric_limits<logit_t>::max();
-		}
-	}
-
-	//
-	// Decrease occupancy
-	//
-
-	void decreaseOccupancy(logit_t const value)
-	{
-		for (auto& occ : occupancy_) {
-			occ = std::numeric_limits<logit_t>::lowest() + value < occ
-			          ? occ - value
-			          : std::numeric_limits<logit_t>::lowest();
-		}
-	}
-
-	void decreaseOccupancy(index_t const index, logit_t const value)
-	{
-		if constexpr (1 == N) {
-			occupancy_[0] = std::numeric_limits<logit_t>::lowest() + value < occupancy_[0]
-			                    ? occupancy_[0] - value
-			                    : std::numeric_limits<logit_t>::lowest();
-		} else {
-			occupancy_[index] =
-			    std::numeric_limits<logit_t>::lowest() + value < occupancy_[index]
-			        ? occupancy_[index] - value
-			        : std::numeric_limits<logit_t>::lowest();
-		}
-	}
-
- private:
-	// Data
-	std::array<logit_t, N> occupancy_;
 };
 
 template <std::size_t N>
@@ -265,178 +122,9 @@ struct ContainsOccupancy {
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(ContainsOccupancy const, std::size_t const) const
+	[[nodiscard]] static constexpr bool isCollapsible()
 	{
 		return true;  // Does not matter what this is...
-	}
-
-	//
-	// Get contains unknown
-	//
-
-	[[nodiscard]] constexpr bool containsUnknown(index_t const index) const
-	{
-		return contains_unknown[index];
-	}
-
-	//
-	// Set contains unknown
-	//
-
-	constexpr void setContainsUnknown(bool const value)
-	{
-		if (value) {
-			contains_unknown.set();
-		} else {
-			contains_unknown.reset();
-		}
-	}
-
-	constexpr void setContainsUnknown(index_t const index, bool const value)
-	{
-		contains_unknown.set(index, value);
-	}
-
-	//
-	// Get contains free
-	//
-
-	[[nodiscard]] constexpr bool containsFree(index_t const index) const
-	{
-		return contains_free[index];
-	}
-
-	//
-	// Set contains free
-	//
-
-	constexpr void setContainsFree(bool const value)
-	{
-		if (value) {
-			contains_free.set();
-		} else {
-			contains_free.reset();
-		}
-	}
-
-	constexpr void setContainsFree(index_t const index, bool const value)
-	{
-		contains_free.set(index, value);
-	}
-
-	//
-	// Get contains occupied
-	//
-
-	[[nodiscard]] constexpr bool containsOccupied(index_t const index) const
-	{
-		return contains_occupied[index];
-	}
-
-	//
-	// Set contains occupied
-	//
-
-	constexpr void setContainsOccupied(bool const value)
-	{
-		if (value) {
-			contains_occupied.set();
-		} else {
-			contains_occupied.reset();
-		}
-	}
-
-	constexpr void setContainsOccupied(index_t const index, bool const value)
-	{
-		contains_occupied.set(index, value);
-	}
-};
-
-template <>
-struct ContainsOccupancy<1> {
-	// Indicators
-	index_field_t contains_unknown : 1;
-	index_field_t contains_free : 1;
-	index_field_t contains_occupied : 1;
-
-	//
-	// Fill
-	//
-
-	void fill(ContainsOccupancy const parent, std::size_t const)
-	{
-		contains_unknown = parent.contains_unknown;
-		contains_free = parent.contains_free;
-		contains_occupied = parent.contains_occupied;
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible(ContainsOccupancy const, std::size_t const) const
-	{
-		return true;  // Does not matter what this is...
-	}
-
-	//
-	// Get contains unknown
-	//
-
-	[[nodiscard]] constexpr bool containsUnknown(index_t const index) const
-	{
-		return contains_unknown;
-	}
-
-	//
-	// Set contains unknown
-	//
-
-	constexpr void setContainsUnknown(bool const value) { contains_unknown = value; }
-
-	constexpr void setContainsUnknown(index_t const index, bool const value)
-	{
-		setContainsUnknown(value);
-	}
-
-	//
-	// Get contains free
-	//
-
-	[[nodiscard]] constexpr bool containsFree(index_t const index) const
-	{
-		return contains_free;
-	}
-
-	//
-	// Set contains free
-	//
-
-	constexpr void setContainsFree(bool const value) { contains_free = value; }
-
-	constexpr void setContainsFree(index_t const index, bool const value)
-	{
-		setContainsFree(value);
-	}
-
-	//
-	// Get contains occupied
-	//
-
-	[[nodiscard]] constexpr bool containsOccupied(index_t const index) const
-	{
-		return contains_occupied;
-	}
-
-	//
-	// Set contains occupied
-	//
-
-	constexpr void setContainsOccupied(bool const value) { contains_occupied = value; }
-
-	constexpr void setContainsOccupied(index_t const index, bool const value)
-	{
-		setContainsOccupied(value);
 	}
 };
 }  // namespace ufo::map

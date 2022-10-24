@@ -51,7 +51,7 @@
 
 namespace ufo::map
 {
-template <std::size_t N = 8>
+template <std::size_t N>
 struct ColorNode {
 	// Data
 	std::array<color_t, N> red;
@@ -70,92 +70,24 @@ struct ColorNode {
 
 	void fill(ColorNode const parent, index_t const index)
 	{
-		if constexpr (1 == N) {
-			setColor(parent.red[0], parent.green[0], parent.blue[0]);
-		} else {
-			setColor(parent.red[index], parent.green[index], parent.blue[index]);
-		}
+		red.fill(parent.red[index]);
+		green.fill(parent.green[index]);
+		blue.fill(parent.blue[index]);
 	}
 
 	//
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(ColorNode const parent,
-	                                           index_t const index) const
+	[[nodiscard]] constexpr bool isCollapsible() const
 	{
-		if constexpr (1 == N) {
-			return red[0] == parent.red[0] && green[0] == parent.green[0] &&
-			       blue[0] == parent.blue[0];
-		} else {
-			return all_of(red, [r = parent.red[index]](auto const c) { return c == r; }) &&
-			       all_of(green, [g = parent.green[index]](auto const c) { return c == g; }) &&
-			       all_of(blue, [b = parent.blue[index]](auto const c) { return c == b; });
-		}
+		return std::all_of(std::begin(red) + 1, std::end(red),
+		                   [r = red.front()](auto c) { return c == r; }) &&
+		       std::all_of(std::begin(green) + 1, std::end(green),
+		                   [g = green.front()](auto c) { return c == g; }) &&
+		       std::all_of(std::begin(blue) + 1, std::end(blue),
+		                   [b = blue.front()](auto c) { return c == b; });
 	}
-
-	//
-	// Get color
-	//
-
-	[[nodiscard]] constexpr Color color(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return Color(red[0], green[0], blue[0]);
-		} else {
-			return Color(red[index], green[index], blue[index]);
-		}
-	}
-
-	//
-	// Set color
-	//
-
-	void setColor(color_t const r, color_t const g, color_t const b)
-	{
-		red.fill(r);
-		green.fill(g);
-		blue.fill(b);
-	}
-
-	void setColor(Color const value) { setColor(value.red, value.green, value.blue); }
-
-	void setColor(index_t const index, color_t const r, color_t const g, color_t const b)
-	{
-		if constexpr (1 == N) {
-			setColor(r, g, b);
-		} else {
-			red[index] = r;
-			green[index] = g;
-			blue[index] = b;
-		}
-	}
-
-	void setColor(index_t const index, Color const value)
-	{
-		setColor(index, value.red, value.green, value.blue);
-	}
-
-	//
-	// Has color
-	//
-
-	[[nodiscard]] constexpr bool hasColor(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return 0 != red[0] || 0 != green[0] || 0 != blue[0];
-		} else {
-			return 0 != red[index] || 0 != green[index] || 0 != blue[index];
-		}
-	}
-
-	//
-	// Clear color
-	//
-
-	void clearColor() { setColor(0, 0, 0); }
-
-	void clearColor(index_t const index) { setColor(index, 0, 0, 0); }
 };
 }  // namespace ufo::map
 

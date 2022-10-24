@@ -65,13 +65,16 @@ class ColorMap
 
 	[[nodiscard]] Color color(Node node) const
 	{
-		return derived().leafNode(node).color(node.index());
+		auto const& data = derived().leafNode(node);
+		auto index = node.index();
+		return Color(data.red[index], data.green[index], data.blue[index]);
 	}
 
 	[[nodiscard]] Color color(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.color(code.index(depth));
+		auto index = code.index(depth);
+		return Color(node.red[index], node.green[index], node.blue[index]);
 	}
 
 	[[nodiscard]] Color color(Key key) const { return color(derived().toCode(key)); }
@@ -101,9 +104,16 @@ class ColorMap
 		derived().apply(
 		    node,
 		    [red, green, blue](auto& node, index_t index) {
-			    node.setColor(index, red, green, blue);
+			    node.red[index] = red;
+			    node.green[index] = green;
+			    node.blue[index] = blue;
 		    },
-		    [red, green, blue](auto& node) { node.setColor(red, green, blue); }, propagate);
+		    [red, green, blue](auto& node) {
+			    node.red.fill(red);
+			    node.green.fill(green);
+			    node.blue.fill(blue);
+		    },
+		    propagate);
 	}
 
 	void setColor(Code code, Color color, bool propagate = true)
@@ -117,9 +127,16 @@ class ColorMap
 		derived().apply(
 		    code,
 		    [red, green, blue](auto& node, index_t index) {
-			    node.setColor(index, red, green, blue);
+			    node.red[index] = red;
+			    node.green[index] = green;
+			    node.blue[index] = blue;
 		    },
-		    [red, green, blue](auto& node) { node.setColor(red, green, blue); }, propagate);
+		    [red, green, blue](auto& node) {
+			    node.red.fill(red);
+			    node.green.fill(green);
+			    node.blue.fill(blue);
+		    },
+		    propagate);
 	}
 
 	void setColor(Key key, Color color, bool propagate = true)
@@ -161,13 +178,16 @@ class ColorMap
 
 	[[nodiscard]] bool hasColor(Node node) const
 	{
-		return derived().leafNode(node).hasColor(node.index());
+		auto const& data = derived().leafNode(node);
+		auto index = node.index();
+		return 0 != data.red[index] || 0 != data.green[index] || 0 != data.blue[index];
 	}
 
 	[[nodiscard]] bool hasColor(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.hasColor(code.index(depth));
+		auto index = code.index(depth);
+		return 0 != node.red[index] || 0 != node.green[index] || 0 != node.blue[index];
 	}
 
 	[[nodiscard]] bool hasColor(Key key) const { return hasColor(derived().toCode(key)); }
@@ -188,16 +208,12 @@ class ColorMap
 
 	void clearColor(Node node, bool propagate = true)
 	{
-		derived().apply(
-		    node, [](auto& node, index_t index) { node.clearColor(index); },
-		    [](auto& node) { node.clearColor(); }, propagate);
+		setColor(node, 0, 0, 0, propagate);
 	}
 
 	void clearColor(Code code, bool propagate = true)
 	{
-		derived().apply(
-		    code, [](auto& node, index_t index) { node.clearColor(index); },
-		    [](auto& node) { node.clearColor(); }, propagate);
+		setColor(code, 0, 0, 0, propagate);
 	}
 
 	void clearColor(Key key, bool propagate = true)
@@ -267,7 +283,13 @@ class ColorMap
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().clearColor(derived().rootIndex()); }
+	void initRoot()
+	{
+		auto index = derived().rootIndex();
+		derived().root().red[index] = 0;
+		derived().root().green[index] = 0;
+		derived().root().blue[index] = 0;
+	}
 
 	//
 	// Update node
@@ -277,18 +299,18 @@ class ColorMap
 	void updateNode(ColorNode<N>& node, IndexField const indices, InputIt first,
 	                InputIt last)
 	{
-		if constexpr (1 == N) {
-			node.setColor(mean(first, last, [](ColorNode<N> child) { return child.red[0]; }),
-			              mean(first, last, [](ColorNode<N> child) { return child.green[0]; }),
-			              mean(first, last, [](ColorNode<N> child) { return child.blue[0]; }));
-		} else if (indices.all()) {
+		if (indices.all()) {
 			for (index_t i = 0; first != last; ++first, ++i) {
-				node.setColor(i, mean(first->red), mean(first->green), mean(first->blue));
+				node.red[i] = mean(first->red);
+				node.green[i] = mean(first->green);
+				node.blue[i] = mean(first->blue);
 			}
 		} else {
 			for (index_t i = 0; first != last; ++first, ++i) {
 				if (indices[i]) {
-					node.setColor(i, mean(first->red), mean(first->green), mean(first->blue));
+					node.red[i] = mean(first->red);
+					node.green[i] = mean(first->green);
+					node.blue[i] = mean(first->blue);
 				}
 			}
 		}
@@ -309,7 +331,7 @@ class ColorMap
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr std::size_t numData() noexcept
+	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
 		using value_type = typename std::iterator_traits<InputIt>::value_type;
 		using node_type = typename value_type::node_type;
@@ -317,55 +339,25 @@ class ColorMap
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		std::uint8_t n;
-		in.read(reinterpret_cast<char*>(&n), sizeof(n));
-		std::size_t const s = 3 * n;
-		num_nodes *= s;
-
-		auto data = std::make_unique<color_t[]>(num_nodes);
+		constexpr uint8_t const N = numData<OutputIt>();
+		constexpr auto const S = 3 * N;
+		auto const num_data = std::distance(first, last) * S;
+		auto data = std::make_unique<color_t[]>(num_data);
 		in.read(reinterpret_cast<char*>(data.get()),
-		        num_nodes * sizeof(typename decltype(data)::element_type));
-
-		auto const d = data.get();
-		if constexpr (1 == numData<OutputIt>()) {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 3) {
-					first->node.setColor(*(d + i), *(d + i + 1), *(d + i + 2));
-				}
+		        num_data * sizeof(typename decltype(data)::element_type));
+		for (auto d = data.get(); first != last; ++first, d += S) {
+			if (first->index_field.all()) {
+				std::copy(d, d + N, first->node.red.data());
+				std::copy(d + N, d + (2 * N), first->node.green.data());
+				std::copy(d + (2 * N), d + (3 * N), first->node.blue.data());
 			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 24) {
-					first->node.setColor(mean(d + i, d + i + 8), mean(d + i + 8, d + i + 16),
-					                     mean(d + i + 16, d + i + 24));
-				}
-			}
-		} else {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 3) {
-					if (first->index_field.all()) {
-						first->node.setColor(*(d + i), *(d + i + 1), *(d + i + 2));
-					} else {
-						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
-							if (first->index_field[index]) {
-								first->node.setColor(index, *(d + i), *(d + i + 1), *(d + i + 2));
-							}
-						}
-					}
-				}
-			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 24) {
-					if (first->index_field.all()) {
-						std::copy(d + i, d + i + 8, first->node.red.data());
-						std::copy(d + i + 8, d + i + 16, first->node.green.data());
-						std::copy(d + i + 16, d + i + 24, first->node.blue.data());
-					} else {
-						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
-							if (first->index_field[index]) {
-								first->node.setColor(index, *(d + i + index), *(d + i + index + 8),
-								                     *(d + i + index + 16));
-							}
-						}
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						first->node.red[i] = *(d + i);
+						first->node.green[i] = *(d + N + i);
+						first->node.blue[i] = *(d + (2 * N) + i);
 					}
 				}
 			}
@@ -373,24 +365,19 @@ class ColorMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
+	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr std::uint8_t const n = numData<InputIt>();
-		constexpr std::size_t const s = 3 * n;
-		num_nodes *= s;
-
-		auto data = std::make_unique<color_t[]>(num_nodes);
-		auto d = data.get();
-		for (std::size_t i = 0; i != num_nodes; ++first, i += s) {
-			std::copy(std::cbegin(first->node.red), std::cend(first->node.red), d + i);
-			std::copy(std::cbegin(first->node.green), std::cend(first->node.green), d + i + n);
-			std::copy(std::cbegin(first->node.blue), std::cend(first->node.blue),
-			          d + i + (2 * n));
+		constexpr uint8_t const N = numData<InputIt>();
+		constexpr auto const S = 3 * N;
+		auto const num_data = std::distance(first, last) * S;
+		auto data = std::make_unique<color_t[]>(num_data);
+		for (auto d = data.get(); first != last; ++first) {
+			d = copy(first->node.red, d);
+			d = copy(first->node.green, d);
+			d = copy(first->node.blue, d);
 		}
-
-		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_nodes * sizeof(typename decltype(data)::element_type));
+		          num_data * sizeof(typename decltype(data)::element_type));
 	}
 };
 }  // namespace ufo::map

@@ -386,9 +386,70 @@ class SemanticMap
 	// TODO: Inser or assign custom function
 	//
 
+	template <class UnaryFunction>
+	void insertOrAssignSemantics(Node node, label_t label, UnaryFunction f,
+	                             bool propagate = true)
+	{
+		// TODO: Implement
+	}
+
+	template <class InputIt, class UnaryFunction>
+	void insertOrAssignSemantics(Node node, InputIt first, InputIt last, f,
+	                             bool propagate = true)
+	{
+		// TODO: Implement
+	}
+
+	template <class UnaryFunction>
+	void insertOrAssignSemantics(Node node, std::initializer_list<label_t> labels,
+	                             UnaryFunction f, bool propagate = true)
+	{
+		insertOrAssignSemantics(node, std::cbegin(label), std::cend(labels), f, propagate);
+	}
+
+	
+
 	//
 	// TODO: Assign
 	//
+
+	void assignSemantics(Node node, label_t label, value_t value, bool propagate = true)
+	{
+		assignSemantics(node, SemanticRange(label), value, propagate);
+	}
+
+	void assignSemantics(Node node, SemanticRange range, value_t value,
+	                     bool propagate = true)
+	{
+		assignSemantics(node, SemanticRangeSet(range), value, propagate);
+	}
+
+	void assignSemantics(Node node, SemanticRangeSet const& ranges, value_t value,
+	                     bool propagate = true)
+	{
+		assignSemantics(
+		    node, ranges, [value](auto) { return value }, propagate);
+	}
+
+	template <class UnaryFunction>
+	void assignSemantics(Node node, label_t label, UnaryFunction f, bool propagate = true)
+	{
+		assignSemantics(node, SemanticRange(label), f, propagate);
+	}
+
+	template <class UnaryFunction>
+	void assignSemantics(Node node, SemanticRange range, UnaryFunction f,
+	                     bool propagate = true)
+	{
+		assignSemantics(node, SemanticRangeSet(range), f, propagate);
+	}
+
+	template <class UnaryFunction>
+	void assignSemantics(Node node, SemanticRangeSet const& ranges, UnaryFunction f,
+	                     bool propagate = true)
+	{
+		// TODO: Implement
+	}
 
 	//
 	// TODO: Erase
@@ -873,29 +934,58 @@ class SemanticMap
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
 		mapping_.read(in);
 
+		std::array<size_type, N> sizes;
+		for (; first != last; ++first) {
+			auto& sem = semanticNode(first->node);
 
-		uint8_t n;
-		in.read(reinterpret_cast<char*>(&n), sizeof(n));
+			out.write(reinterpret_cast<char*>(sizes.data()), N * sizeof(size_type));
 
-		for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-			first->node.read(in, first->indices, propagation_, n);
+			if (first->index_field.all()) {
+				sem.resize(sizes);
+				auto size = std::accumulate(std::cbegin(sizes), std::cend(sizes), std::size_t(0));
+				if (0 != size) {
+					in.read(reinterpret_cast<char*>(sem.begin()), size * sizeof(Semantic));
+				}
+			} else {
+				auto cur_sizes = sem.sizes();
+				for (index_t i = 0; N != i; ++i) {
+					if (!first->index_field[i]) {
+						sizes[i] = cur_sizes[i];
+					}
+				}
+
+				sem.resize(sizes);
+
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						in.read(reinterpret_cast<char*>(sem.begin(i)), sizes[i] * sizeof(Semantic));
+					} else {
+						// Skip forward
+						in.seekg(sizes[i] * sizeof(Semantic), std::istream::cur);
+					}
+				}
+			}
 		}
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
+	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
 		mapping_.write(out);
 
-		constexpr uint8_t const n = numData<InputIt>();
-		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
+		for (; first != last; ++first) {
+			auto const& sem = semanticNode(first->node);
 
-		for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-			first->node.write(out);
+			std::array<size_type, N> sizes = sem.sizes();
+			out.write(reinterpret_cast<char const*>(sizes.data()), N * sizeof(size_type));
+			auto size = std::accumulate(std::cbegin(sizes), std::cend(sizes), std::size_t(0));
+			if (0 != size) {
+				out.write(reinterpret_cast<char const*>(sem.begin()), size * sizeof(Semantic));
+			}
 		}
 	}
 

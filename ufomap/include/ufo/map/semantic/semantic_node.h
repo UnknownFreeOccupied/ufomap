@@ -51,8 +51,11 @@
 
 namespace ufo::map
 {
-template <std::size_t N = 8>
+template <std::size_t N>
 struct SemanticNode {
+	// Data
+	std::unique_ptr<Semantic[]> semantics;
+
 	//
 	// Size
 	//
@@ -65,7 +68,12 @@ struct SemanticNode {
 
 	void fill(SemanticNode const& parent, index_t const index)
 	{
-		// TODO: Implement
+		resize(parent.size(index));
+		auto first = parent.begin(index);
+		auto last = parent.end(index);
+		for (index_t i = 0; N != i; ++i) {
+			std::copy(first, last, begin(i));
+		}
 	}
 
 	//
@@ -74,66 +82,40 @@ struct SemanticNode {
 
 	[[nodiscard]] bool isCollapsible(SemanticNode const& parent, index_t const index) const
 	{
-		if constexpr (1 == N) {
-			return std::equal(parent.semantics_.cbegin(0), parent.semantics_.cend(0),
-			                  semantics_.cbegin(0), semantics_.cend(0));
-		} else {
-			auto s = parent.semantics_.size(index);
-			for (std::size_t i = 0; N != i; ++i) {
-				if (semantics_.size(i) != s) {
-					return false;
-				}
+		auto first = parent.begin(index);
+		auto last = parent.end(index);
+		for (index_t i = 0; N != i; ++i) {
+			if (!std::equal(first, last, cbegin(i), cend(i))) {
+				return false;
 			}
-
-			auto first = parent.semantics_.cbegin(index);
-			auto last = parent.semantics_.cend(index);
-			for (std::size_t i = 0; N != i; ++i) {
-				if (!std::equal(first, last, semantics_.cbegin(i), semantics_.cend(i))) {
-					return false;
-				}
-			}
-			return true;
 		}
+		return true;
 	}
 
 	//
-	// Get semantics
+	// Iterators
 	//
 
-	[[nodiscard]] Semantics semantics(index_t const index) const
-	{
-		if constexpr (1 == N) {
-			return Semantics(*this, 0);
-		} else {
-			return Semantics(*this, index);
-		}
-	}
-
 	//
-	// Set semantics
+	// Resize
 	//
 
-	void setSemantics(Semantics const& value)
+	void resize(std::array<std::size_t, N> const& sizes)
 	{
 		// TODO: Implement
 	}
 
-	void setSemantics(index_t const index, Semantics const& value)
+	void resize(std::size_t const size)
 	{
-		if constexpr (1 == N) {
-			setSemantics(value);
-		} else {
-			// TODO: Implement
-		}
+		std::array<std::size_t, N> sizes;
+		sizes.fill(size);
+		resize(sizes);
 	}
 
-	// 
-	// Iterators
-	// 
-
- private:
-	// Data
-	std::unique_ptr<Semantic[]> semantics_;
+	void resize(index_t const index, std::size_t const size)
+	{
+		// TODO: Implement
+	}
 };
 }  // namespace ufo::map
 

@@ -297,6 +297,22 @@ template <class Container, class UnaryFunction>
 }
 
 //
+// Copy
+//
+
+template <class Container, class OutputIt>
+OutputIt copy(Container const& data, OutputIt d_first)
+{
+	return std::copy(std::cbegin(data), std::cend(data), d_first);
+}
+
+template <class Container, class OutputIt, class UnaryPredicate>
+OutputIt copy_if(Container const& data, OutputIt d_first, UnaryPredicate pred)
+{
+	return std::copy_if(std::cbegin(data), std::cend(data), d_first, pred);
+}
+
+//
 // All of
 //
 

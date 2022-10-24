@@ -65,13 +65,13 @@ class CountMap
 
 	[[nodiscard]] count_t count(Node node) const
 	{
-		return derived().leafNode(node).count(node.index());
+		return derived().leafNode(node).count[node.index()];
 	}
 
 	[[nodiscard]] count_t count(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.count(code.index(depth));
+		return node.count[code.index(depth)];
 	}
 
 	[[nodiscard]] count_t count(Key key) const { return count(derived().toCode(key)); }
@@ -93,15 +93,15 @@ class CountMap
 	void setCount(Node node, count_t count, bool propagate = true)
 	{
 		derived().apply(
-		    node, [count](auto& node, index_t index) { node.setCount(index, count); },
-		    [count](auto& node) { node.setCount(count); }, propagate);
+		    node, [count](auto& node, index_t index) { node.count[index] = count; },
+		    [count](auto& node) { node.count.fill(count); }, propagate);
 	}
 
 	void setCount(Code code, count_t count, bool propagate = true)
 	{
 		derived().apply(
-		    code, [count](auto& node, index_t index) { node.setCount(index, count); },
-		    [count](auto& node) { node.setCount(count); }, propagate);
+		    code, [count](auto& node, index_t index) { node.count[index] = count; },
+		    [count](auto& node) { node.count.fill(count); }, propagate);
 	}
 
 	void setCount(Key key, count_t count, bool propagate = true)
@@ -202,41 +202,43 @@ class CountMap
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().setCount(derived().rootIndex(), 0); }
+	void initRoot() { derived().root().count[derived().rootIndex()] = 0; }
 
 	//
 	// Update node
 	//
 
 	template <std::size_t N, class InputIt>
-	void updateNode(CountMap<N>& node, IndexField indices, InputIt first, InputIt last)
+	void updateNode(CountMap<N>& node, IndexField const indices, InputIt first,
+	                InputIt last)
 	{
 		auto const prop = countPropagationCriteria();
-		if constexpr (1 == N) {
-			auto fun = [](TimeNode<N> node) { return node.count(0); };
-			switch (prop) {
-				case PropagationCriteria::MIN:
-					node.setCount(min(first, last, fun));
-					break;
-				case PropagationCriteria::MAX:
-					node.setCount(max(first, last, fun));
-					break;
-				case PropagationCriteria::MEAN:
-					node.setCount(mean(first, last, fun));
-					break;
+		if (indices.all()) {
+			for (index_t i = 0; first != last; ++first, ++i) {
+				switch (prop) {
+					case PropagationCriteria::MIN:
+						node.count[i] = min(first->count);
+						break;
+					case PropagationCriteria::MAX:
+						node.count[i] = max(first->count);
+						break;
+					case PropagationCriteria::MEAN:
+						node.count[i] = mean(first->count);
+						break;
+				}
 			}
 		} else {
 			for (index_t i = 0; first != last; ++first, ++i) {
 				if (indices[i]) {
 					switch (prop) {
 						case PropagationCriteria::MIN:
-							node.setCount(i, min(first->beginCount(), first->endCound()));
+							node.count[i] = min(first->count);
 							break;
 						case PropagationCriteria::MAX:
-							node.setCount(i, max(first->beginCount(), first->endCount()));
+							node.count[i] = max(first->count);
 							break;
 						case PropagationCriteria::MEAN:
-							node.setCount(i, mean(first->beginCount(), first->endCount()));
+							node.count[i] = mean(first->count);
 							break;
 					}
 				}
@@ -259,7 +261,7 @@ class CountMap
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr std::size_t numData() noexcept
+	[[nodiscard]] static constexpr uint8_t numData() noexcept
 	{
 		using value_type = typename std::iterator_traits<InputIt>::value_type;
 		using node_type = typename value_type::node_type;
@@ -267,61 +269,20 @@ class CountMap
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		std::uint8_t n;
-		in.read(reinterpret_cast<char*>(&n), sizeof(n));
-		num_nodes *= n;
-
-		auto data = std::make_unique<count_t[]>(num_nodes);
+		constexpr uint8_t const N = numData<OutputIt>();
+		auto const num_data = std::distance(first, last) * N;
+		auto data = std::make_unique<count_t[]>(num_data);
 		in.read(reinterpret_cast<char*>(data.get()),
-		        num_nodes * sizeof(typename decltype(data)::element_type));
-
-		auto const d = data.get();
-		if constexpr (1 == numData<OutputIt>()) {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					first->node.setCount(*(d + i));
-				}
+		        num_data * sizeof(typename decltype(data)::element_type));
+		for (auto d = data.get(); first != last; ++first, d += N) {
+			if (first->index_field.all()) {
+				std::copy(d, d + N, first->node.count.data());
 			} else {
-				auto prop = countPropagationCriteria();
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					switch (prop) {
-						case PropagationCriteria::MIN:
-							first->node.setCount(min(d + i, d + i + 8));
-							break;
-						case PropagationCriteria::MAX:
-							first->node.setCount(max(d + i, d + i + 8));
-							break;
-						case PropagationCriteria::MEAN:
-							first->node.setCount(mean(d + i, d + i + 8));
-							break;
-					}
-				}
-			}
-		} else {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, ++i) {
-					if (first->index_field.all()) {
-						first->node.setCount(*(d + i));
-					} else {
-						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
-							if (first->index_field[index]) {
-								first->node.setCount(index, *(d + i));
-							}
-						}
-					}
-				}
-			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-					if (first->index_field.all()) {
-						std::copy(d + i, d + i + 8, first->node.countData());
-					} else {
-						for (std::size_t index = 0; numData<OutputIt>() != index; ++index) {
-							if (first->index_field[index]) {
-								first->node.setCount(index, *(d + i + index));
-							}
-						}
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						first->node.count[i] = *(d + i);
 					}
 				}
 			}
@@ -329,20 +290,16 @@ class CountMap
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes) const
+	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr std::uint8_t const n = numData<InputIt>();
-		num_nodes *= n;
-
-		auto data = std::make_unique<count_t[]>(num_nodes);
-		auto d = data.get();
-		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(first->node.beginCount(), first->node.endCount(), d + i);
+		constexpr uint8_t const N = numData<InputIt>();
+		auto const num_data = std::distance(first, last) * N;
+		auto data = std::make_unique<count_t[]>(num_data);
+		for (auto d = data.get(); first != last; ++first) {
+			d = copy(first->node.count, d);
 		}
-
-		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
 		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_nodes * sizeof(typename decltype(data)::element_type));
+		          num_data * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:

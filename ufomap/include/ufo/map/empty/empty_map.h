@@ -101,8 +101,9 @@ class EmptyMap
 	// Update node
 	//
 
-	template <std::size_t N, class T>
-	static constexpr void updateNode(EmptyNode<N>, IndexField const, T const&) noexcept
+	template <std::size_t N, class InputIt>
+	static constexpr void updateNode(EmptyNode<N>, IndexField const, InputIt,
+	                                 InputIt) noexcept
 	{
 	}
 
@@ -121,12 +122,12 @@ class EmptyMap
 	}
 
 	template <class OutputIt>
-	static constexpr void readNodes(std::istream&, OutputIt, std::size_t) noexcept
+	static constexpr void readNodes(std::istream&, OutputIt, OutputIt) noexcept
 	{
 	}
 
 	template <class InputIt>
-	static constexpr void writeNodes(std::ostream&, InputIt, std::size_t) noexcept
+	static constexpr void writeNodes(std::ostream&, InputIt, InputIt) noexcept
 	{
 	}
 };
