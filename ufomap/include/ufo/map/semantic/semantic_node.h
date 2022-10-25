@@ -84,7 +84,7 @@ struct SemanticNode {
 
 	void fill(SemanticNode const &parent, index_t const index)
 	{
-		resize(parent.size(index));
+		resizeLazy(parent.size(index));
 		auto first = parent.begin(index);
 		auto last = parent.end(index);
 		for (index_t i = 0; N != i; ++i) {
@@ -274,6 +274,137 @@ struct SemanticNode {
 	void clear(index_t const index) { resize(index, 0); }
 
 	//
+	// Set
+	//
+
+	void set(Semantics const &semantics)
+	{
+		resizeLazy(semantics.size());
+		auto first = std::begin(semantics);
+		auto last = std::end(semantics);
+		for (index_t i = 0; N != i; ++i) {
+			std::copy(first, last, begin(i));
+		}
+	}
+
+	void set(index_t index, Semantics const &semantics)
+	{
+		resize(index, semantics.size());
+		std::copy(std::begin(semantics), std::end(semantics), begin(index));
+	}
+
+	//
+	// TODO: Change label
+	//
+
+	void changeLabel(label_t old_label, label_t new_label)
+	{
+		// TODO: Implement
+	}
+
+	void changeLabel(index_t index, label_t old_label, label_t new_label)
+	{
+		// TODO: Implement
+	}
+
+	//
+	// TODO: Insert
+	//
+
+	void insert(label_t label, value_t value)
+	{
+		// TODO: Implement
+	}
+
+	void insert(index_t index, label_t label, value_t value)
+	{
+		// TODO: Implement
+	}
+
+	template <class InputIt>
+	void insert(InputIt first, InputIt last)
+	{
+		// TODO: Implement
+	}
+
+	template <class InputIt>
+	void insert(index_t index, InputIt first, InputIt last)
+	{
+		// TODO: Implement
+	}
+
+	//
+	// TODO: Insert or assign
+	//
+
+	void insertOrAssign(label_t label, value_t value)
+	{
+		// TODO: Implement
+	}
+
+	void insertOrAssign(index_t index, label_t label, value_t value)
+	{
+		// TODO: Implement
+	}
+
+	template <class UnaryFunction>
+	void insertOrAssign(label_t label, UnaryFunction f)
+	{
+		// TODO: Implement
+	}
+
+	template <class UnaryFunction>
+	void insertOrAssign(index_t index, label_t label, UnaryFunction f)
+	{
+		// TODO: Implement
+	}
+
+	template <class InputIt>
+	void insertOrAssign(InputIt first, InputIt last)
+	{
+		// TODO: Implement
+	}
+
+	template <class InputIt>
+	void insertOrAssign(index_t index, InputIt first, InputIt last)
+	{
+		// TODO: Implement
+	}
+
+	template <class InputIt, class UnaryFunction>
+	void insertOrAssign(InputIt first, InputIt last, UnaryFunction f)
+	{
+		// TODO: Implement
+	}
+
+	template <class InputIt, class UnaryFunction>
+	void insertOrAssign(index_t index, InputIt first, InputIt last, UnaryFunction f)
+	{
+		// TODO: Implement
+	}
+
+	//
+	// TODO: Assign
+	//
+
+	//
+	// TODO: Clear
+	//
+
+	void clear() { semantics.reset(); }
+
+	void clear(index_t index) { resize(index, 0); }
+
+	//
+	// TODO: Erase
+	//
+
+	//
+	// TODO: Erase if
+	//
+
+ private:
+	//
 	// Resize
 	//
 
@@ -292,6 +423,51 @@ struct SemanticNode {
 		} else {
 			semantics[index / 2].value = reinterpret_cast<value_t const &>(size);
 		}
+	}
+
+	void resizeLazy(std::array<size_type, N> const &sizes)
+	{
+		auto const new_size = std::accumulate(std::begin(sizes), std::end(sizes), N_H);
+		if (0 == new_size) {
+			clear();
+			return;
+		}
+
+		auto const cur_sizes = sizes();
+		if (cur_sizes == sizes) {
+			return;
+		}
+
+		if (std::accumulate(std::begin(cur_sizes), std::end(cur_sizes), N_H) != new_size) {
+			pointer p_cur = data_.release();
+			pointer p_new = static_cast<pointer>(realloc(p_cur, new_size * sizeof(Semantic)));
+
+			if (!p_new) {
+				data_.reset(p_cur);
+				throw std::bad_alloc();
+			}
+
+			data_.reset(p_new);
+		}
+
+		for (index_t i = 0; N != i; ++i) {
+			setSize(i, sizes[i]);
+		}
+	}
+
+	void resizeLazy(size_type const size)
+	{
+		std::array<size_type, N> sizes;
+		sizes.fill(size);
+		resizeLazy(sizes);
+	}
+
+	void resizeLazy(index_t const index, std::size_t const new_size)
+	{
+		// FIXME: Optimize
+		std::array<size_type, N> s = sizes();
+		s[index] = new_size;
+		resizeLazy(s);
 	}
 
 	void resize(std::array<size_type, N> const &sizes)
@@ -318,17 +494,15 @@ struct SemanticNode {
 		}
 
 		if (std::accumulate(std::begin(cur_sizes), std::end(cur_sizes), N_H) != new_size) {
-			Semantic *ptr_cur = data_.release();
+			pointer p_cur = data_.release();
+			pointer p_new = static_cast<pointer>(realloc(p_cur, new_size * sizeof(Semantic)));
 
-			Semantic *ptr_new =
-			    static_cast<Semantic *>(realloc(ptr_cur, new_size * sizeof(Semantic)));
-
-			if (!ptr_new) {
-				data_.reset(ptr_cur);
+			if (!p_new) {
+				data_.reset(p_cur);
 				throw std::bad_alloc();
 			}
 
-			data_.reset(ptr_new);
+			data_.reset(p_new);
 		}
 
 		if (0 == cur_size) {
