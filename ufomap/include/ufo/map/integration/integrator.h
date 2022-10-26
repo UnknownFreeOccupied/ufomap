@@ -53,7 +53,8 @@
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/point_cloud.h>
 #include <ufo/map/ray_caster/ray_caster.h>
-#include <ufo/map/semantic/semantic_map_base.h>
+// #include <ufo/map/semantic/semantic_map_base.h>
+#include <ufo/map/simple_semantic/simple_semantic_map_base.h>
 #include <ufo/map/time/time_map_base.h>
 #include <ufo/map/types.h>
 #include <ufo/math/pose6.h>
@@ -110,7 +111,25 @@ class Integrator
 
 			// Update time step
 			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				map.setTimeStep(node, time_step_, false);
+				if constexpr (std::is_base_of_v<SemanticPair, P>) {
+					semantic_label_t label = 0;
+					semantic_value_t value = 0;
+					for (auto const& p : p.points) {
+						// if (1000 <= p.label && value < p.value) {
+						if (value < p.value) {
+							label = p.label;
+							value = p.value;
+						}
+					}
+					// if (0 != label && 1000 <= label) {
+					if (0 != label) {
+						// map.setTimeStep(node, label / 100, false);
+						map.setTimeStep(node, label, false);
+						// map.setTimeStep(p.code.toDepth(3), label, false);
+					}
+				} else {
+					map.setTimeStep(node, time_step_, false);
+				}
 			}
 
 			// Update color
@@ -120,7 +139,7 @@ class Integrator
 
 				if (avg_color.set()) {
 					double total_logit = logit + prob;
-					double weight = prob / total_logit;
+					double weight = std::min(0.1, prob / total_logit);
 					map.setColor(node,
 					             RGBColor::average(
 					                 {{avg_color, weight}, {map.getColor(node), 1.0 - weight}}),
@@ -128,25 +147,40 @@ class Integrator
 				}
 			}
 
-			// Update semantics
-			if constexpr (is_base_of_template_v<SemanticMapBase, std::decay_t<Map>> &&
+			// Update simple semantics
+			if constexpr (is_base_of_template_v<SimpleSemanticMapBase, std::decay_t<Map>> &&
 			              std::is_base_of_v<SemanticPair, P>) {
-				// FIXME: Implement correctly
-
-				std::vector<SemanticPair> semantics(first_point_it, last_point_it);
-
-				// Remove label 0
-				semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
-				                            [](auto sem) { return 0 == sem.label; }),
-				                std::end(semantics));
-
-				// Decrease all
-				map.decreaseSemantic(node, semantic_value_miss_, false);
-
-				// Incrase hits
-				map.increaseSemantics(node, std::cbegin(semantics), std::cend(semantics),
-				                      semantic_value_hit_ + semantic_value_miss_, false);
+				auto& semantics = map.getSimpleSemantic(node);
+				for (auto p : p.points) {
+					auto it = std::lower_bound(std::begin(semantics), std::end(semantics), p,
+					                           [](auto a, auto b) { return a.label < b.label; });
+					if (std::end(semantics) != it && it->label == p.label) {
+						it->value += 1;
+					} else {
+						semantics.emplace(it, p.label, 1);
+					}
+				}
 			}
+
+			// Update semantics
+			// if constexpr (is_base_of_template_v<SemanticMapBase, std::decay_t<Map>> &&
+			//               std::is_base_of_v<SemanticPair, P>) {
+			// 	// FIXME: Implement correctly
+
+			// 	std::vector<SemanticPair> semantics(first_point_it, last_point_it);
+
+			// 	// Remove label 0
+			// 	semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
+			// 	                            [](auto sem) { return 0 == sem.label; }),
+			// 	                std::end(semantics));
+
+			// 	// Decrease all
+			// 	map.decreaseSemantic(node, semantic_value_miss_, false);
+
+			// 	// Incrase hits
+			// 	map.increaseSemantics(node, std::cbegin(semantics), std::cend(semantics),
+			// 	                      semantic_value_hit_ + semantic_value_miss_, false);
+			// }
 		});
 
 		// FIXME: Increment time step
@@ -168,7 +202,7 @@ class Integrator
 			map.decreaseOccupancyLogit(node, prob, false);
 
 			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				map.setTimeStep(node, time_step, false);
+				// map.setTimeStep(node, time_step, false);
 			}
 		});
 	}

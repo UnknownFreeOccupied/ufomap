@@ -53,10 +53,12 @@
 #include <ufo/map/occupancy/occupancy_map_base.h>
 #include <ufo/map/occupancy/occupancy_node.h>
 #include <ufo/map/octree_map_base.h>
-#include <ufo/map/semantic/semantic_map_base.h>
-#include <ufo/map/semantic/semantic_node.h>
+// #include <ufo/map/semantic/semantic_map_base.h>
+// #include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/signed_distance/signed_distance_map_base.h>
 #include <ufo/map/signed_distance/signed_distance_node.h>
+#include <ufo/map/simple_semantic/simple_semantic_map_base.h>
+#include <ufo/map/simple_semantic/simple_semantic_node.h>
 #include <ufo/map/surfel/surfel_map_base.h>
 #include <ufo/map/surfel/surfel_node.h>
 #include <ufo/map/time/time_map_base.h>
@@ -76,23 +78,24 @@ enum MapType : std::uint64_t {
 	TIME = 1U << 1U,
 	COLOR = 1U << 2U,
 	SURFEL = 1U << 3U,
-	SIGNED_DISTANCE = 1U << 4U,
-	OCCUPANCY_SMALL = 1U << 5U,
+	OCCUPANCY_SMALL = 1U << 4U,
+	SIMPLE_SEMANTIC = 1U << 5U,
 };
 
 template <bool C, std::size_t Num, class Node>
 using conditional_node_t = std::conditional_t<C, Node, EmptyNode<Num>>;
 
-template <bool C, std::size_t Num, template <typename...> typename MapBase>
+template <bool C, std::size_t Num,
+          template <typename, typename, typename> typename MapBase>
 struct conditional_map_base {
-	template <typename... ts>
-	using type = MapBase<ts...>;
+	template <typename T1, typename T2, typename T3>
+	using type = MapBase<T1, T2, T3>;
 };
 
-template <std::size_t Num, template <typename...> typename MapBase>
+template <std::size_t Num, template <typename, typename, typename> typename MapBase>
 struct conditional_map_base<false, Num, MapBase> {
-	template <typename... Ts>
-	using type = EmptyMap<Num, Ts...>;
+	template <typename T1, typename T2, typename T3>
+	using type = EmptyMap<Num, T1, T2, T3>;
 };
 
 template <std::uint64_t MapType, bool ReuseNodes = false, bool LockLess = false>
@@ -103,8 +106,7 @@ class Map
                    conditional_node_t<MapType & TIME, 3, TimeNode>,
                    conditional_node_t<MapType & COLOR, 4, ColorNode>,
                    conditional_node_t<MapType & SURFEL, 5, SurfelNode<float>>,
-                   conditional_node_t<MapType & SIGNED_DISTANCE, 6,
-                                      SignedDistanceNode<float>>>,
+                   conditional_node_t<MapType & SIMPLE_SEMANTIC, 6, SimpleSemanticNode>>,
           std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
                              OctreeIndicators>,
           ReuseNodes, LockLess,
@@ -113,20 +115,19 @@ class Map
           conditional_map_base<MapType & TIME, 2, TimeMapBase>::template type,
           conditional_map_base<MapType & COLOR, 3, ColorMapBase>::template type,
           conditional_map_base<MapType & SURFEL, 5, SurfelMapBase>::template type,
-          conditional_map_base<MapType & SIGNED_DISTANCE, 6,
-                               SignedDistanceMapBase>::template type>
+          conditional_map_base<MapType & SIMPLE_SEMANTIC, 6,
+                               SimpleSemanticMapBase>::template type>
 {
  private:
 	// static_assert(!(MapType & OCCUPANCY && MapType & OCCUPANCY_SMALL));
 
 	using Base = OctreeMapBase<
-	    NodeBase<
-	        conditional_node_t<MapType & OCCUPANCY, 1, OccupancyNode<float>>,
-	        conditional_node_t<MapType & OCCUPANCY_SMALL, 2, OccupancyNodeSmall>,
-	        conditional_node_t<MapType & TIME, 3, TimeNode>,
-	        conditional_node_t<MapType & COLOR, 4, ColorNode>,
-	        conditional_node_t<MapType & SURFEL, 5, SurfelNode<float>>,
-	        conditional_node_t<MapType & SIGNED_DISTANCE, 6, SignedDistanceNode<float>>>,
+	    NodeBase<conditional_node_t<MapType & OCCUPANCY, 1, OccupancyNode<float>>,
+	             conditional_node_t<MapType & OCCUPANCY_SMALL, 2, OccupancyNodeSmall>,
+	             conditional_node_t<MapType & TIME, 3, TimeNode>,
+	             conditional_node_t<MapType & COLOR, 4, ColorNode>,
+	             conditional_node_t<MapType & SURFEL, 5, SurfelNode<float>>,
+	             conditional_node_t<MapType & SIMPLE_SEMANTIC, 6, SimpleSemanticNode>>,
 	    std::conditional_t<MapType&(OCCUPANCY | OCCUPANCY_SMALL), OccupancyIndicators,
 	                       OctreeIndicators>,
 	    ReuseNodes, LockLess,
@@ -135,8 +136,8 @@ class Map
 	    conditional_map_base<MapType & TIME, 2, TimeMapBase>::template type,
 	    conditional_map_base<MapType & COLOR, 3, ColorMapBase>::template type,
 	    conditional_map_base<MapType & SURFEL, 5, SurfelMapBase>::template type,
-	    conditional_map_base<MapType & SIGNED_DISTANCE, 6,
-	                         SignedDistanceMapBase>::template type>;
+	    conditional_map_base<MapType & SIMPLE_SEMANTIC, 6,
+	                         SimpleSemanticMapBase>::template type>;
 
  public:
 	//

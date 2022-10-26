@@ -58,10 +58,81 @@ struct Filter {
 	uint8_t min_occupancy;
 	uint8_t max_occupancy;
 
+	// Color
+	bool filter_color;
+
 	// Time step
 	bool filter_time_step;
 	ufo::map::time_step_t min_time_step;
 	ufo::map::time_step_t max_time_step;
+
+	bool unlabeled;
+	bool outlier;
+	bool car;
+	bool bicycle;
+	bool bus;
+	bool motorcycle;
+	bool on_rails;
+	bool truck;
+	bool other_vehicle;
+	bool person;
+	bool bicyclist;
+	bool motorcyclist;
+	bool road;
+	bool parking;
+	bool sidewalk;
+	bool other_ground;
+	bool building;
+	bool fence;
+	bool other_structure;
+	bool lane_marking;
+	bool vegetation;
+	bool trunk;
+	bool terrain;
+	bool pole;
+	bool traffic_sign;
+	bool other_object;
+	bool moving_car;
+	bool moving_bicyclist;
+	bool moving_person;
+	bool moving_motorcyclist;
+	bool moving_on_rails;
+	bool moving_bus;
+	bool moving_truck;
+	bool moving_other_vehicle;
+
+	// bool noise;
+	// bool animal;
+	// bool human_pedestrian_adult;
+	// bool human_pedestrian_child;
+	// bool human_pedestrian_construction_worker;
+	// bool human_pedestrian_personal_mobility;
+	// bool human_pedestrian_police_officer;
+	// bool human_pedestrian_stroller;
+	// bool human_pedestrian_wheelchair;
+	// bool movable_object_barrier;
+	// bool movable_object_debris;
+	// bool movable_object_pushable_pullable;
+	// bool movable_object_trafficcone;
+	// bool static_object_bicycle_rack;
+	// bool vehicle_bicycle;
+	// bool vehicle_bus_bendy;
+	// bool vehicle_bus_rigid;
+	// bool vehicle_car;
+	// bool vehicle_construction;
+	// bool vehicle_emergencyambulance;
+	// bool vehicle_emergencypolice;
+	// bool vehicle_motorcycle;
+	// bool vehicle_trailer;
+	// bool vehicle_truck;
+	// bool flat_driveable_surface;
+	// bool flat_other;
+	// bool flat_sidewalk;
+	// bool flat_terrain;
+	// bool static_manmade;
+	// bool static_other;
+	// bool static_vegetation;
+	// bool vehicle_ego;
 
 	// Semantics
 	bool filter_semantics;

@@ -63,6 +63,7 @@ enum struct DataIdentifier : std::uint8_t {
 	SEMANTIC,
 	SURFEL,
 	SIGNED_DISTANCE,
+	SIMPLE_SEMANTIC,
 };
 
 // File options

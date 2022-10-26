@@ -48,6 +48,7 @@
 // ROS
 #include <rviz/frame_manager.h>
 #include <rviz/properties/bool_property.h>
+#include <rviz/properties/float_property.h>
 #include <rviz/properties/int_property.h>
 #include <rviz/properties/property.h>
 #include <rviz/properties/tf_frame_property.h>
@@ -68,16 +69,88 @@ class FilterDisplay
 	rviz::IntProperty* min_occupancy_;
 	rviz::IntProperty* max_occupancy_;
 
+	// Color
+	rviz::BoolProperty* filter_color_;
+
 	// Time step
 	rviz::BoolProperty* filter_time_step_;
 	rviz::IntProperty* min_time_step_;
 	rviz::IntProperty* max_time_step_;
+	rviz::BoolProperty* unlabeled_;
+	rviz::BoolProperty* outlier_;
+	rviz::BoolProperty* car_;
+	rviz::BoolProperty* bicycle_;
+	rviz::BoolProperty* bus_;
+	rviz::BoolProperty* motorcycle_;
+	rviz::BoolProperty* on_rails_;
+	rviz::BoolProperty* truck_;
+	rviz::BoolProperty* other_vehicle_;
+	rviz::BoolProperty* person_;
+	rviz::BoolProperty* bicyclist_;
+	rviz::BoolProperty* motorcyclist_;
+	rviz::BoolProperty* road_;
+	rviz::BoolProperty* parking_;
+	rviz::BoolProperty* sidewalk_;
+	rviz::BoolProperty* other_ground_;
+	rviz::BoolProperty* building_;
+	rviz::BoolProperty* fence_;
+	rviz::BoolProperty* other_structure_;
+	rviz::BoolProperty* lane_marking_;
+	rviz::BoolProperty* vegetation_;
+	rviz::BoolProperty* trunk_;
+	rviz::BoolProperty* terrain_;
+	rviz::BoolProperty* pole_;
+	rviz::BoolProperty* traffic_sign_;
+	rviz::BoolProperty* other_object_;
+	rviz::BoolProperty* moving_car_;
+	rviz::BoolProperty* moving_bicyclist_;
+	rviz::BoolProperty* moving_person_;
+	rviz::BoolProperty* moving_motorcyclist_;
+	rviz::BoolProperty* moving_on_rails_;
+	rviz::BoolProperty* moving_bus_;
+	rviz::BoolProperty* moving_truck_;
+	rviz::BoolProperty* moving_other_vehicle_;
+
+	// rviz::BoolProperty* noise_;
+	// rviz::BoolProperty* animal_;
+	// rviz::BoolProperty* human_pedestrian_adult_;
+	// rviz::BoolProperty* human_pedestrian_child_;
+	// rviz::BoolProperty* human_pedestrian_construction_worker_;
+	// rviz::BoolProperty* human_pedestrian_personal_mobility_;
+	// rviz::BoolProperty* human_pedestrian_police_officer_;
+	// rviz::BoolProperty* human_pedestrian_stroller_;
+	// rviz::BoolProperty* human_pedestrian_wheelchair_;
+	// rviz::BoolProperty* movable_object_barrier_;
+	// rviz::BoolProperty* movable_object_debris_;
+	// rviz::BoolProperty* movable_object_pushable_pullable_;
+	// rviz::BoolProperty* movable_object_trafficcone_;
+	// rviz::BoolProperty* static_object_bicycle_rack_;
+	// rviz::BoolProperty* vehicle_bicycle_;
+	// rviz::BoolProperty* vehicle_bus_bendy_;
+	// rviz::BoolProperty* vehicle_bus_rigid_;
+	// rviz::BoolProperty* vehicle_car_;
+	// rviz::BoolProperty* vehicle_construction_;
+	// rviz::BoolProperty* vehicle_emergencyambulance_;
+	// rviz::BoolProperty* vehicle_emergencypolice_;
+	// rviz::BoolProperty* vehicle_motorcycle_;
+	// rviz::BoolProperty* vehicle_trailer_;
+	// rviz::BoolProperty* vehicle_truck_;
+	// rviz::BoolProperty* flat_driveable_surface_;
+	// rviz::BoolProperty* flat_other_;
+	// rviz::BoolProperty* flat_sidewalk_;
+	// rviz::BoolProperty* flat_terrain_;
+	// rviz::BoolProperty* static_manmade_;
+	// rviz::BoolProperty* static_other_;
+	// rviz::BoolProperty* static_vegetation_;
+	// rviz::BoolProperty* vehicle_ego_;
 
 	// Semantics
 	rviz::BoolProperty* filter_semantics_;
-	// TODO: Add labels
-	rviz::IntProperty* min_semantic_value_;
-	rviz::IntProperty* max_semantic_value_;
+	rviz::BoolProperty* filter_semantics_value_;
+	rviz::FloatProperty* min_semantic_value_;
+	rviz::FloatProperty* max_semantic_value_;
+	rviz::BoolProperty* filter_semantics_label_;
+	std::vector<rviz::BoolProperty*> semantic_labels_;
 
 	// Frame manager
 	mutable rviz::FrameManager* frame_manager_;

@@ -69,17 +69,89 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 		            (filter.min_occupancy != voxels_filter_.min_occupancy ||
 		             filter.max_occupancy != voxels_filter_.max_occupancy));
 
+		bool c = filter.filter_color != voxels_filter_.filter_color;
+
 		bool ts = filter.filter_time_step != voxels_filter_.filter_time_step ||
 		          (filter.filter_time_step &&
 		           (filter.min_time_step != voxels_filter_.min_time_step ||
 		            filter.max_time_step != voxels_filter_.max_time_step));
+
+		ts = filter.unlabeled != voxels_filter_.unlabeled ||
+		     filter.outlier != voxels_filter_.outlier || filter.car != voxels_filter_.car ||
+		     filter.bicycle != voxels_filter_.bicycle || filter.bus != voxels_filter_.bus ||
+		     filter.motorcycle != voxels_filter_.motorcycle ||
+		     filter.on_rails != voxels_filter_.on_rails ||
+		     filter.truck != voxels_filter_.truck ||
+		     filter.other_vehicle != voxels_filter_.other_vehicle ||
+		     filter.person != voxels_filter_.person ||
+		     filter.bicyclist != voxels_filter_.bicyclist ||
+		     filter.motorcyclist != voxels_filter_.motorcyclist ||
+		     filter.road != voxels_filter_.road || filter.parking != voxels_filter_.parking ||
+		     filter.sidewalk != voxels_filter_.sidewalk ||
+		     filter.other_ground != voxels_filter_.other_ground ||
+		     filter.building != voxels_filter_.building ||
+		     filter.fence != voxels_filter_.fence ||
+		     filter.other_structure != voxels_filter_.other_structure ||
+		     filter.lane_marking != voxels_filter_.lane_marking ||
+		     filter.vegetation != voxels_filter_.vegetation ||
+		     filter.trunk != voxels_filter_.trunk ||
+		     filter.terrain != voxels_filter_.terrain || filter.pole != voxels_filter_.pole ||
+		     filter.traffic_sign != voxels_filter_.traffic_sign ||
+		     filter.other_object != voxels_filter_.other_object ||
+		     filter.moving_car != voxels_filter_.moving_car ||
+		     filter.moving_bicyclist != voxels_filter_.moving_bicyclist ||
+		     filter.moving_person != voxels_filter_.moving_person ||
+		     filter.moving_motorcyclist != voxels_filter_.moving_motorcyclist ||
+		     filter.moving_on_rails != voxels_filter_.moving_on_rails ||
+		     filter.moving_bus != voxels_filter_.moving_bus ||
+		     filter.moving_truck != voxels_filter_.moving_truck ||
+		     filter.moving_other_vehicle != voxels_filter_.moving_other_vehicle;
+
+		// ts = filter.noise != voxels_filter_.noise || filter.animal != voxels_filter_.animal
+		// ||
+		//      filter.human_pedestrian_adult != voxels_filter_.human_pedestrian_adult ||
+		//      filter.human_pedestrian_child != voxels_filter_.human_pedestrian_child ||
+		//      filter.human_pedestrian_construction_worker !=
+		//          voxels_filter_.human_pedestrian_construction_worker ||
+		//      filter.human_pedestrian_personal_mobility !=
+		//          voxels_filter_.human_pedestrian_personal_mobility ||
+		//      filter.human_pedestrian_police_officer !=
+		//          voxels_filter_.human_pedestrian_police_officer ||
+		//      filter.human_pedestrian_stroller != voxels_filter_.human_pedestrian_stroller
+		//      || filter.human_pedestrian_wheelchair !=
+		//          voxels_filter_.human_pedestrian_wheelchair ||
+		//      filter.movable_object_barrier != voxels_filter_.movable_object_barrier ||
+		//      filter.movable_object_debris != voxels_filter_.movable_object_debris ||
+		//      filter.movable_object_pushable_pullable !=
+		//          voxels_filter_.movable_object_pushable_pullable ||
+		//      filter.movable_object_trafficcone != voxels_filter_.movable_object_trafficcone
+		//      || filter.static_object_bicycle_rack !=
+		//      voxels_filter_.static_object_bicycle_rack || filter.vehicle_bicycle !=
+		//      voxels_filter_.vehicle_bicycle || filter.vehicle_bus_bendy !=
+		//      voxels_filter_.vehicle_bus_bendy || filter.vehicle_bus_rigid !=
+		//      voxels_filter_.vehicle_bus_rigid || filter.vehicle_car !=
+		//      voxels_filter_.vehicle_car || filter.vehicle_construction !=
+		//      voxels_filter_.vehicle_construction || filter.vehicle_emergencyambulance !=
+		//      voxels_filter_.vehicle_emergencyambulance || filter.vehicle_emergencypolice !=
+		//      voxels_filter_.vehicle_emergencypolice || filter.vehicle_motorcycle !=
+		//      voxels_filter_.vehicle_motorcycle || filter.vehicle_trailer !=
+		//      voxels_filter_.vehicle_trailer || filter.vehicle_truck !=
+		//      voxels_filter_.vehicle_truck || filter.flat_driveable_surface !=
+		//      voxels_filter_.flat_driveable_surface || filter.flat_other !=
+		//      voxels_filter_.flat_other || filter.flat_sidewalk !=
+		//      voxels_filter_.flat_sidewalk || filter.flat_terrain !=
+		//      voxels_filter_.flat_terrain || filter.static_manmade !=
+		//      voxels_filter_.static_manmade || filter.static_other !=
+		//      voxels_filter_.static_other || filter.static_vegetation !=
+		//      voxels_filter_.static_vegetation || filter.vehicle_ego !=
+		//      voxels_filter_.vehicle_ego;
 
 		bool sem = filter.filter_semantics != voxels_filter_.filter_semantics ||
 		           (filter.filter_semantics &&
 		            (filter.min_semantic_value != voxels_filter_.min_semantic_value ||
 		             filter.max_semantic_value != voxels_filter_.max_semantic_value));
 
-		regenerate = occ || ts || sem ||
+		regenerate = occ || c || ts || sem ||
 		             filter.filter_bounding_volume != voxels_filter_.filter_bounding_volume;
 
 		if (!regenerate && filter.filter_bounding_volume) {
@@ -94,8 +166,8 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 				double max_diff = std::abs(old_max[i] - new_max[i]);
 
 				regenerate = regenerate ||
-				             (render_mode.normalized_min_change < (min_diff / new_diff)) ||
-				             (render_mode.normalized_min_change < (max_diff / new_diff));
+				             (render_mode.normalized_min_change <= (min_diff / new_diff)) ||
+				             (render_mode.normalized_min_change <= (max_diff / new_diff));
 			}
 		}
 	}

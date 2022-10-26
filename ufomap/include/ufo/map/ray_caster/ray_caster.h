@@ -119,13 +119,12 @@ void computeRay(KeyRay& ray, Key origin, Key goal)
 
 	Vector3d t_max = t_delta / 2.0;
 
-	ray.reserve(ray.size() + (1.5f * Vector3d::abs(g - o).norm() / size));
-	ray.push_back(origin);
+	ray.reserve(ray.size() + (1.5 * Vector3d::abs(g - o).norm() / size));
 	while (origin != goal && t_max.min() <= distance) {
+		ray.push_back(origin);
 		auto advance_dim = t_max.minElementIndex();
 		origin[advance_dim] += step[advance_dim];
 		t_max[advance_dim] += t_delta[advance_dim];
-		ray.push_back(origin);
 	}
 }
 

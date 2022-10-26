@@ -39,35 +39,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEMANTIC_H
-#define UFO_MAP_SEMANTIC_H
+#ifndef UFO_MAP_PREDICATE_SIMPLE_SEMANTICS_H
+#define UFO_MAP_PREDICATE_SIMPLE_SEMANTICS_H
 
-// STL
-#include <cstdint>
-
-namespace ufo::map
+namespace ufo::map::predicate
 {
-using semantic_label_t = uint32_t;
-using semantic_value_t = float;
 
-struct SemanticPair {
-	semantic_label_t label = 0;
-	semantic_value_t value = 0;
+}
 
-	constexpr SemanticPair() = default;
-
-	constexpr SemanticPair(semantic_label_t label, semantic_value_t value = 0)
-	    : label(label), value(value)
-	{
-	}
-
-	constexpr bool operator==(SemanticPair const& rhs) const
-	{
-		return label == rhs.label && value == rhs.value;
-	}
-
-	constexpr bool operator!=(SemanticPair const& rhs) const { return !(*this == rhs); }
-};
-}  // namespace ufo::map
-
-#endif  // UFO_MAP_SEMANTIC_H
+#endif  // UFO_MAP_PREDICATE_SIMPLE_SEMANTICS_H

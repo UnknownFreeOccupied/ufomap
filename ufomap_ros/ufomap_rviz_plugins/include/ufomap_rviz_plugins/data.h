@@ -93,14 +93,9 @@ class Data
 		                    color_lut[color.red], 1.0f);
 	}
 
-	template <class SemanticContainer>
-	void addSemantics(SemanticContainer const& semantics)
+	void addSemantics(std::vector<ufo::map::SemanticPair> const& semantics)
 	{
-		auto s = semantics_.emplace_back();
-		s.reserve(semantics.size());
-		for (auto [label, value] : semantics) {
-			s.emplace_back(label, value);
-		}
+		semantics_.push_back(semantics);
 	}
 
 	void swap(Data& other);

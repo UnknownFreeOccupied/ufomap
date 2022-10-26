@@ -39,35 +39,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEMANTIC_H
-#define UFO_MAP_SEMANTIC_H
+#ifndef UFO_MAP_SIMPLE_SEMANTIC_NODE_H
+#define UFO_MAP_SIMPLE_SEMANTIC_NODE_H
+
+// UFO
+#include <ufo/map/semantic/semantic.h>
 
 // STL
-#include <cstdint>
+#include <map>
 
 namespace ufo::map
 {
-using semantic_label_t = uint32_t;
-using semantic_value_t = float;
+struct SimpleSemanticNode {
+	std::vector<SemanticPair> simple_semantic;
 
-struct SemanticPair {
-	semantic_label_t label = 0;
-	semantic_value_t value = 0;
-
-	constexpr SemanticPair() = default;
-
-	constexpr SemanticPair(semantic_label_t label, semantic_value_t value = 0)
-	    : label(label), value(value)
+	constexpr bool operator==(SimpleSemanticNode const& rhs) const
 	{
+		return simple_semantic == rhs.simple_semantic;
 	}
 
-	constexpr bool operator==(SemanticPair const& rhs) const
+	constexpr bool operator!=(SimpleSemanticNode const& rhs) const
 	{
-		return label == rhs.label && value == rhs.value;
+		return !(*this == rhs);
 	}
-
-	constexpr bool operator!=(SemanticPair const& rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_SEMANTIC_H
+#endif  // UFO_MAP_SIMPLE_SEMANTIC_NODE_H

@@ -101,7 +101,7 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud_in, "x");
 	std::optional<sensor_msgs::PointCloud2ConstIterator<uint8_t>> iter_rgb;
 	std::optional<sensor_msgs::PointCloud2ConstIterator<uint32_t>> iter_label;
-	std::optional<sensor_msgs::PointCloud2ConstIterator<uint32_t>> iter_value;
+	std::optional<sensor_msgs::PointCloud2ConstIterator<float>> iter_value;
 
 	// Create optional iteraters if wanted and available
 	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
@@ -178,7 +178,7 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 														"z",     1, sensor_msgs::PointField::FLOAT32,
 														"rgb",   1, sensor_msgs::PointField::UINT32,
 														"label", 1, sensor_msgs::PointField::UINT32,
-														"value", 1, sensor_msgs::PointField::UINT32);
+														"value", 1, sensor_msgs::PointField::FLOAT32);
 		// clang-format on
 	} else if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {
 		cloud_out_modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
@@ -189,7 +189,7 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
                             "y",     1, sensor_msgs::PointField::FLOAT32,
                             "z",     1, sensor_msgs::PointField::FLOAT32,
                             "label", 1, sensor_msgs::PointField::UINT32,
-                            "value", 1, sensor_msgs::PointField::UINT32);
+                            "value", 1, sensor_msgs::PointField::FLOAT32);
 		// clang-format on
 	} else {
 		cloud_out_modifier.setPointCloud2FieldsByString(1, "xyz");
@@ -200,7 +200,7 @@ void ufoToRos(ufo::map::PointCloudT<P> const& cloud_in,
 	sensor_msgs::PointCloud2Iterator<float> iter_x(cloud_out, "x");
 	std::optional<sensor_msgs::PointCloud2Iterator<uint8_t>> iter_rgb;
 	std::optional<sensor_msgs::PointCloud2Iterator<uint32_t>> iter_label;
-	std::optional<sensor_msgs::PointCloud2Iterator<uint32_t>> iter_value;
+	std::optional<sensor_msgs::PointCloud2Iterator<float>> iter_value;
 
 	// Create optional iterators
 	if constexpr (std::is_base_of_v<ufo::map::RGBColor, P>) {

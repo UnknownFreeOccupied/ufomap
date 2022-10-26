@@ -96,12 +96,14 @@ struct RGBColor {
 					continue;
 				}
 
-				r += first->red;
-				g += first->green;
-				b += first->blue;
+				r += first->red * first->red;
+				g += first->green * first->green;
+				b += first->blue * first->blue;
 				++num;
 			}
-			return 0 == num ? RGBColor() : RGBColor(r / num, g / num, b / num);
+			return 0 == num
+			           ? RGBColor()
+			           : RGBColor(std::sqrt(r / num), std::sqrt(g / num), std::sqrt(b / num));
 		} else if constexpr (std::is_base_of_v<
 		                         std::pair<RGBColor, double>,
 		                         typename std::iterator_traits<InputIt>::value_type>) {
@@ -114,12 +116,14 @@ struct RGBColor {
 					continue;
 				}
 
-				r += first->first.red * first->second;
-				g += first->first.green * first->second;
-				b += first->first.blue * first->second;
+				r += first->first.red * first->first.red * first->second;
+				g += first->first.green * first->first.green * first->second;
+				b += first->first.blue * first->first.blue * first->second;
 				weight += first->second;
 			}
-			return 0 == weight ? RGBColor() : RGBColor(r / weight, g / weight, b / weight);
+			return 0 == weight ? RGBColor()
+			                   : RGBColor(std::sqrt(r / weight), std::sqrt(g / weight),
+			                              std::sqrt(b / weight));
 
 		} else {
 			static_assert(

@@ -178,7 +178,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
  private:
 	//  Map
 	ufo::map::Map<ufo::map::MapType::OCCUPANCY_SMALL | ufo::map::MapType::TIME |
-	              ufo::map::MapType::COLOR>
+	              ufo::map::MapType::COLOR | ufo::map::MapType::SIMPLE_SEMANTIC>
 	    map_;
 
 	// Flag to tell the other threads to stop
