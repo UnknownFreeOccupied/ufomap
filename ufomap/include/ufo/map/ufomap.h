@@ -98,7 +98,6 @@ enum MapType : mt_t {
 	INTENSITY  = mt_t(1) << 6,
 	COUNT      = mt_t(1) << 7,
 	REFLECTION = mt_t(1) << 8,
-	VELOCITY   = mt_t(1) << 9,
 	// clang-format on
 };
 
