@@ -1141,7 +1141,8 @@ class SemanticMap
 		changeLabel(derived().rootCode(), old_label, new_label, propagate);
 	}
 
-	void changeSemantics(Node node, label_t old_label, label_t new_label, bool propagate = true)
+	void changeSemantics(Node node, label_t old_label, label_t new_label,
+	                     bool propagate = true)
 	{
 		derived().apply(
 		    node,
@@ -1154,7 +1155,8 @@ class SemanticMap
 		    propagate);
 	}
 
-	void changeSemantics(Code code, label_t old_label, label_t new_label, bool propagate = true)
+	void changeSemantics(Code code, label_t old_label, label_t new_label,
+	                     bool propagate = true)
 	{
 		derived().apply(
 		    code,
@@ -1167,19 +1169,20 @@ class SemanticMap
 		    propagate);
 	}
 
-	void changeSemantics(Key key, label_t old_label, label_t new_label, bool propagate = true)
+	void changeSemantics(Key key, label_t old_label, label_t new_label,
+	                     bool propagate = true)
 	{
 		changeSemantics(derived().toCode(key), old_label, new_label, propagate);
 	}
 
 	void changeSemantics(Point coord, label_t old_label, label_t new_label,
-	                 bool propagate = true, depth_t depth = 0)
+	                     bool propagate = true, depth_t depth = 0)
 	{
 		changeSemantics(derived().toCode(coord, depth), old_label, new_label, propagate);
 	}
 
-	void changeSemantics(coord_t x, coord_t y, coord_t z, label_t old_label, label_t new_label,
-	                 bool propagate = true, depth_t depth = 0)
+	void changeSemantics(coord_t x, coord_t y, coord_t z, label_t old_label,
+	                     label_t new_label, bool propagate = true, depth_t depth = 0)
 	{
 		changeSemantics(derived().toCode(x, y, z, depth), old_label, new_label, propagate);
 	}
@@ -1402,7 +1405,7 @@ class SemanticMap
 			out.write(reinterpret_cast<char*>(sizes.data()), N * sizeof(size_type));
 
 			if (first->index_field.all()) {
-				sem.resize(sizes);
+				sem.resizeLazy(sizes);
 				auto size = std::accumulate(std::cbegin(sizes), std::cend(sizes), std::size_t(0));
 				if (0 != size) {
 					in.read(reinterpret_cast<char*>(sem.begin()), size * sizeof(Semantic));
