@@ -149,7 +149,10 @@ struct Node {
 	};
 
  protected:
-	constexpr Node(void* data, Code code) noexcept : data_(data), code_(code) {}
+	constexpr Node(void* data, Code code, depth_t real_depth) noexcept
+	    : data_(data), code_(code), real_depth_(real_depth)
+	{
+	}
 
 	/*!
 	 * @brief Get the corresponding data.
@@ -158,7 +161,7 @@ struct Node {
 	 *
 	 * @return The corresponding data.
 	 */
-	constexpr void* data() noexcept { return data_; }
+	[[nodiscard]] constexpr void* data() noexcept { return data_; }
 
 	/*!
 	 * @brief Get the corresponding data.
@@ -167,13 +170,29 @@ struct Node {
 	 *
 	 * @return The corresponding data.
 	 */
-	constexpr void const* data() const noexcept { return data_; }
+	[[nodiscard]] constexpr void const* data() const noexcept { return data_; }
+
+	/*!
+	 * @brief Get the real depth of the node.
+	 *
+	 * @return The real depth.
+	 */
+	[[nodiscard]] constexpr depth_t realDepth() const noexcept { return real_depth_; }
+
+	/*!
+	 * @brief Whether the node is at the real depth.
+	 *
+	 * @return Whether the node is at the real depth.
+	 */
+	[[nodiscard]] constexpr bool isReal() const noexcept { return depth() == realDepth(); }
 
  protected:
 	// Pointer to the actual node
 	void* data_ = nullptr;
 	// The code for the node
 	Code code_;
+	// The real depth of the node
+	depth_t real_depth_ = 0;
 
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>
@@ -276,8 +295,9 @@ struct NodeBV : public Node, public BV {
 	constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	constexpr NodeBV(void* data, Code code, geometry::AAEBB aaebb) noexcept
-	    : Node(data, code), aaebb_(aaebb)
+	constexpr NodeBV(void* data, Code code, depth_t real_depth,
+	                 geometry::AAEBB aaebb) noexcept
+	    : Node(data, code, real_depth), aaebb_(aaebb)
 	{
 	}
 

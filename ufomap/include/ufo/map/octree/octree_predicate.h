@@ -391,7 +391,7 @@ struct PredicateInnerCheck<Leaf> {
 	template <class Map>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
 	{
-		return m.isParent(n) && n.depth() > p.min_depth;
+		return n.depth() > p.min_depth;
 	}
 };
 
