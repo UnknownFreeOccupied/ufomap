@@ -58,51 +58,17 @@ namespace ufo::map::predicate
 // Predicates
 //
 
-struct Index {
-	constexpr Index(index_t index) noexcept : index(index) {}
-
-	// TODO: Implement
-	
-	index_t index;
-};
-
-struct PureLeaf {
-};
-
 struct Leaf {
-	constexpr Leaf(depth_t min_depth = 0) noexcept : min_depth(min_depth) {}
-
-	depth_t min_depth;
 };
 
-template <PredicateRounding PR>
-struct LeafVoxelSize {
-	constexpr LeafVoxelSize(double voxel_size = 0.0) noexcept : voxel_size(voxel_size) {}
-
-	constexpr void setVoxelSize(double new_voxel_size) noexcept
-	{
-		leaf_modified = leaf_modified || voxel_size != new_voxel_size;
-		voxel_size = new_voxel_size;
-	}
-
-	constexpr double voxelSize() const noexcept { return voxel_size; }
-
- private:
-	double voxel_size;
-	mutable Leaf leaf;
-	mutable bool leaf_modified = true;
-
-	template <PredicateRounding P>
-	friend struct PredicateValueCheck;
-	template <PredicateRounding P>
-	friend struct PredicateInnerCheck;
+struct Inner {
 };
-
-using LeafVoxelSizeNearest = LeafVoxelSize<PredicateRounding::NEAREST>;
-using LeafVoxelSizeDownwards = LeafVoxelSize<PredicateRounding::FLOOR>;
-using LeafVoxelSizeUpwards = LeafVoxelSize<PredicateRounding::CEIL>;
 
 struct Parent {
+};
+
+// FIXME: Change name
+struct Allocated {
 };
 
 template <PredicateCompare PC = PredicateCompare::EQUAL,
@@ -131,76 +97,80 @@ struct DepthInterval {
 
 template <PredicateRounding PR, PredicateCompare PC = PredicateCompare::EQUAL,
           PredicateType PT = PredicateType::RETURN_AND_INNER>
-struct VoxelSize {
-	constexpr VoxelSize(double voxel_size) noexcept : voxel_size(voxel_size), depth(0) {}
+struct Size {
+	constexpr Size(double size) noexcept : size_(size), depth(0) {}
 
-	constexpr void setVoxelSize(double new_voxel_size) noexcept
+	constexpr void setSize(double size) noexcept
 	{
-		depth_modified = depth_modified || voxel_size != new_voxel_size;
-		voxel_size = new_voxel_size;
+		depth_modified = depth_modified || size != size_;
+		size_ = size;
 	}
 
-	constexpr double voxelSize() const noexcept { return voxel_size; }
+	constexpr double size() const noexcept { return size_; }
 
  private:
-	double voxel_size;
-	mutable Depth<PC, PT> depth;
-	mutable bool depth_modified = true;
+	double size_;
+	mutable Depth<PC, PT> depth_;
+	mutable bool depth_modified_ = true;
 
-	friend struct PredicateValueCheck<VoxelSize<PR, PC, PT>>;
-	friend struct PredicateInnerCheck<VoxelSize<PR, PC, PT>>;
+	friend struct PredicateValueCheck<Size<PR, PC, PT>>;
+	friend struct PredicateInnerCheck<Size<PR, PC, PT>>;
 };
 
 template <PredicateCompare PC = PredicateCompare::EQUAL,
           PredicateType PT = PredicateType::RETURN_AND_INNER>
-using VoxelSizeNearest = VoxelSize<PredicateRounding::NEAREST, PC, PT>;
-using VoxelSizeENearest = VoxelSizeNearest<>;
-using VoxelSizeLENearest = VoxelSizeNearest<PredicateCompare::LESS_EQUAL>;
-using VoxelSizeGENearest = VoxelSizeNearest<PredicateCompare::GREATER_EQUAL>;
-using VoxelSizeLNearest = VoxelSizeNearest<PredicateCompare::LESS>;
-using VoxelSizeGNearest = VoxelSizeNearest<PredicateCompare::GREATER>;
+using SizeNearest = Size<PredicateRounding::NEAREST, PC, PT>;
+using SizeENearest = SizeNearest<>;
+using SizeLENearest = SizeNearest<PredicateCompare::LESS_EQUAL>;
+using SizeGENearest = SizeNearest<PredicateCompare::GREATER_EQUAL>;
+using SizeLNearest = SizeNearest<PredicateCompare::LESS>;
+using SizeGNearest = SizeNearest<PredicateCompare::GREATER>;
 
 template <PredicateCompare PC = PredicateCompare::EQUAL,
           PredicateType PT = PredicateType::RETURN_AND_INNER>
-using VoxelSizeDownwards = VoxelSize<PredicateRounding::FLOOR, PC, PT>;
-using VoxelSizeEDownwards = VoxelSizeDownwards<>;
-using VoxelSizeLEDownwards = VoxelSizeDownwards<PredicateCompare::LESS_EQUAL>;
-using VoxelSizeGEDownwards = VoxelSizeDownwards<PredicateCompare::GREATER_EQUAL>;
-using VoxelSizeLDownwards = VoxelSizeDownwards<PredicateCompare::LESS>;
-using VoxelSizeGDownwards = VoxelSizeDownwards<PredicateCompare::GREATER>;
+using SizeDownwards = Size<PredicateRounding::FLOOR, PC, PT>;
+using SizeEDownwards = SizeDownwards<>;
+using SizeLEDownwards = SizeDownwards<PredicateCompare::LESS_EQUAL>;
+using SizeGEDownwards = SizeDownwards<PredicateCompare::GREATER_EQUAL>;
+using SizeLDownwards = SizeDownwards<PredicateCompare::LESS>;
+using SizeGDownwards = SizeDownwards<PredicateCompare::GREATER>;
 
 template <PredicateCompare PC = PredicateCompare::EQUAL,
           PredicateType PT = PredicateType::RETURN_AND_INNER>
-using VoxelSizeUpwards = VoxelSize<PredicateRounding::CEIL, PC, PT>;
-using VoxelSizeEUpwards = VoxelSizeUpwards<>;
-using VoxelSizeLEUpwards = VoxelSizeUpwards<PredicateCompare::LESS_EQUAL>;
-using VoxelSizeGEUpwards = VoxelSizeUpwards<PredicateCompare::GREATER_EQUAL>;
-using VoxelSizeLUpwards = VoxelSizeUpwards<PredicateCompare::LESS>;
-using VoxelSizeGUpwards = VoxelSizeUpwards<PredicateCompare::GREATER>;
+using SizeUpwards = Size<PredicateRounding::CEIL, PC, PT>;
+using SizeEUpwards = SizeUpwards<>;
+using SizeLEUpwards = SizeUpwards<PredicateCompare::LESS_EQUAL>;
+using SizeGEUpwards = SizeUpwards<PredicateCompare::GREATER_EQUAL>;
+using SizeLUpwards = SizeUpwards<PredicateCompare::LESS>;
+using SizeGUpwards = SizeUpwards<PredicateCompare::GREATER>;
 
-using VoxelSizeMin = VoxelSizeGEUpwards;
-using VoxelSizeMax = VoxelSizeLEDownwards;
+using SizeMin = SizeGEUpwards;
+using SizeMax = SizeLEDownwards;
 
-struct VoxelSizeInterval {
-	constexpr VoxelSizeInterval(double min, double max) noexcept : min(min), max(max) {}
+struct SizeInterval {
+	constexpr SizeInterval(double min, double max) noexcept : min(min), max(max) {}
 
-	VoxelSizeMin min;
-	VoxelSizeMax max;
+	SizeMin min;
+	SizeMax max;
 };
 
 struct Modified {
 };
 
-struct ChildrenOf {
-	constexpr ChildrenOf(Node const& node) noexcept : node(node) {}
+struct ChildOf {
+	constexpr ChildOf(Node node) noexcept : code(node.code()) {}
 
-	Node node;
-};
+	constexpr ChildOf(Code code) noexcept : code(code) {}
 
-struct CodePrefix {
-	constexpr CodePrefix(Code code) noexcept : code(code) {}
+	constexpr ChildOf(Key key) noexcept : code(key) {}
 
 	Code code;
+};
+
+struct Index {
+	constexpr Index(index_t index) noexcept : index(index) {}
+
+	index_t index;
 };
 
 //
@@ -208,47 +178,24 @@ struct CodePrefix {
 //
 
 template <>
-struct PredicateValueCheck<PureLeaf> {
-	using Pred = PureLeaf;
-
-	template <class Map>
-	static constexpr bool apply(Pred const&, Map const&, Node const& n) noexcept
-	{
-		return Map::isPureLeaf(n);
-	}
-};
-
-template <>
 struct PredicateValueCheck<Leaf> {
 	using Pred = Leaf;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node n)
 	{
-		return m.isLeaf(n) || n.depth() == p.min_depth;
+		return Map::isLeaf(n);
 	}
 };
 
-template <PredicateRounding PR>
-struct PredicateValueCheck<LeafVoxelSize<PR>> {
-	using Pred = LeafVoxelSize<PR>;
+template <>
+struct PredicateValueCheck<Inner> {
+	using Pred = Inner;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node n) noexcept
 	{
-		if (p.depth_modified) {
-			double temp = std::max(0.0, (m.resolution() / p.resolution) + 1.0);
-			if constexpr (PredicateRounding::NEAREST == PR) {
-				p.leaf.min_depth = std::round(temp);
-			} else if constexpr (PredicateRounding::FLOOR == PR) {
-				p.leaf.min_depth = std::floor(temp);
-			} else {
-				p.leaf.min_depth = std::ceil(temp);
-			}
-			p.depth_modified = false;
-		}
-
-		return PredicateValueCheck<std::decay_t<decltype(p.leaf)>>::apply(p.leaf, m, n);
+		return 0 != n.depth();
 	}
 };
 
@@ -257,18 +204,29 @@ struct PredicateValueCheck<Parent> {
 	using Pred = Parent;
 
 	template <class Map>
-	static constexpr bool apply(Pred const&, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node n)
 	{
 		return Map::isParent(n);
 	}
 };
+
+template <>
+struct PredicateValueCheck<Allocated> {
+	using Pred = Allocated;
+
+	template <class Map>
+	static constexpr bool apply(Pred, Map const&, Node n)
+	{
+		return Map::isReal(n);  // TODO: Look at
+	}
+}
 
 template <PredicateCompare PC, PredicateType PT>
 struct PredicateValueCheck<Depth<PC, PT>> {
 	using Pred = Depth<PC, PT>;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		if constexpr (PredicateType::INNER == PT) {
 			return false;
@@ -293,7 +251,7 @@ struct PredicateValueCheck<DepthInterval> {
 	using Pred = DepthInterval;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -301,11 +259,11 @@ struct PredicateValueCheck<DepthInterval> {
 };
 
 template <PredicateRounding PR, PredicateCompare PC, PredicateType PT>
-struct PredicateValueCheck<VoxelSize<PR, PC, PT>> {
-	using Pred = VoxelSize<PR, PC, PT>;
+struct PredicateValueCheck<Size<PR, PC, PT>> {
+	using Pred = Size<PR, PC, PT>;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		if (p.depth_modified) {
 			double temp = std::max(0.0, (m.resolution() / p.resolution) + 1.0);
@@ -324,11 +282,11 @@ struct PredicateValueCheck<VoxelSize<PR, PC, PT>> {
 };
 
 template <>
-struct PredicateValueCheck<VoxelSizeInterval> {
-	using Pred = VoxelSizeInterval;
+struct PredicateValueCheck<SizeInterval> {
+	using Pred = SizeInterval;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -340,32 +298,31 @@ struct PredicateValueCheck<Modified> {
 	using Pred = Modified;
 
 	template <class Map>
-	static constexpr bool apply(Pred const&, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const& m, Node n) noexcept
 	{
 		return m.isModified(n);
 	}
 };
 
 template <>
-struct PredicateValueCheck<ChildrenOf> {
-	using Pred = ChildrenOf;
+struct PredicateValueCheck<ChildOf> {
+	using Pred = ChildOf;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const&, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const&, Node n) noexcept
 	{
-		return n.depth() < p.node.depth() &&
-		       n.code().toDepth(p.node.depth()) == p.node.depth();
+		return n.depth() < p.code.depth() && n.code().toDepth(p.code.depth()) == p.code;
 	}
 };
 
 template <>
-struct PredicateValueCheck<CodePrefix> {
-	using Pred = CodePrefix;
+struct PredicateValueCheck<Index> {
+	using Pred = Index;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const&, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const&, Node n) noexcept
 	{
-		return n.depth() <= p.code.depth() && n.code().toDepth(p.code.depth()) == p.code;
+		return p.index == n.index();
 	}
 };
 
@@ -374,47 +331,24 @@ struct PredicateValueCheck<CodePrefix> {
 //
 
 template <>
-struct PredicateInnerCheck<PureLeaf> {
-	using Pred = PureLeaf;
+struct PredicateInnerCheck<Leaf> {
+	using Pred = Leaf;
 
 	template <class Map>
-	static constexpr bool apply(Pred const&, Map const&, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node n) noexcept
 	{
 		return 0 != n.depth();
 	}
 };
 
 template <>
-struct PredicateInnerCheck<Leaf> {
-	using Pred = Leaf;
+struct PredicateInnerCheck<Inner> {
+	using Pred = Inner;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node n)
 	{
-		return n.depth() > p.min_depth;
-	}
-};
-
-template <PredicateRounding PR>
-struct PredicateInnerCheck<LeafVoxelSize<PR>> {
-	using Pred = LeafVoxelSize<PR>;
-
-	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
-	{
-		if (p.leaf_modified) {
-			double temp = std::max(0.0, (m.resolution() / p.resolution) + 1.0);
-			if constexpr (PredicateRounding::NEAREST == PR) {
-				p.leaf.depth = std::round(temp);
-			} else if constexpr (PredicateRounding::FLOOR == PR) {
-				p.leaf.depth = std::floor(temp);
-			} else {
-				p.leaf.depth = std::ceil(temp);
-			}
-			p.leaf_modified = false;
-		}
-
-		return PredicateInnerCheck<std::decay_t<decltype(p.leaf)>>::apply(p.leaf, m, n);
+		return 1 < n.depth() && Map::isParent(n);
 	}
 };
 
@@ -423,9 +357,20 @@ struct PredicateInnerCheck<Parent> {
 	using Pred = Parent;
 
 	template <class Map>
-	static constexpr bool apply(Pred const&, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node n)
 	{
-		return Map::isParent(n);
+		return 1 < n.depth() && Map::isParent(n);
+	}
+};
+
+template <>
+struct PredicateInnerCheck<Allocated> {
+	using Pred = Allocated;
+
+	template <class Map>
+	static constexpr bool apply(Pred, Map const&, Node n)
+	{
+		return Map::isParent(n);  // TODO: Look at
 	}
 };
 
@@ -434,7 +379,7 @@ struct PredicateInnerCheck<Depth<PC, PT>> {
 	using Pred = Depth<PC, PT>;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		if constexpr (PredicateType::RETURN == PT) {
 			return PredicateValueCheck<Pred>::apply(p, m, n);
@@ -459,7 +404,7 @@ struct PredicateInnerCheck<DepthInterval> {
 	using Pred = DepthInterval;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -467,11 +412,11 @@ struct PredicateInnerCheck<DepthInterval> {
 };
 
 template <PredicateRounding PR, PredicateCompare PC, PredicateType PT>
-struct PredicateInnerCheck<VoxelSize<PR, PC, PT>> {
-	using Pred = VoxelSize<PR, PC, PT>;
+struct PredicateInnerCheck<Size<PR, PC, PT>> {
+	using Pred = Size<PR, PC, PT>;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		if constexpr (PredicateType::RETURN == PT) {
 			return PredicateValueCheck<Pred>::apply(p, m, n);
@@ -494,11 +439,11 @@ struct PredicateInnerCheck<VoxelSize<PR, PC, PT>> {
 };
 
 template <>
-struct PredicateInnerCheck<VoxelSizeInterval> {
-	using Pred = VoxelSizeInterval;
+struct PredicateInnerCheck<SizeInterval> {
+	using Pred = SizeInterval;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
 	{
 		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -510,39 +455,32 @@ struct PredicateInnerCheck<Modified> {
 	using Pred = Modified;
 
 	template <class Map>
-	static constexpr bool apply(Pred const&, Map const& m, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const& m, Node n) noexcept
 	{
 		return m.isModified(n);
 	}
 };
 
 template <>
-struct PredicateInnerCheck<ChildrenOf> {
-	using Pred = ChildrenOf;
+struct PredicateInnerCheck<ChildOf> {
+	using Pred = ChildOf;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const&, Node const& n) noexcept
+	static constexpr bool apply(Pred p, Map const&, Node n) noexcept
 	{
-		if (n.depth() <= p.node.depth()) {
-			return n.code().toDepth(p.node.depth()) == p.node.code();
-		} else {
-			return n.code() == p.node.code().toDepth(n.depth());
-		}
+		return n.depth() > p.code.depth() ? n.code() == p.code.toDepth(n.depth())
+		                                  : n.code().toDepth(p.code.depth()) == p.code;
 	}
 };
 
 template <>
-struct PredicateInnerCheck<CodePrefix> {
-	using Pred = CodePrefix;
+struct PredicateInnerCheck<Index> {
+	using Pred = Index;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const&, Node const& n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node) noexcept
 	{
-		if (n.depth() <= p.code.depth()) {
-			return n.code().toDepth(p.code.depth()) == p.code;
-		} else {
-			return n.code() == p.code.toDepth(n.depth());
-		}
+		return true;
 	}
 };
 }  // namespace ufo::map::predicate

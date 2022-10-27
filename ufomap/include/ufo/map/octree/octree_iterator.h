@@ -148,13 +148,8 @@ class IteratorBase
 	[[nodiscard]] constexpr bool validInnerNode(NodeType const& node,
 	                                            Predicates const& predicates) const
 	{
-		if constexpr (OnlyRealNodes) {
-			return isParent(node) &&
-			       predicate::PredicateInnerCheck<Predicates>::apply(predicates, *tree_, node);
-		} else {
-			return !isPureLeaf(node) &&
-			       predicate::PredicateInnerCheck<Predicates>::apply(predicates, *tree_, node);
-		}
+		return 0 != node.depth() &&
+		       predicate::PredicateInnerCheck<Predicates>::apply(predicates, *tree_, node);
 	}
 
 	template <class NodeType, class Predicates>
@@ -224,7 +219,7 @@ class IteratorWrapper
 	std::unique_ptr<Base> it_base_;
 };
 
-template <class BaseNodeType, bool OnlyRealNodes, class Tree, class NodeType = Node,
+template <class BaseNodeType, bool EarlyStopping, class Tree, class NodeType = Node,
           class Predicates = predicate::TRUE>
 class Iterator : public IteratorBase<Tree, BaseNodeType>
 {

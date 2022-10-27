@@ -173,26 +173,22 @@ struct Node {
 	[[nodiscard]] constexpr void const* data() const noexcept { return data_; }
 
 	/*!
-	 * @brief Get the real depth of the node.
-	 *
-	 * @return The real depth.
+	 * @return Get the depth of the data.
 	 */
-	[[nodiscard]] constexpr depth_t realDepth() const noexcept { return real_depth_; }
+	[[nodiscard]] constexpr depth_t dataDepth() const noexcept { return real_depth_; }
 
 	/*!
-	 * @brief Whether the node is at the real depth.
-	 *
-	 * @return Whether the node is at the real depth.
+	 * @return Whether data points to same node as the code.
 	 */
-	[[nodiscard]] constexpr bool isReal() const noexcept { return depth() == realDepth(); }
+	[[nodiscard]] constexpr bool isReal() const noexcept { return depth() == dataDepth(); }
 
  protected:
 	// Pointer to the actual node
 	void* data_ = nullptr;
 	// The code for the node
 	Code code_;
-	// The real depth of the node
-	depth_t real_depth_ = 0;
+	// The depth of the data
+	depth_t data_depth_ = 0;
 
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
 	          bool CountNodes>
