@@ -63,14 +63,16 @@ void msgToUfo(ufomap_msgs::UFOMap const& msg, Map& map, bool propagate = true)
 		return;
 	}
 
-	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-	data.imbue(std::locale());
+	map.read(msg.data, propagate);
 
-	data.write(reinterpret_cast<char const*>(msg.data.data()),
-	           sizeof(typename decltype(msg.data)::value_type) * msg.data.size());
+	// std::stringstream data(std::ios_base::in | std::ios_base::out |
+	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
+	// std::stringstream::badbit); data.imbue(std::locale());
 
-	map.read(data, propagate);
+	// data.write(reinterpret_cast<char const*>(msg.data.data()),
+	//            sizeof(typename decltype(msg.data)::value_type) * msg.data.size());
+
+	// map.read(data, propagate);
 }
 
 //
@@ -84,16 +86,19 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, Predicates const& predicates,
                              int compression_acceleration_level = 1,
                              int compression_level = 0)
 {
-	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-	data.imbue(std::locale());
+	// std::stringstream data(std::ios_base::in | std::ios_base::out |
+	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
+	// std::stringstream::badbit); data.imbue(std::locale());
 
-	map.write(data, predicates, depth, compress, compression_acceleration_level,
-	          compression_level);
+	// map.write(data, predicates, depth, compress, compression_acceleration_level,
+	//           compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.resize(data.tellp());
-	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
+	msg.data = map.write(predicates, depth, compress, compression_acceleration_level,
+	                     compression_level);
+	// msg.data.resize(data.tellp());
+	// data.read(reinterpret_cast<char*>(msg.data.data()),
+	// std::streamsize(msg.data.size()));
 
 	return msg;
 }
@@ -104,15 +109,18 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, unsigned int depth = 0,
                              int compression_acceleration_level = 1,
                              int compression_level = 0)
 {
-	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-	data.imbue(std::locale());
+	// std::stringstream data(std::ios_base::in | std::ios_base::out |
+	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
+	// std::stringstream::badbit); data.imbue(std::locale());
 
-	map.write(data, depth, compress, compression_acceleration_level, compression_level);
+	// map.write(data, depth, compress, compression_acceleration_level, compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.resize(data.tellp());
-	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
+	msg.data =
+	    map.write(depth, compress, compression_acceleration_level, compression_level);
+	// msg.data.resize(data.tellp());
+	// data.read(reinterpret_cast<char*>(msg.data.data()),
+	// std::streamsize(msg.data.size()));
 
 	return msg;
 }
@@ -122,17 +130,31 @@ ufomap_msgs::UFOMap ufoToMsgUpdateModified(Map& map, bool compress = false,
                                            int compression_acceleration_level = 1,
                                            int compression_level = 0)
 {
-	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-	data.imbue(std::locale());
+	// std::stringstream data(std::ios_base::in | std::ios_base::out |
+	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
+	// std::stringstream::badbit); data.imbue(std::locale());
 
-	map.writeAndUpdateModified(data, compress, compression_acceleration_level,
-	                           compression_level);
+	// map.writeAndUpdateModified(data, compress, compression_acceleration_level,
+	//                            compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.resize(data.tellp());
-	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
+	msg.data = map.writeAndUpdateModified(compress, compression_acceleration_level,
+	                                      compression_level);
+	// msg.data.resize(data.tellp());
+	// data.read(reinterpret_cast<char*>(msg.data.data()),
+	// std::streamsize(msg.data.size()));
 
+	return msg;
+}
+
+template <class Map>
+ufomap_msgs::UFOMap ufoToMsgPruneModified(Map& map, bool compress = false,
+                                          int compression_acceleration_level = 1,
+                                          int compression_level = 0)
+{
+	ufomap_msgs::UFOMap msg;
+	msg.data = map.writeAndPruneModified(compress, compression_acceleration_level,
+	                                     compression_level);
 	return msg;
 }
 
@@ -141,16 +163,19 @@ ufomap_msgs::UFOMap ufoToMsgClearModified(Map& map, bool compress = false,
                                           int compression_acceleration_level = 1,
                                           int compression_level = 0)
 {
-	std::stringstream data(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-	data.exceptions(std::stringstream::failbit | std::stringstream::badbit);
-	data.imbue(std::locale());
+	// std::stringstream data(std::ios_base::in | std::ios_base::out |
+	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
+	// std::stringstream::badbit); data.imbue(std::locale());
 
-	map.writeAndClearModified(data, compress, compression_acceleration_level,
-	                          compression_level);
+	// map.writeAndClearModified(data, compress, compression_acceleration_level,
+	//                           compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data.resize(data.tellp());
-	data.read(reinterpret_cast<char*>(msg.data.data()), std::streamsize(msg.data.size()));
+	msg.data = map.writeAndClearModified(data, compress, compression_acceleration_level,
+	                                     compression_level);
+	// msg.data.resize(data.tellp());
+	// data.read(reinterpret_cast<char*>(msg.data.data()),
+	// std::streamsize(msg.data.size()));
 
 	return msg;
 }

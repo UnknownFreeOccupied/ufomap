@@ -67,8 +67,7 @@ struct Inner {
 struct Parent {
 };
 
-// FIXME: Change name
-struct Allocated {
+struct Exists {
 };
 
 template <PredicateCompare PC = PredicateCompare::EQUAL,
@@ -182,9 +181,9 @@ struct PredicateValueCheck<Leaf> {
 	using Pred = Leaf;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node n)
+	static constexpr bool apply(Pred, Map const& m, Node n)
 	{
-		return Map::isLeaf(n);
+		return m.isLeaf(n);
 	}
 };
 
@@ -204,20 +203,20 @@ struct PredicateValueCheck<Parent> {
 	using Pred = Parent;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node n)
+	static constexpr bool apply(Pred, Map const& m, Node n)
 	{
-		return Map::isParent(n);
+		return m.isParent(n);
 	}
 };
 
 template <>
-struct PredicateValueCheck<Allocated> {
-	using Pred = Allocated;
+struct PredicateValueCheck<Exists> {
+	using Pred = Exists;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node n)
+	static constexpr bool apply(Pred, Map const& m, Node n)
 	{
-		return Map::isReal(n);  // TODO: Look at
+		return m.exists(n);  // TODO: Look at
 	}
 }
 
@@ -263,7 +262,7 @@ struct PredicateValueCheck<Size<PR, PC, PT>> {
 	using Pred = Size<PR, PC, PT>;
 
 	template <class Map>
-	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
+	static constexpr bool apply(Pred const& p, Map const& m, Node n) noexcept
 	{
 		if (p.depth_modified) {
 			double temp = std::max(0.0, (m.resolution() / p.resolution) + 1.0);
@@ -286,7 +285,7 @@ struct PredicateValueCheck<SizeInterval> {
 	using Pred = SizeInterval;
 
 	template <class Map>
-	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
+	static constexpr bool apply(Pred const& p, Map const& m, Node n) noexcept
 	{
 		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -346,9 +345,9 @@ struct PredicateInnerCheck<Inner> {
 	using Pred = Inner;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node n)
+	static constexpr bool apply(Pred, Map const& m, Node n)
 	{
-		return 1 < n.depth() && Map::isParent(n);
+		return 1 < n.depth() && m.isParent(n);
 	}
 };
 
@@ -357,20 +356,20 @@ struct PredicateInnerCheck<Parent> {
 	using Pred = Parent;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node n)
+	static constexpr bool apply(Pred, Map const& m, Node n)
 	{
-		return 1 < n.depth() && Map::isParent(n);
+		return 1 < n.depth() && m.isParent(n);
 	}
 };
 
 template <>
-struct PredicateInnerCheck<Allocated> {
-	using Pred = Allocated;
+struct PredicateInnerCheck<Exists> {
+	using Pred = Exists;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node n)
+	static constexpr bool apply(Pred, Map const& m, Node n)
 	{
-		return Map::isParent(n);  // TODO: Look at
+		return m.isParent(n);
 	}
 };
 
@@ -416,7 +415,7 @@ struct PredicateInnerCheck<Size<PR, PC, PT>> {
 	using Pred = Size<PR, PC, PT>;
 
 	template <class Map>
-	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
+	static constexpr bool apply(Pred const& p, Map const& m, Node n) noexcept
 	{
 		if constexpr (PredicateType::RETURN == PT) {
 			return PredicateValueCheck<Pred>::apply(p, m, n);
@@ -443,7 +442,7 @@ struct PredicateInnerCheck<SizeInterval> {
 	using Pred = SizeInterval;
 
 	template <class Map>
-	static constexpr bool apply(Pred p, Map const& m, Node n) noexcept
+	static constexpr bool apply(Pred const& p, Map const& m, Node n) noexcept
 	{
 		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);

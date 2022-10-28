@@ -88,10 +88,9 @@ struct PredicateValueCheck<TimeMap> {
 	using Pred = TimeMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
-	    -> decltype(m.time(n), true)
+	static constexpr auto apply(Pred, Map const& m, Node n) -> decltype(m.time(n), true)
 	{
-		return true;
+		return true;  // TODO: Improve
 	}
 
 	static constexpr bool apply(...) { return false; }
@@ -117,7 +116,7 @@ struct PredicateValueCheck<Time<PC>> {
 	using Pred = Time<PC>;
 
 	template <class Map>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	static constexpr bool apply(Pred p, Map const& m, Node n)
 	{
 		if constexpr (PredicateCompare::EQUAL == PC) {
 			return m.time(n) == p.time;
@@ -140,7 +139,7 @@ struct PredicateValueCheck<TimeInterval> {
 	using Pred = TimeInterval;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred p, Map const& m, Node n)
 	{
 		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -156,8 +155,7 @@ struct PredicateInnerCheck<TimeMap> {
 	using Pred = TimeMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
-	    -> decltype(m.time(n), true)
+	static constexpr auto apply(Pred, Map const& m, Node n) -> decltype(m.time(n), true)
 	{
 		return true;
 	}
@@ -185,7 +183,7 @@ struct PredicateInnerCheck<Time<PC>> {
 	using Pred = Time<PC>;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred p, Map const& m, Node n)
 	{
 		// FIXME: Check how time step is propagated to determine
 
@@ -210,7 +208,7 @@ struct PredicateInnerCheck<TimeInterval> {
 	using Pred = TimeInterval;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred p, Map const& m, Node n)
 	{
 		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);

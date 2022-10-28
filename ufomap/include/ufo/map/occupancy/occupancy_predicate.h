@@ -144,10 +144,9 @@ struct PredicateValueCheck<OccupancyMap> {
 	using Pred = OccupancyMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
-	    -> decltype(m.isUnknown(n), true)
+	static constexpr auto apply(Pred, Map const&, Node) -> decltype(m.isUnknown(n), true)
 	{
-		return true;
+		return true;  // TODO: Improve
 	}
 
 	static constexpr bool apply(...) { return false; }
@@ -168,18 +167,18 @@ struct PredicateValueCheck<THEN<OccupancyMap, PredPost>> {
 	}
 };
 
-template <map::OccupancyState state>
-struct PredicateValueCheck<OccupancyState<state>> {
-	using Pred = OccupancyState<state>;
+template <map::OccupancyState State>
+struct PredicateValueCheck<OccupancyState<State>> {
+	using Pred = OccupancyState<State>;
 
 	template <class Map>
-	static inline bool apply(Pred const&, Map const& m, Node const& n)
+	static inline bool apply(Pred, Map const& m, Node n)
 	{
-		if constexpr (map::OccupancyState::UNKNOWN == state) {
+		if constexpr (map::OccupancyState::UNKNOWN == State) {
 			return m.isUnknown(n);
-		} else if constexpr (map::OccupancyState::FREE == state) {
+		} else if constexpr (map::OccupancyState::FREE == State) {
 			return m.isFree(n);
-		} else if constexpr (map::OccupancyState::OCCUPIED == state) {
+		} else if constexpr (map::OccupancyState::OCCUPIED == State) {
 			return m.isOccupied(n);
 		} else {
 			static_assert("Non-supported occupancy state.");
@@ -192,25 +191,25 @@ struct PredicateValueCheck<OccupancyStates> {
 	using Pred = OccupancyStates;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred p, Map const& m, Node n)
 	{
 		return (p.unknown && m.isUnknown(n)) || (p.free && m.isFree(n)) ||
 		       (p.occupied && m.isOccupied(n));
 	}
 };
 
-template <map::OccupancyState state>
-struct PredicateValueCheck<ContainOccupancyState<state>> {
-	using Pred = ContainOccupancyState<state>;
+template <map::OccupancyState State>
+struct PredicateValueCheck<ContainOccupancyState<State>> {
+	using Pred = ContainOccupancyState<State>;
 
 	template <class Map>
-	static inline bool apply(Pred const&, Map const& m, Node const& n)
+	static inline bool apply(Pred, Map const& m, Node n)
 	{
-		if constexpr (map::OccupancyState::UNKNOWN == state) {
+		if constexpr (map::OccupancyState::UNKNOWN == State) {
 			return m.containsUnknown(n);
-		} else if constexpr (map::OccupancyState::FREE == state) {
+		} else if constexpr (map::OccupancyState::FREE == State) {
 			return m.containsFree(n);
-		} else if constexpr (map::OccupancyState::OCCUPIED == state) {
+		} else if constexpr (map::OccupancyState::OCCUPIED == State) {
 			return m.containsOccupied(n);
 		} else {
 			static_assert("Non-supported occupancy state.");
@@ -223,7 +222,7 @@ struct PredicateValueCheck<ContainOccupancyStates> {
 	using Pred = ContainOccupancyStates;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred p, Map const& m, Node n)
 	{
 		return (p.unknown && m.containsUnknown(n)) || (p.free && m.containsFree(n)) ||
 		       (p.occupied && m.containsOccupied(n));
@@ -235,7 +234,7 @@ struct PredicateValueCheck<Occupancy<PC>> {
 	using Pred = Occupancy<PC>;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node n)
 	{
 		if (p.occupancy_modified) {
 			if constexpr (std::is_same_v<uint8_t, typename Map::logit_t>) {
@@ -283,7 +282,7 @@ struct PredicateValueCheck<OccupancyInterval> {
 	using Pred = OccupancyInterval;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node n)
 	{
 		return PredicateValueCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateValueCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);
@@ -299,7 +298,7 @@ struct PredicateInnerCheck<OccupancyMap> {
 	using Pred = OccupancyMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred const&, Map const& m, Node const& n)
+	static constexpr auto apply(Pred, Map const& m, Node n)
 	    -> decltype(m.isOccupied(n), true)
 	{
 		return true;
@@ -323,18 +322,18 @@ struct PredicateInnerCheck<THEN<OccupancyMap, PredPost>> {
 	}
 };
 
-template <map::OccupancyState state>
-struct PredicateInnerCheck<OccupancyState<state>> {
-	using Pred = OccupancyState<state>;
+template <map::OccupancyState State>
+struct PredicateInnerCheck<OccupancyState<State>> {
+	using Pred = OccupancyState<State>;
 
 	template <class Map>
-	static inline bool apply(Pred const&, Map const& m, Node const& n)
+	static inline bool apply(Pred, Map const& m, Node n)
 	{
-		if constexpr (map::OccupancyState::UNKNOWN == state) {
+		if constexpr (map::OccupancyState::UNKNOWN == State) {
 			return m.containsUnknown(n);
-		} else if constexpr (map::OccupancyState::FREE == state) {
+		} else if constexpr (map::OccupancyState::FREE == State) {
 			return m.containsFree(n);
-		} else if constexpr (map::OccupancyState::OCCUPIED == state) {
+		} else if constexpr (map::OccupancyState::OCCUPIED == State) {
 			return m.containsOccupied(n);
 		} else {
 			static_assert("Non-supported occupancy state.");
@@ -347,7 +346,7 @@ struct PredicateInnerCheck<OccupancyStates> {
 	using Pred = OccupancyStates;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred p, Map const& m, Node n)
 	{
 		return (p.unknown && m.containsUnknown(n)) || (p.free && m.containsFree(n)) ||
 		       (p.occupied && m.containsOccupied(n));
@@ -359,7 +358,7 @@ struct PredicateInnerCheck<ContainOccupancyState<state>> {
 	using Pred = ContainOccupancyState<state>;
 
 	template <class Map>
-	static inline bool apply(Pred const&, Map const& m, Node const& n)
+	static inline bool apply(Pred, Map const& m, Node n)
 	{
 		if constexpr (map::OccupancyState::UNKNOWN == state) {
 			return m.containsUnknown(n);
@@ -378,7 +377,7 @@ struct PredicateInnerCheck<ContainOccupancyStates> {
 	using Pred = ContainOccupancyStates;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred p, Map const& m, Node n)
 	{
 		return (p.unknown && m.containsUnknown(n)) || (p.free && m.containsFree(n)) ||
 		       (p.occupied && m.containsOccupied(n));
@@ -390,7 +389,7 @@ struct PredicateInnerCheck<Occupancy<PC>> {
 	using Pred = Occupancy<PC>;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node n)
 	{
 		if (p.occupancy_modified) {
 			if constexpr (std::is_same_v<uint8_t, typename Map::logit_t>) {
@@ -440,7 +439,7 @@ struct PredicateInnerCheck<OccupancyInterval> {
 	using Pred = OccupancyInterval;
 
 	template <class Map>
-	static inline bool apply(Pred const& p, Map const& m, Node const& n)
+	static inline bool apply(Pred const& p, Map const& m, Node n)
 	{
 		return PredicateInnerCheck<std::decay_t<decltype(p.min)>>::apply(p.min, m, n) &&
 		       PredicateInnerCheck<std::decay_t<decltype(p.max)>>::apply(p.max, m, n);

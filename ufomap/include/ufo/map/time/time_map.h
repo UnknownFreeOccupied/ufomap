@@ -243,14 +243,24 @@ class TimeMap
 		return dataIdentifier() == identifier;
 	}
 
+	template <class InputIt>
+	[[nodiscard]] static constexpr std::size_t numData() noexcept
+	{
+		using value_type = typename std::iterator_traits<InputIt>::value_type;
+		using node_type = typename value_type::node_type;
+		return node_type::timeSize();
+	}
+
+	template <class InputIt>
+	std::size_t serializedSize(InputIt first, InputIt last) const
+	{
+		return numData<InputIt>() * std::distance(first, last) * sizeof(time_t);
+	}
+
 	template <class OutputIt>
 	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		if (first == last) {
-			return;
-		}
-
-		auto const N = first->node.time.size();
+		constexpr auto N = numData<InputIt>();
 
 		auto size = std::distance(first, last) * N;
 
@@ -272,23 +282,55 @@ class TimeMap
 		}
 	}
 
+	template <class OutputIt>
+	void readNodes(std::vector<std::uint8_t> const& in, std::size_t& index, OutputIt first,
+	               OutputIt last) const
+	{
+		constexpr auto N = numData<InputIt>();
+
+		constexpr std::size_t count = N * sizeof(time_t);
+
+		auto d = in.data() + index;
+		index += serializedSize(first, last);
+		for (; first != last; ++first, d += count) {
+			if (first->index_field.all()) {
+				std::memcpy(first->node.time.data(), d, count);
+			} else {
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						std::memcpy(&first->node.time[i], d + (i * sizeof(time_t)), sizeof(time_t));
+					}
+				}
+			}
+		}
+	}
+
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		if (first == last) {
-			return;
-		}
-
-		auto size = std::distance(first, last) * first->node.time.size();
+		auto size = std::distance(first, last) * numData<InputIt>();
 
 		auto data = std::make_unique<time_t[]>(size);
 		auto d = data.get();
 		for (; first != last; ++first) {
-			d = std::copy(std::begin(first->node.time), std::end(first->node.time), d);
+			d = copy(first->node.time, d);
 		}
 
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          size * sizeof(typename decltype(data)::element_type));
+	}
+
+	template <class InputIt>
+	void writeNodes(std::vector<std::uint8_t>& out, std::size_t& index, InputIt first,
+	                InputIt last) const
+	{
+		constexpr std::size_t count = numData<InputIt>() * sizeof(time_t);
+
+		auto d = out.data() + index;
+		index += serializedSize(first, last);
+		for (; first != last; ++first, d += count) {
+			std::memcpy(d, first->node.time.data(), count);
+		}
 	}
 
  protected:

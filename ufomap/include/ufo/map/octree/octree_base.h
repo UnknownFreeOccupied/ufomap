@@ -472,6 +472,13 @@ class OctreeBase
 		return !isLeaf(x, y, z, depth);
 	}
 
+	// TODO: Add comment
+	[[nodiscard]] constexpr bool exists(Node node) const
+	{
+		node = operator()(node);
+		return node.isReal();
+	}
+
 	/**************************************************************************************
 	|                                                                                     |
 	|                                      Modified                                       |

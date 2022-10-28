@@ -331,17 +331,23 @@ class ColorMap
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr uint8_t numData() noexcept
+	[[nodiscard]] static constexpr std::size_t numData() noexcept
 	{
 		using value_type = typename std::iterator_traits<InputIt>::value_type;
 		using node_type = typename value_type::node_type;
 		return node_type::colorSize();
 	}
 
+	template <class InputIt>
+	std::size_t serializedSize(InputIt first, InputIt last) const
+	{
+		return 3 * numData<InputIt>() * std::distance(first, last) * sizeof(color_t);
+	}
+
 	template <class OutputIt>
 	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		constexpr uint8_t const N = numData<OutputIt>();
+		constexpr std::uint8_t const N = numData<OutputIt>();
 		constexpr auto const S = 3 * N;
 		auto const num_data = std::distance(first, last) * S;
 		auto data = std::make_unique<color_t[]>(num_data);
@@ -367,7 +373,7 @@ class ColorMap
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr uint8_t const N = numData<InputIt>();
+		constexpr std::uint8_t const N = numData<InputIt>();
 		constexpr auto const S = 3 * N;
 		auto const num_data = std::distance(first, last) * S;
 		auto data = std::make_unique<color_t[]>(num_data);
