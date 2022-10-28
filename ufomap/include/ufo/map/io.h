@@ -46,9 +46,12 @@
 #include <ufo/map/types.h>
 
 // STL
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -130,28 +133,120 @@ template <typename T>
 template <typename T>
 [[nodiscard]] constexpr inline DataType dataType(T const)
 {
-	return dataType<T>();
+	return dataType<>();
 }
+
+// Data storage
+class SharedReadBuffer
+{
+ public:
+	SharedReadBuffer& read(std::uint8_t* dest, std::size_t count)
+	{
+		if (size() < index_ + count) {
+			// TODO: Fill in exception message
+			throw std::out_of_range("");
+		}
+
+		std::memmove(dest, data_.get() + index_, count);
+		index_ += count;
+
+		return *this;
+	}
+
+	[[nodiscard]] constexpr std::size_t size() const noexcept { return size_; }
+
+	[[nodiscard]] constexpr std::size_t readIndex() const noexcept { return index_; }
+
+	constexpr void setReadIndex(std::size_t index) noexcept { index_ = index; }
+
+ private:
+	std::uint8_t const* data_ = nullptr;
+	std::size_t size_ = 0;
+	std::size_t index_ = 0;
+};
+
+class SharedWriteBuffer
+{
+	SharedWriteBuffer& write(std::uint8_t const* src, std::size_t count)
+	{
+		if (capacity() < index_ + count) {
+			reserve(index_ + count);
+		}
+
+		std::memmove(data_.get() + index_, src, count);
+		index_ += count;
+
+		size_ = std::max(size_, index_);
+
+		return *this;
+	}
+
+	void reserve(std::size_t new_cap)
+	{
+		auto p_cur = data_.release();
+		auto p_new =
+		    static_cast<std::uint8_t*>(realloc(p_cur, new_cap * sizeof(std::uint8_t)));
+
+		if (!p_new) {
+			data_.reset(p_cur);
+			throw std::bad_alloc();
+		}
+
+		data_.reset(p_new);
+		cap_ = new_cap;
+	}
+
+	[[nodiscard]] constexpr std::size_t size() const noexcept { return size_; }
+
+	[[nodiscard]] constexpr std::size_t capacity() const noexcept { return cap_; }
+
+	[[nodiscard]] constexpr std::size_t writeIndex() const noexcept { return index_; }
+
+	constexpr void setWriteIndex(std::size_t index) noexcept { index_ = index; }
+
+ private:
+	std::uint8_t* data_ = nullptr;
+	std::size_t size_ = 0;
+	std::size_t cap_ = 0;
+	std::size_t index_ = 0;
+};
+
+class SharedBuffer : public SharedReadBuffer, public SharedWriteBuffer
+{
+ public:
+	// TODO: Implement
+
+	using SharedWriteBuffer::size;
+};
 
 [[nodiscard]] bool isUFOMap(std::filesystem::path const& filename);
 
-[[nodiscard]] bool isUFOMap(std::istream& in_stream);
+[[nodiscard]] bool isUFOMap(std::istream& in);
+
+[[nodiscard]] bool isUFOMap(std::vector<std::uint8_t> const& in, std::size_t& index);
 
 [[nodiscard]] FileHeader readHeader(std::filesystem::path const& filename);
 
-[[nodiscard]] FileHeader readHeader(std::istream& in_stream);
+[[nodiscard]] FileHeader readHeader(std::istream& in);
 
-void writeHeader(std::ostream& out_stream, FileOptions const& options);
+[[nodiscard]] FileHeader readHeader(std::vector<std::uint8_t> const& in,
+                                    std::size_t& index);
 
-bool compressData(std::istream& in_stream, std::ostream& out_stream,
+void writeHeader(std::ostream& out, FileOptions const& options);
+
+void writeHeader(std::vector<std::uint8_t>& out, std::size_t& index,
+                 FileOptions const& options);
+
+std::size_t maxSizeCompressed(std::size_t uncompressed_size);
+
+bool compressData(std::istream& in, std::ostream& out,
                   std::uint64_t uncompressed_data_size, int acceleration_level = 1,
                   int compression_level = 0);
 
-bool decompressData(std::istream& in_stream, std::ostream& out_stream,
+bool decompressData(std::istream& in, std::ostream& out,
                     std::uint64_t uncompressed_data_size);
 
-bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    std::uint64_t uncompressed_data_size,
-                    std::uint64_t& compressed_data_size);
+bool decompressData(std::istream& in, std::ostream& out,
+                    std::uint64_t uncompressed_data_size);
 }  // namespace ufo::map
 #endif  // UFO_MAP_IO_H

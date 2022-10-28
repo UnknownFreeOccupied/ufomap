@@ -84,7 +84,7 @@ template <class Derived, class Data, class InnerData = void, bool ReuseNodes = f
 class OctreeBase
 {
  private:
-	using LeafNode = OctreeLeafNode<Data>;
+	using LeafNode = OctreeLeafNode<Data, ReuseNodes>;
 	using InnerNode = OctreeInnerNode<LeafNode, InnerData>;
 	using typename InnerNode::InnerNodeBlock;
 	using typename InnerNode::LeafNodeBlock;
@@ -471,6 +471,10 @@ class OctreeBase
 	{
 		return !isLeaf(x, y, z, depth);
 	}
+
+	//
+	// Exists
+	//
 
 	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(Node node) const

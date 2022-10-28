@@ -43,6 +43,7 @@
 #define UFO_MAP_OCTREE_OCTREE_NODE_H
 
 // UFO
+#include <ufo/map/code.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -75,11 +76,49 @@ struct OctreeNode : Nodes... {
 	}
 };
 
-template <class Data>
+template <class Data, bool ReuseNodes>
 struct OctreeLeafNode : Data {
+	// Code for this node
+	Code code;
+
 	// Indicates whether this node has to be updated (get information from children and/or
 	// update indicators). Useful when propagating information up the tree
 	IndexField modified;
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeLeafNode const& other, index_t index)
+	{
+		if (other.modified[index]) {
+			modified.set();
+		} else {
+			modified.reset();
+		}
+
+		Data::fill(other, index);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
+	                                           index_t index) const
+	{
+		return Data::isCollapsible(parent, index);
+	}
+};
+
+template <class Data>
+struct OctreeLeafNode<Data, false> {
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	IndexField modified;
+
+	// Indicates whether this node actual is part of the octree
+	IndexField exists;
 
 	//
 	// Fill

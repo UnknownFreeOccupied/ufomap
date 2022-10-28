@@ -122,11 +122,25 @@ void writeHeader(std::ostream& out_stream, FileOptions const& options)
 	out_stream.write(reinterpret_cast<char const*>(&depth_levels), sizeof(depth_levels));
 }
 
+std::size_t maxSizeCompressed(std::size_t uncompressed_size)
+{
+	constexpr std::size_t max = std::numeric_limits<std::int32_t>::max();
+
+	std::size_t compressed_size = 0;
+
+	for (std::size_t size = std::min(max, uncompressed_size); 0 != size;
+	     uncompressed_size -= size, size = std::min(max, uncompressed_size)) {
+		compressed_size += size;
+	}
+
+	return compressed_size;
+}
+
 bool compressData(std::istream& in_stream, std::ostream& out_stream,
                   std::uint_fast64_t uncompressed_data_size, int acceleration_level,
                   int compression_level)
 {
-	static constexpr uint_fast64_t max = std::numeric_limits<int32_t>::max();
+	constexpr std::uint_fast64_t max = std::numeric_limits<std::int32_t>::max();
 
 	std::uint_fast64_t begin = 0;
 	std::uint_fast64_t end = std::min(max, uncompressed_data_size);
@@ -198,8 +212,7 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 }
 
 bool decompressData(std::istream& in_stream, std::ostream& out_stream,
-                    std::uint_fast64_t uncompressed_data_size,
-                    std::uint_fast64_t& compressed_data_size)
+                    std::uint_fast64_t uncompressed_data_size)
 {
 	auto regen_buffer = std::make_unique<char[]>(uncompressed_data_size);
 	size_t cur = 0;
@@ -208,8 +221,6 @@ bool decompressData(std::istream& in_stream, std::ostream& out_stream,
 		std::int32_t cur_compressed_data_size;
 		in_stream.read(reinterpret_cast<char*>(&cur_compressed_data_size),
 		               sizeof(cur_compressed_data_size));
-
-		compressed_data_size += cur_compressed_data_size;
 
 		// Decompress data
 		auto compressed_data = std::make_unique<char[]>(cur_compressed_data_size);
