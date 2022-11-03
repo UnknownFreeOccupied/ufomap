@@ -50,7 +50,8 @@
 #include <ufo/map/occupancy/occupancy_map.h>
 #include <ufo/map/octree/octree_map.h>
 // #include <ufo/map/semantic/semantic_map.h>
-#include <ufo/map/surfel/surfel_map.h>
+// #include <ufo/map/surfel/surfel_map.h>
+// #include <ufo/map/reflection/reflection_map.h>
 #include <ufo/map/time/time_map.h>
 
 // STL
@@ -68,7 +69,7 @@ namespace ufo::map
 
 using mt_t = std::uint64_t;
 
-template <mt_t MT, mt_t T, template <class> class Node>
+template <mt_t MT, mt_t T, template <std::size_t> class Node>
 using cond_node_t = std::conditional_t<MT & T, Node<8>, EmptyNode<T>>;
 
 template <bool C, mt_t T, template <typename...> typename Map>
@@ -93,11 +94,11 @@ enum MapType : mt_t {
 	TIME       = mt_t(1) << 1,
 	COLOR      = mt_t(1) << 2,
 	// SEMANTIC   = mt_t(1) << 3,
-	SURFEL     = mt_t(1) << 4,
+	// SURFEL     = mt_t(1) << 4,
 	// DISTANCE   = mt_t(1) << 5,
-	INTENSITY  = mt_t(1) << 6,
-	COUNT      = mt_t(1) << 7,
-	REFLECTION = mt_t(1) << 8,
+	// INTENSITY  = mt_t(1) << 6,
+	// COUNT      = mt_t(1) << 7,
+	// REFLECTION = mt_t(1) << 8,
 	// clang-format on
 };
 
@@ -106,31 +107,31 @@ enum MapType : mt_t {
 //
 
 template <mt_t MapType, bool ReuseNodes = false, bool LockLess = false,
-          bool CountNodes = true>
+          bool PerNodeLock = false, bool TrackNodes = false, bool CountNodes = true>
 class UFOMap
     : public OctreeMap<
           // clang-format off
-          OctreeNodeBase<
-												 // These should be ordered based on size
-												//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
-                         cond_node_t<MapType, SURFEL,     SurfelNode>,
-                        //  cond_node_t<MapType, DISTANCE,   DistanceNode>,
-												 cond_node_t<MapType, REFLECTION, ReflectionNode>,
-												 cond_node_t<MapType, COUNT,      CountNode>,
-                         cond_node_t<MapType, TIME,       TimeNode>,
-												 cond_node_t<MapType, INTENSITY,  IntensityNode>,
-                         cond_node_t<MapType, COLOR,      ColorNode>,
-                         cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
+          OctreeNode<
+							// These should be ordered based on size
+							//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
+							//  cond_node_t<MapType, SURFEL,     SurfelNode>,
+							//  cond_node_t<MapType, DISTANCE,   DistanceNode>,
+							//  cond_node_t<MapType, REFLECTION, ReflectionNode>,
+							//  cond_node_t<MapType, COUNT,      CountNode>,
+							cond_node_t<MapType, TIME,       TimeNode>,
+							//  cond_node_t<MapType, INTENSITY,  IntensityNode>,
+							cond_node_t<MapType, COLOR,      ColorNode>,
+							cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
 					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
-          ReuseNodes, LockLess, CountNodes,
+          ReuseNodes, LockLess, PerNodeLock, TrackNodes, CountNodes,
 					// Order does not matter
           // cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
-          cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
+          // cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
           // cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
-          cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
-          cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
+          // cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
+          // cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
           cond_map_base<MapType & TIME,       TIME,       TimeMap>::template type,
-          cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
+          // cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
           cond_map_base<MapType & COLOR,      COLOR,      ColorMap>::template type,
           cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMap>::template type
           // clang-format on
@@ -139,25 +140,25 @@ class UFOMap
  private:
 	using Base = OctreeMap<
 	    // clang-format off
-			OctreeNodeBase<
-										//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
-										 cond_node_t<MapType, SURFEL,     SurfelNode>,
-										//  cond_node_t<MapType, DISTANCE,   DistanceNode>,
-										 cond_node_t<MapType, REFLECTION, ReflectionNode>,
-										 cond_node_t<MapType, COUNT,      CountNode>,
-										 cond_node_t<MapType, TIME,       TimeNode>,
-										 cond_node_t<MapType, INTENSITY,  IntensityNode>,
-										 cond_node_t<MapType, COLOR,      ColorNode>,
-										 cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
+			OctreeNode<
+					//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
+					//  cond_node_t<MapType, SURFEL,     SurfelNode>,
+					//  cond_node_t<MapType, DISTANCE,   DistanceNode>,
+					//  cond_node_t<MapType, REFLECTION, ReflectionNode>,
+					//  cond_node_t<MapType, COUNT,      CountNode>,
+					cond_node_t<MapType, TIME,       TimeNode>,
+					//  cond_node_t<MapType, INTENSITY,  IntensityNode>,
+					cond_node_t<MapType, COLOR,      ColorNode>,
+					cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
 			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
-			ReuseNodes, LockLess, CountNodes,
+			ReuseNodes, LockLess, PerNodeLock, TrackNodes, CountNodes,
 			// cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
-			cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
+			// cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
 			// cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
-			cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
-			cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
+			// cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
+			// cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
 			cond_map_base<MapType & TIME,       TIME,       TimeMap>::template type,
-			cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
+			// cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
 			cond_map_base<MapType & COLOR,      COLOR,      ColorMap>::template type,
 			cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMap>::template type
 	    // clang-format on
@@ -183,8 +184,10 @@ class UFOMap
 
 	UFOMap(UFOMap const& other) = default;
 
-	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool CountNodes2>
-	UFOMap(UFOMap<MapType2, ReuseNodes2, LockLess2, CountNodes2> const& other) : Base(other)
+	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool PerNodeLock2,
+	          bool CountNodes2>
+	UFOMap(UFOMap<MapType2, ReuseNodes2, LockLess2, PerNodeLock2, CountNodes2> const& other)
+	    : Base(other)
 	{
 	}
 
@@ -196,8 +199,10 @@ class UFOMap
 
 	UFOMap& operator=(UFOMap const& rhs) = default;
 
-	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool CountNodes2>
-	UFOMap& operator=(UFOMap<MapType2, ReuseNodes2, LockLess2, CountNodes2> const& rhs)
+	template <mt_t MapType2, bool ReuseNodes2, bool LockLess2, bool PerNodeLock2,
+	          bool CountNodes2>
+	UFOMap& operator=(
+	    UFOMap<MapType2, ReuseNodes2, LockLess2, PerNodeLock2, CountNodes2> const& rhs)
 	{
 		Base::operator=(rhs);
 		return *this;
@@ -221,20 +226,22 @@ using OccupancyMap    = UFOMap<OCCUPANCY>;
 using TimeMap         = UFOMap<TIME>;
 using ColorMap        = UFOMap<COLOR>;
 // using SemanticMap     = UFOMap<SEMANTIC>;
-using SurfelMap       = UFOMap<SURFEL>;
+// using SurfelMap       = UFOMap<SURFEL>;
 // using DistanceMap     = UFOMap<DISTANCE>;
-using IntensityMap    = UFOMap<INTENSITY>;
-using CountMap        = UFOMap<COUNT>;
-using ReflectionMap   = UFOMap<REFLECTION>;
+// using IntensityMap    = UFOMap<INTENSITY>;
+// using CountMap        = UFOMap<COUNT>;
+// using ReflectionMap   = UFOMap<REFLECTION>;
 // clang-format on
 }  // namespace ufo::map
 
 namespace std
 {
-template <ufo::map::mt_t MapType, bool ReuseNodes, bool LockLess, bool CountNodes>
-void swap(UFOMap<MapType, ReuseNodes, LockLess, CountNodes>& lhs,
-          UFOMap<MapType, ReuseNodes, LockLess, CountNodes>&
-              rhs) noexcept(noexcept(lhs.swap(rhs)))
+template <ufo::map::mt_t MapType, bool ReuseNodes, bool LockLess, bool PerNodeLock,
+          bool TrackNodes, bool CountNodes>
+void swap(ufo::map::UFOMap<MapType, ReuseNodes, LockLess, PerNodeLock, TrackNodes,
+                           CountNodes>& lhs,
+          ufo::map::UFOMap<MapType, ReuseNodes, LockLess, PerNodeLock, TrackNodes,
+                           CountNodes>& rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }

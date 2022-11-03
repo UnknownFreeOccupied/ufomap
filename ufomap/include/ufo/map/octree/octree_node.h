@@ -48,6 +48,7 @@
 
 // STL
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -76,8 +77,46 @@ struct OctreeNode : Nodes... {
 	}
 };
 
-template <class Data, bool ReuseNodes>
+template <class Data, bool Lock, bool Reuse, bool Track>
 struct OctreeLeafNode : Data {
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	IndexField modified;
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeLeafNode const& other, index_t index)
+	{
+		if (other.modified[index]) {
+			modified.set();
+		} else {
+			modified.reset();
+		}
+
+		Data::fill(other, index);
+	}
+
+	//
+	// Clear
+	//
+
+	void clear() {}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
+	                                           index_t index) const
+	{
+		return Data::isCollapsible(parent, index);
+	}
+};
+
+template <class Data>
+struct OctreeLeafNode<Data, false, true, true> : Data {
 	// Code for this node
 	Code code;
 
@@ -119,13 +158,101 @@ struct OctreeLeafNode : Data {
 };
 
 template <class Data>
-struct OctreeLeafNode<Data, false> {
+struct OctreeLeafNode<Data, false, false, true> {
 	// Indicates whether this node has to be updated (get information from children and/or
 	// update indicators). Useful when propagating information up the tree
 	IndexField modified;
 
 	// Indicates whether this node actual is part of the octree
 	bool exists = false;
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeLeafNode const& other, index_t index)
+	{
+		if (other.modified[index]) {
+			modified.set();
+		} else {
+			modified.reset();
+		}
+
+		Data::fill(other, index);
+		exists = true;
+	}
+
+	//
+	// Clear
+	//
+
+	void clear() { exists = false; }
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
+	                                           index_t index) const
+	{
+		return Data::isCollapsible(parent, index);
+	}
+};
+
+template <class Data>
+struct OctreeLeafNode<Data, true, true, true> : Data {
+	// Code for this node
+	Code code;
+
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	IndexField modified;
+
+	std::atomic_flag lock = ATOMIC_FLAG_INIT;
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeLeafNode const& other, index_t index)
+	{
+		if (other.modified[index]) {
+			modified.set();
+		} else {
+			modified.reset();
+		}
+
+		Data::fill(other, index);
+		code = other.code.child(index);
+	}
+
+	//
+	// Clear
+	//
+
+	void clear() { code = Code(); }
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
+	                                           index_t index) const
+	{
+		return Data::isCollapsible(parent, index);
+	}
+};
+
+template <class Data>
+struct OctreeLeafNode<Data, true, false, true> {
+	// Indicates whether this node has to be updated (get information from children and/or
+	// update indicators). Useful when propagating information up the tree
+	IndexField modified;
+
+	// Indicates whether this node actual is part of the octree
+	bool exists = false;
+
+	std::atomic_flag lock = ATOMIC_FLAG_INIT;
 
 	//
 	// Fill

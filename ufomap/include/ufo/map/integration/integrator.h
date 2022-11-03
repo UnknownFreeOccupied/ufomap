@@ -132,18 +132,17 @@ class Integrator
 						blue += c.blue;
 					}
 				}
+
 				if (0 != num) {
 					red /= num;
 					green /= num;
 					blue /= num;
 
-					Color c = map.color(node);
-					if (c.isSet()) {
-						red = (red + c.red) / 2;
-						green = (green + c.green) / 2;
-						blue = (blue + c.blue) / 2;
-					}
-					map.setColor(node, red, green, blue, false);
+					map.updateColor(node, [red, green, blue](Color c) {
+						return c.isSet() ? Color((red + c.red) / 2, (green + c.green) / 2,
+						                         (blue + c.blue) / 2)
+						                 : Color(red, green, blue);
+					});
 				}
 			}
 

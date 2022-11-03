@@ -60,21 +60,23 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Data, class InnerData, bool ReuseNodes, bool LockLess, bool CountNodes,
-          template <class> class... Bases>
+template <class Data, class InnerData, bool ReuseNodes, bool LockLess, bool PerNodeLock,
+          bool TrackNodes, bool CountNodes, template <class> class... Bases>
 class OctreeMap
-    : public OctreeBase<
-          OctreeMap<Data, InnerData, ReuseNodes, LockLess, CountNodes, Bases...>, Data,
-          InnerData, ReuseNodes, LockLess, CountNodes>,
-      public Bases<
-          OctreeMap<Data, InnerData, ReuseNodes, LockLess, CountNodes, Bases...>>...
+    : public OctreeBase<OctreeMap<Data, InnerData, ReuseNodes, LockLess, PerNodeLock,
+                                  TrackNodes, CountNodes, Bases...>,
+                        Data, InnerData, ReuseNodes, LockLess, PerNodeLock, TrackNodes,
+                        CountNodes>,
+      public Bases<OctreeMap<Data, InnerData, ReuseNodes, LockLess, PerNodeLock,
+                             TrackNodes, CountNodes, Bases...>>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMap, Data, InnerData, ReuseNodes, LockLess, CountNodes>;
+	using Octree = OctreeBase<OctreeMap, Data, InnerData, ReuseNodes, LockLess, PerNodeLock,
+	                          TrackNodes, CountNodes>;
 
 	//
 	// Friends
@@ -116,9 +118,10 @@ class OctreeMap
 	}
 
 	template <class Data2, class InnerData2, bool ReuseNodes2, bool LockLess2,
-	          bool CountNodes2, template <class> class... Bases2>
-	OctreeMap(OctreeMap<Data2, InnerData2, ReuseNodes2, LockLess2, CountNodes2,
-	                    Bases2...> const& other)
+	          bool PerNodeLock2, bool TrackNodes2, bool CountNodes2,
+	          template <class> class... Bases2>
+	OctreeMap(OctreeMap<Data2, InnerData2, ReuseNodes2, LockLess2, PerNodeLock2,
+	                    TrackNodes2, CountNodes2, Bases2...> const& other)
 	    : Octree(other), Bases<OctreeMap>(other)...
 	{
 		readFromOtherMap(other);
@@ -137,9 +140,10 @@ class OctreeMap
 	}
 
 	template <class Data2, class InnerData2, bool ReuseNodes2, bool LockLess2,
-	          bool CountNodes2m template <class> class... Bases2>
-	OctreeMap& operator=(OctreeMap<Data2, InnerData2, ReuseNodes2, LockLess2, CountNodes2,
-	                               Bases2...> const& rhs)
+	          bool PerNodeLock2, bool TrackNodes2, bool CountNodes2,
+	          template <class> class... Bases2>
+	OctreeMap& operator=(OctreeMap<Data2, InnerData2, ReuseNodes2, LockLess2, PerNodeLock2,
+	                               TrackNodes2, CountNodes2, Bases2...> const& rhs)
 	{
 		Octree::operator=(rhs);
 		(Bases<OctreeMap>::operator=(rhs), ...);
@@ -287,7 +291,7 @@ class OctreeMap
 		                              compression_acceleration_level, compression_level),
 		 ...);
 
-		for (auto const& r : res) {
+		for (auto& r : res) {
 			auto [real_size, pred_size] = r.get();
 			if (real_size != pred_size) {
 				// TODO: Move so all correct

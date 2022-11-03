@@ -202,7 +202,7 @@ struct Node {
 	depth_t data_depth_ = 0;
 
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-	          bool CountNodes>
+	          bool PerNodeLock, bool TrackNodes, bool CountNodes>
 	friend class OctreeBase;
 };
 
@@ -323,7 +323,7 @@ struct NodeBV : public Node {
 	geometry::AAEBB aaebb_;
 
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-	          bool CountNodes>
+	          bool PerNodeLock, bool TrackNodes, bool CountNodes>
 	friend class OctreeBase;
 };
 }  // namespace ufo::map

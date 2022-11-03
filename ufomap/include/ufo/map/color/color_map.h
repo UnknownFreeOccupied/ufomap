@@ -173,6 +173,73 @@ class ColorMap
 	}
 
 	//
+	// Update color
+	//
+
+	template <class UnaryFunction>
+	void updateColor(Node node, UnaryFunction f, bool propagate = true)
+	{
+		derived().apply(
+		    node,
+		    [f](auto& node, index_t index) {
+			    auto c = f(Color(node.red[index], node.green[index], node.blue[index]));
+			    node.red[index] = c.red;
+			    node.green[index] = c.green;
+			    node.blue[index] = c.blue;
+		    },
+		    [f](auto& node) {
+			    for (index_t i = 0; node.red.size() != i; ++i) {
+				    auto c = f(Color(node.red[i], node.green[i], node.blue[i]));
+				    node.red[i] = c.red;
+				    node.green[i] = c.green;
+				    node.blue[i] = c.blue;
+			    }
+		    },
+		    propagate);
+	}
+
+	template <class UnaryFunction>
+	void updateColor(Code code, UnaryFunction f, bool propagate = true)
+	{
+		derived().apply(
+		    code,
+		    [f](auto& node, index_t index) {
+			    auto c = f(Color(node.red[index], node.green[index], node.blue[index]));
+			    node.red[index] = c.red;
+			    node.green[index] = c.green;
+			    node.blue[index] = c.blue;
+		    },
+		    [f](auto& node) {
+			    for (index_t i = 0; node.red.size() != i; ++i) {
+				    auto c = f(Color(node.red[i], node.green[i], node.blue[i]));
+				    node.red[i] = c.red;
+				    node.green[i] = c.green;
+				    node.blue[i] = c.blue;
+			    }
+		    },
+		    propagate);
+	}
+
+	template <class UnaryFunction>
+	void updateColor(Key key, UnaryFunction f, bool propagate = true)
+	{
+		updateColor(derived().toCode(key), f, propagate);
+	}
+
+	template <class UnaryFunction>
+	void updateColor(Point coord, UnaryFunction f, bool propagate = true, depth_t depth = 0)
+	{
+		updateColor(derived().toCode(coord, depth), f, propagate);
+	}
+
+	template <class UnaryFunction>
+	void updateColor(coord_t x, coord_t y, coord_t z, UnaryFunction f,
+	                 bool propagate = true, depth_t depth = 0)
+	{
+		updateColor(derived().toCode(x, y, z, depth), f, propagate);
+	}
+
+	//
 	// Has color
 	//
 
