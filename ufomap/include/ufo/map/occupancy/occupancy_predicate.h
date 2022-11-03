@@ -144,9 +144,9 @@ struct PredicateValueCheck<OccupancyMap> {
 	using Pred = OccupancyMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred, Map const&, Node) -> decltype(m.isUnknown(n), true)
+	static constexpr auto apply(Pred, Map const& m, Node n)
+	    -> decltype(m.isUnknown(n), true)
 	{
-		return true;  // TODO: Improve
 	}
 
 	static constexpr bool apply(...) { return false; }

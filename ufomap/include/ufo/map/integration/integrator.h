@@ -52,11 +52,12 @@
 #include <ufo/map/occupancy/occupancy_map.h>
 #include <ufo/map/point_cloud.h>
 #include <ufo/map/ray_caster/ray_caster.h>
-#include <ufo/map/semantic/semantic_map.h>
+// #include <ufo/map/semantic/semantic_map.h>
 #include <ufo/map/time/time_map.h>
 #include <ufo/map/types.h>
 #include <ufo/math/pose6.h>
 #include <ufo/util/timing.h>
+#include <ufo/util/type_traits.h>
 
 // STL
 #include <algorithm>
@@ -111,45 +112,60 @@ class Integrator
 			map.increaseOccupancyLogit(node, prob, false);
 
 			// Update time step
-			if constexpr (is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
+			if constexpr (util::is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
 				map.setTime(node, time, false);
 			}
 
 			// Update color
-			if constexpr (is_base_of_template_v<ColorMap, std::decay_t<Map>> &&
+			if constexpr (util::is_base_of_template_v<ColorMap, std::decay_t<Map>> &&
 			              std::is_base_of_v<Color, P>) {
-				// TODO: Implement
-				Color avg_color = Color::average(first_point_it, last_point_it);
+				double red = 0;
+				double green = 0;
+				double blue = 0;
 
-				if (avg_color.set()) {
-					double total_logit = logit + prob;
-					double weight = prob / total_logit;
-					map.setColor(
-					    node,
-					    Color::average({{avg_color, weight}, {map.getColor(node), 1.0 - weight}}),
-					    false);  // TODO: Update
+				std::size_t num = 0;
+				for (Color c : p.points) {
+					if (c.isSet()) {
+						++num;
+						red += c.red;
+						green += c.green;
+						blue += c.blue;
+					}
+				}
+				if (0 != num) {
+					red /= num;
+					green /= num;
+					blue /= num;
+
+					Color c = map.color(node);
+					if (c.isSet()) {
+						red = (red + c.red) / 2;
+						green = (green + c.green) / 2;
+						blue = (blue + c.blue) / 2;
+					}
+					map.setColor(node, red, green, blue, false);
 				}
 			}
 
 			// Update semantics
-			if constexpr (is_base_of_template_v<SemanticMap, std::decay_t<Map>> &&
-			              std::is_base_of_v<SemanticPair, P>) {
-				// FIXME: Implement correctly
+			// if constexpr (util::is_base_of_template_v<SemanticMap, std::decay_t<Map>> &&
+			//               std::is_base_of_v<SemanticPair, P>) {
+			// 	// FIXME: Implement correctly
 
-				std::vector<SemanticPair> semantics(first_point_it, last_point_it);
+			// 	std::vector<SemanticPair> semantics(first_point_it, last_point_it);
 
-				// Remove label 0
-				semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
-				                            [](auto sem) { return 0 == sem.label; }),
-				                std::end(semantics));
+			// 	// Remove label 0
+			// 	semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
+			// 	                            [](auto sem) { return 0 == sem.label; }),
+			// 	                std::end(semantics));
 
-				// Decrease all
-				map.decreaseSemantic(node, semantic_value_miss_, false);
+			// 	// Decrease all
+			// 	map.decreaseSemantic(node, semantic_value_miss_, false);
 
-				// Incrase hits
-				map.increaseSemantics(node, std::cbegin(semantics), std::cend(semantics),
-				                      semantic_value_hit_ + semantic_value_miss_, false);
-			}
+			// 	// Incrase hits
+			// 	map.increaseSemantics(node, std::cbegin(semantics), std::cend(semantics),
+			// 	                      semantic_value_hit_ + semantic_value_miss_, false);
+			// }
 		});
 
 		// FIXME: Increment time step
@@ -174,7 +190,7 @@ class Integrator
 
 			map.decreaseOccupancyLogit(node, prob, false);
 
-			if constexpr (is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
+			if constexpr (util::is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
 				map.setTime(node, time, false);
 			}
 		});

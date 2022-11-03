@@ -70,6 +70,8 @@ struct SemanticNode {
 	static constexpr std::size_t N_H = 1 + (N - 1) / 2;
 
 	// Data
+	// TODO: Most significate size bits indicates whether the labels have change and the
+	// second most significate if the values have changed for the particular index.
 	std::unique_ptr<Semantic[]> semantics;
 
 	//

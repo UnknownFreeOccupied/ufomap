@@ -43,10 +43,10 @@
 #define UFO_MAP_TIME_NODE_H
 
 // UFO
-#include <ufo/algorithm/algorithm.h>
 #include <ufo/map/types.h>
 
 // STL
+#include <algorithm>
 #include <array>
 
 namespace ufo::map
@@ -71,6 +71,7 @@ struct TimeNode {
 		return std::all_of(std::begin(time) + 1, std::end(time),
 		                   [t = time.front()](auto e) { return e == t; });
 	}
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TIME_NODE_H

@@ -148,18 +148,7 @@ ufomap_msgs::UFOMap ufoToMsgUpdateModified(Map& map, bool compress = false,
 }
 
 template <class Map>
-ufomap_msgs::UFOMap ufoToMsgPruneModified(Map& map, bool compress = false,
-                                          int compression_acceleration_level = 1,
-                                          int compression_level = 0)
-{
-	ufomap_msgs::UFOMap msg;
-	msg.data = map.writeAndPruneModified(compress, compression_acceleration_level,
-	                                     compression_level);
-	return msg;
-}
-
-template <class Map>
-ufomap_msgs::UFOMap ufoToMsgClearModified(Map& map, bool compress = false,
+ufomap_msgs::UFOMap ufoToMsgResetModified(Map& map, bool compress = false,
                                           int compression_acceleration_level = 1,
                                           int compression_level = 0)
 {
@@ -171,7 +160,7 @@ ufomap_msgs::UFOMap ufoToMsgClearModified(Map& map, bool compress = false,
 	//                           compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data = map.writeAndClearModified(data, compress, compression_acceleration_level,
+	msg.data = map.writeAndResetModified(data, compress, compression_acceleration_level,
 	                                     compression_level);
 	// msg.data.resize(data.tellp());
 	// data.read(reinterpret_cast<char*>(msg.data.data()),

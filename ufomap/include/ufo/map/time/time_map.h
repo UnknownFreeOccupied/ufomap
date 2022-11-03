@@ -184,7 +184,7 @@ class TimeMap
 	// Swap
 	//
 
-	void swap(CountMap& other) noexcept { std::swap(prop_criteria_, other.prop_criteria_); }
+	void swap(TimeMap& other) noexcept { std::swap(prop_criteria_, other.prop_criteria_); }
 
 	//
 	// Derived
@@ -260,7 +260,7 @@ class TimeMap
 	template <class OutputIt>
 	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		constexpr auto N = numData<InputIt>();
+		constexpr auto N = numData<OutputIt>();
 
 		auto size = std::distance(first, last) * N;
 
@@ -286,7 +286,7 @@ class TimeMap
 	void readNodes(std::vector<std::uint8_t> const& in, std::size_t& index, OutputIt first,
 	               OutputIt last) const
 	{
-		constexpr auto N = numData<InputIt>();
+		constexpr auto N = numData<OutputIt>();
 
 		constexpr std::size_t count = N * sizeof(time_t);
 

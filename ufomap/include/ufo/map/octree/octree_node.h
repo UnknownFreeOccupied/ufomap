@@ -98,7 +98,14 @@ struct OctreeLeafNode : Data {
 		}
 
 		Data::fill(other, index);
+		code = other.code.child(index);
 	}
+
+	//
+	// Clear
+	//
+
+	void clear() { code = Code(); }
 
 	//
 	// Is collapsible
@@ -118,7 +125,7 @@ struct OctreeLeafNode<Data, false> {
 	IndexField modified;
 
 	// Indicates whether this node actual is part of the octree
-	IndexField exists;
+	bool exists = false;
 
 	//
 	// Fill
@@ -133,7 +140,14 @@ struct OctreeLeafNode<Data, false> {
 		}
 
 		Data::fill(other, index);
+		exists = true;
 	}
+
+	//
+	// Clear
+	//
+
+	void clear() { exists = false; }
 
 	//
 	// Is collapsible

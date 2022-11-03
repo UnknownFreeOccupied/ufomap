@@ -63,7 +63,8 @@ struct IndexField {
 
 		constexpr Reference& operator=(bool x) noexcept
 		{
-			field_ ^= (-static_cast<index_field_t>(x) ^ field_) & index_;
+			field_ ^=
+			    static_cast<index_field_t>(-static_cast<index_field_t>(x) ^ field_) & index_;
 			return *this;
 		}
 
@@ -87,7 +88,7 @@ struct IndexField {
 
 	 private:
 		constexpr Reference(index_field_t& field, std::size_t pos) noexcept
-		    : field_(field), index_(index_field_t(1) << pos)
+		    : field_(field), index_(static_cast<index_field_t>(index_field_t(1) << pos))
 		{
 		}
 
@@ -152,15 +153,15 @@ struct IndexField {
 	{
 		// TODO: Look at
 		constexpr auto lut = [] {
-			std::array<std::size_t, std::numeric_limits<index_field_t>::max() + 1> lut{};
-			for (std::size_t i = 0; lut.size() != i; ++i) {
+			std::array<std::size_t, std::numeric_limits<index_field_t>::max() + 1> temp{};
+			for (std::size_t i = 0; temp.size() != i; ++i) {
 				for (std::size_t j = 0; 8 != j; ++j) {
 					if ((i >> j) & std::size_t(1)) {
-						++lut[i];
+						++temp[i];
 					}
 				}
 			}
-			return lut;
+			return temp;
 		}();
 		return lut[field];
 	}
@@ -185,7 +186,10 @@ struct IndexField {
 		return *this;
 	}
 
-	constexpr IndexField operator~() const noexcept { return IndexField(~field); }
+	constexpr IndexField operator~() const noexcept
+	{
+		return IndexField(static_cast<index_field_t>(~field));
+	}
 
 	constexpr IndexField& set() noexcept
 	{
@@ -199,7 +203,8 @@ struct IndexField {
 			std::out_of_range("position (which is " + std::to_string(pos) +
 			                  ") >= size (which is " + std::to_string(size()) + ")");
 		}
-		field ^= (-static_cast<index_field_t>(value) ^ field) & (index_field_t(1) << pos);
+		field ^= static_cast<index_field_t>((-static_cast<index_field_t>(value) ^ field) &
+		                                    (index_field_t(1) << pos));
 		return *this;
 	}
 
@@ -213,7 +218,7 @@ struct IndexField {
 
 	constexpr IndexField& flip() noexcept
 	{
-		field = ~field;
+		field = static_cast<index_field_t>(~field);
 		return *this;
 	}
 
@@ -223,7 +228,7 @@ struct IndexField {
 			std::out_of_range("position (which is " + std::to_string(pos) +
 			                  ") >= size (which is " + std::to_string(size()) + ")");
 		}
-		field ^= index_field_t(1) << pos;
+		field ^= static_cast<index_field_t>(index_field_t(1) << pos);
 		return *this;
 	}
 };

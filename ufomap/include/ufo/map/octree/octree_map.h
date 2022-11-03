@@ -93,19 +93,19 @@ class OctreeMap
 	//
 
 	OctreeMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16,
-	          bool auto_prune = true)
+	          bool auto_prune = false)
 	    : Octree(leaf_node_size, depth_levels, auto_prune)
 	{
 		initRoot();
 	}
 
-	OctreeMap(std::filesystem::path const& file, bool auto_prune = true)
+	OctreeMap(std::filesystem::path const& file, bool auto_prune = false)
 	    : OctreeMap(0.1, 16, auto_prune)
 	{
 		Octree::read(file);
 	}
 
-	OctreeMap(std::istream& in, bool auto_prune = true) : OctreeMap(0.1, 16, auto_prune)
+	OctreeMap(std::istream& in, bool auto_prune = false) : OctreeMap(0.1, 16, auto_prune)
 	{
 		Octree::read(in);
 	}
@@ -240,7 +240,7 @@ class OctreeMap
 	}
 
 	template <class OutputIt>
-	void readNodes(SharedReadBuffer& in, OutputIt first, OutputIt last, bool const parallel,
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last, bool const parallel,
 	               bool const compressed)
 	{
 		std::vector<std::future<void>> res;
@@ -276,9 +276,8 @@ class OctreeMap
 	}
 
 	template <class InputIt>
-	void writeNodes(SharedWriteBuffer& out, InputIt first, InputIt last,
-	                bool const parallel, bool const compress,
-	                int const compression_acceleration_level,
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const parallel,
+	                bool const compress, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
 		// TODO: Look at
@@ -342,8 +341,8 @@ class OctreeMap
 	}
 
 	template <class Base, class OutputIt>
-	bool readNodes(std::vector<std::uint8_t> const& in, std::size_t& index, OutputIt first,
-	               OutputIt last, DataIdentifier const identifier, uint64_t const data_size,
+	bool readNodes(ReadBuffer& in, OutputIt first, OutputIt last,
+	               DataIdentifier const identifier, uint64_t const data_size,
 	               bool const compressed)
 	{
 		if (!Base::canReadData(identifier)) {
@@ -351,20 +350,16 @@ class OctreeMap
 		}
 
 		if (compressed) {
-			std::vector<std::uint8_t> data;
+			Buffer data;
 
 			std::uint64_t uncompressed_size;
+			in.read(&uncompressed_size, sizeof(uncompressed_size));
 
-			auto d = in.data() + index;
-			std::memcpy(&uncompressed_size, d, sizeof(uncompressed_size));
-			d += sizeof(uncompressed_size);
+			decompressData(in, data, uncompressed_size);
 
-			decompressData(in, index, data, uncompressed_size);
-
-			std::size_t i = 0;
-			Base::readNodes(data, i, first, last);
+			Base::readNodes(data, first, last);
 		} else {
-			Base::readNodes(in, index, first, last);
+			Base::readNodes(in, first, last);
 		}
 
 		return true;
@@ -408,8 +403,7 @@ class OctreeMap
 	}
 
 	template <class Base, class InputIt>
-	void writeNodes(std::vector<std::uint8_t>& out, std::size_t& index, InputIt first,
-	                InputIt last, bool const compress,
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const compress,
 	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
@@ -418,25 +412,26 @@ class OctreeMap
 			return;
 		}
 
-		std::memcpy(out.data() + index, &identifier, sizeof(identifier));
+		out.write(&identifier, sizeof(identifier));
 
-		index += sizeof(identifier);
-
-		std::size_t size_index = index;
-		index += sizeof(std::uint64_t);
-
+		std::uint64_t size;
+		auto size_index = out.writeIndex();
+		out.setWriteIndex(size_index + sizeof(size));
 		if (compress) {
-			std::vector<std::uint8_t> data(Base::serializedSize());
-			std::size_t i = 0;
-			Base::writeNodes(data, i, first, last);
+			Buffer data;
+			data.reserve(Base::serializedSize());
+			Base::writeNodes(data, first, last);
 
-			compressData(data, out, index, compression_acceleration_level, compression_level);
+			compressData(data, out, compression_acceleration_level, compression_level);
 		} else {
-			Base::writeNodes(out, index, first, last);
+			Base::writeNodes(out, first, last);
 		}
 
-		std::uint64_t size = index - size_index;
-		std::memcpy(out.data() + size_index, size, sizeof(size));
+		auto cur_index = out.writeIndex();
+		size = cur_index - size_index;
+		out.setWriteIndex(size_index);
+		out.write(&size, sizeof(size));
+		out.setWriteIndex(cur_index);
 	}
 };
 }  // namespace ufo::map

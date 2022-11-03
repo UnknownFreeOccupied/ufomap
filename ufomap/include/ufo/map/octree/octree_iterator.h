@@ -144,7 +144,7 @@ class IteratorBase
 		return tree_->nodeSibling(node, sibling_index);
 	}
 
-	template <bool OnlyRealNodes, class NodeType, class Predicates>
+	template <class NodeType, class Predicates>
 	[[nodiscard]] constexpr bool validInnerNode(NodeType const& node,
 	                                            Predicates const& predicates) const
 	{
@@ -225,8 +225,9 @@ class Iterator : public IteratorBase<Tree, BaseNodeType>
 {
  private:
 	static constexpr bool OnlyLeavesOrFixedDepth =
-	    predicate::contains_always_predicate_v<predicate::Leaf, Predicates> ||
-	    predicate::contains_always_predicate_v<predicate::DepthE, Predicates>;
+	    predicate::contains_always_predicate_v<predicate::PureLeaf, Predicates> ||
+	    predicate::contains_always_predicate_v<predicate::DepthE, Predicates> ||
+	    EarlyStopping;
 
 	using Base = IteratorBase<Tree, BaseNodeType>;
 
@@ -269,24 +270,14 @@ class Iterator : public IteratorBase<Tree, BaseNodeType>
 				if constexpr (OnlyLeavesOrFixedDepth) {
 					if (this->validReturnNode(current, predicates_)) {
 						return_nodes_.push(current);
-					} else if (this->validInnerNode<OnlyRealNodes>(current, predicates_)) {
-						inner_nodes_.push(current);
-					}
-				} else if constexpr (OnlyRealNodes) {
-					if (this->validReturnNode(current, predicates_)) {
-						return_nodes_.push(current);
-					}
-					if (this->validInnerNode<OnlyRealNodes>(current, predicates_)) {
+					} else if (this->validInnerNode(current, predicates_)) {
 						inner_nodes_.push(current);
 					}
 				} else {
 					if (this->validReturnNode(current, predicates_)) {
 						return_nodes_.push(current);
-						if (this->isReal(current) && this->isParent(current) &&
-						    this->validInnerNode<OnlyRealNodes>(current, predicates_)) {
-							inner_nodes_.push(current);
-						}
-					} else if (this->validInnerNode<OnlyRealNodes>(current, predicates_)) {
+					}
+					if (this->validInnerNode(current, predicates_)) {
 						inner_nodes_.push(current);
 					}
 				}
@@ -314,37 +305,20 @@ class Iterator : public IteratorBase<Tree, BaseNodeType>
  private:
 	void init(NodeType const& node)
 	{
-		if constexpr (OnlyRealNodes) {
-			if (!this->isReal(node)) {
-				return;
-			}
-		}
-
 		if constexpr (OnlyLeavesOrFixedDepth) {
 			if (this->validReturnNode(node, predicates_)) {
 				return_nodes_.push(node);
-			} else if (this->validInnerNode<OnlyRealNodes>(node, predicates_)) {
+			} else if (this->validInnerNode(node, predicates_)) {
 				inner_nodes_.push(node);
-				next();
-			}
-		} else if constexpr (OnlyRealNodes) {
-			if (this->validInnerNode<OnlyRealNodes>(node, predicates_)) {
-				inner_nodes_.push(node);
-			}
-
-			if (this->validReturnNode(node, predicates_)) {
-				return_nodes_.push(node);
-			} else {
 				next();
 			}
 		} else {
 			if (this->validReturnNode(node, predicates_)) {
 				return_nodes_.push(node);
-				if (this->isReal(node) && this->isParent(node) &&
-				    this->validInnerNode<OnlyRealNodes>(node, predicates_)) {
+				if (this->validInnerNode(node, predicates_)) {
 					inner_nodes_.push(node);
 				}
-			} else if (this->validInnerNode<OnlyRealNodes>(node, predicates_)) {
+			} else if (this->validInnerNode(node, predicates_)) {
 				inner_nodes_.push(node);
 				next();
 			}
@@ -397,14 +371,15 @@ struct NearestNode {
 	}
 };
 
-template <bool OnlyRealNodes, class Tree, class Geometry = geometry::Point,
+template <bool EarlyStopping, class Tree, class Geometry = geometry::Point,
           class Predicates = predicate::TRUE>
 class NearestIterator : public IteratorBase<Tree, NearestNode>
 {
  private:
 	static constexpr bool OnlyLeavesOrFixedDepth =
-	    predicate::contains_always_predicate_v<predicate::Leaf, Predicates> ||
-	    predicate::contains_always_predicate_v<predicate::DepthE, Predicates>;
+	    predicate::contains_always_predicate_v<predicate::PureLeaf, Predicates> ||
+	    predicate::contains_always_predicate_v<predicate::DepthE, Predicates> ||
+	    EarlyStopping;
 
 	using Base = IteratorBase<Tree, NearestNode>;
 
@@ -453,32 +428,17 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				if constexpr (OnlyLeavesOrFixedDepth) {
 					if (this->validReturnNode(current, predicates_)) {
 						return_nodes_.emplace(current, squaredDistance(current));
-					} else if (this->validInnerNode<OnlyRealNodes>(current, predicates_)) {
+					} else if (this->validInnerNode(current, predicates_)) {
 						inner_nodes_.emplace(current, squaredDistance(current) + epsilon_);
-					}
-				} else if constexpr (OnlyRealNodes) {
-					// No need to add inner nodes that does not have children
-					bool const valid_inner =
-					    this->validInnerNode<OnlyRealNodes>(current, predicates_);
-					bool const valid_return = this->validReturnNode(current, predicates_);
-
-					if (valid_inner || valid_return) {
-						auto const dist_sq = squaredDistance(current);
-						if (valid_inner) {
-							inner_nodes_.emplace(current, dist_sq + epsilon_);
-						}
-						if (valid_return) {
-							return_nodes_.emplace(current, dist_sq);
-						}
 					}
 				} else {
 					if (this->validReturnNode(current, predicates_)) {
+						auto dist_sq = squaredDistance(current);
 						return_nodes_.emplace(current, dist_sq);
-						if (this->isReal(current) && this->isParent(current) &&
-						    this->validInnerNode<OnlyRealNodes>(current, predicates_)) {
+						if (this->validInnerNode(current, predicates_)) {
 							inner_nodes_.emplace(current, dist_sq + epsilon_);
 						}
-					} else if (this->validInnerNode<OnlyRealNodes>(current, predicates_)) {
+					} else if (this->validInnerNode(current, predicates_)) {
 						inner_nodes_.emplace(current, squaredDistance(current) + epsilon_);
 					}
 				}
@@ -511,16 +471,10 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 
 	void init(NodeBV const& node)
 	{
-		if constexpr (OnlyRealNodes) {
-			if (!this->isReal(node)) {
-				return;
-			}
-		}
-
 		if constexpr (OnlyLeavesOrFixedDepth) {
 			if (this->validReturnNode(node, predicates_)) {
 				return_nodes_.emplace(node, squaredDistance(node));
-			} else if (this->validInnerNode<OnlyRealNodes>(node, predicates_)) {
+			} else if (this->validInnerNode(node, predicates_)) {
 				std::vector<value_type> container;
 				container.reserve(256);
 				return_nodes_ = std::priority_queue<value_type, std::vector<value_type>,
@@ -530,29 +484,6 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 
 				inner_nodes_.emplace(node, squaredDistance(node) + epsilon_);
 				next();
-			}
-		} else if constexpr (OnlyRealNodes) {
-			bool const valid_inner = this->validInnerNode<OnlyRealNodes>(node, predicates_);
-			bool const valid_return = this->validReturnNode(node, predicates_);
-
-			if (valid_inner || valid_return) {
-				std::vector<value_type> container;
-				container.reserve(256);
-				return_nodes_ = std::priority_queue<value_type, std::vector<value_type>,
-				                                    std::greater<value_type>>(
-				    std::greater<value_type>(), std::move(container));
-				inner_nodes_ = return_nodes_;
-
-				auto const dist_sq = squaredDistance(node);
-
-				if (valid_inner) {
-					inner_nodes_.emplace(node, dist_sq + epsilon_);
-				}
-				if (valid_return) {
-					return_nodes_.emplace(node, dist_sq);
-				} else {
-					next();
-				}
 			}
 		} else {
 			if (this->validReturnNode(node, predicates_)) {
@@ -566,11 +497,10 @@ class NearestIterator : public IteratorBase<Tree, NearestNode>
 				auto const dist_sq = squaredDistance(node);
 
 				return_nodes_.emplace(node, dist_sq);
-				if (this->isReal(node) && this->isParent(node) &&
-				    this->validInnerNode<OnlyRealNodes>(node, predicates_)) {
+				if (this->validInnerNode(node, predicates_)) {
 					inner_nodes_.emplace(node, dist_sq + epsilon_);
 				}
-			} else if (this->validInnerNode<OnlyRealNodes>(node, predicates_)) {
+			} else if (this->validInnerNode(node, predicates_)) {
 				std::vector<value_type> container;
 				container.reserve(256);
 				return_nodes_ = std::priority_queue<value_type, std::vector<value_type>,

@@ -58,6 +58,9 @@ namespace ufo::map::predicate
 // Predicates
 //
 
+struct PureLeaf {
+};
+
 struct Leaf {
 };
 
@@ -97,11 +100,11 @@ struct DepthInterval {
 template <PredicateRounding PR, PredicateCompare PC = PredicateCompare::EQUAL,
           PredicateType PT = PredicateType::RETURN_AND_INNER>
 struct Size {
-	constexpr Size(double size) noexcept : size_(size), depth(0) {}
+	constexpr Size(double size) noexcept : size_(size), depth_(0) {}
 
 	constexpr void setSize(double size) noexcept
 	{
-		depth_modified = depth_modified || size != size_;
+		depth_modified_ = depth_modified_ || size != size_;
 		size_ = size;
 	}
 
@@ -161,7 +164,7 @@ struct ChildOf {
 
 	constexpr ChildOf(Code code) noexcept : code(code) {}
 
-	constexpr ChildOf(Key key) noexcept : code(key) {}
+	ChildOf(Key key) noexcept : code(key) {}
 
 	Code code;
 };
@@ -175,6 +178,17 @@ struct Index {
 //
 // Predicate value/return check
 //
+
+template <>
+struct PredicateValueCheck<PureLeaf> {
+	using Pred = PureLeaf;
+
+	template <class Map>
+	static constexpr bool apply(Pred, Map const& m, Node n)
+	{
+		return m.isPureLeaf(n);
+	}
+};
 
 template <>
 struct PredicateValueCheck<Leaf> {
@@ -218,7 +232,7 @@ struct PredicateValueCheck<Exists> {
 	{
 		return m.exists(n);  // TODO: Look at
 	}
-}
+};
 
 template <PredicateCompare PC, PredicateType PT>
 struct PredicateValueCheck<Depth<PC, PT>> {
@@ -330,13 +344,24 @@ struct PredicateValueCheck<Index> {
 //
 
 template <>
+struct PredicateInnerCheck<PureLeaf> {
+	using Pred = PureLeaf;
+
+	template <class Map>
+	static constexpr bool apply(Pred, Map const&, Node) noexcept
+	{
+		return true;
+	}
+};
+
+template <>
 struct PredicateInnerCheck<Leaf> {
 	using Pred = Leaf;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node n) noexcept
+	static constexpr bool apply(Pred, Map const&, Node) noexcept
 	{
-		return 0 != n.depth();
+		return true;
 	}
 };
 

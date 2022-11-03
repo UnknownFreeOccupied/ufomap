@@ -44,7 +44,7 @@
 
 // UFO
 #include <ufo/map/color/color_map.h>
-#include <ufo/map/distance/distance_map.h>
+// #include <ufo/map/distance/distance_map.h>
 #include <ufo/map/empty/empty_map.h>
 #include <ufo/map/io.h>
 #include <ufo/map/occupancy/occupancy_map.h>
@@ -92,9 +92,9 @@ enum MapType : mt_t {
 	OCCUPANCY  = mt_t(1),
 	TIME       = mt_t(1) << 1,
 	COLOR      = mt_t(1) << 2,
-	SEMANTIC   = mt_t(1) << 3,
+	// SEMANTIC   = mt_t(1) << 3,
 	SURFEL     = mt_t(1) << 4,
-	DISTANCE   = mt_t(1) << 5,
+	// DISTANCE   = mt_t(1) << 5,
 	INTENSITY  = mt_t(1) << 6,
 	COUNT      = mt_t(1) << 7,
 	REFLECTION = mt_t(1) << 8,
@@ -112,9 +112,9 @@ class UFOMap
           // clang-format off
           OctreeNodeBase<
 												 // These should be ordered based on size
-												 cond_node_t<MapType, SEMANTIC,   SemanticNode>,
+												//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
                          cond_node_t<MapType, SURFEL,     SurfelNode>,
-                         cond_node_t<MapType, DISTANCE,   DistanceNode>,
+                        //  cond_node_t<MapType, DISTANCE,   DistanceNode>,
 												 cond_node_t<MapType, REFLECTION, ReflectionNode>,
 												 cond_node_t<MapType, COUNT,      CountNode>,
                          cond_node_t<MapType, TIME,       TimeNode>,
@@ -124,9 +124,9 @@ class UFOMap
 					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
           ReuseNodes, LockLess, CountNodes,
 					// Order does not matter
-          cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
+          // cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
           cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
-          cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
+          // cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
           cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
           cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
           cond_map_base<MapType & TIME,       TIME,       TimeMap>::template type,
@@ -140,9 +140,9 @@ class UFOMap
 	using Base = OctreeMap<
 	    // clang-format off
 			OctreeNodeBase<
-										 cond_node_t<MapType, SEMANTIC,   SemanticNode>,
+										//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
 										 cond_node_t<MapType, SURFEL,     SurfelNode>,
-										 cond_node_t<MapType, DISTANCE,   DistanceNode>,
+										//  cond_node_t<MapType, DISTANCE,   DistanceNode>,
 										 cond_node_t<MapType, REFLECTION, ReflectionNode>,
 										 cond_node_t<MapType, COUNT,      CountNode>,
 										 cond_node_t<MapType, TIME,       TimeNode>,
@@ -151,9 +151,9 @@ class UFOMap
 										 cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
 			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
 			ReuseNodes, LockLess, CountNodes,
-			cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
+			// cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
 			cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
-			cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
+			// cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
 			cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
 			cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
 			cond_map_base<MapType & TIME,       TIME,       TimeMap>::template type,
@@ -169,17 +169,17 @@ class UFOMap
 	//
 
 	UFOMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 17,
-	       bool auto_prune = true)
+	       bool auto_prune = false)
 	    : Base(leaf_node_size, depth_levels, auto_prune)
 	{
 	}
 
-	UFOMap(std::filesystem::path const& file, bool auto_prune = true)
+	UFOMap(std::filesystem::path const& file, bool auto_prune = false)
 	    : Base(file, auto_prune)
 	{
 	}
 
-	UFOMap(std::istream& in, bool auto_prune = true) : Base(in, auto_prune) {}
+	UFOMap(std::istream& in, bool auto_prune = false) : Base(in, auto_prune) {}
 
 	UFOMap(UFOMap const& other) = default;
 
@@ -220,9 +220,9 @@ class UFOMap
 using OccupancyMap    = UFOMap<OCCUPANCY>;
 using TimeMap         = UFOMap<TIME>;
 using ColorMap        = UFOMap<COLOR>;
-using SemanticMap     = UFOMap<SEMANTIC>;
+// using SemanticMap     = UFOMap<SEMANTIC>;
 using SurfelMap       = UFOMap<SURFEL>;
-using DistanceMap     = UFOMap<DISTANCE>;
+// using DistanceMap     = UFOMap<DISTANCE>;
 using IntensityMap    = UFOMap<INTENSITY>;
 using CountMap        = UFOMap<COUNT>;
 using ReflectionMap   = UFOMap<REFLECTION>;

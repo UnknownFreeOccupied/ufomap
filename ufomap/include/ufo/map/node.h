@@ -123,14 +123,14 @@ struct Node {
 	 *
 	 * @return The code for the node.
 	 */
-	constexpr Code code() const noexcept { return code_; }
+	[[nodiscard]] constexpr Code code() const noexcept { return code_; }
 
 	/*!
 	 * @brief Get the depth of the node.
 	 *
 	 * @return The depth of the node.
 	 */
-	constexpr depth_t depth() const noexcept { return code_.depth(); }
+	[[nodiscard]] constexpr depth_t depth() const noexcept { return code_.depth(); }
 
 	/*!
 	 * @brief Get the index of the node (i.e., the child index from the parent's
@@ -138,7 +138,7 @@ struct Node {
 	 *
 	 * @return The index of the node.
 	 */
-	constexpr index_t index() const noexcept { return code_.index(); }
+	[[nodiscard]] constexpr index_t index() const noexcept { return code_.index(); }
 
 	struct Hash {
 		static constexpr code_t hash(Node node) { return node.code().code(); }
@@ -149,8 +149,8 @@ struct Node {
 	};
 
  protected:
-	constexpr Node(void* data, Code code, depth_t real_depth) noexcept
-	    : data_(data), code_(code), real_depth_(real_depth)
+	constexpr Node(void* data, Code code, depth_t data_depth) noexcept
+	    : data_(data), code_(code), data_depth_(data_depth)
 	{
 	}
 
@@ -175,12 +175,23 @@ struct Node {
 	/*!
 	 * @return Get the depth of the data.
 	 */
-	[[nodiscard]] constexpr depth_t dataDepth() const noexcept { return real_depth_; }
+	[[nodiscard]] constexpr depth_t dataDepth() const noexcept { return data_depth_; }
+
+	/*!
+	 * @return The index of the data.
+	 */
+	[[nodiscard]] constexpr index_t dataIndex() const noexcept
+	{
+		return code_.index(dataDepth());
+	}
 
 	/*!
 	 * @return Whether data points to same node as the code.
 	 */
-	[[nodiscard]] constexpr bool isReal() const noexcept { return depth() == dataDepth(); }
+	[[nodiscard]] constexpr bool isActualData() const noexcept
+	{
+		return depth() == dataDepth();
+	}
 
  protected:
 	// Pointer to the actual node
@@ -195,7 +206,7 @@ struct Node {
 	friend class OctreeBase;
 };
 
-struct NodeBV : public Node, public BV {
+struct NodeBV : public Node {
  public:
 	//
 	// Constructor
@@ -214,7 +225,7 @@ struct NodeBV : public Node, public BV {
 	void swap(NodeBV& other)
 	{
 		std::swap(static_cast<Node&>(*this), static_cast<Node&>(other));
-		std::swap(static_cast<BV&>(*this), static_cast<BV&>(other));
+		std::swap(aaebb_, other.aaebb_);
 	}
 
 	friend constexpr bool operator==(NodeBV const& lhs, NodeBV const& rhs) noexcept
@@ -232,68 +243,74 @@ struct NodeBV : public Node, public BV {
 	 *
 	 * @return The bounding volume of the node.
 	 */
-	constexpr geometry::AAEBB boundingVolume() const noexcept { return aaebb_; }
+	[[nodiscard]] constexpr geometry::AAEBB boundingVolume() const noexcept
+	{
+		return aaebb_;
+	}
 
 	/*!
 	 * @brief The center coordinate of the node.
 	 *
 	 * @return The center coordinate of the node.
 	 */
-	constexpr geometry::Point center() const noexcept { return aaebb_.center; }
+	[[nodiscard]] constexpr geometry::Point center() const noexcept
+	{
+		return aaebb_.center;
+	}
 
 	/*!
 	 * @brief The minimum coordinate of the node.
 	 *
 	 * @return The minimum coordinate of the node.
 	 */
-	constexpr geometry::Point min() const noexcept { return aaebb_.min(); }
+	[[nodiscard]] constexpr geometry::Point min() const noexcept { return aaebb_.min(); }
 
 	/*!
 	 * @brief The maximum coordinate of the node.
 	 *
 	 * @return The maximum coordinte of the node.
 	 */
-	constexpr geometry::Point max() const noexcept { return aaebb_.max(); }
+	[[nodiscard]] constexpr geometry::Point max() const noexcept { return aaebb_.max(); }
 
 	/*!
 	 * @brief Half the length of a side of the node.
 	 *
 	 * @return Half the length of a side of the node.
 	 */
-	constexpr float halfSize() const noexcept { return aaebb_.half_size; }
+	[[nodiscard]] constexpr float halfSize() const noexcept { return aaebb_.half_size; }
 
 	/*!
 	 * @brief The length of a side of the node.
 	 *
 	 * @return The length of a side of the node.
 	 */
-	constexpr float size() const noexcept { return 2 * halfSize(); }
+	[[nodiscard]] constexpr float size() const noexcept { return 2 * halfSize(); }
 
 	/*!
 	 * @brief The center x coordinate of the node.
 	 *
 	 * @return The center x coordinate of the node.
 	 */
-	constexpr float x() const noexcept { return aaebb_.center.x; }
+	[[nodiscard]] constexpr float x() const noexcept { return aaebb_.center.x; }
 
 	/*!
 	 * @brief The center y coordinate of the node.
 	 *
 	 * @return The center y coordinate of the node.
 	 */
-	constexpr float y() const noexcept { return aaebb_.center.y; }
+	[[nodiscard]] constexpr float y() const noexcept { return aaebb_.center.y; }
 
 	/*!
 	 * @brief The center z coordinate of the node.
 	 *
 	 * @return The center z coordinate of the node.
 	 */
-	constexpr float z() const noexcept { return aaebb_.center.z; }
+	[[nodiscard]] constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	constexpr NodeBV(void* data, Code code, depth_t real_depth,
+	constexpr NodeBV(void* data, Code code, depth_t data_depth,
 	                 geometry::AAEBB aaebb) noexcept
-	    : Node(data, code, real_depth), aaebb_(aaebb)
+	    : Node(data, code, data_depth), aaebb_(aaebb)
 	{
 	}
 

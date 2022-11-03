@@ -208,13 +208,13 @@ class OctreeBase
 	/*!
 	 * @brief The volume of the octree.
 	 *
-	 * @note This is the same as `size() * size() * size()`.
+	 * @note Same as `size(rootDepth()) * size(rootDepth()) * size(rootDepth())`.
 	 *
 	 * @return The volume of the octree.
 	 */
 	[[nodiscard]] constexpr node_size_t volume() const
 	{
-		auto const s = size();
+		auto const s = size(rootDepth());
 		return s * s * s;
 	}
 
@@ -374,7 +374,7 @@ class OctreeBase
 		if (isPureLeaf(code)) {
 			return true;
 		}
-		auto [node, depth] = leafNodeAndDepth(code);
+		auto [node, depth] = innerNodeAndDepth(code);
 		return node.leaf[code.index(depth)];
 	}
 
@@ -479,8 +479,26 @@ class OctreeBase
 	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(Node node) const
 	{
-		node = operator()(node);
-		return node.isReal();
+		// FIXME: Optimize
+		return operator()(node).isActualData();
+	}
+
+	[[nodiscard]] constexpr bool exists(Code code) const
+	{
+		return leafNodeAndDepth(code).second == code.depth();
+	}
+
+	[[nodiscard]] constexpr bool exists(Key key) const { return exists(toCode(key)); }
+
+	[[nodiscard]] constexpr bool exists(Point coord, depth_t depth = 0) const
+	{
+		return exists(toCode(coord, depth));
+	}
+
+	[[nodiscard]] constexpr bool exists(coord_t x, coord_t y, coord_t z,
+	                                    depth_t depth = 0) const
+	{
+		return exists(toCode(x, y, z, depth));
 	}
 
 	/**************************************************************************************
@@ -499,7 +517,7 @@ class OctreeBase
 	 *
 	 * @return Whether the octree is in a modified state.
 	 */
-	[[nodiscard]] constexpr bool isModified() const { return isModified(root()); }
+	[[nodiscard]] constexpr bool isModified() const { return root().modified[rootIndex()]; }
 
 	/*!
 	 * @brief Check if a node of the octree is in a modified state (i.e., the node
@@ -1081,7 +1099,7 @@ class OctreeBase
 	template <class NodeType>
 	[[nodiscard]] Point center(NodeType const& node) const
 	{
-		if constexpr (std::is_same_as_v<NodeBV, NodeType>) {
+		if constexpr (std::is_same_v<NodeBV, NodeType>) {
 			return node.center();
 		} else {
 			return coord(node.code());
@@ -1101,7 +1119,7 @@ class OctreeBase
 	template <class NodeType>
 	[[nodiscard]] geometry::AAEBB boundingVolume(NodeType const& node) const
 	{
-		if constexpr (std::is_same_as_v<NodeBV, NodeType>) {
+		if constexpr (std::is_same_v<NodeBV, NodeType>) {
 			return node.boundingVolume();
 
 		} else {
@@ -1199,23 +1217,26 @@ class OctreeBase
 	// TODO: Add comment
 	[[nodiscard]] Node operator()(Node node) const
 	{
-		if (node.depth() == node.realDepth()) {
+		if (!exists(leafNodeUnsafe(node))) {
+			return operator()(node.code());
+		} else if (node.isActualData() || isLeaf(node)) {
 			return node;
 		}
 
-		// TODO: Implement correct
-		InnerNode const* node = &innerNode(node);
-		depth_t depth = node.realDepth();
+		InnerNode const* n = &innerNodeUnsafe(node);
+		depth_t depth = node.dataDepth();
 		depth_t min_depth = std::max(node.depth(), depth_t(1));
 		Code code = node.code();
-		while (min_depth != depth && isParent(*node)) {
-			node = &innerChild(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !n->leaf[index]) {
+			n = &innerChild(*n, index);
 			--depth;
+			index = code.index(depth);
 		}
 
-		return 0 == code.depth() && isParent(*node)
-		           ? Node(const_cast<LeafNode*>(&leafChild(*node, code.index())), code, 0)
-		           : Node(const_cast<LeafNode*>(node), code, depth);
+		return 0 == code.depth() && !n->leaf[index]
+		           ? Node(const_cast<LeafNode*>(&leafChild(*n, index)), code, 0)
+		           : Node(const_cast<LeafNode*>(n), code, depth);
 	}
 
 	/*!
@@ -1304,7 +1325,7 @@ class OctreeBase
 	[[nodiscard]] Node sibling(Node node, index_t sibling_index) const
 	{
 		node = operator()(node);
-		return Node(node.data(), node.code().sibling(sibling_index), node.realDepth());
+		return Node(node.data(), node.code().sibling(sibling_index), node.dataDepth());
 	}
 
 	/*!
@@ -1355,9 +1376,9 @@ class OctreeBase
 	{
 		node = operator()(node);
 		return isLeaf(node)
-		           ? Node(node.data(), node.code().child(child_index), node.realDepth())
+		           ? Node(node.data(), node.code().child(child_index), node.dataDepth())
 		           : Node(&child(innerNode(node), node.index(), node.depth()),
-		                  node.code.child(child_index), node.realDepth() - 1);
+		                  node.code().child(child_index), node.dataDepth() - 1);
 	}
 
 	/*!
@@ -1406,9 +1427,9 @@ class OctreeBase
 	 */
 	[[nodiscard]] Node parent(Node node) const
 	{
-		return node.depth() == node.realDepth() ? operator()(node.code().parent())
-		                                        : Node(node.data(), node.code.parent(),
-		                                               node.realDepth());
+		return node.depth() == node.dataDepth() ? operator()(node.code().parent())
+		                                        : Node(node.data(), node.code().parent(),
+		                                               node.dataDepth());
 	}
 
 	/*!
@@ -1650,9 +1671,8 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(UnaryFunction f) const
 	{
-		if constexpr (std::is_same_as_v<
-		                  Node, util::argument<UnaryFunction, 0>>) {  // FIXME: Should it be
-			                                                            // const also?
+		// FIXME: Should it be const also?
+		if constexpr (std::is_same_v<Node, util::argument<UnaryFunction, 0>>) {
 			traverseRecurs(rootNode(), f);
 		} else {
 			traverseRecurs(rootNodeBV(), f);
@@ -1670,8 +1690,8 @@ class OctreeBase
 	template <class UnaryFunction>
 	void traverse(Node node, UnaryFunction f) const
 	{
-		if constexpr (std::is_same_v<util::argument<UnaryFunction, 0>,
-		                             Node>) {  // FIXME: Should it be const also?
+		// FIXME: Should it be const also?
+		if constexpr (std::is_same_v<util::argument<UnaryFunction, 0>, Node>) {
 			traverseRecurs(node, f);
 		} else {
 			traverseRecurs(NodeBV(node, boundingVolume(node)), f);
@@ -1841,49 +1861,49 @@ class OctreeBase
 	//
 
 	template <class Predicates>
-	[[nodiscard]] Query query(Predicates&& predicates, bool create_nodes = false) const
+	[[nodiscard]] Query query(Predicates&& predicates, bool early_stopping = false) const
 	{
-		return Query(beginQuery(std::forward<Predicates>(predicates), create_nodes),
+		return Query(beginQuery(std::forward<Predicates>(predicates), early_stopping),
 		             endQuery());
 	}
 
 	template <class Predicates>
 	[[nodiscard]] Query query(Node node, Predicates&& predicates,
-	                          bool create_nodes = false) const
+	                          bool early_stopping = false) const
 	{
-		return Query(beginQuery(node, std::forward<Predicates>(predicates), create_nodes),
+		return Query(beginQuery(node, std::forward<Predicates>(predicates), early_stopping),
 		             endQuery());
 	}
 
 	template <class Predicates>
 	[[nodiscard]] Query query(Code code, Predicates&& predicates,
-	                          bool create_nodes = false) const
+	                          bool early_stopping = false) const
 	{
-		return Query(beginQuery(code, std::forward<Predicates>(predicates), create_nodes),
+		return Query(beginQuery(code, std::forward<Predicates>(predicates), early_stopping),
 		             endQuery());
 	}
 
 	template <class Predicates>
 	[[nodiscard]] Query query(Key key, Predicates&& predicates,
-	                          bool create_nodes = false) const
+	                          bool early_stopping = false) const
 	{
-		return query(toCode(key), std::forward<Predicates>(predicates), create_nodes);
+		return query(toCode(key), std::forward<Predicates>(predicates), early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] Query query(Point coord, depth_t depth, Predicates&& predicates,
-	                          bool create_nodes = false) const
+	                          bool early_stopping = false) const
 	{
 		return query(toCode(coord, depth), std::forward<Predicates>(predicates),
-		             create_nodes);
+		             early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] Query query(coord_t x, coord_t y, coord_t z, depth_t depth,
-	                          Predicates&& predicates, bool create_nodes = false) const
+	                          Predicates&& predicates, bool early_stopping = false) const
 	{
 		return query(toCode(x, y, z, depth), std::forward<Predicates>(predicates),
-		             create_nodes);
+		             early_stopping);
 	}
 
 	//
@@ -1891,49 +1911,53 @@ class OctreeBase
 	//
 
 	template <class Predicates>
-	[[nodiscard]] QueryBV queryBV(Predicates&& predicates, bool create_nodes = false) const
+	[[nodiscard]] QueryBV queryBV(Predicates&& predicates,
+	                              bool early_stopping = false) const
 	{
-		return QueryBV(beginQueryBV(std::forward<Predicates>(predicates), create_nodes),
+		return QueryBV(beginQueryBV(std::forward<Predicates>(predicates), early_stopping),
 		               endQueryBV());
 	}
 
 	template <class Predicates>
 	[[nodiscard]] QueryBV queryBV(Node node, Predicates&& predicates,
-	                              bool create_nodes = false) const
+	                              bool early_stopping = false) const
 	{
-		return QueryBV(beginQueryBV(node, std::forward<Predicates>(predicates), create_nodes),
-		               endQueryBV());
+		return QueryBV(
+		    beginQueryBV(node, std::forward<Predicates>(predicates), early_stopping),
+		    endQueryBV());
 	}
 
 	template <class Predicates>
 	[[nodiscard]] QueryBV queryBV(Code code, Predicates&& predicates,
-	                              bool create_nodes = false) const
+	                              bool early_stopping = false) const
 	{
-		return QueryBV(beginQueryBV(code, std::forward<Predicates>(predicates), create_nodes),
-		               endQueryBV());
+		return QueryBV(
+		    beginQueryBV(code, std::forward<Predicates>(predicates), early_stopping),
+		    endQueryBV());
 	}
 
 	template <class Predicates>
 	[[nodiscard]] QueryBV queryBV(Key key, Predicates&& predicates,
-	                              bool create_nodes = false) const
+	                              bool early_stopping = false) const
 	{
-		return queryBV(toCode(key), std::forward<Predicates>(predicates), create_nodes);
+		return queryBV(toCode(key), std::forward<Predicates>(predicates), early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] QueryBV queryBV(Point coord, depth_t depth, Predicates&& predicates,
-	                              bool create_nodes = false) const
+	                              bool early_stopping = false) const
 	{
 		return queryBV(toCode(coord, depth), std::forward<Predicates>(predicates),
-		               create_nodes);
+		               early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] QueryBV queryBV(coord_t x, coord_t y, coord_t z, depth_t depth,
-	                              Predicates&& predicates, bool create_nodes = false) const
+	                              Predicates&& predicates,
+	                              bool early_stopping = false) const
 	{
 		return queryBV(toCode(x, y, z, depth), std::forward<Predicates>(predicates),
-		               create_nodes);
+		               early_stopping);
 	}
 
 	//
@@ -1942,61 +1966,61 @@ class OctreeBase
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] QueryNearest queryNearest(Geometry&& geometry, Predicates&& predicates,
-	                                        bool create_nodes = false) const
+	                                        bool early_stopping = false) const
 	{
 		return QueryNearest(
 		    beginQueryNearest(std::forward<Geometry>(geometry),
-		                      std::forward<Predicates>(predicates), create_nodes),
+		                      std::forward<Predicates>(predicates), early_stopping),
 		    endQueryNearest());
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] QueryNearest queryNearest(Node node, Geometry&& geometry,
 	                                        Predicates&& predicates,
-	                                        bool create_nodes = false) const
+	                                        bool early_stopping = false) const
 	{
 		return QueryNearest(
 		    beginQueryNearest(node, std::forward<Geometry>(geometry),
-		                      std::forward<Predicates>(predicates), create_nodes),
+		                      std::forward<Predicates>(predicates), early_stopping),
 		    endQueryNearest());
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] QueryNearest queryNearest(Code code, Geometry&& geometry,
 	                                        Predicates&& predicates,
-	                                        bool create_nodes = false) const
+	                                        bool early_stopping = false) const
 	{
 		return QueryNearest(
 		    beginQueryNearest(code, std::forward<Geometry>(geometry),
-		                      std::forward<Predicates>(predicates), create_nodes),
+		                      std::forward<Predicates>(predicates), early_stopping),
 		    endQueryNearest());
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] QueryNearest queryNearest(Key key, Geometry&& geometry,
 	                                        Predicates&& predicates,
-	                                        bool create_nodes = false) const
+	                                        bool early_stopping = false) const
 	{
 		return queryNearest(toCode(key), std::forward<Geometry>(geometry),
-		                    std::forward<Predicates>(predicates), create_nodes);
+		                    std::forward<Predicates>(predicates), early_stopping);
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] QueryNearest queryNearest(Point coord, depth_t depth, Geometry&& geometry,
 	                                        Predicates&& predicates,
-	                                        bool create_nodes = false) const
+	                                        bool early_stopping = false) const
 	{
 		return queryNearest(toCode(coord, depth), std::forward<Geometry>(geometry),
-		                    std::forward<Predicates>(predicates), create_nodes);
+		                    std::forward<Predicates>(predicates), early_stopping);
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] QueryNearest queryNearest(coord_t x, coord_t y, coord_t z, depth_t depth,
 	                                        Geometry&& geometry, Predicates&& predicates,
-	                                        bool create_nodes = false) const
+	                                        bool early_stopping = false) const
 	{
 		return queryNearest(toCode(x, y, z, depth), std::forward<Geometry>(geometry),
-		                    std::forward<Predicates>(predicates), create_nodes);
+		                    std::forward<Predicates>(predicates), early_stopping);
 	}
 
 	//
@@ -2005,83 +2029,83 @@ class OctreeBase
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(Predicates&& predicates, OutputIt d_first,
-	               bool create_nodes = false) const
+	               bool early_stopping = false) const
 	{
 		if constexpr (std::is_same_v<typename OutputIt::value_type, Node>) {
-			return std::copy(beginQuery(std::forward<Predicates>(predicates), create_nodes),
+			return std::copy(beginQuery(std::forward<Predicates>(predicates), early_stopping),
 			                 endQuery(), d_first);
 		} else {
-			return std::copy(beginQueryBV(std::forward<Predicates>(predicates), create_nodes),
+			return std::copy(beginQueryBV(std::forward<Predicates>(predicates), early_stopping),
 			                 endQueryBV(), d_first);
 		}
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(Node node, Predicates&& predicates, OutputIt d_first,
-	               bool create_nodes = false) const
+	               bool early_stopping = false) const
 	{
 		if constexpr (std::is_same_v<typename OutputIt::value_type, Node>) {
 			return std::copy(
-			    beginQuery(node, std::forward<Predicates>(predicates), create_nodes),
+			    beginQuery(node, std::forward<Predicates>(predicates), early_stopping),
 			    endQuery(), d_first);
 		} else {
 			return std::copy(
-			    beginQueryBV(node, std::forward<Predicates>(predicates), create_nodes),
+			    beginQueryBV(node, std::forward<Predicates>(predicates), early_stopping),
 			    endQueryBV(), d_first);
 		}
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(Code code, Predicates&& predicates, OutputIt d_first,
-	               bool create_nodes = false) const
+	               bool early_stopping = false) const
 	{
 		if constexpr (std::is_same_v<typename OutputIt::value_type, Node>) {
 			return std::copy(
-			    beginQuery(code, std::forward<Predicates>(predicates), create_nodes),
+			    beginQuery(code, std::forward<Predicates>(predicates), early_stopping),
 			    endQuery(), d_first);
 		} else {
 			return std::copy(
-			    beginQueryBV(code, std::forward<Predicates>(predicates), create_nodes),
+			    beginQueryBV(code, std::forward<Predicates>(predicates), early_stopping),
 			    endQueryBV(), d_first);
 		}
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(Key key, Predicates&& predicates, OutputIt d_first,
-	               bool create_nodes = false) const
+	               bool early_stopping = false) const
 	{
 		return query(toCode(key), std::forward<Predicates>(predicates), d_first,
-		             create_nodes);
+		             early_stopping);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(Point coord, depth_t depth, Predicates&& predicates, OutputIt d_first,
-	               bool create_nodes = false) const
+	               bool early_stopping = false) const
 	{
 		return query(toCode(coord, depth), std::forward<Predicates>(predicates), d_first,
-		             create_nodes);
+		             early_stopping);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt query(coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates,
-	               OutputIt d_first, bool create_nodes = false) const
+	               OutputIt d_first, bool early_stopping = false) const
 	{
 		return query(toCode(x, y, z, depth), std::forward<Predicates>(predicates), d_first,
-		             create_nodes);
+		             early_stopping);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(std::size_t k, Predicates&& predicates, OutputIt d_first,
-	                bool create_nodes = false) const
+	                bool early_stopping = false) const
 	{
 		std::size_t count = 0;
 		if constexpr (std::is_same_v<typename OutputIt::value_type, Node>) {
-			for (auto it = beginQuery(std::forward<Predicates>(predicates), create_nodes);
+			for (auto it = beginQuery(std::forward<Predicates>(predicates), early_stopping);
 			     count < k && it != endQuery(); ++it, ++count) {
 				*d_first++ = *it;
 			}
 		} else {
-			for (auto it = beginQueryBV(std::forward<Predicates>(predicates), create_nodes);
+			for (auto it = beginQueryBV(std::forward<Predicates>(predicates), early_stopping);
 			     count < k && it != endQueryBV(); ++it, ++count) {
 				*d_first++ = *it;
 			}
@@ -2091,17 +2115,18 @@ class OctreeBase
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(Node node, std::size_t k, Predicates&& predicates, OutputIt d_first,
-	                bool create_nodes = false) const
+	                bool early_stopping = false) const
 	{
 		std::size_t count = 0;
 		if constexpr (std::is_same_v<typename OutputIt::value_type, Node>) {
-			for (auto it = beginQuery(node, std::forward<Predicates>(predicates), create_nodes);
+			for (auto it =
+			         beginQuery(node, std::forward<Predicates>(predicates), early_stopping);
 			     count < k && it != endQuery(); ++it, ++count) {
 				*d_first++ = *it;
 			}
 		} else {
 			for (auto it =
-			         beginQueryBV(node, std::forward<Predicates>(predicates), create_nodes);
+			         beginQueryBV(node, std::forward<Predicates>(predicates), early_stopping);
 			     count < k && it != endQueryBV(); ++it, ++count) {
 				*d_first++ = *it;
 			}
@@ -2111,17 +2136,18 @@ class OctreeBase
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(Code code, std::size_t k, Predicates&& predicates, OutputIt d_first,
-	                bool create_nodes = false) const
+	                bool early_stopping = false) const
 	{
 		std::size_t count = 0;
 		if constexpr (std::is_same_v<typename OutputIt::value_type, Node>) {
-			for (auto it = beginQuery(code, std::forward<Predicates>(predicates), create_nodes);
+			for (auto it =
+			         beginQuery(code, std::forward<Predicates>(predicates), early_stopping);
 			     count < k && it != endQuery(); ++it, ++count) {
 				*d_first++ = *it;
 			}
 		} else {
 			for (auto it =
-			         beginQueryBV(code, std::forward<Predicates>(predicates), create_nodes);
+			         beginQueryBV(code, std::forward<Predicates>(predicates), early_stopping);
 			     count < k && it != endQueryBV(); ++it, ++count) {
 				*d_first++ = *it;
 			}
@@ -2131,100 +2157,100 @@ class OctreeBase
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(Key key, std::size_t k, Predicates&& predicates, OutputIt d_first,
-	                bool create_nodes = false) const
+	                bool early_stopping = false) const
 	{
 		return queryK(toCode(key), k, std::forward<Predicates>(predicates), d_first,
-		              create_nodes);
+		              early_stopping);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(Point coord, depth_t depth, std::size_t k, Predicates&& predicates,
-	                OutputIt d_first, bool create_nodes = false) const
+	                OutputIt d_first, bool early_stopping = false) const
 	{
 		return queryK(toCode(coord, depth), k, std::forward<Predicates>(predicates), d_first,
-		              create_nodes);
+		              early_stopping);
 	}
 
 	template <class Predicates, class OutputIt>
 	OutputIt queryK(coord_t x, coord_t y, coord_t z, depth_t depth, std::size_t k,
 	                Predicates&& predicates, OutputIt d_first,
-	                bool create_nodes = false) const
+	                bool early_stopping = false) const
 	{
 		return queryK(toCode(x, y, z, depth), k, std::forward<Predicates>(predicates),
-		              d_first, create_nodes);
+		              d_first, early_stopping);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearest(Geometry&& geometry, Predicates&& predicates, OutputIt d_first,
-	                      double epsilon = 0.0, bool create_nodes = false) const
+	                      double epsilon = 0.0, bool early_stopping = false) const
 	{
 		return std::copy(
 		    beginQueryNearest(std::forward<Geometry>(geometry),
-		                      std::forward<Predicates>(predicates), epsilon, create_nodes),
+		                      std::forward<Predicates>(predicates), epsilon, early_stopping),
 		    endQueryNearest(), d_first);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearest(Node node, Geometry&& geometry, Predicates&& predicates,
 	                      OutputIt d_first, double epsilon = 0.0,
-	                      bool create_nodes = false) const
+	                      bool early_stopping = false) const
 	{
 		return std::copy(
 		    beginQueryNearest(node, std::forward<Geometry>(geometry),
-		                      std::forward<Predicates>(predicates), epsilon, create_nodes),
+		                      std::forward<Predicates>(predicates), epsilon, early_stopping),
 		    endQueryNearest(), d_first);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearest(Code code, Geometry&& geometry, Predicates&& predicates,
 	                      OutputIt d_first, double epsilon = 0.0,
-	                      bool create_nodes = false) const
+	                      bool early_stopping = false) const
 	{
 		return std::copy(
 		    beginQueryNearest(code, std::forward<Geometry>(geometry),
-		                      std::forward<Predicates>(predicates), epsilon, create_nodes),
+		                      std::forward<Predicates>(predicates), epsilon, early_stopping),
 		    endQueryNearest(), d_first);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearest(Key key, Geometry&& geometry, Predicates&& predicates,
 	                      OutputIt d_first, double epsilon = 0.0,
-	                      bool create_nodes = false) const
+	                      bool early_stopping = false) const
 	{
 		return queryNearest(toCode(key), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates), d_first, epsilon,
-		                    create_nodes);
+		                    early_stopping);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearest(Point coord, depth_t depth, Geometry&& geometry,
 	                      Predicates&& predicates, OutputIt d_first, double epsilon = 0.0,
-	                      bool create_nodes = false) const
+	                      bool early_stopping = false) const
 	{
 		return queryNearest(toCode(coord, depth), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates), d_first, epsilon,
-		                    create_nodes);
+		                    early_stopping);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearest(coord_t x, coord_t y, coord_t z, depth_t depth,
 	                      Geometry&& geometry, Predicates&& predicates, OutputIt d_first,
-	                      double epsilon = 0.0, bool create_nodes = false) const
+	                      double epsilon = 0.0, bool early_stopping = false) const
 	{
 		return queryNearest(toCode(x, y, z, depth), std::forward<Geometry>(geometry),
 		                    std::forward<Predicates>(predicates), d_first, epsilon,
-		                    create_nodes);
+		                    early_stopping);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearestK(std::size_t k, Geometry&& geometry, Predicates&& predicates,
 	                       OutputIt d_first, double epsilon = 0.0,
-	                       bool create_nodes = false) const
+	                       bool early_stopping = false) const
 	{
 		std::size_t count = 0;
 		for (auto it = beginQueryNearest(std::forward<Geometry>(geometry),
 		                                 std::forward<Predicates>(predicates), epsilon,
-		                                 create_nodes);
+		                                 early_stopping);
 		     count < k && it != endQueryNearest(); ++it, ++count) {
 			*d_first++ = *it;
 		}
@@ -2234,12 +2260,12 @@ class OctreeBase
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearestK(Node node, std::size_t k, Geometry&& geometry,
 	                       Predicates&& predicates, OutputIt d_first, double epsilon = 0.0,
-	                       bool create_nodes = false) const
+	                       bool early_stopping = false) const
 	{
 		std::size_t count = 0;
 		for (auto it = beginQueryNearest(node, std::forward<Geometry>(geometry),
 		                                 std::forward<Predicates>(predicates), epsilon,
-		                                 create_nodes);
+		                                 early_stopping);
 		     count < k && it != endQueryNearest(); ++it, ++count) {
 			*d_first++ = *it;
 		}
@@ -2249,12 +2275,12 @@ class OctreeBase
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearestK(Code code, std::size_t k, Geometry&& geometry,
 	                       Predicates&& predicates, OutputIt d_first, double epsilon = 0.0,
-	                       bool create_nodes = false) const
+	                       bool early_stopping = false) const
 	{
 		std::size_t count = 0;
 		for (auto it = beginQueryNearest(code, std::forward<Geometry>(geometry),
 		                                 std::forward<Predicates>(predicates), epsilon,
-		                                 create_nodes);
+		                                 early_stopping);
 		     count < k && it != endQueryNearest(); ++it, ++count) {
 			*d_first++ = *it;
 		}
@@ -2264,31 +2290,31 @@ class OctreeBase
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearestK(Key key, std::size_t k, Geometry&& geometry,
 	                       Predicates&& predicates, OutputIt d_first, double epsilon = 0.0,
-	                       bool create_nodes = false) const
+	                       bool early_stopping = false) const
 	{
 		return queryNearestK(toCode(key), k, std::forward<Geometry>(geometry),
 		                     std::forward<Predicates>(predicates), d_first, epsilon,
-		                     create_nodes);
+		                     early_stopping);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearestK(Point coord, depth_t depth, std::size_t k, Geometry&& geometry,
 	                       Predicates&& predicates, OutputIt d_first, double epsilon = 0.0,
-	                       bool create_nodes = false) const
+	                       bool early_stopping = false) const
 	{
 		return queryNearestK(toCode(coord, depth), k, std::forward<Geometry>(geometry),
 		                     std::forward<Predicates>(predicates), d_first, epsilon,
-		                     create_nodes);
+		                     early_stopping);
 	}
 
 	template <class Geometry, class Predicates, class OutputIt>
 	OutputIt queryNearestK(coord_t x, coord_t y, coord_t z, depth_t depth, std::size_t k,
 	                       Geometry&& geometry, Predicates&& predicates, OutputIt d_first,
-	                       double epsilon = 0.0, bool create_nodes = false) const
+	                       double epsilon = 0.0, bool early_stopping = false) const
 	{
 		return queryNearestK(toCode(x, y, z, depth), k, std::forward<Geometry>(geometry),
 		                     std::forward<Predicates>(predicates), d_first, epsilon,
-		                     create_nodes);
+		                     early_stopping);
 	}
 
 	//
@@ -2297,9 +2323,9 @@ class OctreeBase
 
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(Predicates&& predicates,
-	                                              bool create_nodes = false) const
+	                                              bool early_stopping = false) const
 	{
-		if (create_nodes) {
+		if (early_stopping) {
 			if constexpr (predicate::contains_spatial_predicate_v<std::decay_t<Predicates>>) {
 				return const_query_iterator(
 				    new Iterator<Node, false, Derived, NodeBV, std::decay_t<Predicates>>(
@@ -2324,9 +2350,9 @@ class OctreeBase
 
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(Node node, Predicates&& predicates,
-	                                              bool create_nodes = false) const
+	                                              bool early_stopping = false) const
 	{
-		if (create_nodes) {
+		if (early_stopping) {
 			if constexpr (predicate::contains_spatial_predicate_v<std::decay_t<Predicates>>) {
 				return const_query_iterator(
 				    new Iterator<Node, false, Derived, NodeBV, std::decay_t<Predicates>>(
@@ -2351,35 +2377,35 @@ class OctreeBase
 
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(Code code, Predicates&& predicates,
-	                                              bool create_nodes = false) const
+	                                              bool early_stopping = false) const
 	{
 		return beginQuery(operator()(code), std::forward<Predicates>(predicates),
-		                  create_nodes);
+		                  early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(Key key, Predicates&& predicates,
-	                                              bool create_nodes = false) const
+	                                              bool early_stopping = false) const
 	{
-		return beginQuery(toCode(key), std::forward<Predicates>(predicates), create_nodes);
+		return beginQuery(toCode(key), std::forward<Predicates>(predicates), early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(Point coord, depth_t depth,
 	                                              Predicates&& predicates,
-	                                              bool create_nodes = false) const
+	                                              bool early_stopping = false) const
 	{
 		return beginQuery(toCode(coord, depth), std::forward<Predicates>(predicates),
-		                  create_nodes);
+		                  early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_query_iterator beginQuery(coord_t x, coord_t y, coord_t z,
 	                                              depth_t depth, Predicates&& predicates,
-	                                              bool create_nodes = false) const
+	                                              bool early_stopping = false) const
 	{
 		return beginQuery(toCode(x, y, z, depth), std::forward<Predicates>(predicates),
-		                  create_nodes);
+		                  early_stopping);
 	}
 
 	[[nodiscard]] const_query_iterator endQuery() const
@@ -2389,9 +2415,9 @@ class OctreeBase
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
-	    Predicates&& predicates, bool create_nodes = false) const
+	    Predicates&& predicates, bool early_stopping = false) const
 	{
-		if (create_nodes) {
+		if (early_stopping) {
 			return const_bounding_volume_query_iterator(
 			    new Iterator<NodeBV, false, Derived, NodeBV, Predicates>(
 			        &derived(), rootNodeBV(), std::forward<Predicates>(predicates)));
@@ -2404,9 +2430,9 @@ class OctreeBase
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
-	    Node node, Predicates&& predicates, bool create_nodes = false) const
+	    Node node, Predicates&& predicates, bool early_stopping = false) const
 	{
-		if (create_nodes) {
+		if (early_stopping) {
 			return const_bounding_volume_query_iterator(
 			    new Iterator<NodeBV, false, Derived, NodeBV, Predicates>(
 			        &derived(), toNodeBV(node), std::forward<Predicates>(predicates)));
@@ -2419,35 +2445,36 @@ class OctreeBase
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
-	    Code code, Predicates&& predicates, bool create_nodes = false) const
+	    Code code, Predicates&& predicates, bool early_stopping = false) const
 	{
 		return beginQueryBV(operator()(code), std::forward<Predicates>(predicates),
-		                    create_nodes);
+		                    early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
-	    Key key, Predicates&& predicates, bool create_nodes = false) const
+	    Key key, Predicates&& predicates, bool early_stopping = false) const
 	{
-		return beginQueryBV(toCode(key), std::forward<Predicates>(predicates), create_nodes);
+		return beginQueryBV(toCode(key), std::forward<Predicates>(predicates),
+		                    early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
 	    Point coord, depth_t depth, Predicates&& predicates,
-	    bool create_nodes = false) const
+	    bool early_stopping = false) const
 	{
 		return beginQueryBV(toCode(coord, depth), std::forward<Predicates>(predicates),
-		                    create_nodes);
+		                    early_stopping);
 	}
 
 	template <class Predicates>
 	[[nodiscard]] const_bounding_volume_query_iterator beginQueryBV(
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Predicates&& predicates,
-	    bool create_nodes = false) const
+	    bool early_stopping = false) const
 	{
 		return beginQueryBV(toCode(x, y, z, depth), std::forward<Predicates>(predicates),
-		                    create_nodes);
+		                    early_stopping);
 	}
 
 	[[nodiscard]] const_bounding_volume_query_iterator endQueryBV() const
@@ -2459,69 +2486,77 @@ class OctreeBase
 	template <class Geometry, class Predicates>
 	[[nodiscard]] const_query_nearest_iterator beginQueryNearest(
 	    Geometry&& geometry, Predicates&& predicates, double epsilon = 0.0,
-	    bool create_nodes = false) const
+	    bool early_stopping = false) const
 	{
-		if (create_nodes) {
-			return const_query_nearest_iterator(new NearestIterator<false>(
-			    &derived(), rootNodeBV(), std::forward<Geometry>(geometry),
-			    std::forward<Predicates>(predicates), epsilon));
+		if (early_stopping) {
+			return const_query_nearest_iterator(
+			    new NearestIterator<false, Derived, Geometry, Predicates>(
+			        &derived(), rootNodeBV(), std::forward<Geometry>(geometry),
+			        std::forward<Predicates>(predicates), epsilon));
 		} else {
-			return const_query_nearest_iterator(new NearestIterator<true>(
-			    &derived(), rootNodeBV(), std::forward<Geometry>(geometry),
-			    std::forward<Predicates>(predicates), epsilon));
+			return const_query_nearest_iterator(
+			    new NearestIterator<true, Derived, Geometry, Predicates>(
+			        &derived(), rootNodeBV(), std::forward<Geometry>(geometry),
+			        std::forward<Predicates>(predicates), epsilon));
 		}
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] const_query_nearest_iterator beginQueryNearest(
 	    Node node, Geometry&& geometry, Predicates&& predicates, double epsilon = 0.0,
-	    bool create_nodes = false) const
+	    bool early_stopping = false) const
 	{
-		if (create_nodes) {
-			return const_query_nearest_iterator(new NearestIterator<false>(
-			    &derived(), toNodeBV(node), std::forward<Geometry>(geometry),
-			    std::forward<Predicates>(predicates), epsilon));
+		if (early_stopping) {
+			return const_query_nearest_iterator(
+			    new NearestIterator<false, Derived, Geometry, Predicates>(
+			        &derived(), toNodeBV(node), std::forward<Geometry>(geometry),
+			        std::forward<Predicates>(predicates), epsilon));
 		} else {
-			return const_query_nearest_iterator(new NearestIterator<true>(
-			    &derived(), toNodeBV(node), std::forward<Geometry>(geometry),
-			    std::forward<Predicates>(predicates), epsilon));
+			return const_query_nearest_iterator(
+			    new NearestIterator<true, Derived, Geometry, Predicates>(
+			        &derived(), toNodeBV(node), std::forward<Geometry>(geometry),
+			        std::forward<Predicates>(predicates), epsilon));
 		}
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] const_query_nearest_iterator beginQueryNearest(
 	    Code code, Geometry&& geometry, Predicates&& predicates, double epsilon = 0.0,
-	    bool create_nodes = false) const
+	    bool early_stopping = false) const
 	{
 		return beginQueryNearest(operator()(code), std::forward<Geometry>(geometry),
-		                         std::forward<Predicates>(predicates), epsilon, create_nodes);
+		                         std::forward<Predicates>(predicates), epsilon,
+		                         early_stopping);
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] const_query_nearest_iterator beginQueryNearest(
 	    Key key, Geometry&& geometry, Predicates&& predicates, double epsilon = 0.0,
-	    bool create_nodes = false) const
+	    bool early_stopping = false) const
 	{
 		return beginQueryNearest(toCode(key), std::forward<Geometry>(geometry),
-		                         std::forward<Predicates>(predicates), epsilon, create_nodes);
+		                         std::forward<Predicates>(predicates), epsilon,
+		                         early_stopping);
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] const_query_nearest_iterator beginQueryNearest(
 	    Point coord, depth_t depth, Geometry&& geometry, Predicates&& predicates,
-	    double epsilon = 0.0, bool create_nodes = false) const
+	    double epsilon = 0.0, bool early_stopping = false) const
 	{
 		return beginQueryNearest(toCode(coord, depth), std::forward<Geometry>(geometry),
-		                         std::forward<Predicates>(predicates), epsilon, create_nodes);
+		                         std::forward<Predicates>(predicates), epsilon,
+		                         early_stopping);
 	}
 
 	template <class Geometry, class Predicates>
 	[[nodiscard]] const_query_nearest_iterator beginQueryNearest(
 	    coord_t x, coord_t y, coord_t z, depth_t depth, Geometry&& geometry,
-	    Predicates&& predicates, double epsilon = 0.0, bool create_nodes = false) const
+	    Predicates&& predicates, double epsilon = 0.0, bool early_stopping = false) const
 	{
 		return beginQueryNearest(toCode(x, y, z, depth), std::forward<Geometry>(geometry),
-		                         std::forward<Predicates>(predicates), epsilon, create_nodes);
+		                         std::forward<Predicates>(predicates), epsilon,
+		                         early_stopping);
 	}
 
 	[[nodiscard]] const_query_nearest_iterator endQueryNearest() const
@@ -2533,75 +2568,75 @@ class OctreeBase
 	// "Normal" iterator
 	//
 
-	[[nodiscard]] const_iterator begin(bool create_nodes = false) const
+	[[nodiscard]] const_iterator begin(bool early_stopping = false) const
 	{
-		return beginQuery(predicate::TRUE{}, create_nodes);
+		return beginQuery(predicate::Exists{}, early_stopping);
 	}
 
-	[[nodiscard]] const_iterator begin(Node node, bool create_nodes = false) const
+	[[nodiscard]] const_iterator begin(Node node, bool early_stopping = false) const
 	{
-		return beginQuery(node, predicate::TRUE{}, create_nodes);
+		return beginQuery(node, predicate::Exists{}, early_stopping);
 	}
 
-	[[nodiscard]] const_iterator begin(Code code, bool create_nodes = false) const
+	[[nodiscard]] const_iterator begin(Code code, bool early_stopping = false) const
 	{
-		return beginQuery(code, predicate::TRUE{}, create_nodes);
+		return beginQuery(code, predicate::Exists{}, early_stopping);
 	}
 
-	[[nodiscard]] const_iterator begin(Key key, bool create_nodes = false) const
+	[[nodiscard]] const_iterator begin(Key key, bool early_stopping = false) const
 	{
-		return begin(toCode(key), create_nodes);
+		return begin(toCode(key), early_stopping);
 	}
 
 	[[nodiscard]] const_iterator begin(Point coord, depth_t depth,
-	                                   bool create_nodes = false) const
+	                                   bool early_stopping = false) const
 	{
-		return begin(toCode(coord, depth), create_nodes);
+		return begin(toCode(coord, depth), early_stopping);
 	}
 
 	[[nodiscard]] const_iterator begin(coord_t x, coord_t y, coord_t z, depth_t depth,
-	                                   bool create_nodes = false) const
+	                                   bool early_stopping = false) const
 	{
-		return begin(toCode(x, y, z, depth), create_nodes);
+		return begin(toCode(x, y, z, depth), early_stopping);
 	}
 
-	[[nodiscard]] const_iterator end() const { return endQuery(predicate::TRUE{}); }
+	[[nodiscard]] const_iterator end() const { return endQuery(predicate::Exists{}); }
 
-	[[nodiscard]] const_bounding_volume_iterator beginBV(bool create_nodes = false) const
+	[[nodiscard]] const_bounding_volume_iterator beginBV(bool early_stopping = false) const
 	{
-		return beginQueryBV(predicate::TRUE{}, create_nodes);
+		return beginQueryBV(predicate::Exists{}, early_stopping);
 	}
 
-	[[nodiscard]] const_iterator beginBV(Node node, bool create_nodes = false) const
+	[[nodiscard]] const_iterator beginBV(Node node, bool early_stopping = false) const
 	{
-		return beginQueryBV(node, predicate::TRUE{}, create_nodes);
+		return beginQueryBV(node, predicate::Exists{}, early_stopping);
 	}
 
-	[[nodiscard]] const_iterator beginBV(Code code, bool create_nodes = false) const
+	[[nodiscard]] const_iterator beginBV(Code code, bool early_stopping = false) const
 	{
-		return beginQueryBV(code, predicate::TRUE{}, create_nodes);
+		return beginQueryBV(code, predicate::Exists{}, early_stopping);
 	}
 
-	[[nodiscard]] const_iterator beginBV(Key key, bool create_nodes = false) const
+	[[nodiscard]] const_iterator beginBV(Key key, bool early_stopping = false) const
 	{
-		return beginBV(toCode(key), create_nodes);
+		return beginBV(toCode(key), early_stopping);
 	}
 
 	[[nodiscard]] const_iterator beginBV(Point coord, depth_t depth,
-	                                     bool create_nodes = false) const
+	                                     bool early_stopping = false) const
 	{
-		return beginBV(toCode(coord, depth), create_nodes);
+		return beginBV(toCode(coord, depth), early_stopping);
 	}
 
 	[[nodiscard]] const_iterator beginBV(coord_t x, coord_t y, coord_t z, depth_t depth,
-	                                     bool create_nodes = false) const
+	                                     bool early_stopping = false) const
 	{
-		return beginBV(toCode(x, y, z, depth), create_nodes);
+		return beginBV(toCode(x, y, z, depth), early_stopping);
 	}
 
 	[[nodiscard]] const_bounding_volume_iterator endBV() const
 	{
-		return endQueryBV(predicate::TRUE{});
+		return endQueryBV(predicate::Exists{});
 	}
 
 	/**************************************************************************************
@@ -2625,6 +2660,11 @@ class OctreeBase
 		readData(in, readHeader(in), propagate);
 	}
 
+	void read(ReadBuffer& in, bool propagate = true)
+	{
+		readData(in, readHeader(in), propagate);
+	}
+
 	void readData(std::istream& in, FileHeader const& header, bool propagate = true)
 	{
 		if (size() != header.leaf_size || depthLevels() != header.depth_levels) {
@@ -2632,8 +2672,21 @@ class OctreeBase
 		}
 
 		auto nodes = readNodes(in);
+		derived().readNodes(in, std::begin(nodes), std::end(nodes), header.compressed);
 
-		derived().readNodes(in, std::begin(nodes), nodes.size(), header.compressed);
+		if (propagate) {
+			propagateModified();
+		}
+	}
+
+	void readData(ReadBuffer& in, FileHeader const& header, bool propagate = true)
+	{
+		if (size() != header.leaf_size || depthLevels() != header.depth_levels) {
+			clear(header.leaf_size, header.depth_levels);
+		}
+
+		auto nodes = readNodes(in);
+		derived().readNodes(in, std::begin(nodes), std::end(nodes), header.compressed);
 
 		if (propagate) {
 			propagateModified();
@@ -2644,14 +2697,21 @@ class OctreeBase
 	           bool compress = false, int compression_acceleration_level = 1,
 	           int compression_level = 0) const
 	{
-		write(path, predicate::TRUE(), min_depth, compress, compression_acceleration_level,
+		write(path, predicate::Exists(), min_depth, compress, compression_acceleration_level,
 		      compression_level);
 	}
 
 	void write(std::ostream& out, depth_t min_depth = 0, bool compress = false,
 	           int compression_acceleration_level = 1, int compression_level = 0) const
 	{
-		write(out, predicate::TRUE(), min_depth, compress, compression_acceleration_level,
+		write(out, predicate::Exists(), min_depth, compress, compression_acceleration_level,
+		      compression_level);
+	}
+
+	void write(WriteBuffer& out, depth_t min_depth = 0, bool compress = false,
+	           int compression_acceleration_level = 1, int compression_level = 0) const
+	{
+		write(out, predicate::Exists(), min_depth, compress, compression_acceleration_level,
 		      compression_level);
 	}
 
@@ -2677,8 +2737,22 @@ class OctreeBase
 	           int compression_level = 0) const
 	{
 		auto [tree_structure, nodes] =
-		    data(predicate::Leaf(min_depth) && std::forward<Predicates>(predicates));
-		write(out, tree_structure, std::cbegin(nodes), nodes.size(), compress,
+		    data(predicate::Leaf() && predicate::DepthMin(min_depth) &&
+		         std::forward<Predicates>(predicates));
+		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
+		      compression_acceleration_level, compression_level);
+	}
+
+	template <class Predicates,
+	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
+	void write(WriteBuffer& out, Predicates&& predicates, depth_t min_depth = 0,
+	           bool compress = false, int compression_acceleration_level = 1,
+	           int compression_level = 0) const
+	{
+		auto [tree_structure, nodes] =
+		    data(predicate::Leaf() && predicate::DepthMin(min_depth) &&
+		         std::forward<Predicates>(predicates));
+		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
 		      compression_acceleration_level, compression_level);
 	}
 
@@ -2701,7 +2775,16 @@ class OctreeBase
 	                               int compression_level = 0)
 	{
 		auto [tree_structure, nodes] = modifiedData<true>();
-		write(out, tree_structure, std::cbegin(nodes), nodes.size(), compress,
+		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
+		      compression_acceleration_level, compression_level);
+	}
+
+	void writeModifiedAndPropagate(WriteBuffer& out, bool compress = false,
+	                               int compression_acceleration_level = 1,
+	                               int compression_level = 0)
+	{
+		auto [tree_structure, nodes] = modifiedData<true>();
+		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
 		      compression_acceleration_level, compression_level);
 	}
 
@@ -2723,7 +2806,16 @@ class OctreeBase
 	                           int compression_level = 0)
 	{
 		auto [tree_structure, nodes] = modifiedData<false>();
-		write(out, tree_structure, std::cbegin(nodes), nodes.size(), compress,
+		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
+		      compression_acceleration_level, compression_level);
+	}
+
+	void writeModifiedAndReset(WriteBuffer& out, bool compress = false,
+	                           int compression_acceleration_level = 1,
+	                           int compression_level = 0)
+	{
+		auto [tree_structure, nodes] = modifiedData<false>();
+		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
 		      compression_acceleration_level, compression_level);
 	}
 
@@ -2872,8 +2964,8 @@ class OctreeBase
 	// TODO: Add comments
 
 	OctreeBase(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16,
-	           bool automatic_pruning = true)
-	    : automatic_prune_(automatic_pruning)
+	           bool auto_prune = false)
+	    : automatic_prune_(auto_prune)
 	{
 		setNodeSizeAndDepthLevels(leaf_node_size, depth_levels);
 
@@ -3083,6 +3175,11 @@ class OctreeBase
 	{
 		root().leaf.set();
 		root().modified.reset();
+		if constexpr (ReuseNodes) {
+			root().code = rootCode();  // TODO: Correct?
+		} else {
+			root().exists = true;
+		}
 	}
 
 	/*!
@@ -3118,6 +3215,21 @@ class OctreeBase
 
 	/**************************************************************************************
 	|                                                                                     |
+	|                                        Root                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	[[nodiscard]] bool lazyExists(Node node) const
+	{
+		if constexpr (ReuseNodes) {
+			return leafNodeUnsafe(node).code == node.code().parent();
+		} else {
+			return leafNodeUnsafe(node).exists;
+		}
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
 	|                                        Apply                                        |
 	|                                                                                     |
 	**************************************************************************************/
@@ -3129,20 +3241,25 @@ class OctreeBase
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
 	void apply(Node node, BinaryFunction f, UnaryFunction f2, bool const propagate)
 	{
-		if (node.depth() == node.realDepth()) {
+		if (!lazyExists(node)) {
+			apply(node.code(), f, f2, propagate);
+			return;
+		}
+
+		if (node.isActualData()) {
 			if (isLeaf(node)) {
-				f(leafNode(node), node.index());
+				f(leafNodeUnsafe(node), node.index());
 			} else {
-				applyAllRecurs(innerNode(node), node.index(), node.depth(), f, f2);
+				applyAllRecurs(innerNodeUnsafe(node), node.index(), node.depth(), f, f2);
 			}
 
-			if (leafNode(node).modified.none()) {
+			if (leafNodeUnsafe(node).modified.none()) {
 				setModifiedParents(node.code());
 			}
 
-			leafNode(node).modified.set(node.index());
+			leafNodeUnsafe(node).modified.set(node.index());
 		} else {
-			applyRecurs(innerNode(node), node.realDepth(), node.code(), f, f2);
+			applyRecurs(innerNodeUnsafe(node), node.dataDepth(), node.code(), f, f2);
 		}
 
 		if (propagate) {
@@ -3174,24 +3291,21 @@ class OctreeBase
 	                 UnaryFunction f2)
 	{
 		auto index = code.index(depth);
-		auto child_index = code.index(depth - 1);
 
 		if (code.depth() == depth) {
-			if (node.leaf[index]) {
+			if (std::as_const(node).leaf[index]) {
 				f(static_cast<LeafNode&>(node), index);
 			} else {
 				applyAllRecurs(node, index, depth, f, f2);
 			}
 		} else if (1 == depth) {
-			// TODO: Implement
-			createLeafChildren(node, ...);
-			LeafNode& child = leafChild(node, code.index(0));
+			createLeafChildren(node, index);
+			LeafNode& child = leafChild(node, index);
 			f(child);
 			setModified(child, true);
 		} else {
-			// TODO: Implement
-			createInnerChildren(node, depth);
-			applyRecurs(innerChild(node, code.index(depth - 1)), depth - 1, code, f, f2);
+			createInnerChildren(node, index, depth);
+			applyRecurs(innerChild(node, index), depth - 1, code, f, f2);
 		}
 
 		node.modified.set(index);
@@ -3326,37 +3440,37 @@ class OctreeBase
 	// Get node
 	//
 
-	[[nodiscard]] constexpr LeafNode const& leafNode(Node node) const
+	[[nodiscard]] LeafNode const& leafNodeUnsafe(Node node) const
 	{
-		if (node.isReal()) {
-			return *static_cast<LeafNode*>(node.data());
-		} else {
-			// TODO: Implement
-		}
+		return *static_cast<LeafNode const*>(node.data());
 	}
 
-	[[nodiscard]] constexpr LeafNode& leafNode(Node node)
+	[[nodiscard]] LeafNode& leafNodeUnsafe(Node node)
 	{
-		if (node.isReal()) {
-			return *static_cast<LeafNode*>(node.data());
-		} else {
-			// TODO: Implement
-		}
+		return *static_cast<LeafNode*>(node.data());
 	}
+
+	[[nodiscard]] LeafNode const& leafNode(Node node) const
+	{
+		return leafNodeUnsafe(operator()(node));
+	}
+
+	[[nodiscard]] LeafNode& leafNode(Node node) { return leafNodeUnsafe(operator()(node)); }
 
 	[[nodiscard]] LeafNode const& leafNode(Code code) const
 	{
 		InnerNode const* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && node->isParentIndex(code.index(depth))) {
-			node = &innerNode(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerNode(*node, code.index(index));
 			--depth;
+			index = code.index(depth);
 		}
 
-		return 0 == code.depth() && node->isParentIndex(code.index(depth))
-		           ? leafNode(*node, code.index(1))
-		           : *node;
+		return 0 == code.depth() && !node->leaf[index] ? leafNode(*node, code.index(index))
+		                                               : *node;
 	}
 
 	[[nodiscard]] LeafNode& leafNode(Code code)
@@ -3364,32 +3478,35 @@ class OctreeBase
 		InnerNode* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && node->isParentIndex(code.index(depth))) {
-			node = &innerNode(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerNode(*node, code.index(index));
 			--depth;
+			index = code.index(depth);
 		}
 
-		return 0 == code.depth() && node->isParentIndex(code.index(depth))
-		           ? leafNode(*node, code.index(1))
-		           : *node;
+		return 0 == code.depth() && !node->leaf[index] ? leafNode(*node, code.index(index))
+		                                               : *node;
 	}
 
-	[[nodiscard]] constexpr InnerNode const& innerNode(Node node) const
+	[[nodiscard]] InnerNode const& innerNodeUnsafe(Node node) const
 	{
-		if (node.isReal()) {
-			return *static_cast<InnerNode*>(node.data());
-		} else {
-			// TODO: Implement
-		}
+		return *static_cast<InnerNode const*>(node.data());
 	}
 
-	[[nodiscard]] constexpr InnerNode& innerNode(Node& node)
+	[[nodiscard]] InnerNode& innerNodeUnsafe(Node node)
 	{
-		if (node.isReal()) {
-			return *static_cast<InnerNode*>(node.data());
-		} else {
-			// TODO: Implement
-		}
+		return *static_cast<InnerNode*>(node.data());
+	}
+
+	[[nodiscard]] InnerNode const& innerNode(Node node) const
+	{
+		return innerNodeUnsafe(operator()(node));
+	}
+
+	[[nodiscard]] InnerNode& innerNode(Node node)
+	{
+		return innerNodeUnsafe(operator()(node));
 	}
 
 	[[nodiscard]] InnerNode const& innerNode(Code code) const
@@ -3399,9 +3516,11 @@ class OctreeBase
 		InnerNode const* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = code.depth();
-		while (min_depth != depth && isParent(*node)) {
-			node = &innerChild(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerChild(*node, index);
 			--depth;
+			index = code.index(depth);
 		}
 
 		return *node;
@@ -3414,9 +3533,11 @@ class OctreeBase
 		InnerNode* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = code.depth();
-		while (min_depth != depth && isParent(*node)) {
-			node = &innerChild(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerChild(*node, index);
 			--depth;
+			index = code.index(depth);
 		}
 
 		return *node;
@@ -3427,14 +3548,15 @@ class OctreeBase
 		InnerNode const* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			node = &innerChild(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerChild(*node, index);
 			--depth;
+			index = code.index(depth);
 		}
 
-		return 0 == code.depth() && isParent(*node)
-		           ? std::make_pair<LeafNode const&, depth_t>(leafChild(*node, code.index()),
-		                                                      0)
+		return 0 == code.depth() && !node->leaf[index]
+		           ? std::make_pair<LeafNode const&, depth_t>(leafChild(*node, index), 0)
 		           : std::make_pair<LeafNode const&, depth_t>(*node, depth);
 	}
 
@@ -3443,13 +3565,15 @@ class OctreeBase
 		InnerNode* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			node = &innerChild(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerChild(*node, index);
 			--depth;
+			index = code.index(depth);
 		}
 
-		return 0 == code.depth() && isParent(*node)
-		           ? std::make_pair<LeafNode&, depth_t>(leafChild(*node, code.index(0)), 0)
+		return 0 == code.depth() && !node->leaf[index]
+		           ? std::make_pair<LeafNode&, depth_t>(leafChild(*node, index), 0)
 		           : std::make_pair<LeafNode&, depth_t>(*node, depth);
 	}
 
@@ -3458,9 +3582,11 @@ class OctreeBase
 		InnerNode const* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			node = &innerChild(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerChild(*node, index);
 			--depth;
+			auto index = code.index(depth);
 		}
 
 		return {*node, depth};
@@ -3471,69 +3597,14 @@ class OctreeBase
 		InnerNode* node = &root();
 		depth_t depth = rootDepth();
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
-		while (min_depth != depth && isParent(*node)) {
-			node = &innerChild(*node, code.index(depth));
+		auto index = code.index(depth);
+		while (min_depth != depth && !node->leaf[index]) {
+			node = &innerChild(*node, index);
 			--depth;
+			auto index = code.index(depth);
 		}
 
 		return {*node, depth};
-	}
-
-	//
-	// Create node
-	//
-
-	[[nodiscard]] LeafNode& createLeafNode(Code code, bool set_modified = false)
-	{
-		InnerNode* node = &root();
-		if (set_modified) {
-			node->setModifiedIndex(rootIndex());
-		}
-		auto const min_depth = std::max(depth_t(1), code.depth());
-		for (depth_t depth = rootDepth(); min_depth < depth; --depth) {
-			auto const index = code.index(depth);
-			if (node->isLeafIndex(index)) {
-				createInnerChildren(*node, index, depth);
-			}
-			node = &innerChild(*node, index);
-			if (set_modified) {
-				node->setModifiedIndex(code.index(depth - 1));
-			}
-		}
-
-		if (0 == code.depth()) {
-			auto const index = code.index(1);
-			if (node->isLeafIndex(index)) {
-				createLeafChildren(*node, index);
-			}
-			LeafNode& n = leafChild(*node, index);
-			if (set_modified) {
-				n.setModifiedIndex(code.index(0));
-			}
-			return n;
-		} else {
-			return *node;
-		}
-	}
-
-	[[nodiscard]] InnerNode& createInnerNode(Code code, bool set_modified = false)
-	{
-		InnerNode* node = &root();
-		if (set_modified) {
-			node->setModifiedIndex(rootIndex());
-		}
-		auto const min_depth = std::max(depth_t(1), code.depth());
-		for (depth_t depth = rootDepth(); min_depth < depth; --depth) {
-			auto const index = code.index(depth);
-			if (node->isLeafIndex(index)) {
-				createInnerChildren(*node, index, depth);
-			}
-			node = &innerChild(*node, index);
-			if (set_modified) {
-				node->setModifiedIndex(code.index(depth - 1));
-			}
-		}
-		return *node;
 	}
 
 	//
@@ -3822,7 +3893,7 @@ class OctreeBase
 	void propagateModified(InnerNode& node, index_t index, depth_t depth,
 	                       bool keep_modified, depth_t max_depth)
 	{
-		if (!node.modified[index]) {
+		if (!std::as_const(node).modified[index]) {
 			return;  // Nothing modified here
 		}
 
@@ -3842,7 +3913,7 @@ class OctreeBase
 	template <bool KeepModified>
 	void propagateModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
 	{
-		IndexField modified_parent = node.modified & ~node.leaf;
+		IndexField const modified_parent = node.modified & ~node.leaf;
 
 		if (modified_parent.none()) {
 			if constexpr (!KeepModified) {
@@ -3856,19 +3927,17 @@ class OctreeBase
 		if (1 == depth) {
 			if constexpr (!KeepModified) {
 				for (std::size_t index = 0; 8 != index; ++index) {
-					if (!modified_parent[index]) {
-						continue;
+					if (modified_parent[index]) {
+						leafChild(node, index).modified.reset();
 					}
-					leafChild(node, index).modified.reset();
 				}
 			}
 		} else {
 			for (std::size_t index = 0; 8 != index; ++index) {
-				if (!modified_parent[index]) {
-					continue;
+				if (modified_parent[index]) {
+					propagateModifiedRecurs<KeepModified>(innerChild(node, index), depth - 1,
+					                                      max_depth);
 				}
-				propagateModifiedRecurs<KeepModified>(innerChild(node, index), depth - 1,
-				                                      max_depth);
 			}
 		}
 
@@ -3895,17 +3964,12 @@ class OctreeBase
 	                                              depth_t const depth)
 	{
 		IndexField collapsible;
-		for (std::size_t index = 0; 8 != index; ++index) {
-			if (!indices[index]) {
-				continue;
-			}
-			if (1 == depth) {
-				if (leafChild(node, index).isCollapsible(node, index)) {
-					collapsible.set(index);
-				}
-			} else {
-				if (innerChild(node, index).isCollapsible(node, index)) {
-					collapsible.set(index);
+		for (index_t i = 0; 8 != i; ++i) {
+			if (indices[i]) {
+				if (1 == depth) {
+					collapsible[i] = leafChild(node, i).isCollapsible(node, i);
+				} else {
+					collapsible[i] = innerChild(node, i).isCollapsible(node, i);
 				}
 			}
 		}
@@ -3916,7 +3980,7 @@ class OctreeBase
 	IndexField prune(InnerNode& node, IndexField indices, depth_t depth)
 	{
 		indices = isCollapsible(node, indices, depth);
-		if (indices.all()) {
+		if (indices.any()) {
 			deleteChildren(node, indices, depth);
 		}
 		return indices;
@@ -3924,23 +3988,21 @@ class OctreeBase
 
 	IndexField pruneRecurs(InnerNode& node, depth_t depth)
 	{
-		if (node.isAllLeaf()) {
-			return node.isLeaf();
+		if (node.leaf.all()) {
+			return node.leaf;
 		}
 
 		if (1 == depth) {
-			return node.isLeaf() | prune(node, node.isParent(), depth);
+			return node.leaf | prune(node, ~node.leaf, depth);
 		}
 
 		IndexField prunable;
-		for (std::size_t index = 0; 8 != index; ++index) {
-			if (node.isLeafIndex(index)) {
-				continue;
-			}
-
-			auto& child = innerChild(node, index);
-			if (child.isParent() == pruneRecurs(child, depth - 1)) {
-				prunable.set(index);
+		for (index_t i = 0; 8 != i; ++i) {
+			if (!std::as_const(node).leaf[i]) {
+				auto& child = innerChild(node, i);
+				if ((~child.leaf) == pruneRecurs(child, depth - 1)) {
+					prunable.set(i);
+				}
 			}
 		}
 
@@ -3959,18 +4021,48 @@ class OctreeBase
 
 	inline void allocateLeafChildren(InnerNode& node)
 	{
+		if constexpr (ReuseNodes) {
+			if constexpr (LockLess) {
+				if (!free_leaf_blocks_.empty()) {
+					takeExistingLeafChildren(node);
+					return;
+				}
+			} else if (lockIfNonEmptyLeaves()) {
+				takeExistingLeafChildren(node);
+				unlockLeaves();
+				return;
+			}
+		}
+
 		node.leaf_children = new LeafNodeBlock();
-		num_allocated_leaf_nodes_ += 8 * 8;
-		num_allocated_inner_leaf_nodes_ -= 1 * 8;
-		num_allocated_inner_nodes_ += 1 * 8;
+		if constexpr (CountNodes) {
+			num_allocated_leaf_nodes_ += 8 * 8;
+			num_allocated_inner_leaf_nodes_ -= 1 * 8;
+			num_allocated_inner_nodes_ += 1 * 8;
+		}
 	}
 
 	inline void allocateInnerChildren(InnerNode& node)
 	{
+		if constexpr (ReuseNodes) {
+			if constexpr (LockLess) {
+				if (!free_inner_blocks_.empty()) {
+					takeExistingInnerChildren(node);
+					return;
+				}
+			} else if (lockIfNonEmptyInner()) {
+				takeExistingInnerChildren(node);
+				unlockInner();
+				return;
+			}
+		}
+
 		node.inner_children = new InnerNodeBlock();
-		// Got 8 * 8 new and 1 * 8 is made into a inner node
-		num_allocated_inner_leaf_nodes_ += 7 * 8;
-		num_allocated_inner_nodes_ += 1 * 8;
+		if constexpr (CountNodes) {
+			// Got 8 * 8 new and 1 * 8 is made into a inner node
+			num_allocated_inner_leaf_nodes_ += 7 * 8;
+			num_allocated_inner_nodes_ += 1 * 8;
+		}
 	}
 
 	inline void takeExistingLeafChildren(InnerNode& node)
@@ -3985,11 +4077,11 @@ class OctreeBase
 		free_inner_blocks_.pop();
 	}
 
-	void createLeafChildren(InnerNode& node) { createLeafChildren(node, leaf(node)); }
+	void createLeafChildren(InnerNode& node) { createLeafChildren(node, node.leaf); }
 
 	void createLeafChildren(InnerNode& node, IndexField indices)
 	{
-		indices &= leaf(node);
+		indices &= node.leaf;
 		if (indices.none()) {
 			return;
 		}
@@ -4000,57 +4092,65 @@ class OctreeBase
 			}
 		}
 
-		if constexpr (ReuseNodes) {
-			if constexpr (!LockLess) {
-				if (lockIfNonEmptyLeaves()) {
-					takeExistingLeafChildren(node);
-					unlockLeaves();
-				} else {
-					allocateLeafChildren(node);
-				}
-			} else {
-				if (free_leaf_blocks_.empty()) {
-					allocateLeafChildren(node);
-				} else {
-					takeExistingLeafChildren(node);
-				}
-			}
-		} else if (!node.leaf_children) {
+		if (!node.leaf_children) {
 			allocateLeafChildren(node);
 		}
 
 		std::size_t num = 0;
-		for (index_t index = 0; 8 != index; ++index) {
-			if (!indices[index]) {
-				continue;
+		for (index_t i = 0; 8 != i; ++i) {
+			if (std::as_const(indices)[i]) {
+				++num;
+				leafChild(node, i).fill(node, i);
 			}
-			++num;
-			leafChildren(node, index).fill(node, index);
 		}
 
-		num_leaf_nodes_ += 8 * num;
-		num_inner_leaf_nodes_ -= 1 * num;
-		num_inner_nodes_ += 1 * num;
+		if constexpr (CountNodes) {
+			num_leaf_nodes_ += 8 * num;
+			num_inner_leaf_nodes_ -= 1 * num;
+			num_inner_nodes_ += 1 * num;
+		}
 
-		resetLeaf(node, indices);
+		node.leaf &= ~indices;
 		if constexpr (!LockLess) {
 			unlockChildren(0);
 		}
 	}
 
-	void createLeafChildrenIndex(InnerNode& node, index_t index)
+	void createLeafChildren(InnerNode& node, index_t index)
 	{
-		// TODO: Implement
+		if constexpr (!LockLess) {
+			if (!lockIfLeaf(node, index, 0)) {
+				return;
+			}
+		}
+
+		if (!node.leaf_children) {
+			allocateLeafChildren(node);
+		}
+
+		if (std::as_const(node).leaf[index]) {
+			leafChild(node, index).fill(node, index);
+			if constexpr (CountNodes) {
+				num_leaf_nodes_ += 8;
+				num_inner_leaf_nodes_ -= 1;
+				num_inner_nodes_ += 1;
+			}
+			node.leaf[index] = false;
+		}
+
+		if constexpr (!LockLess) {
+			unlockChildren(0);
+		}
 	}
 
 	void createInnerChildren(InnerNode& node, depth_t depth)
 	{
-		createInnerChildren(node, leaf(node), depth);
+		createInnerChildren(node, node.leaf, depth);
 	}
 
 	void createInnerChildren(InnerNode& node, IndexField indices, depth_t depth)
 	{
-		indices &= leaf(node);
+		indices &= node.leaf;
 		if (indices.none()) {
 			return;
 		}
@@ -4061,66 +4161,101 @@ class OctreeBase
 			}
 		}
 
-		if constexpr (ReuseNodes) {
-			if constexpr (!LockLess) {
-				if (lockIfNonEmptyInner()) {
-					takeExistingInnerChildren(node);
-					unlockInner();
-				} else {
-					allocateInnerChildren(node);
-				}
-			} else {
-				if (free_inner_blocks_.empty()) {
-					allocateInnerChildren(node);
-				} else {
-					takeExistingInnerChildren(node);
-				}
-			}
-		} else if (!node.inner_children) {
+		if (!node.inner_children) {
 			allocateInnerChildren(node);
 		}
 
 		std::size_t num = 0;
-		for (index_t index = 0; 8 != index; ++index) {
-			if (!indices[index]) {
-				continue;
+		for (index_t i = 0; 8 != i; ++i) {
+			if (std::as_const(indices)[i]) {
+				++num;
+				innerChild(node, i).fill(node, i);
 			}
-			++num;
-			innerChildren(node, index).fill(node, index);
 		}
 
-		num_inner_leaf_nodes_ += 7 * num;
-		num_inner_nodes_ += 1 * num;
+		if constexpr (CountNodes) {
+			num_inner_leaf_nodes_ += 7 * num;
+			num_inner_nodes_ += 1 * num;
+		}
 
-		resetLeaf(node, indices);
+		node.leaf &= ~indices;
 		if constexpr (!LockLess) {
 			unlockChildren(depth);
 		}
 	}
 
-	void createInnerChildrenIndex(InnerNode& node, index_t index, depth_t depth)
+	void createInnerChildren(InnerNode& node, index_t index, depth_t depth)
 	{
-		// TODO: Implement
+		if constexpr (!LockLess) {
+			if (!lockIfLeaf(node, index, depth)) {
+				return;
+			}
+		}
+
+		if (!node.inner_children) {
+			allocateInnerChildren(node);
+		}
+
+		if (std::as_const(node).leaf[index]) {
+			innerChild(node, index).fill(node, index);
+			if constexpr (CountNodes) {
+				num_inner_leaf_nodes_ += 7;
+				num_inner_nodes_ += 1;
+			}
+			node.leaf[index] = false;
+		}
+
+		if constexpr (!LockLess) {
+			unlockChildren(depth);
+		}
 	}
 
 	//
 	// Delete
 	//
 
-	inline void deallocateLeafChildren(InnerNode& node)
+	inline void deallocateLeafChildren(InnerNode& node, bool prune)
 	{
-		delete &leafChildren(node);
-		num_allocated_leaf_nodes_ -= 8 * 8;
-		num_allocated_inner_leaf_nodes_ += 1 * 8;
-		num_allocated_inner_nodes_ -= 1 * 8;
+		if (prune) {
+			delete &leafChildren(node);
+			if constexpr (CountNodes) {
+				num_allocated_leaf_nodes_ -= 8 * 8;
+				num_allocated_inner_leaf_nodes_ += 1 * 8;
+				num_allocated_inner_nodes_ -= 1 * 8;
+			}
+			node.leaf_children = nullptr;
+		} else if constexpr (ReuseNodes) {
+			if constexpr (!LockLess) {
+				lockLeaves();
+			}
+			addExistingLeafChildren(node);
+			if constexpr (!LockLess) {
+				unlockLeaves();
+			}
+			node.leaf_children = nullptr;
+		}
 	}
 
-	inline void deallocateInnerChildren(InnerNode& node)
+	inline void deallocateInnerChildren(InnerNode& node, bool prune)
 	{
-		delete &innerChildren(node);
-		// Remove 8*8 and 1*8 inner node is made into a inner leaf node
-		num_allocated_inner_leaf_nodes_ -= 7 * 8;
-		num_allocated_inner_nodes_ -= 1 * 8;
+		if (prune) {
+			delete &innerChildren(node);
+			if constexpr (CountNodes) {
+				// Remove 8*8 and 1*8 inner node is made into a inner leaf node
+				num_allocated_inner_leaf_nodes_ -= 7 * 8;
+				num_allocated_inner_nodes_ -= 1 * 8;
+			}
+			node.inner_children = nullptr;
+		} else if constexpr (ReuseNodes) {
+			if constexpr (!LockLess) {
+				lockInner();
+			}
+			addExistingInnerChildren(node);
+			if constexpr (!LockLess) {
+				unlockInner();
+			}
+			node.inner_children = nullptr;
+		}
 	}
 
 	inline void addExistingLeafChildren(InnerNode& node)
@@ -4135,110 +4270,133 @@ class OctreeBase
 
 	void deleteLeafChildren(InnerNode& node, bool manual_pruning = false)
 	{
-		deleteLeafChildren(node, ~leaf(node), manual_pruning);
+		deleteLeafChildren(node, ~node.leaf, manual_pruning);
 	}
 
 	void deleteLeafChildren(InnerNode& node, IndexField indices,
 	                        bool manual_pruning = false)
 	{
-		IndexField new_leaf = indices & ~leaf(node);
+		IndexField const new_leaf = indices & ~node.leaf;
 		if (new_leaf.none()) {
 			return;
 		}
 
-		indices |= leaf(node);
-
-		setLeaf(node, indices);
+		node.leaf |= indices;
 
 		std::size_t num = 0;
-		for (index_t index = 0; 8 != index; ++index) {
-			if (new_leaf[index]) {
+		for (index_t i = 0; 8 != i; ++i) {
+			if (new_leaf[i]) {
+				leafChild(node, i).clear();
 				++num;
 			}
 		}
-		num_leaf_nodes_ -= 8 * num;
-		num_inner_leaf_nodes_ += 1 * num;
-		num_inner_nodes_ -= 1 * num;
 
-		if (!indices.all()) {
+		if constexpr (CountNodes) {
+			num_leaf_nodes_ -= 8 * num;
+			num_inner_leaf_nodes_ += 1 * num;
+			num_inner_nodes_ -= 1 * num;
+		}
+
+		if (node.leaf.all()) {
 			// Can only remove if all nodes will be leaves
+			deallocateLeafChildren(node, manual_pruning || automaticPruning());
+		}
+	}
+
+	void deleteLeafChildren(InnerNode& node, index_t index, bool manual_pruning = false)
+	{
+		if (node.leaf[index]) {
 			return;
 		}
 
-		if constexpr (ReuseNodes) {
-			if (!manual_pruning && !automaticPruning()) {
-				if constexpr (!LockLess) {
-					lockLeaves();
-					addExistingLeafChildren(node);
-					unlockLeaves();
-				} else {
-					addExistingLeafChildren(node);
-				}
-			} else {
-				deallocateLeafChildren(node);
-			}
-		} else {
-			if (!manual_pruning && !automaticPruning()) {
-				return;
-			}
-			deallocateLeafChildren(node);
+		node.leaf[index] = true;
+
+		leafChild(node, index).clear();
+
+		if constexpr (CountNodes) {
+			num_leaf_nodes_ -= 8;
+			num_inner_leaf_nodes_ += 1;
+			num_inner_nodes_ -= 1;
 		}
 
-		node.leaf_children = nullptr;
+		if (node.leaf.all()) {
+			// Can only remove if all nodes will be leaves
+			deallocateLeafChildren(node, manual_pruning || automaticPruning());
+		}
 	}
 
 	void deleteChildren(InnerNode& node, depth_t const depth, bool manual_pruning = false)
 	{
-		deleteChildren(node, ~leaf(node), depth, manual_pruning);
+		if (1 == depth) {
+			deleteLeafChildren(node, manual_pruning);
+		} else {
+			deleteChildren(node, ~node.leaf, depth, manual_pruning);
+		}
 	}
 
 	void deleteChildren(InnerNode& node, IndexField indices, depth_t const depth,
 	                    bool manual_pruning = false)
 	{
-		IndexField new_leaf = indices & ~leaf(node);
+		if (1 == depth) {
+			deteleLeafChildren(node, indices, manual_pruning);
+			return;
+		}
+
+		IndexField const new_leaf = indices & ~node.leaf;
 		if (new_leaf.none()) {
 			return;
 		}
 
-		indices |= leaf(node);
-
-		setLeaf(node, indices);
+		node.leaf |= indices;
 
 		std::size_t num = 0;
-		for (index_t index = 0; 8 != index; ++index) {
-			if (new_leaf[index]) {
+		for (index_t i = 0; 8 != i; ++i) {
+			if (new_leaf[i]) {
+				InnerNode& child = innerChild(node, i);
+				deleteChildren(child, depth - 1, manual_pruning);
+				child.clear();
 				++num;
 			}
 		}
-		num_inner_leaf_nodes_ -= 7 * num;
-		num_inner_nodes_ -= 1 * num;
 
-		if (!indices.all()) {
+		if constexpr (CountNodes) {
+			num_inner_leaf_nodes_ -= 7 * num;
+			num_inner_nodes_ -= 1 * num;
+		}
+
+		if (node.leaf.all()) {
 			// Can only remove if all nodes will be leaves
+			deallocateInnerChildren(node, manual_pruning || automaticPruning());
+		}
+	}
+
+	void deleteChildren(InnerNode& node, index_t index, depth_t depth,
+	                    bool manual_pruning = false)
+	{
+		if (1 == depth) {
+			deteleLeafChildren(node, index, manual_pruning);
 			return;
 		}
 
-		if constexpr (ReuseNodes) {
-			if (!manual_pruning && !automaticPruning()) {
-				if constexpr (!LockLess) {
-					lockInner();
-					addExistingInnerChildren(node);
-					unlockInner();
-				} else {
-					addExistingInnerChildren(node);
-				}
-			} else {
-				deallocateInnerChildren(node);
-			}
-		} else {
-			if (!manual_pruning && !automaticPruning()) {
-				return;
-			}
-
-			deallocateInnerChildren(node);
+		if (node.leaf[index]) {
+			return;
 		}
 
-		node.inner_children = nullptr;
+		node.leaf[index] = true;
+
+		InnerNode& child = innerChild(node, index);
+		deleteChildren(child, depth - 1, manual_pruning);
+		child.clear();
+
+		if constexpr (CountNodes) {
+			num_inner_leaf_nodes_ -= 7;
+			num_inner_nodes_ -= 1;
+		}
+
+		if (node.leaf.all()) {
+			// Can only remove if all nodes will be leaves
+			deallocateInnerChildren(node, manual_pruning || automaticPruning());
+		}
 	}
 
 	//
@@ -4256,15 +4414,32 @@ class OctreeBase
 			;
 	}
 
-	[[nodiscard]] bool lockIfLeaf(InnerNode const& node, depth_t depth)
+	[[nodiscard]] bool lockIfLeaf(InnerNode const& node, index_t index, depth_t depth)
 	{
 		do {
-			if (isParent(node)) {
+			if (!node.leaf[index]) {
 				return false;
 			}
 		} while (!tryLockChildren(depth));
 
-		if (isParent(node)) {
+		if (!node.leaf[index]) {
+			unlockChildren(depth);
+			return false;
+		}
+
+		return true;
+	}
+
+	[[nodiscard]] bool lockIfLeaf(InnerNode const& node, IndexField const indices,
+	                              depth_t depth)
+	{
+		do {
+			if ((node.leaf & indices).none()) {
+				return false;
+			}
+		} while (!tryLockChildren(depth));
+
+		if ((node.leaf & indices).none()) {
 			unlockChildren(depth);
 			return false;
 		}
@@ -4343,13 +4518,14 @@ class OctreeBase
 	|                                                                                     |
 	**************************************************************************************/
 
+	template <class T = LeafNode>
 	struct NodeAndIndices {
-		std::reference_wrapper<LeafNode> node;
+		std::reference_wrapper<T> node;
 		IndexField indices;
 
 		NodeAndIndices() = default;
 
-		NodeAndIndices(LeafNode& node, IndexField indices) : node(node), indices(indices) {}
+		NodeAndIndices(T& node, IndexField indices) : node(node), indices(indices) {}
 
 		NodeAndIndices(NodeAndIndices const&) = default;
 
@@ -4360,25 +4536,7 @@ class OctreeBase
 		NodeAndIndices& operator=(NodeAndIndices&&) = default;
 	};
 
-	struct ConstNodeAndIndices {
-		std::reference_wrapper<LeafNode const> node;
-		IndexField indices;
-
-		ConstNodeAndIndices() = default;
-
-		ConstNodeAndIndices(LeafNode const& node, IndexField indices)
-		    : node(node), indices(indices)
-		{
-		}
-
-		ConstNodeAndIndices(ConstNodeAndIndices const&) = default;
-
-		ConstNodeAndIndices(ConstNodeAndIndices&&) = default;
-
-		ConstNodeAndIndices& operator=(ConstNodeAndIndices const&) = default;
-
-		ConstNodeAndIndices& operator=(ConstNodeAndIndices&&) = default;
-	};
+	using ConstNodeAndIndices = NodeAndIndices<LeafNode const>;
 
 	[[nodiscard]] FileOptions fileOptions(bool const compress) const
 	{
@@ -4390,6 +4548,13 @@ class OctreeBase
 	}
 
 	[[nodiscard]] std::vector<NodeAndIndices> readNodes(std::istream& in)
+	{
+		auto tree = readTreeStructure(in);
+		std::uint64_t num_nodes = readNumNodes(in);
+		return retrieveNodes(tree, num_nodes);
+	}
+
+	[[nodiscard]] std::vector<NodeAndIndices> readNodes(ReadBuffer& in)
 	{
 		auto tree = readTreeStructure(in);
 		std::uint64_t num_nodes = readNumNodes(in);
@@ -4606,7 +4771,7 @@ class OctreeBase
 
 			tree.push_back(valid_return);
 
-			if (valid_return) {
+			if (valid_return.any()) {
 				nodes.emplace_back(leafNode(node), valid_return);
 			}
 		} else {
@@ -4659,8 +4824,8 @@ class OctreeBase
 		InnerNode& root = root();
 		depth_t depth = rootDepth();
 
-		IndexField valid_return = root.leaf & root.modified;
-		IndexField valid_inner = root.modified;
+		IndexField const valid_return = root.leaf & root.modified;
+		IndexField const valid_inner = root.modified;
 
 		tree.push_back(valid_return);
 		tree.push_back(valid_inner);
@@ -4688,7 +4853,7 @@ class OctreeBase
 	}
 
 	template <bool Propagate>
-	void modifiedDataRecurs(LeafNodeBlock& node_block, IndexField indices,
+	void modifiedDataRecurs(LeafNodeBlock& node_block, IndexField const indices,
 	                        std::vector<IndexField>& tree,
 	                        std::vector<ConstNodeAndIndices>& nodes)
 	{
@@ -4697,7 +4862,7 @@ class OctreeBase
 				continue;
 			}
 
-			IndexField m = node_block[i].modified;
+			IndexField const m = node_block[i].modified;
 			tree.push_back(m);
 
 			if (m.none()) {
@@ -4715,7 +4880,7 @@ class OctreeBase
 	}
 
 	template <bool Propagate>
-	void modifiedDataRecurs(InnerNodeBlock& node_block, IndexField indices,
+	void modifiedDataRecurs(InnerNodeBlock& node_block, IndexField const indices,
 	                        depth_t const depth, std::vector<IndexField>& tree,
 	                        std::vector<ConstNodeAndIndices>& nodes)
 	{
@@ -4724,11 +4889,11 @@ class OctreeBase
 				continue;
 			}
 
-			IndexField m = node_block[i].modified;
-			IndexField l = node_block[i].leaf;
+			IndexField const m = node_block[i].modified;
+			IndexField const l = node_block[i].leaf;
 
-			IndexField valid_return = m & l;
-			IndexField valid_inner = m & ~l;
+			IndexField const valid_return = m & l;
+			IndexField const valid_inner = m & ~l;
 
 			tree.push_back(valid_return);
 			tree.push_back(valid_inner);
@@ -4766,13 +4931,23 @@ class OctreeBase
 
 	template <class InputIt>
 	void write(std::ostream& out, std::vector<IndexField> const& tree, InputIt first,
-	           std::size_t num_nodes, bool compress, int compression_acceleration_level,
+	           InputIt last, bool compress, int compression_acceleration_level,
 	           int compression_level) const
 	{
 		writeHeader(out, fileOptions(compress));
 		writeTreeStructure(out, tree);
-		writeNumNodes(out, num_nodes);
-		writeNodes(out, first, num_nodes, compress, compression_acceleration_level,
+		writeNodes(out, first, last, compress, compression_acceleration_level,
+		           compression_level);
+	}
+
+	template <class InputIt>
+	void write(WriteBuffer& out, std::vector<IndexField> const& tree, InputIt first,
+	           InputIt last, bool compress, int compression_acceleration_level,
+	           int compression_level) const
+	{
+		writeHeader(out, fileOptions(compress));
+		writeTreeStructure(out, tree);
+		writeNodes(out, first, last, compress, compression_acceleration_level,
 		           compression_level);
 	}
 
@@ -4784,17 +4959,28 @@ class OctreeBase
 		          num * sizeof(typename decltype(tree)::value_type));
 	}
 
-	void writeNumNodes(std::ostream& out, std::uint64_t const num_nodes) const
+	void writeTreeStructure(WriteBuffer& out, std::vector<IndexField> const& tree) const
 	{
-		out.write(reinterpret_cast<char const*>(&num_nodes), sizeof(num_nodes));
+		std::uint64_t num = tree.size();
+		out.write(&num, sizeof(num));
+		out.write(tree.data(), num * sizeof(typename decltype(tree)::value_type));
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes,
-	                bool const compress, int const compression_acceleration_level,
+	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
+	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		derived().writeNodes(out, first, num_nodes, compress, compression_acceleration_level,
+		derived().writeNodes(out, first, last, compress, compression_acceleration_level,
+		                     compression_level);
+	}
+
+	template <class InputIt>
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const compress,
+	                int const compression_acceleration_level,
+	                int const compression_level) const
+	{
+		derived().writeNodes(out, first, last, compress, compression_acceleration_level,
 		                     compression_level);
 	}
 

@@ -44,9 +44,6 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/color/color_node.h>
-#include <ufo/map/octree/octree_node.h>
-#include <ufo/map/semantic/semantic_node.h>
 #include <ufo/map/types.h>
 
 // STL
