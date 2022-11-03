@@ -452,7 +452,6 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
                                  size_t index) const
 {
 	// FIXME: Use alpha?
-
 	switch (render.coloring_mode) {
 		case ColoringMode::FIXED_COLOR:
 			return render.color;
@@ -476,7 +475,20 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
 			                               render.max_normalized_value, render.color_factor);
 		case ColoringMode::TIME_STEP_COLOR:
 			assert(position_.size() == time_step_.size());
-			switch (time_step_[index]) {
+			return render.normalized_value
+			           ? Heatmap::getColor(time_step_[index], heatmap.min_time_step,
+			                               heatmap.max_time_step, render.color_factor)
+			           : Heatmap::getColor(time_step_[index], render.min_normalized_value,
+			                               render.max_normalized_value, render.color_factor);
+		case ColoringMode::OCCUPANCY_COLOR:
+			assert(position_.size() == occupancy_.size());
+			return Heatmap::getColor(occupancy_[index], 0, 100, render.color_factor);
+		case ColoringMode::VOXEL_COLOR:
+			assert(position_.size() == color_.size());
+			return color_[index];
+		case ColoringMode::SEMANTIC_COLOR:
+			switch (maxSemantic(index).label) {
+				// Kitti
 				case 0:
 					return Ogre::ColourValue(0 / 255.0, 0 / 255.0, 0 / 255.0);
 				case 1:
@@ -579,51 +591,44 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
 				case 25900:
 					return Ogre::ColourValue(255 / 255.0, 0 / 255.0, 0 / 255.0);
 
-					// case 0:  return Ogre::ColourValue(0/ 255.0, 0 / 255.0, 0 / 255.0);
-					// case 1:  return Ogre::ColourValue(70/ 255.0, 130 / 255.0, 180 / 255.0);
-					// case 2:  return Ogre::ColourValue(0/ 255.0, 0 / 255.0, 230 / 255.0);
-					// case 3:  return Ogre::ColourValue(135/ 255.0, 206 / 255.0, 235 / 255.0);
-					// case 4:  return Ogre::ColourValue(100/ 255.0, 149 / 255.0, 237 / 255.0);
-					// case 5:  return Ogre::ColourValue(219/ 255.0, 112 / 255.0, 147 / 255.0);
-					// case 6:  return Ogre::ColourValue(0/ 255.0, 0 / 255.0, 128 / 255.0);
-					// case 7:  return Ogre::ColourValue(240/ 255.0, 128 / 255.0, 128 / 255.0);
-					// case 8:  return Ogre::ColourValue(138/ 255.0, 43 / 255.0, 226 / 255.0);
-					// case 9:  return Ogre::ColourValue(112/ 255.0, 128 / 255.0, 144 / 255.0);
-					// case 10: return Ogre::ColourValue(210/ 255.0, 105 / 255.0, 30 / 255.0);
-					// case 11: return Ogre::ColourValue(105/ 255.0, 105 / 255.0, 105 / 255.0);
-					// case 12: return Ogre::ColourValue(47/ 255.0, 79 / 255.0, 79 / 255.0);
-					// case 13: return Ogre::ColourValue(188/ 255.0, 143 / 255.0, 143 / 255.0);
-					// case 14: return Ogre::ColourValue(220/ 255.0, 20 / 255.0, 60 / 255.0);
-					// case 15: return Ogre::ColourValue(255/ 255.0, 127 / 255.0, 80 / 255.0);
-					// case 16: return Ogre::ColourValue(255/ 255.0, 69 / 255.0, 0 / 255.0);
-					// case 17: return Ogre::ColourValue(255/ 255.0, 158 / 255.0, 0 / 255.0);
-					// case 18: return Ogre::ColourValue(233/ 255.0, 150 / 255.0, 70 / 255.0);
-					// case 19: return Ogre::ColourValue(255/ 255.0, 83 / 255.0, 0 / 255.0);
-					// case 20: return Ogre::ColourValue(255/ 255.0, 215 / 255.0, 0 / 255.0);
-					// case 21: return Ogre::ColourValue(255/ 255.0, 61 / 255.0, 99 / 255.0);
-					// case 22: return Ogre::ColourValue(255/ 255.0, 140 / 255.0, 0 / 255.0);
-					// case 23: return Ogre::ColourValue(255/ 255.0, 99 / 255.0, 71 / 255.0);
-					// case 24: return Ogre::ColourValue(0/ 255.0, 207 / 255.0, 191 / 255.0);
-					// case 25: return Ogre::ColourValue(175/ 255.0, 0 / 255.0, 75 / 255.0);
-					// case 26: return Ogre::ColourValue(75/ 255.0, 0 / 255.0, 75 / 255.0);
-					// case 27: return Ogre::ColourValue(112/ 255.0, 180 / 255.0, 60 / 255.0);
-					// case 28: return Ogre::ColourValue(222/ 255.0, 184 / 255.0, 135 / 255.0);
-					// case 29: return Ogre::ColourValue(255/ 255.0, 228 / 255.0, 196 / 255.0);
-					// case 30: return Ogre::ColourValue(0/ 255.0, 175 / 255.0, 0 / 255.0);
-					// case 31: return Ogre::ColourValue(255/ 255.0, 240 / 255.0, 245 / 255.0);
+				// Nuscenes
+
+				// case 0:  return Ogre::ColourValue(0/ 255.0, 0 / 255.0, 0 / 255.0);
+				// case 1:  return Ogre::ColourValue(70/ 255.0, 130 / 255.0, 180 / 255.0);
+				// case 2:  return Ogre::ColourValue(0/ 255.0, 0 / 255.0, 230 / 255.0);
+				// case 3:  return Ogre::ColourValue(135/ 255.0, 206 / 255.0, 235 / 255.0);
+				// case 4:  return Ogre::ColourValue(100/ 255.0, 149 / 255.0, 237 / 255.0);
+				// case 5:  return Ogre::ColourValue(219/ 255.0, 112 / 255.0, 147 / 255.0);
+				// case 6:  return Ogre::ColourValue(0/ 255.0, 0 / 255.0, 128 / 255.0);
+				// case 7:  return Ogre::ColourValue(240/ 255.0, 128 / 255.0, 128 / 255.0);
+				// case 8:  return Ogre::ColourValue(138/ 255.0, 43 / 255.0, 226 / 255.0);
+				// case 9:  return Ogre::ColourValue(112/ 255.0, 128 / 255.0, 144 / 255.0);
+				// case 10: return Ogre::ColourValue(210/ 255.0, 105 / 255.0, 30 / 255.0);
+				// case 11: return Ogre::ColourValue(105/ 255.0, 105 / 255.0, 105 / 255.0);
+				// case 12: return Ogre::ColourValue(47/ 255.0, 79 / 255.0, 79 / 255.0);
+				// case 13: return Ogre::ColourValue(188/ 255.0, 143 / 255.0, 143 / 255.0);
+				// case 14: return Ogre::ColourValue(220/ 255.0, 20 / 255.0, 60 / 255.0);
+				// case 15: return Ogre::ColourValue(255/ 255.0, 127 / 255.0, 80 / 255.0);
+				// case 16: return Ogre::ColourValue(255/ 255.0, 69 / 255.0, 0 / 255.0);
+				// case 17: return Ogre::ColourValue(255/ 255.0, 158 / 255.0, 0 / 255.0);
+				// case 18: return Ogre::ColourValue(233/ 255.0, 150 / 255.0, 70 / 255.0);
+				// case 19: return Ogre::ColourValue(255/ 255.0, 83 / 255.0, 0 / 255.0);
+				// case 20: return Ogre::ColourValue(255/ 255.0, 215 / 255.0, 0 / 255.0);
+				// case 21: return Ogre::ColourValue(255/ 255.0, 61 / 255.0, 99 / 255.0);
+				// case 22: return Ogre::ColourValue(255/ 255.0, 140 / 255.0, 0 / 255.0);
+				// case 23: return Ogre::ColourValue(255/ 255.0, 99 / 255.0, 71 / 255.0);
+				// case 24: return Ogre::ColourValue(0/ 255.0, 207 / 255.0, 191 / 255.0);
+				// case 25: return Ogre::ColourValue(175/ 255.0, 0 / 255.0, 75 / 255.0);
+				// case 26: return Ogre::ColourValue(75/ 255.0, 0 / 255.0, 75 / 255.0);
+				// case 27: return Ogre::ColourValue(112/ 255.0, 180 / 255.0, 60 / 255.0);
+				// case 28: return Ogre::ColourValue(222/ 255.0, 184 / 255.0, 135 / 255.0);
+				// case 29: return Ogre::ColourValue(255/ 255.0, 228 / 255.0, 196 / 255.0);
+				// case 30: return Ogre::ColourValue(0/ 255.0, 175 / 255.0, 0 / 255.0);
+				// case 31: return Ogre::ColourValue(255/ 255.0, 240 / 255.0, 245 / 255.0);
+				default:
+					return Ogre::ColourValue(rand() / double(RAND_MAX), rand() / double(RAND_MAX),
+					                         rand / double(RAND_MAX), 1);
 			}
-			// return render.normalized_value
-			//            ? Heatmap::getColor(time_step_[index], heatmap.min_time_step,
-			//                                heatmap.max_time_step, render.color_factor)
-			//            : Heatmap::getColor(time_step_[index], render.min_normalized_value,
-			//                                render.max_normalized_value, render.color_factor);
-		case ColoringMode::OCCUPANCY_COLOR:
-			assert(position_.size() == occupancy_.size());
-			return Heatmap::getColor(occupancy_[index], 0, 100, render.color_factor);
-		case ColoringMode::VOXEL_COLOR:
-			assert(position_.size() == color_.size());
-			return color_[index];
-		case ColoringMode::SEMANTIC_COLOR:
 		default:
 			return Ogre::ColourValue(0, 0, 0, 1);
 	}

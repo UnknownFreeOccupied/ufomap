@@ -53,15 +53,12 @@ namespace ufo::map
 struct SimpleSemanticNode {
 	std::vector<SemanticPair> simple_semantic;
 
-	constexpr bool operator==(SimpleSemanticNode const& rhs) const
+	bool operator==(SimpleSemanticNode const& rhs) const
 	{
 		return simple_semantic == rhs.simple_semantic;
 	}
 
-	constexpr bool operator!=(SimpleSemanticNode const& rhs) const
-	{
-		return !(*this == rhs);
-	}
+	bool operator!=(SimpleSemanticNode const& rhs) const { return !(*this == rhs); }
 };
 }  // namespace ufo::map
 

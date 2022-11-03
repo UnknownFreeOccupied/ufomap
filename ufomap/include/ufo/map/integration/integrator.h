@@ -111,25 +111,7 @@ class Integrator
 
 			// Update time step
 			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				if constexpr (std::is_base_of_v<SemanticPair, P>) {
-					semantic_label_t label = 0;
-					semantic_value_t value = 0;
-					for (auto const& p : p.points) {
-						// if (1000 <= p.label && value < p.value) {
-						if (value < p.value) {
-							label = p.label;
-							value = p.value;
-						}
-					}
-					// if (0 != label && 1000 <= label) {
-					if (0 != label) {
-						// map.setTimeStep(node, label / 100, false);
-						map.setTimeStep(node, label, false);
-						// map.setTimeStep(p.code.toDepth(3), label, false);
-					}
-				} else {
-					map.setTimeStep(node, time_step_, false);
-				}
+				map.setTimeStep(node, time_step_, false);
 			}
 
 			// Update color
@@ -155,7 +137,9 @@ class Integrator
 					auto it = std::lower_bound(std::begin(semantics), std::end(semantics), p,
 					                           [](auto a, auto b) { return a.label < b.label; });
 					if (std::end(semantics) != it && it->label == p.label) {
-						it->value += 1;
+						if (1 < p.label) {
+							it->value += 1;
+						}
 					} else {
 						semantics.emplace(it, p.label, 1);
 					}
@@ -202,7 +186,7 @@ class Integrator
 			map.decreaseOccupancyLogit(node, prob, false);
 
 			if constexpr (is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				// map.setTimeStep(node, time_step, false);
+				map.setTimeStep(node, time_step, false);
 			}
 		});
 	}

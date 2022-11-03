@@ -112,6 +112,20 @@ class Data
 
 	ufo::map::time_step_t maxTimeStep() const { return max_time_step_; }
 
+	ufo::map::SemanticPair maxSemantic(std::size_t index) const
+	{
+		if (semantics_[index].empty()) {
+			return ufo::map::SemanticPair();
+		}
+		ufo::map::SemanticPair max = semantics_[index].front();
+		for (auto a : semantics_[index]) {
+			if (max.value < a.value) {
+				max = a;
+			}
+		}
+		return max;
+	}
+
 	void clear();
 
  protected:

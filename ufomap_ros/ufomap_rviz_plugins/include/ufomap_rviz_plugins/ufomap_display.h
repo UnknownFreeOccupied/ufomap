@@ -141,6 +141,10 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 		// if constexpr (ufo::map::is_base_of_template_v<ufo::map::SemanticMapBase, Map>) {
 		// 	// TODO: Add semantics
 		// }
+
+		if constexpr (ufo::map::is_base_of_template_v<ufo::map::SimpleSemanticMapBase, Map>) {
+			data.addSemantics(map.getSimpleSemantic(node));
+		}
 	}
 
 	// void filterMsgs(std::vector<ufomap_msgs::UFOMapStamped::ConstPtr>& msgs);

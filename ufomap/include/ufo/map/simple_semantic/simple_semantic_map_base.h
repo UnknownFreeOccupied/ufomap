@@ -203,7 +203,7 @@ class SimpleSemanticMapBase
 			auto size = it->label;
 			++it;
 			node->simple_semantic.resize(size);
-			if (0 != size) {
+			if (!node->simple_semantic.empty()) {
 				std::copy(it, it + size, node->simple_semantic.data());
 				it += size;
 			}
@@ -222,11 +222,10 @@ class SimpleSemanticMapBase
 
 		auto data = std::make_unique<SemanticPair[]>(num_nodes + total_size);
 		auto it = data.get();
-		std::size_t i = 0;
 		for (auto const& node : nodes) {
 			it->label = node.simple_semantic.size();
 			++it;
-			if (0 != it->label) {
+			if (!node.simple_semantic.empty()) {
 				it = std::copy(node.simple_semantic.data(),
 				               node.simple_semantic.data() + node.simple_semantic.size(), it);
 			}
