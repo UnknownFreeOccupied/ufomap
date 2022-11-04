@@ -63,7 +63,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class OccupancyMap
+class OccupancyMapBase
 {
  public:
 	//
@@ -676,7 +676,8 @@ class OccupancyMap
 
 	[[nodiscard]] constexpr logit_t toOccupancyLogit(occupancy_t probability) const
 	{
-		return math::logit<logit_t>(probability, occupancyClampingThresMinLogit(),
+		return math::logit<logit_t>(static_cast<double>(probability),
+		                            occupancyClampingThresMinLogit(),
 		                            occupancyClampingThresMaxLogit());
 	}
 
@@ -786,14 +787,14 @@ class OccupancyMap
 	// Constructors
 	//
 
-	OccupancyMap() = default;
+	OccupancyMapBase() = default;
 
-	OccupancyMap(OccupancyMap const& other) = default;
+	OccupancyMapBase(OccupancyMapBase const& other) = default;
 
-	OccupancyMap(OccupancyMap&& other) = default;
+	OccupancyMapBase(OccupancyMapBase&& other) = default;
 
 	template <class Derived2>
-	OccupancyMap(OccupancyMap<Derived2> const& other)
+	OccupancyMapBase(OccupancyMapBase<Derived2> const& other)
 	    : clamping_thres_min_logit_(other.occupancyClampingThresMinLogit()),
 	      clamping_thres_max_logit_(other.occupancyClampingThresMaxLogit()),
 	      occupied_thres_logit_(other.occupiedThresLogit()),
@@ -805,12 +806,12 @@ class OccupancyMap
 	// Assignment operator
 	//
 
-	OccupancyMap& operator=(OccupancyMap const& rhs) = default;
+	OccupancyMapBase& operator=(OccupancyMapBase const& rhs) = default;
 
-	OccupancyMap& operator=(OccupancyMap&& rhs) = default;
+	OccupancyMapBase& operator=(OccupancyMapBase&& rhs) = default;
 
 	template <class Derived2>
-	OccupancyMap& operator=(OccupancyMap<Derived2> const& rhs)
+	OccupancyMapBase& operator=(OccupancyMapBase<Derived2> const& rhs)
 	{
 		clamping_thres_min_logit_ = rhs.occupancyClampingThresMinLogit();
 		clamping_thres_max_logit_ = rhs.occupancyClampingThresMaxLogit();
@@ -823,7 +824,7 @@ class OccupancyMap
 	// Swap
 	//
 
-	void swap(OccupancyMap& other) noexcept
+	void swap(OccupancyMapBase& other) noexcept
 	{
 		std::swap(clamping_thres_min_logit_, other.clamping_thres_min_logit_);
 		std::swap(clamping_thres_max_logit_, other.clamping_thres_max_logit_);

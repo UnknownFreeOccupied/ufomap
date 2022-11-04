@@ -170,10 +170,10 @@ template <
 	                    (max_logit - min_logit));
 }
 
-template <
-    typename U, typename F,
-    typename = std::enable_if_t<std::is_unsigned_v<U> && std::is_floating_point_v<F>>>
-[[nodiscard]] constexpr U logit(F probability, F min_logit, F max_logit) noexcept
+template <typename U, typename F,
+          typename = std::enable_if_t<std::is_floating_point_v<F>>>
+[[nodiscard]] constexpr std::enable_if_t<std::is_unsigned_v<U>, U> logit(
+    F probability, F min_logit, F max_logit) noexcept
 {
 	return convertLogit<U>(logit(probability, min_logit, max_logit), min_logit, max_logit);
 }

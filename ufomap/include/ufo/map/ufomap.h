@@ -130,10 +130,10 @@ class UFOMap
           // cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
           // cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
           // cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
-          cond_map_base<MapType & TIME,       TIME,       TimeMap>::template type,
+          cond_map_base<MapType & TIME,       TIME,       TimeMapBase>::template type,
           // cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
-          cond_map_base<MapType & COLOR,      COLOR,      ColorMap>::template type,
-          cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMap>::template type
+          cond_map_base<MapType & COLOR,      COLOR,      ColorMapBase>::template type,
+          cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMapBase>::template type
           // clang-format on
           >
 {
@@ -157,10 +157,10 @@ class UFOMap
 			// cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
 			// cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
 			// cond_map_base<MapType & COUNT,      COUNT,      CountMap>::template type,
-			cond_map_base<MapType & TIME,       TIME,       TimeMap>::template type,
+			cond_map_base<MapType & TIME,       TIME,       TimeMapBase>::template type,
 			// cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
-			cond_map_base<MapType & COLOR,      COLOR,      ColorMap>::template type,
-			cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMap>::template type
+			cond_map_base<MapType & COLOR,      COLOR,      ColorMapBase>::template type,
+			cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMapBase>::template type
 	    // clang-format on
 	    >;
 

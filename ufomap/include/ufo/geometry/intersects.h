@@ -98,7 +98,7 @@ constexpr bool intersects(Point point, OBB const& obb) noexcept
 {
 	// FIXME: Implement look earlier. THIS IS WRONG!
 	Point dir = point - obb.center;
-	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
+	std::array<float, 9> obb_rot_matrix = obb.rotation.rotMatrix();
 	for (int i = 0; i < 3; ++i) {
 		Point axis(obb_rot_matrix[i * 3], obb_rot_matrix[i * 3 + 1],
 		           obb_rot_matrix[i * 3 + 2]);
@@ -260,7 +260,7 @@ constexpr bool intersects(AABB const& aabb, LineSegment const& line_segment) noe
 
 inline bool intersects(AABB const& aabb, OBB const& obb) noexcept
 {
-	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
+	std::array<float, 9> obb_rot_matrix = obb.rotation.rotMatrix();
 
 	std::array<Point, 15> test = {
 	    Point(1, 0, 0),  // AABB axis 1
@@ -344,7 +344,7 @@ constexpr bool intersects(AAEBB aaebb, LineSegment const& line_segment) noexcept
 
 inline bool intersects(AAEBB aaebb, OBB const& obb) noexcept
 {
-	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
+	std::array<float, 9> obb_rot_matrix = obb.rotation.rotMatrix();
 
 	std::array<Point, 15> test = {
 	    Point(1, 0, 0),  // AABB axis 1
@@ -525,8 +525,8 @@ constexpr bool intersects(OBB const& obb, LineSegment const& line_segment) noexc
 
 inline bool intersects(OBB const& obb_1, OBB const& obb_2) noexcept
 {
-	std::array<float, 9> obb_1_rot_matrix = obb_1.rotation.getRotMatrix();
-	std::array<float, 9> obb_2_rot_matrix = obb_2.rotation.getRotMatrix();
+	std::array<float, 9> obb_1_rot_matrix = obb_1.rotation.rotMatrix();
+	std::array<float, 9> obb_2_rot_matrix = obb_2.rotation.rotMatrix();
 
 	std::array<Point, 15> test = {
 	    Point(obb_1_rot_matrix[0], obb_1_rot_matrix[1], obb_1_rot_matrix[2]),

@@ -169,7 +169,7 @@ struct Quaternion {
 		return Vector3<T>(roll, pitch, yaw);
 	}
 
-	constexpr std::array<T, 9> getRotMatrix() const noexcept
+	constexpr std::array<T, 9> rotMatrix() const noexcept
 	{
 		// create rotational matrix
 		T const n = norm();

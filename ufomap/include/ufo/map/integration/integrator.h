@@ -86,6 +86,7 @@ class Integrator
 		auto const occupancy_prob_hit = getOccupancyProbHit();
 		auto const time = getTime();
 
+		// TODO: Check if occupancy map before this
 		auto prob = map.toOccupancyChangeLogit(
 		    occupancy_prob_hit);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
 
@@ -103,21 +104,20 @@ class Integrator
 			auto last_point_it = std::cend(p.points);
 
 			// Create and retrieve the node
-			auto node = map.createNode(p.code);
-
-			// Get current occupancy
-			auto logit = map.getOccupancyLogit(node);
+			auto node = map(p.code);
 
 			// Update occupancy
-			map.increaseOccupancyLogit(node, prob, false);
+			if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
+				map.increaseOccupancyLogit(node, prob, false);
+			}
 
 			// Update time step
-			if constexpr (util::is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
+			if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
 				map.setTime(node, time, false);
 			}
 
 			// Update color
-			if constexpr (util::is_base_of_template_v<ColorMap, std::decay_t<Map>> &&
+			if constexpr (util::is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
 			              std::is_base_of_v<Color, P>) {
 				double red = 0;
 				double green = 0;
@@ -182,17 +182,25 @@ class Integrator
 		auto const occupancy_prob_miss = getOccupancyProbMiss();
 		auto const time = getTime();
 
-		auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss);
+		if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
+			auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss);
 
-		for_each(misses, [&map, prob, time](auto code) {
-			auto node = map.createNode(code);
+			for (auto code : misses) {
+				auto node = map(code);
 
-			map.decreaseOccupancyLogit(node, prob, false);
+				map.decreaseOccupancyLogit(node, prob, false);
 
-			if constexpr (util::is_base_of_template_v<TimeMap, std::decay_t<Map>>) {
-				map.setTime(node, time, false);
+				if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+					map.setTime(node, time, false);
+				}
 			}
-		});
+		} else {
+			for (auto code : misses) {
+				if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+					map.setTime(code, time, false);
+				}
+			}
+		}
 	}
 
 	//
@@ -221,7 +229,7 @@ class Integrator
 
 		// Propagate information in the map
 		if (propagate) {
-			map.updateModifiedNodes();
+			map.propagateModified();
 		}
 	}
 
@@ -261,7 +269,7 @@ class Integrator
 
 		if (propagate) {
 			// Propagate information in the map
-			map.updateModifiedNodes();
+			map.propagateModified();
 		}
 	}
 

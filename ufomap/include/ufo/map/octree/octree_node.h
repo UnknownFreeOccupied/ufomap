@@ -71,10 +71,7 @@ struct OctreeNode : Nodes... {
 	// Is collapsible
 	//
 
-	[[nodiscard]] bool isCollapsible(OctreeNode const& parent, index_t const index) const
-	{
-		return (Nodes::isCollapsible(parent, index) && ...);
-	}
+	[[nodiscard]] bool isCollapsible() const { return (Nodes::isCollapsible() && ...); }
 };
 
 template <class Data, bool Lock, bool Reuse, bool Track>
@@ -108,11 +105,7 @@ struct OctreeLeafNode : Data {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
-	                                           index_t index) const
-	{
-		return Data::isCollapsible(parent, index);
-	}
+	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
 };
 
 template <class Data>
@@ -150,11 +143,7 @@ struct OctreeLeafNode<Data, false, true, true> : Data {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
-	                                           index_t index) const
-	{
-		return Data::isCollapsible(parent, index);
-	}
+	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
 };
 
 template <class Data>
@@ -192,11 +181,7 @@ struct OctreeLeafNode<Data, false, false, true> {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
-	                                           index_t index) const
-	{
-		return Data::isCollapsible(parent, index);
-	}
+	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
 };
 
 template <class Data>
@@ -236,11 +221,7 @@ struct OctreeLeafNode<Data, true, true, true> : Data {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
-	                                           index_t index) const
-	{
-		return Data::isCollapsible(parent, index);
-	}
+	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
 };
 
 template <class Data>
@@ -280,11 +261,7 @@ struct OctreeLeafNode<Data, true, false, true> {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(OctreeLeafNode const& parent,
-	                                           index_t index) const
-	{
-		return Data::isCollapsible(parent, index);
-	}
+	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
 };
 
 struct Leaf {
@@ -309,10 +286,7 @@ struct Leaf {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(Leaf const, index_t const) const
-	{
-		return leaf.all();
-	}
+	[[nodiscard]] constexpr bool isCollapsible() const { return leaf.all(); }
 };
 
 template <class LeafNode, class InnerData>
@@ -341,11 +315,10 @@ struct OctreeInnerNode : LeafNode, Leaf, InnerData {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(OctreeInnerNode const& parent,
-	                                           index_t index) const
+	[[nodiscard]] bool isCollapsible() const
 	{
-		return Leaf::isCollapsible(parent, index) && LeafNode::isCollapsible(parent, index) &&
-		       InnerData::isCollapsible(parent, index);
+		return Leaf::isCollapsible() && LeafNode::isCollapsible() &&
+		       InnerData::isCollapsible();
 	}
 };
 
@@ -374,10 +347,9 @@ struct OctreeInnerNode<LeafNode, void> : LeafNode, Leaf {
 	// Is collapsible
 	//
 
-	[[nodiscard]] constexpr bool isCollapsible(OctreeInnerNode const& parent,
-	                                           index_t index) const
+	[[nodiscard]] bool isCollapsible() const
 	{
-		return Leaf::isCollapsible(parent, index) && LeafNode::isCollapsible(parent, index);
+		return Leaf::isCollapsible() && LeafNode::isCollapsible();
 	}
 };
 }  // namespace ufo::map

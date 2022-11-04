@@ -220,7 +220,7 @@ constexpr std::pair<float, float> getInterval(OBB const& obb, Point axis) noexce
 	Point C = obb.center;     // OBB Center
 	Point E = obb.half_size;  // OBB Extents
 
-	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
+	std::array<float, 9> obb_rot_matrix = obb.rotation.rotMatrix();
 
 	Point A[] = {
 	    // OBB Axis

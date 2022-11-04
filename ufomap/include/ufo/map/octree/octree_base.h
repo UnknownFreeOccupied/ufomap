@@ -87,8 +87,8 @@ class OctreeBase
  private:
 	using LeafNode = OctreeLeafNode<Data, !LockLess && PerNodeLock, ReuseNodes, TrackNodes>;
 	using InnerNode = OctreeInnerNode<LeafNode, InnerData>;
-	using typename InnerNode::InnerNodeBlock;
-	using typename InnerNode::LeafNodeBlock;
+	using InnerNodeBlock = typename InnerNode::InnerNodeBlock;
+	using LeafNodeBlock = typename InnerNode::LeafNodeBlock;
 
 	friend Derived;
 
@@ -2722,6 +2722,13 @@ class OctreeBase
 		      compression_level);
 	}
 
+	Buffer write(depth_t min_depth = 0, bool compress = false,
+	             int compression_acceleration_level = 1, int compression_level = 0) const
+	{
+		return write(predicate::Exists(), min_depth, compress, compression_acceleration_level,
+		             compression_level);
+	}
+
 	template <class Predicates,
 	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
 	void write(std::filesystem::path const& path, Predicates&& predicates,
@@ -2763,6 +2770,17 @@ class OctreeBase
 		      compression_acceleration_level, compression_level);
 	}
 
+	template <class Predicates,
+	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
+	Buffer write(Predicates&& predicates, depth_t min_depth = 0, bool compress = false,
+	             int compression_acceleration_level = 1, int compression_level = 0)
+	{
+		Buffer buffer;
+		write(buffer, predicates, min_depth, compress, compression_acceleration_level,
+		      compression_level);
+		return buffer;
+	}
+
 	void writeModifiedAndPropagate(std::filesystem::path const& filename,
 	                               bool compress = false,
 	                               int compression_acceleration_level = 1,
@@ -2795,6 +2813,16 @@ class OctreeBase
 		      compression_acceleration_level, compression_level);
 	}
 
+	Buffer writeModifiedAndPropagate(bool compress = false,
+	                                 int compression_acceleration_level = 1,
+	                                 int compression_level = 0)
+	{
+		Buffer buffer;
+		writeModifiedAndPropagate(buffer, compress, compression_acceleration_level,
+		                          compression_level);
+		return buffer;
+	}
+
 	void writeModifiedAndReset(std::filesystem::path const& filename, bool compress = false,
 	                           int compression_acceleration_level = 1,
 	                           int compression_level = 0)
@@ -2824,6 +2852,16 @@ class OctreeBase
 		auto [tree_structure, nodes] = modifiedData<false>();
 		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
 		      compression_acceleration_level, compression_level);
+	}
+
+	Buffer writeModifiedAndReset(bool compress = false,
+	                             int compression_acceleration_level = 1,
+	                             int compression_level = 0)
+	{
+		Buffer buffer;
+		writeModifiedAndReset(buffer, compress, compression_acceleration_level,
+		                      compression_level);
+		return buffer;
 	}
 
 	/**************************************************************************************
@@ -3974,9 +4012,9 @@ class OctreeBase
 		for (index_t i = 0; 8 != i; ++i) {
 			if (indices[i]) {
 				if (1 == depth) {
-					collapsible[i] = leafChild(node, i).isCollapsible(node, i);
+					collapsible[i] = leafChild(node, i).isCollapsible();
 				} else {
-					collapsible[i] = innerChild(node, i).isCollapsible(node, i);
+					collapsible[i] = innerChild(node, i).isCollapsible();
 				}
 			}
 		}
@@ -4345,7 +4383,7 @@ class OctreeBase
 	                    bool manual_pruning = false)
 	{
 		if (1 == depth) {
-			deteleLeafChildren(node, indices, manual_pruning);
+			deleteLeafChildren(node, indices, manual_pruning);
 			return;
 		}
 
@@ -4381,7 +4419,7 @@ class OctreeBase
 	                    bool manual_pruning = false)
 	{
 		if (1 == depth) {
-			deteleLeafChildren(node, index, manual_pruning);
+			deleteLeafChildren(node, index, manual_pruning);
 			return;
 		}
 
@@ -4772,25 +4810,25 @@ class OctreeBase
 		InnerNode& root = root();
 		depth_t depth = rootDepth();
 
-		IndexField const valid_return = root.leaf & root.modified;
-		IndexField const valid_inner = root.modified;
+		bool const valid_return =
+		    std::as_const(root).leaf[0] && std::as_const(root).modified[0];
+		bool const valid_inner = std::as_const(root).modified[0];
 
 		tree.push_back(valid_return);
 		tree.push_back(valid_inner);
 
 		if (valid_return) {
-			nodes.emplace_back(root, valid_return);
+			nodes.emplace_back(root, 1);
 			if constexpr (Propagate) {
 				propagate(root, valid_return);
 			}
 		} else if (valid_inner) {
-			modifiedDataRecurs<Propagate>(innerChildren(root), valid_inner, depth - 1, tree,
+			modifiedDataRecurs<Propagate>(innerChildren(root), IndexField(1), depth - 1, tree,
 			                              nodes);
 			if constexpr (Propagate) {
 				propagate(root, valid_inner, depth);
 			}
 			if (nodes.empty()) {
-				//  Nothing was added
 				tree.clear();
 			}
 		}
@@ -4906,14 +4944,15 @@ class OctreeBase
 		std::uint64_t num = tree.size();
 		out.write(reinterpret_cast<char const*>(&num), sizeof(num));
 		out.write(reinterpret_cast<char const*>(tree.data()),
-		          num * sizeof(typename decltype(tree)::value_type));
+		          num * sizeof(typename std::decay_t<decltype(tree)>::value_type));
 	}
 
 	void writeTreeStructure(WriteBuffer& out, std::vector<IndexField> const& tree) const
 	{
 		std::uint64_t num = tree.size();
 		out.write(&num, sizeof(num));
-		out.write(tree.data(), num * sizeof(typename decltype(tree)::value_type));
+		out.write(tree.data(),
+		          num * sizeof(typename std::decay_t<decltype(tree)>::value_type));
 	}
 
 	void writeNumNodes(std::ostream& out, std::uint64_t num_nodes) const

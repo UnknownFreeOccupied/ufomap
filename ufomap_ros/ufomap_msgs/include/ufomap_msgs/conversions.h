@@ -94,8 +94,10 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, Predicates const& predicates,
 	//           compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data = map.write(predicates, depth, compress, compression_acceleration_level,
-	                     compression_level);
+	auto data = map.write(predicates, depth, compress, compression_acceleration_level,
+	                      compression_level);
+	msg.data.resize(data.size());
+	data.read(msg.data.data(), data.size());
 	// msg.data.resize(data.tellp());
 	// data.read(reinterpret_cast<char*>(msg.data.data()),
 	// std::streamsize(msg.data.size()));
@@ -116,8 +118,10 @@ ufomap_msgs::UFOMap ufoToMsg(Map const& map, unsigned int depth = 0,
 	// map.write(data, depth, compress, compression_acceleration_level, compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data =
+	auto data =
 	    map.write(depth, compress, compression_acceleration_level, compression_level);
+	msg.data.resize(data.size());
+	data.read(msg.data.data(), data.size());
 	// msg.data.resize(data.tellp());
 	// data.read(reinterpret_cast<char*>(msg.data.data()),
 	// std::streamsize(msg.data.size()));
@@ -138,8 +142,10 @@ ufomap_msgs::UFOMap ufoToMsgUpdateModified(Map& map, bool compress = false,
 	//                            compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data = map.writeAndUpdateModified(compress, compression_acceleration_level,
-	                                      compression_level);
+	auto data = map.writeModifiedAndUpdate(compress, compression_acceleration_level,
+	                                       compression_level);
+	msg.data.resize(data.size());
+	data.read(msg.data.data(), data.size());
 	// msg.data.resize(data.tellp());
 	// data.read(reinterpret_cast<char*>(msg.data.data()),
 	// std::streamsize(msg.data.size()));
@@ -160,8 +166,10 @@ ufomap_msgs::UFOMap ufoToMsgResetModified(Map& map, bool compress = false,
 	//                           compression_level);
 
 	ufomap_msgs::UFOMap msg;
-	msg.data = map.writeAndResetModified(data, compress, compression_acceleration_level,
-	                                     compression_level);
+	auto data = map.writeModifiedAndReset(compress, compression_acceleration_level,
+	                                      compression_level);
+	msg.data.resize(data.size());
+	data.read(msg.data.data(), data.size());
 	// msg.data.resize(data.tellp());
 	// data.read(reinterpret_cast<char*>(msg.data.data()),
 	// std::streamsize(msg.data.size()));

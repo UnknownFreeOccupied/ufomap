@@ -89,7 +89,7 @@ constexpr Point closestPoint(OBB const& obb, Point point) noexcept
 	Point result = obb.center;
 	Point dir = point - obb.center;
 
-	std::array<float, 9> obb_rot_matrix = obb.rotation.getRotMatrix();
+	std::array<float, 9> obb_rot_matrix = obb.rotation.rotMatrix();
 
 	for (int i = 0; i < 3; ++i) {
 		Point axis(obb_rot_matrix[i * 3], obb_rot_matrix[(i * 3) + 1],
