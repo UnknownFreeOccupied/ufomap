@@ -72,16 +72,16 @@ using mt_t = std::uint64_t;
 template <mt_t MT, mt_t T, template <std::size_t> class Node>
 using cond_node_t = std::conditional_t<MT & T, Node<8>, EmptyNode<T>>;
 
-template <bool C, mt_t T, template <typename...> typename Map>
+template <bool C, mt_t T, template <class> class Map>
 struct cond_map_base {
-	template <typename... ts>
-	using type = Map<ts...>;
+	template <class D>
+	using type = Map<D>;
 };
 
-template <mt_t T, template <typename...> typename Map>
+template <mt_t T, template <class> class Map>
 struct cond_map_base<false, T, Map> {
-	template <typename... Ts>
-	using type = EmptyMap<T, Ts...>;
+	template <class D>
+	using type = EmptyMap<T, D>;
 };
 
 //

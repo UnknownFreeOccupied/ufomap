@@ -41,7 +41,7 @@
 
 // UFO
 #include <ufomap_mapping/server.h>
-#include <ufomap_msgs/UFOMapStamped.h>
+#include <ufomap_msgs/UFOMap.h>
 #include <ufomap_msgs/conversions.h>
 #include <ufomap_ros/conversions.h>
 
@@ -179,8 +179,8 @@ void Server::cloudCallback(sensor_msgs::PointCloud2::ConstPtr const &msg)
 							    map.updateModifiedNodes(i);
 						    }
 
-						    ufomap_msgs::UFOMapStamped::Ptr update_msg(
-						        new ufomap_msgs::UFOMapStamped);
+						    ufomap_msgs::UFOMap::Ptr update_msg(
+						        new ufomap_msgs::UFOMap);
 						    auto pred = ufo::map::predicate::UpdatedNode();
 						    if (ufomap_msgs::ufoToMsg(map, update_msg->map, pred, i, compress_)) {
 							    update_msg->header.stamp = msg->header.stamp;
@@ -287,7 +287,7 @@ void Server::mapConnectCallback(ros::SingleSubscriberPublisher const &pub, int d
 		    using T = std::decay_t<decltype(map)>;
 		    if constexpr (!std::is_same_v<std::monostate, T>) {
 			    timing_.start("Full Publish");
-			    ufomap_msgs::UFOMapStamped::Ptr msg(new ufomap_msgs::UFOMapStamped);
+			    ufomap_msgs::UFOMap::Ptr msg(new ufomap_msgs::UFOMap);
 			    if (ufomap_msgs::ufoToMsg(map, msg->map, compress_, depth)) {
 				    msg->header.stamp = ros::Time::now();
 				    msg->header.frame_id = frame_id_;
@@ -334,7 +334,7 @@ bool Server::clearVolumeCallback(ufomap_srvs::ClearVolume::Request &request,
 	// 		    for (int i = 0; i < map_pub_.size(); ++i) {
 	// 			    if (map_pub_[i] &&
 	// 			        (0 < map_pub_[i].getNumSubscribers() || map_pub_[i].isLatched())) {
-	// 				    ufomap_msgs::UFOMapStamped::Ptr msg(new ufomap_msgs::UFOMapStamped);
+	// 				    ufomap_msgs::UFOMap::Ptr msg(new ufomap_msgs::UFOMap);
 	// 				    if (ufomap_msgs::ufoToMsg(map, msg->map, bv, compress_, i)) {
 	// 					    msg->header.stamp = ros::Time::now();
 	// 					    msg->header.frame_id = frame_id_;
@@ -404,7 +404,7 @@ void Server::timerCallback(ros::TimerEvent const &event)
 					    using T = std::decay_t<decltype(map)>;
 					    if constexpr (!std::is_same_v<std::monostate, T>) {
 						    timing_.start("Full Publish");
-						    ufomap_msgs::UFOMapStamped::Ptr msg(new ufomap_msgs::UFOMapStamped);
+						    ufomap_msgs::UFOMap::Ptr msg(new ufomap_msgs::UFOMap);
 						    if (ufomap_msgs::ufoToMsg(map, msg->map, i, compress_)) {
 							    msg->header = header;
 							    map_pub_[i].publish(msg);
@@ -465,7 +465,7 @@ void Server::configCallback(ufomap_mapping::ServerConfig &config, uint32_t level
 		for (int i = 0; i < map_pub_.size(); ++i) {
 			map_queue_size_ = config.map_queue_size;
 			std::string final_topic = i == 0 ? "map" : "map_depth_" + std::to_string(i);
-			map_pub_[i] = nh_priv_.advertise<ufomap_msgs::UFOMapStamped>(
+			map_pub_[i] = nh_priv_.advertise<ufomap_msgs::UFOMap>(
 			    final_topic, map_queue_size_,
 			    boost::bind(&Server::mapConnectCallback, this, _1, i),
 			    ros::SubscriberStatusCallback(), ros::VoidConstPtr(), config.map_latch);

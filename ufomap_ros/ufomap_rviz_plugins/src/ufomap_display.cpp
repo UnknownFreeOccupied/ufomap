@@ -152,7 +152,7 @@ void UFOMapDisplay::reset()
 	message_worker_ = std::thread(&UFOMapDisplay::processMessages, this);
 }
 
-void UFOMapDisplay::processMessage(ufomap_msgs::UFOMapStamped::ConstPtr const& msg)
+void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 {
 	std::scoped_lock<std::mutex> message_lock(message_mutex_);
 	message_queue_.push_back(msg);
@@ -172,7 +172,7 @@ void UFOMapDisplay::processMessages()
 		auto start = std::chrono::high_resolution_clock::now();
 
 		// Copy and clear global queue
-		std::vector<ufomap_msgs::UFOMapStamped::ConstPtr> local_queue;
+		std::vector<ufomap_msgs::UFOMap::ConstPtr> local_queue;
 		local_queue.swap(message_queue_);
 
 		message_lock.unlock();
@@ -346,7 +346,7 @@ std::vector<ufo::map::Code> UFOMapDisplay::getCodesInFOV(
 	return codes;
 }
 
-// void UFOMapDisplay::filterMsgs(std::vector<ufomap_msgs::UFOMapStamped::ConstPtr>& msgs)
+// void UFOMapDisplay::filterMsgs(std::vector<ufomap_msgs::UFOMap::ConstPtr>& msgs)
 // {
 // 	if (msgs.empty()) {
 // 		return;
@@ -365,7 +365,7 @@ std::vector<ufo::map::Code> UFOMapDisplay::getCodesInFOV(
 // }
 
 void UFOMapDisplay::updateMap(
-    std::vector<ufomap_msgs::UFOMapStamped::ConstPtr> const& msgs)
+    std::vector<ufomap_msgs::UFOMap::ConstPtr> const& msgs)
 {
 	auto res = map_.resolution();
 	auto depth = map_.depthLevels();

@@ -480,6 +480,12 @@ class OctreeBase
 	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(Node node) const
 	{
+		if constexpr (ReuseNodes) {
+		}
+
+		if constexpr (TrackNodes) {
+		}
+
 		// FIXME: Optimize
 		return operator()(node).isActualData();
 	}

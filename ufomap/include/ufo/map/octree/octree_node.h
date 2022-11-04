@@ -99,7 +99,7 @@ struct OctreeLeafNode : Data {
 	// Clear
 	//
 
-	void clear() {}
+	constexpr void clear() {}
 
 	//
 	// Is collapsible
@@ -137,7 +137,7 @@ struct OctreeLeafNode<Data, false, true, true> : Data {
 	// Clear
 	//
 
-	void clear() { code = Code(); }
+	constexpr void clear() { code = Code(); }
 
 	//
 	// Is collapsible

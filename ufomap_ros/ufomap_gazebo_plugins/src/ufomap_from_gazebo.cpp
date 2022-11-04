@@ -44,7 +44,7 @@
 
 // UFO ROS
 #include <ufomap_gazebo_plugins/ufomap_from_gazebo.h>
-#include <ufomap_msgs/UFOMapStamped.h>
+#include <ufomap_msgs/UFOMap.h>
 #include <ufomap_msgs/conversions.h>
 
 // Gazebo
@@ -94,7 +94,7 @@ void UFOMapFromGazebo::Load(gazebo::physics::WorldPtr _parent, sdf::ElementPtr _
 	gzlog << "Advertising service: " << service_name << '\n';
 	get_map_srv_ =
 	    nh_priv_.advertiseService(service_name, &UFOMapFromGazebo::getMapCallback, this);
-	pub_ = nh_priv_.advertise<ufomap_msgs::UFOMapStamped>(pub_topic_name, 1,
+	pub_ = nh_priv_.advertise<ufomap_msgs::UFOMap>(pub_topic_name, 1,
 	                                                      pub_topic_latched);
 }
 
@@ -126,7 +126,7 @@ bool UFOMapFromGazebo::getMapCallback(GetMap::Request& req, GetMap::Response& re
 	}
 
 	if (req.publish) {
-		ufomap_msgs::UFOMapStamped msg;
+		ufomap_msgs::UFOMap msg;
 		msg.header.frame_id = req.publish_frame;
 		msg.header.stamp = ros::Time::now();
 		msg.map = res.map;

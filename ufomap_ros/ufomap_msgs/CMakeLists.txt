@@ -13,15 +13,13 @@ find_package(ufomap REQUIRED)
 add_message_files(
   DIRECTORY msg
   FILES
-    UFOMap.msg
-    UFOMapStamped.msg
+  UFOMap.msg
 )
 
 generate_messages(
   DEPENDENCIES
-    std_msgs
+  std_msgs
 )
-
 
 catkin_package(
   INCLUDE_DIRS include

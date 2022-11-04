@@ -184,7 +184,10 @@ class TimeMapBase
 	// Swap
 	//
 
-	void swap(TimeMapBase& other) noexcept { std::swap(prop_criteria_, other.prop_criteria_); }
+	void swap(TimeMapBase& other) noexcept
+	{
+		std::swap(prop_criteria_, other.prop_criteria_);
+	}
 
 	//
 	// Derived
@@ -201,7 +204,7 @@ class TimeMapBase
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().setTime(derived().rootIndex(), 0); }
+	void initRoot() { derived().root().time[derived().rootIndex()] = 0; }
 
 	//
 	// Update node

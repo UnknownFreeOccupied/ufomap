@@ -46,7 +46,7 @@
 #include <ufo/geometry/frustum.h>
 #include <ufo/map/code.h>
 #include <ufo/map/ufomap.h>
-#include <ufomap_msgs/UFOMapStamped.h>
+#include <ufomap_msgs/UFOMap.h>
 #include <ufomap_rviz_plugins/data.h>
 #include <ufomap_rviz_plugins/filter_display.h>
 #include <ufomap_rviz_plugins/performance_display.h>
@@ -75,7 +75,7 @@
 
 namespace ufomap_ros::rviz_plugins
 {
-class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamped>
+class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 {
 	Q_OBJECT
  public:
@@ -91,7 +91,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 
 	void setupResources();
 
-	void processMessage(ufomap_msgs::UFOMapStamped::ConstPtr const& msg) override;
+	void processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg) override;
 
  private:
 	void processMessages();
@@ -142,9 +142,9 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 		// }
 	}
 
-	// void filterMsgs(std::vector<ufomap_msgs::UFOMapStamped::ConstPtr>& msgs);
+	// void filterMsgs(std::vector<ufomap_msgs::UFOMap::ConstPtr>& msgs);
 
-	void updateMap(std::vector<ufomap_msgs::UFOMapStamped::ConstPtr> const& msgs);
+	void updateMap(std::vector<ufomap_msgs::UFOMap::ConstPtr> const& msgs);
 
 	std::vector<ufo::map::Code> getCodesInFOV(ufo::geometry::Frustum const& view,
 	                                          ufo::map::depth_t depth) const;
@@ -190,7 +190,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMapStamp
 	std::thread message_worker_;
 	std::mutex message_mutex_;
 	std::condition_variable message_cv_;
-	std::vector<ufomap_msgs::UFOMapStamped::ConstPtr> message_queue_;
+	std::vector<ufomap_msgs::UFOMap::ConstPtr> message_queue_;
 
 	// Visible
 	std::vector<RenderData*> prev_visible_;
