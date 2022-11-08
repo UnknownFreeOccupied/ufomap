@@ -157,6 +157,8 @@ class ReadBuffer
 
 	[[nodiscard]] constexpr std::size_t readIndex() const noexcept { return index_; }
 
+	constexpr void skipRead(std::size_t count) noexcept { index_ += count; }
+
 	constexpr void setReadIndex(std::size_t index) noexcept { index_ = index; }
 
 	[[nodiscard]] std::size_t readLeft() const noexcept

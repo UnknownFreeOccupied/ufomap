@@ -71,8 +71,8 @@ class TimeMapBase
 
 	[[nodiscard]] time_t time(Code code) const
 	{
-		auto [n, d] = derived().leafNodeAndDepth(code);
-		return n.time[code.index(d)];
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		return node.time[code.index(depth)];
 	}
 
 	[[nodiscard]] time_t time(Key key) const { return time(derived().toCode(key)); }
@@ -285,34 +285,22 @@ class TimeMapBase
 		}
 	}
 
-	// template <class OutputIt>
-	// void readNodes(std::vector<std::uint8_t> const& in, std::size_t& index, OutputIt
-	// first,
-	//                OutputIt last) const
-	// {
-	// 	constexpr auto N = numData<OutputIt>();
-
-	// 	constexpr std::size_t count = N * sizeof(time_t);
-
-	// 	auto d = in.data() + index;
-	// 	index += serializedSize(first, last);
-	// 	for (; first != last; ++first, d += count) {
-	// 		if (first->index_field.all()) {
-	// 			std::memcpy(first->node.time.data(), d, count);
-	// 		} else {
-	// 			for (index_t i = 0; N != i; ++i) {
-	// 				if (first->index_field[i]) {
-	// 					std::memcpy(&first->node.time[i], d + (i * sizeof(time_t)), sizeof(time_t));
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	template <class OutputIt>
-	void readNodes(ReadBuffer&, OutputIt, OutputIt)
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
-		// TODO: Implement
+		constexpr std::size_t const N = numData<OutputIt>();
+		for (; first != last; ++first) {
+			if (first->index_field.all()) {
+				in.read(first->node.time.data(), N * sizeof(time_t));
+			} else {
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						in.read(&first->node.time[i], sizeof(time_t));
+					} else
+						in.skipRead(sizeof(time_t));
+				}
+			}
+		}
 	}
 
 	template <class InputIt>
@@ -331,16 +319,11 @@ class TimeMapBase
 	}
 
 	template <class InputIt>
-	void writeNodes(WriteBuffer&, InputIt first, InputIt last) const
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
 	{
-		// TODO: Implement
-		// constexpr std::size_t count = numData<InputIt>() * sizeof(time_t);
-
-		// auto d = out.data() + index;
-		// index += serializedSize(first, last);
-		// for (; first != last; ++first, d += count) {
-		// 	std::memcpy(d, first->node.time.data(), count);
-		// }
+		for (; first != last; ++first) {
+			out.write(first->node.get().time.data(), numData<InputIt>() * sizeof(time_t));
+		}
 	}
 
  protected:
