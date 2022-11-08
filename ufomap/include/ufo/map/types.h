@@ -50,6 +50,7 @@
 
 namespace ufo::map
 {
+enum class UFOLock { NONE, DEPTH, NODE };
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
 enum class PropagationCriteria { MIN, MAX, MEAN, FIRST };
 

@@ -437,6 +437,12 @@ class ColorMapBase
 		}
 	}
 
+	template <class OutputIt>
+	void readNodes(ReadBuffer&, OutputIt, OutputIt)
+	{
+		// TODO: Implement
+	}
+
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
@@ -451,6 +457,12 @@ class ColorMapBase
 		}
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_data * sizeof(typename decltype(data)::element_type));
+	}
+
+	template <class InputIt>
+	void writeNodes(WriteBuffer&, InputIt, InputIt) const
+	{
+		// TODO: Implement
 	}
 };
 }  // namespace ufo::map

@@ -121,13 +121,29 @@ class EmptyMap
 		return dataIdentifier() == identifier;
 	}
 
+	template <class InputIt>
+	static constexpr std::size_t serializedSize(InputIt first, InputIt last) noexcept
+	{
+		return 0;
+	}
+
 	template <class OutputIt>
 	static constexpr void readNodes(std::istream&, OutputIt, OutputIt) noexcept
 	{
 	}
 
+	template <class OutputIt>
+	static constexpr void readNodes(ReadBuffer&, OutputIt, OutputIt) noexcept
+	{
+	}
+
 	template <class InputIt>
 	static constexpr void writeNodes(std::ostream&, InputIt, InputIt) noexcept
+	{
+	}
+
+	template <class InputIt>
+	static constexpr void writeNodes(WriteBuffer&, InputIt, InputIt) noexcept
 	{
 	}
 };

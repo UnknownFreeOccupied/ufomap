@@ -57,6 +57,12 @@ struct TimeNode {
 	std::array<time_t, N> time;
 
 	//
+	// Size
+	//
+
+	[[nodiscard]] static constexpr std::size_t timeSize() { return N; }
+
+	//
 	// Fill
 	//
 

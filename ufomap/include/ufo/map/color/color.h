@@ -45,6 +45,9 @@
 // UFO
 #include <ufo/map/types.h>
 
+// STL
+#include <utility>
+
 namespace ufo::map
 {
 /*!
@@ -97,7 +100,8 @@ constexpr bool operator!=(Color const lhs, Color const rhs) { return !(lhs == rh
 
 namespace std
 {
-void swap(ufo::map::Color& lhs, ufo::map::Color& rhs) noexcept(noexcept(lhs.swap(rhs)))
+inline void swap(ufo::map::Color& lhs,
+                 ufo::map::Color& rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }

@@ -60,23 +60,22 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Data, class InnerData, bool ReuseNodes, bool LockLess, bool PerNodeLock,
-          bool TrackNodes, bool CountNodes, template <class> class... Bases>
+template <class Data, class InnerData, bool ReuseNodes, UFOLock Lock, bool TrackNodes,
+          bool CountNodes, template <class> class... Bases>
 class OctreeMap
-    : public OctreeBase<OctreeMap<Data, InnerData, ReuseNodes, LockLess, PerNodeLock,
-                                  TrackNodes, CountNodes, Bases...>,
-                        Data, InnerData, ReuseNodes, LockLess, PerNodeLock, TrackNodes,
-                        CountNodes>,
-      public Bases<OctreeMap<Data, InnerData, ReuseNodes, LockLess, PerNodeLock,
-                             TrackNodes, CountNodes, Bases...>>...
+    : public OctreeBase<
+          OctreeMap<Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes, Bases...>,
+          Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes>,
+      public Bases<OctreeMap<Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes,
+                             Bases...>>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMap, Data, InnerData, ReuseNodes, LockLess, PerNodeLock,
-	                          TrackNodes, CountNodes>;
+	using Octree =
+	    OctreeBase<OctreeMap, Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes>;
 
 	//
 	// Friends
@@ -117,11 +116,10 @@ class OctreeMap
 		readFromOtherMap(other);
 	}
 
-	template <class Data2, class InnerData2, bool ReuseNodes2, bool LockLess2,
-	          bool PerNodeLock2, bool TrackNodes2, bool CountNodes2,
-	          template <class> class... Bases2>
-	OctreeMap(OctreeMap<Data2, InnerData2, ReuseNodes2, LockLess2, PerNodeLock2,
-	                    TrackNodes2, CountNodes2, Bases2...> const& other)
+	template <class Data2, class InnerData2, bool ReuseNodes2, UFOLock Lock2,
+	          bool TrackNodes2, bool CountNodes2, template <class> class... Bases2>
+	OctreeMap(OctreeMap<Data2, InnerData2, ReuseNodes2, Lock2, TrackNodes2, CountNodes2,
+	                    Bases2...> const& other)
 	    : Octree(other), Bases<OctreeMap>(other)...
 	{
 		readFromOtherMap(other);
@@ -139,11 +137,10 @@ class OctreeMap
 		return *this;
 	}
 
-	template <class Data2, class InnerData2, bool ReuseNodes2, bool LockLess2,
-	          bool PerNodeLock2, bool TrackNodes2, bool CountNodes2,
-	          template <class> class... Bases2>
-	OctreeMap& operator=(OctreeMap<Data2, InnerData2, ReuseNodes2, LockLess2, PerNodeLock2,
-	                               TrackNodes2, CountNodes2, Bases2...> const& rhs)
+	template <class Data2, class InnerData2, bool ReuseNodes2, UFOLock Lock2,
+	          bool TrackNodes2, bool CountNodes2, template <class> class... Bases2>
+	OctreeMap& operator=(OctreeMap<Data2, InnerData2, ReuseNodes2, Lock2, TrackNodes2,
+	                               CountNodes2, Bases2...> const& rhs)
 	{
 		Octree::operator=(rhs);
 		(Bases<OctreeMap>::operator=(rhs), ...);
@@ -284,19 +281,9 @@ class OctreeMap
 	                bool const compress, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		// TODO: Look at
-		std::vector<std::future<std::pair<std::size_t, std::size_t>>> res;
-
-		(writeNodes<Bases<OctreeMap>>(out, first, last, res, parallel, compress,
+		(writeNodes<Bases<OctreeMap>>(out, first, last, compress,
 		                              compression_acceleration_level, compression_level),
 		 ...);
-
-		for (auto& r : res) {
-			auto [real_size, pred_size] = r.get();
-			if (real_size != pred_size) {
-				// TODO: Move so all correct
-			}
-		}
 	}
 
  private:
@@ -421,9 +408,10 @@ class OctreeMap
 		std::uint64_t size;
 		auto size_index = out.writeIndex();
 		out.setWriteIndex(size_index + sizeof(size));
+
 		if (compress) {
 			Buffer data;
-			data.reserve(Base::serializedSize());
+			data.reserve(Base::serializedSize(first, last));
 			Base::writeNodes(data, first, last);
 
 			compressData(data, out, compression_acceleration_level, compression_level);

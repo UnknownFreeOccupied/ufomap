@@ -201,8 +201,8 @@ struct Node {
 	// The depth of the data
 	depth_t data_depth_ = 0;
 
-	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-	          bool PerNodeLock, bool TrackNodes, bool CountNodes>
+	template <class Derived, class Data, class InnerData, bool ReuseNodes, UFOLock Lock,
+	          bool TrackNodes, bool CountNodes>
 	friend class OctreeBase;
 };
 
@@ -322,8 +322,8 @@ struct NodeBV : public Node {
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
 
-	template <class Derived, class Data, class InnerData, bool ReuseNodes, bool LockLess,
-	          bool PerNodeLock, bool TrackNodes, bool CountNodes>
+	template <class Derived, class Data, class InnerData, bool ReuseNodes, UFOLock Lock,
+	          bool TrackNodes, bool CountNodes>
 	friend class OctreeBase;
 };
 }  // namespace ufo::map

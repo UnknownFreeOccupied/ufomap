@@ -285,27 +285,34 @@ class TimeMapBase
 		}
 	}
 
+	// template <class OutputIt>
+	// void readNodes(std::vector<std::uint8_t> const& in, std::size_t& index, OutputIt
+	// first,
+	//                OutputIt last) const
+	// {
+	// 	constexpr auto N = numData<OutputIt>();
+
+	// 	constexpr std::size_t count = N * sizeof(time_t);
+
+	// 	auto d = in.data() + index;
+	// 	index += serializedSize(first, last);
+	// 	for (; first != last; ++first, d += count) {
+	// 		if (first->index_field.all()) {
+	// 			std::memcpy(first->node.time.data(), d, count);
+	// 		} else {
+	// 			for (index_t i = 0; N != i; ++i) {
+	// 				if (first->index_field[i]) {
+	// 					std::memcpy(&first->node.time[i], d + (i * sizeof(time_t)), sizeof(time_t));
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
+
 	template <class OutputIt>
-	void readNodes(std::vector<std::uint8_t> const& in, std::size_t& index, OutputIt first,
-	               OutputIt last) const
+	void readNodes(ReadBuffer&, OutputIt, OutputIt)
 	{
-		constexpr auto N = numData<OutputIt>();
-
-		constexpr std::size_t count = N * sizeof(time_t);
-
-		auto d = in.data() + index;
-		index += serializedSize(first, last);
-		for (; first != last; ++first, d += count) {
-			if (first->index_field.all()) {
-				std::memcpy(first->node.time.data(), d, count);
-			} else {
-				for (index_t i = 0; N != i; ++i) {
-					if (first->index_field[i]) {
-						std::memcpy(&first->node.time[i], d + (i * sizeof(time_t)), sizeof(time_t));
-					}
-				}
-			}
-		}
+		// TODO: Implement
 	}
 
 	template <class InputIt>
@@ -324,16 +331,16 @@ class TimeMapBase
 	}
 
 	template <class InputIt>
-	void writeNodes(std::vector<std::uint8_t>& out, std::size_t& index, InputIt first,
-	                InputIt last) const
+	void writeNodes(WriteBuffer&, InputIt first, InputIt last) const
 	{
-		constexpr std::size_t count = numData<InputIt>() * sizeof(time_t);
+		// TODO: Implement
+		// constexpr std::size_t count = numData<InputIt>() * sizeof(time_t);
 
-		auto d = out.data() + index;
-		index += serializedSize(first, last);
-		for (; first != last; ++first, d += count) {
-			std::memcpy(d, first->node.time.data(), count);
-		}
+		// auto d = out.data() + index;
+		// index += serializedSize(first, last);
+		// for (; first != last; ++first, d += count) {
+		// 	std::memcpy(d, first->node.time.data(), count);
+		// }
 	}
 
  protected:

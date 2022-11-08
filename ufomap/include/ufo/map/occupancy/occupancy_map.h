@@ -698,7 +698,7 @@ class OccupancyMapBase
 		if constexpr (std::is_floating_point_v<logit_t>) {
 			return math::logit(probability);
 		} else {
-			return math::logitChangeValue<logit_t>(probability,
+			return math::logitChangeValue<logit_t>(static_cast<double>(probability),
 			                                       occupancyClampingThresMinLogit(),
 			                                       occupancyClampingThresMaxLogit());
 		}
@@ -1051,6 +1051,13 @@ class OccupancyMapBase
 		return node_type::occupancySize();
 	}
 
+	template <class InputIt>
+	std::size_t serializedSize(InputIt first, InputIt last) const
+	{
+		return sizeof(clamping_thres_min_logit_) + sizeof(clamping_thres_max_logit_) +
+		       numData<InputIt>() * std::distance(first, last) * sizeof(logit_t);
+	}
+
 	template <typename T>
 	static bool equal(T a, T b)
 	{
@@ -1103,6 +1110,12 @@ class OccupancyMapBase
 		}
 	}
 
+	template <class OutputIt>
+	void readNodes(ReadBuffer&, OutputIt, OutputIt)
+	{
+		// TODO: Implement
+	}
+
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
@@ -1118,6 +1131,12 @@ class OccupancyMapBase
 		          sizeof(clamping_thres_max_logit_));
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_data * sizeof(typename decltype(data)::element_type));
+	}
+
+	template <class InputIt>
+	void writeNodes(WriteBuffer&, InputIt, InputIt) const
+	{
+		// TODO: Implement
 	}
 
  protected:
