@@ -74,7 +74,7 @@ struct OctreeNode : Nodes... {
 	[[nodiscard]] bool isCollapsible() const { return (Nodes::isCollapsible() && ...); }
 };
 
-template <class Data, bool Lock, bool Reuse, bool Track>
+template <class Data, bool Reuse, bool Track>
 struct OctreeLeafNode : Data {
 	// Indicates whether this node has to be updated (get information from children and/or
 	// update indicators). Useful when propagating information up the tree
@@ -109,7 +109,7 @@ struct OctreeLeafNode : Data {
 };
 
 template <class Data>
-struct OctreeLeafNode<Data, false, true, true> : Data {
+struct OctreeLeafNode<Data, true, true> : Data {
 	// Code for this node
 	Code code;
 
@@ -147,93 +147,13 @@ struct OctreeLeafNode<Data, false, true, true> : Data {
 };
 
 template <class Data>
-struct OctreeLeafNode<Data, false, false, true> {
+struct OctreeLeafNode<Data, false, true> {
 	// Indicates whether this node has to be updated (get information from children and/or
 	// update indicators). Useful when propagating information up the tree
 	IndexField modified;
 
 	// Indicates whether this node actual is part of the octree
 	bool exists = false;
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeLeafNode const& other, index_t index)
-	{
-		if (other.modified[index]) {
-			modified.set();
-		} else {
-			modified.reset();
-		}
-
-		Data::fill(other, index);
-		exists = true;
-	}
-
-	//
-	// Clear
-	//
-
-	void clear() { exists = false; }
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
-};
-
-template <class Data>
-struct OctreeLeafNode<Data, true, true, true> : Data {
-	// Code for this node
-	Code code;
-
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	IndexField modified;
-
-	std::atomic_flag lock = ATOMIC_FLAG_INIT;
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeLeafNode const& other, index_t index)
-	{
-		if (other.modified[index]) {
-			modified.set();
-		} else {
-			modified.reset();
-		}
-
-		Data::fill(other, index);
-		code = other.code.child(index);
-	}
-
-	//
-	// Clear
-	//
-
-	void clear() { code = Code(); }
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
-};
-
-template <class Data>
-struct OctreeLeafNode<Data, true, false, true> {
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	IndexField modified;
-
-	// Indicates whether this node actual is part of the octree
-	bool exists = false;
-
-	std::atomic_flag lock = ATOMIC_FLAG_INIT;
 
 	//
 	// Fill
@@ -289,7 +209,7 @@ struct Leaf {
 	[[nodiscard]] constexpr bool isCollapsible() const { return leaf.all(); }
 };
 
-template <class LeafNode, class InnerData>
+template <class LeafNode, class InnerData, bool Lock>
 struct OctreeInnerNode : LeafNode, Leaf, InnerData {
 	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
 	using LeafNodeBlock = std::array<LeafNode, 8>;
@@ -322,10 +242,80 @@ struct OctreeInnerNode : LeafNode, Leaf, InnerData {
 	}
 };
 
-template <class LeafNode>
-struct OctreeInnerNode<LeafNode, void> : LeafNode, Leaf {
+template <class LeafNode, class InnerData>
+struct OctreeInnerNode<LeafNode, InnerData, true> : LeafNode, Leaf, InnerData {
 	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
 	using LeafNodeBlock = std::array<LeafNode, 8>;
+
+	// Lock
+	std::atomic_flag lock;
+
+	// Pointer to children
+	union {
+		InnerNodeBlock* inner_children = nullptr;
+		LeafNodeBlock* leaf_children;
+	};
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeInnerNode const& other, index_t index)
+	{
+		LeafNode::fill(other, index);
+		Leaf::fill(other, index);
+		InnerData::fill(other, index);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] bool isCollapsible() const
+	{
+		return Leaf::isCollapsible() && LeafNode::isCollapsible() &&
+		       InnerData::isCollapsible();
+	}
+};
+
+template <class LeafNode>
+struct OctreeInnerNode<LeafNode, void, false> : LeafNode, Leaf {
+	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
+	using LeafNodeBlock = std::array<LeafNode, 8>;
+
+	// Pointer to children
+	union {
+		InnerNodeBlock* inner_children = nullptr;
+		LeafNodeBlock* leaf_children;
+	};
+
+	//
+	// Fill
+	//
+
+	void fill(OctreeInnerNode const& other, index_t index)
+	{
+		Leaf::fill(other, index);
+		LeafNode::fill(other, index);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	[[nodiscard]] bool isCollapsible() const
+	{
+		return Leaf::isCollapsible() && LeafNode::isCollapsible();
+	}
+};
+
+template <class LeafNode>
+struct OctreeInnerNode<LeafNode, void, true> : LeafNode, Leaf {
+	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
+	using LeafNodeBlock = std::array<LeafNode, 8>;
+
+	// Lock
+	std::atomic_flag lock;
 
 	// Pointer to children
 	union {
