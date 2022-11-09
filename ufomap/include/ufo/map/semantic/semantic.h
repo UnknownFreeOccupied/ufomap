@@ -48,6 +48,9 @@
 #include <ufo/container/range_set.h>
 #include <ufo/map/types.h>
 
+// STL
+#include <ostream>
+
 namespace ufo::map
 {
 using SemanticRange = container::Range<label_t>;
@@ -91,11 +94,11 @@ constexpr bool operator<=(Semantic lhs, Semantic rhs) { return !(rhs < lhs); }
 constexpr bool operator>(Semantic lhs, Semantic rhs) { return rhs < lhs; }
 
 constexpr bool operator>=(Semantic lhs, Semantic rhs) { return !(lhs < rhs); }
+}  // namespace ufo::map
 
-inline std::ostream& operator<<(std::ostream& out, Semantic s)
+inline std::ostream& operator<<(std::ostream& out, ufo::map::Semantic s)
 {
 	return out << s.label << ": " << s.value;
 }
-}  // namespace ufo::map
 
 #endif  // UFO_MAP_SEMANTIC_H

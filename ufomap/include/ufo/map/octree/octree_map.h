@@ -398,17 +398,21 @@ class OctreeMap
 	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
+		std::cout << "2.1.2.2.4.1.1\n";
 		constexpr DataIdentifier identifier = Base::dataIdentifier();
 		if constexpr (DataIdentifier::NO_DATA == identifier) {
 			return;
 		}
 
+		std::cout << "2.1.2.2.4.1.2\n";
 		out.write(&identifier, sizeof(identifier));
 
+		std::cout << "2.1.2.2.4.1.3\n";
 		std::uint64_t size;
 		auto size_index = out.writeIndex();
 		out.setWriteIndex(size_index + sizeof(size));
 
+		std::cout << "2.1.2.2.4.1.4\n";
 		if (compress) {
 			Buffer data;
 			data.reserve(Base::serializedSize(first, last));
@@ -416,14 +420,18 @@ class OctreeMap
 
 			compressData(data, out, compression_acceleration_level, compression_level);
 		} else {
+			std::cout << "2.1.2.2.4.1.5\n";
 			Base::writeNodes(out, first, last);
+			std::cout << "2.1.2.2.4.1.6\n";
 		}
 
+		std::cout << "2.1.2.2.4.1.7\n";
 		auto cur_index = out.writeIndex();
 		size = cur_index - size_index;
 		out.setWriteIndex(size_index);
 		out.write(&size, sizeof(size));
 		out.setWriteIndex(cur_index);
+		std::cout << "2.1.2.2.4.1.8\n";
 	}
 };
 }  // namespace ufo::map

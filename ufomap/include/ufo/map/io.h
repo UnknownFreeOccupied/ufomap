@@ -153,7 +153,7 @@ class ReadBuffer
 		return *this;
 	}
 
-	[[nodiscard]] constexpr std::size_t size() const noexcept { return size_; }
+	[[nodiscard]] virtual std::size_t size() const { return size_; }
 
 	[[nodiscard]] constexpr std::size_t readIndex() const noexcept { return index_; }
 
@@ -176,7 +176,7 @@ class ReadBuffer
 		return false;  // TODO: Implement correctly
 	}
 
- private:
+ protected:
 	std::uint8_t const* data_ = nullptr;
 	std::size_t size_ = 0;
 	std::size_t index_ = 0;
@@ -214,7 +214,7 @@ class WriteBuffer
 		cap_ = new_cap;
 	}
 
-	[[nodiscard]] constexpr std::size_t size() const noexcept { return size_; }
+	[[nodiscard]] virtual std::size_t size() const { return size_; }
 
 	[[nodiscard]] constexpr std::size_t capacity() const noexcept { return cap_; }
 
@@ -222,7 +222,7 @@ class WriteBuffer
 
 	constexpr void setWriteIndex(std::size_t index) noexcept { index_ = index; }
 
- private:
+ protected:
 	std::unique_ptr<std::uint8_t> data_ = nullptr;
 	std::size_t size_ = 0;
 	std::size_t cap_ = 0;
@@ -234,7 +234,13 @@ class Buffer : public ReadBuffer, public WriteBuffer
  public:
 	// TODO: Implement
 
-	using WriteBuffer::size;
+	[[nodiscard]] std::size_t size() const override { return WriteBuffer::size(); }
+
+	void reserve(std::size_t new_cap) override
+	{
+		WriteBuffer::reserve(new_cap);
+		ReadBuffer::data_ = WriteBuffer::data_.get();
+	}
 };
 
 [[nodiscard]] bool isUFOMap(std::filesystem::path const& filename);

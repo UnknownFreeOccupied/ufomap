@@ -82,9 +82,10 @@ void msgToUfo(ufomap_msgs::UFOMap const& msg, Map& map, bool propagate = true)
 template <class Map, class Predicates,
           typename = std::enable_if_t<!std::is_scalar_v<Predicates>>>
 decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, Predicates const& predicates,
-                             unsigned int depth = 0, bool compress = false,
-                             int compression_acceleration_level = 1,
-                             int compression_level = 0)
+                                             unsigned int depth = 0,
+                                             bool compress = false,
+                                             int compression_acceleration_level = 1,
+                                             int compression_level = 0)
 {
 	// std::stringstream data(std::ios_base::in | std::ios_base::out |
 	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
@@ -107,9 +108,9 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, Predicates const& p
 
 template <class Map>
 decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, unsigned int depth = 0,
-                             bool compress = false,
-                             int compression_acceleration_level = 1,
-                             int compression_level = 0)
+                                             bool compress = false,
+                                             int compression_acceleration_level = 1,
+                                             int compression_level = 0)
 {
 	// std::stringstream data(std::ios_base::in | std::ios_base::out |
 	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
@@ -130,9 +131,9 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, unsigned int depth 
 }
 
 template <class Map>
-decltype(ufomap_msgs::UFOMap::data) ufoToMsgUpdateModified(Map& map, bool compress = false,
-                                           int compression_acceleration_level = 1,
-                                           int compression_level = 0)
+decltype(ufomap_msgs::UFOMap::data) ufoToMsgUpdateModified(
+    Map& map, bool compress = false, int compression_acceleration_level = 1,
+    int compression_level = 0)
 {
 	// std::stringstream data(std::ios_base::in | std::ios_base::out |
 	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
@@ -166,11 +167,16 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsgResetModified(
 	//                           compression_level);
 
 	// ufomap_msgs::UFOMap msg;
+	std::cout << "2.1\n";
 	auto data = map.writeModifiedAndReset(compress, compression_acceleration_level,
 	                                      compression_level);
+	std::cout << "2.2\n";
 	decltype(ufomap_msgs::UFOMap::data) ret;
+	std::cout << "2.3\n";
 	ret.resize(data.size());
+	std::cout << "2.4\n";
 	data.read(ret.data(), data.size());
+	std::cout << "2.5\n";
 	// msg.data.resize(data.tellp());
 	// data.read(reinterpret_cast<char*>(msg.data.data()),
 	// std::streamsize(msg.data.size()));

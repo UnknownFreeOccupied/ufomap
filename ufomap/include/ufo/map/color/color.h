@@ -46,6 +46,7 @@
 #include <ufo/map/types.h>
 
 // STL
+#include <ostream>
 #include <utility>
 
 namespace ufo::map
@@ -95,8 +96,13 @@ constexpr bool operator==(Color const lhs, Color const rhs)
 }
 
 constexpr bool operator!=(Color const lhs, Color const rhs) { return !(lhs == rhs); }
-
 }  // namespace ufo::map
+
+inline std::ostream& operator<<(std::ostream& out, ufo::map::Color color)
+{
+	return out << "Red: " << +color.red << " Green: " << +color.green
+	           << " Blue: " << +color.blue;
+}
 
 namespace std
 {

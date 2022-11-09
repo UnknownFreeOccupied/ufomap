@@ -281,7 +281,7 @@ Misses getMisses(Map const& map, IntegrationCloud<P> const& cloud,
 {
 	CodeUnorderedSet indices;
 
-	double const step_size = map.getNodeSize(depth);
+	double const step_size = map.size(depth);
 
 	for (auto const& p : cloud) {
 		for (auto const& point : p.points) {

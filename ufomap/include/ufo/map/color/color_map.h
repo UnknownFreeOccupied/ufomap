@@ -368,19 +368,40 @@ class ColorMapBase
 	{
 		if (indices.all()) {
 			for (index_t i = 0; first != last; ++first, ++i) {
-				node.red[i] = mean(first->red);
-				node.green[i] = mean(first->green);
-				node.blue[i] = mean(first->blue);
+				Color color = meanColor(*first);
+				node.red[i] = color.red;
+				node.green[i] = color.green;
+				node.blue[i] = color.blue;
 			}
 		} else {
 			for (index_t i = 0; first != last; ++first, ++i) {
 				if (indices[i]) {
-					node.red[i] = mean(first->red);
-					node.green[i] = mean(first->green);
-					node.blue[i] = mean(first->blue);
+					Color color = meanColor(*first);
+					node.red[i] = color.red;
+					node.green[i] = color.green;
+					node.blue[i] = color.blue;
 				}
 			}
 		}
+	}
+
+	template <std::size_t N>
+	Color meanColor(ColorNode<N> node) const
+	{
+		double red = 0;
+		double green = 0;
+		double blue = 0;
+
+		std::size_t num = 0;
+		for (std::size_t i = 0; N != i; ++i) {
+			if (0 != node.red[i] || 0 != node.green[i] || 0 != node.blue[i]) {
+				++num;
+				red += node.red[i];
+				green += node.green[i];
+				blue += node.blue[i];
+			}
+		}
+		return 0 == num ? Color() : Color(red / num, green / num, blue / num);
 	}
 
 	//
