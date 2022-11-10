@@ -178,6 +178,14 @@ struct Node {
 	[[nodiscard]] constexpr depth_t dataDepth() const noexcept { return data_depth_; }
 
 	/*!
+	 * @return Get the code of the data.
+	 */
+	[[nodiscard]] constexpr Code dataCode() const noexcept
+	{
+		return code_.toDepth(dataDepth());
+	}
+
+	/*!
 	 * @return The index of the data.
 	 */
 	[[nodiscard]] constexpr index_t dataIndex() const noexcept

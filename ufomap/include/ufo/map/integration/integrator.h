@@ -109,6 +109,7 @@ class Integrator
 			// Update occupancy
 			if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
 				map.increaseOccupancyLogit(node, prob, false);
+				node = map(node);
 			}
 
 			// Update time step

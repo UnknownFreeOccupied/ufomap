@@ -1236,6 +1236,10 @@ class OctreeBase
 		// 	return node;
 		// }
 
+		if (node.isActualData()) {
+			return node;
+		}
+
 		InnerNode const* n = &innerNodeUnsafe(node);
 		depth_t depth = node.dataDepth();
 		depth_t min_depth = std::max(node.depth(), depth_t(1));
@@ -3307,15 +3311,17 @@ class OctreeBase
 	|                                                                                     |
 	**************************************************************************************/
 
-	[[nodiscard]] bool lazyExists(Node node) const
+	[[nodiscard]] constexpr bool valid(Node node) const
 	{
-		// TODO: Implement
-		// if constexpr (ReuseNodes) {
-		// 	return leafNodeUnsafe(node).code == node.code().parent();
-		// } else {
-		// 	return leafNodeUnsafe(node).exists;
-		// }
-		return true;
+		if constexpr (TrackNodes) {
+			if constexpr (ReuseNodes) {
+				return leafNodeUnsafe(node).code == node.dataCode().parent();
+			} else {
+				return leafNodeUnsafe(node).exists;
+			}
+		} else {
+			return true;
+		}
 	}
 
 	/**************************************************************************************
@@ -3331,23 +3337,30 @@ class OctreeBase
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
 	void apply(Node node, BinaryFunction f, UnaryFunction f2, bool const propagate)
 	{
-		if (!lazyExists(node)) {
-			apply(node.code(), f, f2, propagate);
-			return;
+		if (!valid(node)) {
+			return apply(node.code(), f, f2, propagate);
 		}
 
 		if (node.isActualData()) {
-			if (isLeaf(node)) {
-				f(leafNodeUnsafe(node), node.index());
+			auto index = node.index();
+			if (isPureLeaf(node)) {
+				f(leafNodeUnsafe(node), index);
 			} else {
-				applyAllRecurs(innerNodeUnsafe(node), node.index(), node.depth(), f, f2);
+				auto& inner_node = innerNodeUnsafe(node);
+				if (std::as_const(inner_node).leaf[index]) {
+					f(inner_node, index);
+				} else {
+					IndexField indices;
+					indices[index] = true;
+					applyAllRecurs(inner_node, indices, node.depth(), f, f2);
+				}
 			}
 		} else {
 			applyRecurs(innerNodeUnsafe(node), node.dataDepth(), node.code(), f, f2);
 		}
 
 		if (leafNodeUnsafe(node).modified.none()) {
-			setModifiedParents(node.code());
+			setModifiedParents(node.dataCode());
 		}
 
 		leafNodeUnsafe(node).modified[node.dataIndex()] = true;
@@ -3386,7 +3399,9 @@ class OctreeBase
 			if (std::as_const(node).leaf[index]) {
 				f(static_cast<LeafNode&>(node), index);
 			} else {
-				applyAllRecurs(node, index, depth, f, f2);
+				IndexField indices;
+				indices[index] = true;
+				applyAllRecurs(node, indices, depth, f, f2);
 			}
 		} else if (1 == depth) {
 			createLeafChildren(node, index);
@@ -3405,27 +3420,36 @@ class OctreeBase
 	template <class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
-	void applyAllRecurs(InnerNode& node, index_t index, depth_t depth, BinaryFunction f,
-	                    UnaryFunction f2)
+	void applyAllRecurs(InnerNode& node, IndexField const indices, depth_t depth,
+	                    BinaryFunction f, UnaryFunction f2)
 	{
 		if (1 == depth) {
-			auto& children = leafChild(node, index);
-			f2(children);
-			children.modified.set();
-		} else {
-			auto& children = innerChild(node, index);
-			if (children.leaf.all()) {
-				f2(children);
-			} else {
-				for (index_t i = 0; 8 != i; ++i) {
-					if (std::as_const(children).leaf[i]) {
-						f(static_cast<LeafNode&>(children), i);
-					} else {
-						applyAllRecurs(innerChild(children, i), i, depth - 1, f, f2);
-					}
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if (indices[i]) {
+					auto& children = leafChild(node, i);
+					f2(children);
+					children.modified.set();
 				}
 			}
-			children.modified.set();
+		} else {
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if (indices[i]) {
+					auto& children = innerChild(node, i);
+					if (children.leaf.all()) {
+						f2(children);
+					} else if (children.leaf.any()) {
+						for (index_t j = 0; 8 != j; ++j) {
+							if (std::as_const(children).leaf[j]) {
+								f(static_cast<LeafNode&>(children), j);
+							}
+						}
+						applyAllRecurs(children, ~children.leaf, depth - 1, f, f2);
+					} else {
+						applyAllRecurs(children, ~children.leaf, depth - 1, f, f2);
+					}
+					children.modified.set();
+				}
+			}
 		}
 	}
 
