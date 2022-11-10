@@ -3381,6 +3381,7 @@ class OctreeBase
 	                 UnaryFunction f2)
 	{
 		auto index = code.index(depth);
+		printf("%d: %d\n", int(depth), int(index));
 
 		if (code.depth() == depth) {
 			if (std::as_const(node).leaf[index]) {
@@ -3391,8 +3392,10 @@ class OctreeBase
 		} else if (1 == depth) {
 			createLeafChildren(node, index);
 			LeafNode& child = leafChild(node, index);
-			f(child, code.index(0));
-			child.modified[code.index(0)] = true;
+			auto child_index = code.index(0);
+			f(child, child_index);
+			child.modified[child_index] = true;
+			printf("%s\n", child.modified.test(child_index) ? "true" : "false");
 		} else {
 			createInnerChildren(node, index, depth);
 			applyRecurs(innerChild(node, index), depth - 1, code, f, f2);
@@ -3417,7 +3420,7 @@ class OctreeBase
 				f2(children);
 			} else {
 				for (index_t i = 0; 8 != i; ++i) {
-					if (children.leaf[i]) {
+					if (std::as_const(children).leaf[i]) {
 						f(static_cast<LeafNode&>(children), i);
 					} else {
 						applyAllRecurs(innerChild(children, i), i, depth - 1, f, f2);
