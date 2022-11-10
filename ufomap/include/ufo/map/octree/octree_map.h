@@ -212,9 +212,9 @@ class OctreeMap
 	//
 
 	template <class InputIt>
-	std::size_t serializedSize(InputIt first, InputIt last) const
+	std::size_t serializedSize(InputIt first, InputIt last, bool compress) const
 	{
-		return (serializedSize<Bases<OctreeMap>>(first, last) + ...);
+		return (serializedSize<Bases<OctreeMap>>(first, last, compress) + ...);
 	}
 
 	template <class OutputIt>
@@ -281,6 +281,7 @@ class OctreeMap
 	                bool const compress, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
+		out.reserve(out.size() + serializedSize(first, last, compress));
 		(writeNodes<Bases<OctreeMap>>(out, first, last, compress,
 		                              compression_acceleration_level, compression_level),
 		 ...);

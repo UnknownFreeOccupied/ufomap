@@ -1055,7 +1055,8 @@ class OccupancyMapBase
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
 		return sizeof(clamping_thres_min_logit_) + sizeof(clamping_thres_max_logit_) +
-		       numData<InputIt>() * std::distance(first, last) * sizeof(logit_t);
+		       std::iterator_traits<InputIt>::value_type::occupancySize() *
+		           std::distance(first, last) * sizeof(logit_t);
 	}
 
 	template <typename T>
@@ -1119,11 +1120,11 @@ class OccupancyMapBase
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr uint8_t const N = numData<InputIt>();
+		constexpr uint8_t const N = 8;  // FIXME: numData<InputIt>();
 		auto const num_data = std::distance(first, last) * N;
 		auto data = std::make_unique<logit_t[]>(num_data);
 		for (auto d = data.get(); first != last; ++first) {
-			d = copy(first->node.occupancy, d);
+			d = copy(first->occupancy, d);
 		}
 		out.write(reinterpret_cast<char const*>(&clamping_thres_min_logit_),
 		          sizeof(clamping_thres_min_logit_));
@@ -1134,9 +1135,14 @@ class OccupancyMapBase
 	}
 
 	template <class InputIt>
-	void writeNodes(WriteBuffer&, InputIt, InputIt) const
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
 	{
-		// TODO: Implement
+		out.reserve(out.size() + serializedSize(first, last));
+		out.write(&clamping_thres_min_logit_, sizeof(clamping_thres_min_logit_));
+		out.write(&clamping_thres_max_logit_, sizeof(clamping_thres_max_logit_));
+		for (; first != last; ++first) {
+			out.write(first->occupancy.data(), first->occupancy.size() * sizeof(logit_t));
+		}
 	}
 
  protected:

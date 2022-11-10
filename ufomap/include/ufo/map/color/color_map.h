@@ -429,7 +429,8 @@ class ColorMapBase
 	template <class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
-		return 3 * numData<InputIt>() * std::distance(first, last) * sizeof(color_t);
+		return 3 * std::iterator_traits<InputIt>::value_type::colorSize() *
+		       std::distance(first, last) * sizeof(color_t);
 	}
 
 	template <class OutputIt>
@@ -467,23 +468,28 @@ class ColorMapBase
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr std::uint8_t const N = numData<InputIt>();
+		constexpr std::uint8_t const N = 8;  // FIXME: numData<InputIt>();
 		constexpr auto const S = 3 * N;
 		auto const num_data = std::distance(first, last) * S;
 		auto data = std::make_unique<color_t[]>(num_data);
 		for (auto d = data.get(); first != last; ++first) {
-			d = copy(first->node.red, d);
-			d = copy(first->node.green, d);
-			d = copy(first->node.blue, d);
+			d = copy(first->red, d);
+			d = copy(first->green, d);
+			d = copy(first->blue, d);
 		}
 		out.write(reinterpret_cast<char const*>(data.get()),
 		          num_data * sizeof(typename decltype(data)::element_type));
 	}
 
 	template <class InputIt>
-	void writeNodes(WriteBuffer&, InputIt, InputIt) const
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
 	{
-		// TODO: Implement
+		out.reserve(out.size() + serializedSize(first, last));
+		for (; first != last; ++first) {
+			out.write(first->red.data(), first->red.size() * sizeof(color_t));
+			out.write(first->green.data(), first->green.size() * sizeof(color_t));
+			out.write(first->blue.data(), first->blue.size() * sizeof(color_t));
+		}
 	}
 };
 }  // namespace ufo::map

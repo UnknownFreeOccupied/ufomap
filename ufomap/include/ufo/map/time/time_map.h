@@ -257,7 +257,8 @@ class TimeMapBase
 	template <class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
-		return numData<InputIt>() * std::distance(first, last) * sizeof(time_t);
+		return std::iterator_traits<InputIt>::value_type::timeSize() *
+		       std::distance(first, last) * sizeof(time_t);
 	}
 
 	template <class OutputIt>
@@ -306,12 +307,12 @@ class TimeMapBase
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		auto size = std::distance(first, last) * numData<InputIt>();
+		auto size = std::distance(first, last) * 8;  // FIXME: numData<InputIt>();
 
 		auto data = std::make_unique<time_t[]>(size);
 		auto d = data.get();
 		for (; first != last; ++first) {
-			d = copy(first->node.time, d);
+			d = copy(first->time, d);
 		}
 
 		out.write(reinterpret_cast<char const*>(data.get()),
@@ -321,8 +322,9 @@ class TimeMapBase
 	template <class InputIt>
 	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
 	{
+		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->node.get().time.data(), numData<InputIt>() * sizeof(time_t));
+			out.write(first->time.data(), first->time.size() * sizeof(time_t));
 		}
 	}
 
