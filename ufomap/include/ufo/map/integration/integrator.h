@@ -138,11 +138,14 @@ class Integrator
 					green /= num;
 					blue /= num;
 
-					map.updateColor(node, [red, green, blue](Color c) {
-						return c.isSet() ? Color((red + c.red) / 2, (green + c.green) / 2,
-						                         (blue + c.blue) / 2)
-						                 : Color(red, green, blue);
-					});
+					map.updateColor(
+					    node,
+					    [red, green, blue](Color c) {
+						    return c.isSet() ? Color((red + c.red) / 2, (green + c.green) / 2,
+						                             (blue + c.blue) / 2)
+						                     : Color(red, green, blue);
+					    },
+					    false);
 				}
 			}
 

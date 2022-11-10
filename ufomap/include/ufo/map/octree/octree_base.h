@@ -3381,7 +3381,6 @@ class OctreeBase
 	                 UnaryFunction f2)
 	{
 		auto index = code.index(depth);
-		printf("%d: %d\n", int(depth), int(index));
 
 		if (code.depth() == depth) {
 			if (std::as_const(node).leaf[index]) {
@@ -3395,7 +3394,6 @@ class OctreeBase
 			auto child_index = code.index(0);
 			f(child, child_index);
 			child.modified[child_index] = true;
-			printf("%s\n", child.modified.test(child_index) ? "true" : "false");
 		} else {
 			createInnerChildren(node, index, depth);
 			applyRecurs(innerChild(node, index), depth - 1, code, f, f2);
