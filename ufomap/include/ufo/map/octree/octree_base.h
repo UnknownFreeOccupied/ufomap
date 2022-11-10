@@ -2763,8 +2763,8 @@ class OctreeBase
 		auto [tree_structure, nodes] =
 		    data(predicate::Leaf() && predicate::DepthMin(min_depth) &&
 		         std::forward<Predicates>(predicates));
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
-		      compression_acceleration_level, compression_level);
+		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		      compression_level);
 	}
 
 	template <class Predicates,
@@ -2776,8 +2776,8 @@ class OctreeBase
 		auto [tree_structure, nodes] =
 		    data(predicate::Leaf() && predicate::DepthMin(min_depth) &&
 		         std::forward<Predicates>(predicates));
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
-		      compression_acceleration_level, compression_level);
+		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		      compression_level);
 	}
 
 	template <class Predicates,
@@ -2810,8 +2810,8 @@ class OctreeBase
 	                               int compression_level = 0)
 	{
 		auto [tree_structure, nodes] = modifiedData<true>();
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
-		      compression_acceleration_level, compression_level);
+		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		      compression_level);
 	}
 
 	void writeModifiedAndPropagate(WriteBuffer& out, bool compress = false,
@@ -2819,8 +2819,8 @@ class OctreeBase
 	                               int compression_level = 0)
 	{
 		auto [tree_structure, nodes] = modifiedData<true>();
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
-		      compression_acceleration_level, compression_level);
+		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		      compression_level);
 	}
 
 	Buffer writeModifiedAndPropagate(bool compress = false,
@@ -2851,8 +2851,8 @@ class OctreeBase
 	                           int compression_level = 0)
 	{
 		auto [tree_structure, nodes] = modifiedData<false>();
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
-		      compression_acceleration_level, compression_level);
+		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		      compression_level);
 	}
 
 	void writeModifiedAndReset(WriteBuffer& out, bool compress = false,
@@ -2862,8 +2862,8 @@ class OctreeBase
 		std::cout << "2.1.2.1\n";
 		auto [tree_structure, nodes] = modifiedData<false>();
 		std::cout << "2.1.2.2\n";
-		write(out, tree_structure, std::cbegin(nodes), std::cend(nodes), compress,
-		      compression_acceleration_level, compression_level);
+		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		      compression_level);
 		std::cout << "2.1.2.3\n";
 	}
 
@@ -4902,9 +4902,10 @@ class OctreeBase
 
 		depth_t depth = rootDepth();
 
-		bool const valid_return =
-		    std::as_const(root()).leaf[0] && std::as_const(root()).modified[0];
-		bool const valid_inner = std::as_const(root()).modified[0];
+		bool const valid_return = std::as_const(root()).leaf[rootIndex()] &&
+		                          std::as_const(root()).modified[rootIndex()];
+		bool const valid_inner = !std::as_const(root()).leaf[rootIndex()] &&
+		                         std::as_const(root()).modified[rootIndex()];
 
 		tree.push_back(valid_return);
 		tree.push_back(valid_inner);
@@ -4915,6 +4916,7 @@ class OctreeBase
 				propagate(root(), valid_return);
 			}
 		} else if (valid_inner) {
+			printf("HEEEEEEEEEEEEEEEEEEJ\n");
 			modifiedDataRecurs<Propagate>(innerChildren(root()), IndexField(1), depth - 1, tree,
 			                              nodes);
 			if constexpr (Propagate) {
@@ -4936,7 +4938,7 @@ class OctreeBase
 	                        std::vector<ConstNodeAndIndices>& nodes)
 	{
 		for (index_t i = 0; node_block.size() != i; ++i) {
-			if (indices[i]) {
+			if (!indices[i]) {
 				continue;
 			}
 
@@ -4963,7 +4965,7 @@ class OctreeBase
 	                        std::vector<ConstNodeAndIndices>& nodes)
 	{
 		for (index_t i = 0; node_block.size() != i; ++i) {
-			if (indices[i]) {
+			if (!indices[i]) {
 				continue;
 			}
 
@@ -5007,22 +5009,20 @@ class OctreeBase
 		}
 	}
 
-	template <class InputIt>
-	void write(std::ostream& out, std::vector<IndexField> const& tree, InputIt first,
-	           InputIt last, bool compress, int compression_acceleration_level,
-	           int compression_level) const
+	void write(std::ostream& out, std::vector<IndexField> const& tree,
+	           std::vector<ConstNodeAndIndices> const& nodes, bool compress,
+	           int compression_acceleration_level, int compression_level) const
 	{
 		writeHeader(out, fileOptions(compress));
 		writeTreeStructure(out, tree);
-		writeNumNodes(out, std::distance(first, last));
-		writeNodes(out, first, last, compress, compression_acceleration_level,
-		           compression_level);
+		writeNumNodes(out, nodes.size());
+		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress,
+		           compression_acceleration_level, compression_level);
 	}
 
-	template <class InputIt>
-	void write(WriteBuffer& out, std::vector<IndexField> const& tree, InputIt first,
-	           InputIt last, bool compress, int compression_acceleration_level,
-	           int compression_level) const
+	void write(WriteBuffer& out, std::vector<IndexField> const& tree,
+	           std::vector<ConstNodeAndIndices> const& nodes, bool compress,
+	           int compression_acceleration_level, int compression_level) const
 	{
 		std::cout << "2.1.2.2.1\n";
 		std::cout << out.size() << '\n';
@@ -5032,12 +5032,12 @@ class OctreeBase
 		writeTreeStructure(out, tree);
 		std::cout << "2.1.2.2.3\n";
 		std::cout << out.size() << '\n';
-		writeNumNodes(out, std::distance(first, last));
+		writeNumNodes(out, nodes.size());
 		std::cout << "2.1.2.2.4\n";
 		std::cout << out.size() << '\n';
-		std::cout << "Num nodes " << std::distance(first, last) << '\n';
-		writeNodes(out, first, last, compress, compression_acceleration_level,
-		           compression_level);
+		std::cout << "Num nodes " << nodes.size() << '\n';
+		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress,
+		           compression_acceleration_level, compression_level);
 		std::cout << "2.1.2.2.5\n";
 		std::cout << out.size() << '\n';
 	}
