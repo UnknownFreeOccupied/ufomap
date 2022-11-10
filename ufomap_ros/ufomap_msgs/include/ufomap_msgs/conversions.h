@@ -167,16 +167,11 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsgResetModified(
 	//                           compression_level);
 
 	// ufomap_msgs::UFOMap msg;
-	std::cout << "2.1\n";
 	auto data = map.writeModifiedAndReset(compress, compression_acceleration_level,
 	                                      compression_level);
-	std::cout << "2.2\n";
 	decltype(ufomap_msgs::UFOMap::data) ret;
-	std::cout << "2.3\n";
 	ret.resize(data.size());
-	std::cout << "2.4\n";
 	data.read(ret.data(), data.size());
-	std::cout << "2.5\n";
 	// msg.data.resize(data.tellp());
 	// data.read(reinterpret_cast<char*>(msg.data.data()),
 	// std::streamsize(msg.data.size()));

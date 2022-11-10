@@ -185,13 +185,20 @@ class ReadBuffer
 class WriteBuffer
 {
  public:
+	~WriteBuffer()
+	{
+		if (data_) {
+			free(data_);
+		}
+	}
+
 	WriteBuffer& write(void const* src, std::size_t count)
 	{
 		if (capacity() < index_ + count) {
 			reserve(index_ + count);
 		}
 
-		std::memmove(data_.get() + index_, src, count);
+		std::memmove(data_ + index_, src, count);
 		index_ += count;
 
 		size_ = std::max(size_, index_);
@@ -201,17 +208,17 @@ class WriteBuffer
 
 	virtual void reserve(std::size_t new_cap)
 	{
-		auto p_cur = data_.release();
-		auto p_new =
-		    static_cast<std::uint8_t*>(realloc(p_cur, new_cap * sizeof(std::uint8_t)));
-
-		if (!p_new) {
-			data_.reset(p_cur);
-			throw std::bad_alloc();
+		if (cap_ >= new_cap) {
+			return;
 		}
 
-		data_.reset(p_new);
-		cap_ = new_cap;
+		if (auto p_new =
+		        static_cast<std::uint8_t*>(realloc(data_, new_cap * sizeof(std::uint8_t)))) {
+			data_ = p_new;
+			cap_ = new_cap;
+		} else {
+			throw std::bad_alloc();
+		}
 	}
 
 	[[nodiscard]] virtual std::size_t size() const { return size_; }
@@ -223,7 +230,7 @@ class WriteBuffer
 	constexpr void setWriteIndex(std::size_t index) noexcept { index_ = index; }
 
  protected:
-	std::unique_ptr<std::uint8_t> data_ = nullptr;
+	std::uint8_t* data_ = nullptr;
 	std::size_t size_ = 0;
 	std::size_t cap_ = 0;
 	std::size_t index_ = 0;
@@ -239,7 +246,7 @@ class Buffer : public ReadBuffer, public WriteBuffer
 	void reserve(std::size_t new_cap) override
 	{
 		WriteBuffer::reserve(new_cap);
-		ReadBuffer::data_ = WriteBuffer::data_.get();
+		ReadBuffer::data_ = WriteBuffer::data_;
 	}
 };
 

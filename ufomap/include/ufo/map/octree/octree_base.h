@@ -2859,24 +2859,18 @@ class OctreeBase
 	                           int compression_acceleration_level = 1,
 	                           int compression_level = 0)
 	{
-		std::cout << "2.1.2.1\n";
 		auto [tree_structure, nodes] = modifiedData<false>();
-		std::cout << "2.1.2.2\n";
 		write(out, tree_structure, nodes, compress, compression_acceleration_level,
 		      compression_level);
-		std::cout << "2.1.2.3\n";
 	}
 
 	Buffer writeModifiedAndReset(bool compress = false,
 	                             int compression_acceleration_level = 1,
 	                             int compression_level = 0)
 	{
-		std::cout << "2.1.1\n";
 		Buffer buffer;
-		std::cout << "2.1.2\n";
 		writeModifiedAndReset(buffer, compress, compression_acceleration_level,
 		                      compression_level);
-		std::cout << "2.1.3\n";
 		return buffer;
 	}
 
@@ -3335,11 +3329,13 @@ class OctreeBase
 	template <class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
-	void apply(Node node, BinaryFunction f, UnaryFunction f2, bool const propagate)
+	Node apply(Node node, BinaryFunction f, UnaryFunction f2, bool const propagate)
 	{
 		if (!valid(node)) {
 			return apply(node.code(), f, f2, propagate);
 		}
+
+		Node ret = node;
 
 		if (node.isActualData()) {
 			auto index = node.index();
@@ -3356,7 +3352,7 @@ class OctreeBase
 				}
 			}
 		} else {
-			applyRecurs(innerNodeUnsafe(node), node.dataDepth(), node.code(), f, f2);
+			ret = applyRecurs(innerNodeUnsafe(node), node.dataDepth(), node.code(), f, f2);
 		}
 
 		if (leafNodeUnsafe(node).modified.none()) {
@@ -3367,33 +3363,41 @@ class OctreeBase
 
 		if (propagate) {
 			propagateModified();
+			// TODO: Perhaps change node?
 		}
+
+		return ret;
 	}
 
 	template <class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
-	void apply(Code code, BinaryFunction f, UnaryFunction f2, bool const propagate)
+	Node apply(Code code, BinaryFunction f, UnaryFunction f2, bool const propagate)
 	{
 		// FIXME: Should this be here?
 		if (code.depth() > rootDepth()) {
-			return;
+			return Node();
 		}
 
-		applyRecurs(root(), rootDepth(), code, f, f2);
+		auto ret = applyRecurs(root(), rootDepth(), code, f, f2);
 
 		if (propagate) {
 			propagateModified();
+			// TODO: Perhaps change node?
 		}
+
+		return ret;
 	}
 
 	template <class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
-	void applyRecurs(InnerNode& node, depth_t depth, Code code, BinaryFunction f,
+	Node applyRecurs(InnerNode& node, depth_t depth, Code code, BinaryFunction f,
 	                 UnaryFunction f2)
 	{
 		auto index = code.index(depth);
+
+		Node ret;
 
 		if (code.depth() == depth) {
 			if (std::as_const(node).leaf[index]) {
@@ -3403,18 +3407,22 @@ class OctreeBase
 				indices[index] = true;
 				applyAllRecurs(node, indices, depth, f, f2);
 			}
+			ret = Node(&node, code, depth);
 		} else if (1 == depth) {
 			createLeafChildren(node, index);
 			LeafNode& child = leafChild(node, index);
 			auto child_index = code.index(0);
 			f(child, child_index);
 			child.modified[child_index] = true;
+			ret = Node(&child, code, 0);
 		} else {
 			createInnerChildren(node, index, depth);
-			applyRecurs(innerChild(node, index), depth - 1, code, f, f2);
+			ret = applyRecurs(innerChild(node, index), depth - 1, code, f, f2);
 		}
 
 		node.modified[index] = true;
+
+		return ret;
 	}
 
 	template <class BinaryFunction, class UnaryFunction,
@@ -5017,22 +5025,11 @@ class OctreeBase
 	           std::vector<LeafNode> const& nodes, bool compress,
 	           int compression_acceleration_level, int compression_level) const
 	{
-		std::cout << "2.1.2.2.1\n";
-		std::cout << out.size() << '\n';
 		writeHeader(out, fileOptions(compress));
-		std::cout << "2.1.2.2.2\n";
-		std::cout << out.size() << '\n';
 		writeTreeStructure(out, tree);
-		std::cout << "2.1.2.2.3\n";
-		std::cout << out.size() << '\n';
 		writeNumNodes(out, nodes.size());
-		std::cout << "2.1.2.2.4\n";
-		std::cout << out.size() << '\n';
-		std::cout << "Num nodes " << nodes.size() << '\n';
 		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress,
 		           compression_acceleration_level, compression_level);
-		std::cout << "2.1.2.2.5\n";
-		std::cout << out.size() << '\n';
 	}
 
 	void writeTreeStructure(std::ostream& out, std::vector<IndexField> const& tree) const
@@ -5075,10 +5072,8 @@ class OctreeBase
 	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		std::cout << "2.1.2.2.4.1\n";
 		derived().writeNodes(out, first, last, false, compress,
 		                     compression_acceleration_level, compression_level);
-		std::cout << "2.1.2.2.4.2\n";
 	}
 
  protected:

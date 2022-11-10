@@ -86,13 +86,14 @@ class Integrator
 		auto const occupancy_prob_hit = getOccupancyProbHit();
 		auto const time = getTime();
 
-		// TODO: Check if occupancy map before this
-		auto prob = map.toOccupancyChangeLogit(
-		    occupancy_prob_hit);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
+		logit_t prob;
+		if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
+			prob = map.toOccupancyChangeLogit(
+			    occupancy_prob_hit);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
+		}
 
 		// TODO: Something with semantics
 
-		// For each node
 		std::for_each(std::cbegin(cloud), std::cend(cloud), [&](auto const& p) {
 			if (!p.valid()) {
 				// Not a single valid point fell into this node
@@ -108,13 +109,12 @@ class Integrator
 
 			// Update occupancy
 			if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
-				map.increaseOccupancyLogit(node, prob, false);
-				node = map(node);
+				node = map.increaseOccupancyLogit(node, prob, false);
 			}
 
 			// Update time step
 			if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				map.setTime(node, time, false);
+				node = map.setTime(node, time, false);
 			}
 
 			// Update color
@@ -139,7 +139,7 @@ class Integrator
 					green /= num;
 					blue /= num;
 
-					map.updateColor(
+					node = map.updateColor(
 					    node,
 					    [red, green, blue](Color c) {
 						    return c.isSet() ? Color((red + c.red) / 2, (green + c.green) / 2,

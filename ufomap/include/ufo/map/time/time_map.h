@@ -91,34 +91,34 @@ class TimeMapBase
 	// Set time
 	//
 
-	void setTime(Node node, time_t time, bool propagate = true)
+	Node setTime(Node node, time_t time, bool propagate = true)
 	{
-		derived().apply(
+		return derived().apply(
 		    node, [time](auto& node, index_t index) { node.time[index] = time; },
 		    [time](auto& node) { node.time.fill(time); }, propagate);
 	}
 
-	void setTime(Code code, time_t time, bool propagate = true)
+	Node setTime(Code code, time_t time, bool propagate = true)
 	{
-		derived().apply(
+		return derived().apply(
 		    code, [time](auto& node, index_t index) { node.time[index] = time; },
 		    [time](auto& node) { node.time.fill(time); }, propagate);
 	}
 
-	void setTime(Key key, time_t time, bool propagate = true)
+	Node setTime(Key key, time_t time, bool propagate = true)
 	{
-		setTime(derived().toCode(key), time, propagate);
+		return setTime(derived().toCode(key), time, propagate);
 	}
 
-	void setTime(Point coord, time_t time, bool propagate = true, depth_t depth = 0)
+	Node setTime(Point coord, time_t time, bool propagate = true, depth_t depth = 0)
 	{
-		setTime(derived().toCode(coord, depth), time, propagate);
+		return setTime(derived().toCode(coord, depth), time, propagate);
 	}
 
-	void setTime(coord_t x, coord_t y, coord_t z, time_t time, bool propagate = true,
+	Node setTime(coord_t x, coord_t y, coord_t z, time_t time, bool propagate = true,
 	             depth_t depth = 0)
 	{
-		setTime(derived().toCode(x, y, z, depth), time, propagate);
+		return setTime(derived().toCode(x, y, z, depth), time, propagate);
 	}
 
 	//

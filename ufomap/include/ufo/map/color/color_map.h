@@ -93,15 +93,15 @@ class ColorMapBase
 	// Set color
 	//
 
-	void setColor(Node node, Color color, bool propagate = true)
+	Node setColor(Node node, Color color, bool propagate = true)
 	{
-		setColor(node, color.red, color.green, color.blue, propagate);
+		return setColor(node, color.red, color.green, color.blue, propagate);
 	}
 
-	void setColor(Node node, color_t red, color_t green, color_t blue,
+	Node setColor(Node node, color_t red, color_t green, color_t blue,
 	              bool propagate = true)
 	{
-		derived().apply(
+		return derived().apply(
 		    node,
 		    [red, green, blue](auto& node, index_t index) {
 			    node.red[index] = red;
@@ -116,15 +116,15 @@ class ColorMapBase
 		    propagate);
 	}
 
-	void setColor(Code code, Color color, bool propagate = true)
+	Node setColor(Code code, Color color, bool propagate = true)
 	{
-		setColor(code, color.red, color.green, color.blue, propagate);
+		return setColor(code, color.red, color.green, color.blue, propagate);
 	}
 
-	void setColor(Code code, color_t red, color_t green, color_t blue,
+	Node setColor(Code code, color_t red, color_t green, color_t blue,
 	              bool propagate = true)
 	{
-		derived().apply(
+		return derived().apply(
 		    code,
 		    [red, green, blue](auto& node, index_t index) {
 			    node.red[index] = red;
@@ -139,37 +139,37 @@ class ColorMapBase
 		    propagate);
 	}
 
-	void setColor(Key key, Color color, bool propagate = true)
+	Node setColor(Key key, Color color, bool propagate = true)
 	{
-		setColor(derived().toCode(key), color, propagate);
+		return setColor(derived().toCode(key), color, propagate);
 	}
 
-	void setColor(Key key, color_t red, color_t green, color_t blue, bool propagate = true)
+	Node setColor(Key key, color_t red, color_t green, color_t blue, bool propagate = true)
 	{
-		setColor(derived().toCode(key), red, green, blue, propagate);
+		return setColor(derived().toCode(key), red, green, blue, propagate);
 	}
 
-	void setColor(Point coord, Color color, bool propagate = true, depth_t depth = 0)
+	Node setColor(Point coord, Color color, bool propagate = true, depth_t depth = 0)
 	{
-		setColor(derived().toCode(coord, depth), color, propagate);
+		return setColor(derived().toCode(coord, depth), color, propagate);
 	}
 
-	void setColor(Point coord, color_t red, color_t green, color_t blue,
+	Node setColor(Point coord, color_t red, color_t green, color_t blue,
 	              bool propagate = true, depth_t depth = 0)
 	{
-		setColor(derived().toCode(coord, depth), red, green, blue, propagate);
+		return setColor(derived().toCode(coord, depth), red, green, blue, propagate);
 	}
 
-	void setColor(coord_t x, coord_t y, coord_t z, Color color, bool propagate = true,
+	Node setColor(coord_t x, coord_t y, coord_t z, Color color, bool propagate = true,
 	              depth_t depth = 0)
 	{
-		setColor(derived().toCode(x, y, z, depth), color, propagate);
+		return setColor(derived().toCode(x, y, z, depth), color, propagate);
 	}
 
-	void setColor(coord_t x, coord_t y, coord_t z, color_t red, color_t green, color_t blue,
+	Node setColor(coord_t x, coord_t y, coord_t z, color_t red, color_t green, color_t blue,
 	              bool propagate = true, depth_t depth = 0)
 	{
-		setColor(derived().toCode(x, y, z, depth), red, green, blue, propagate);
+		return setColor(derived().toCode(x, y, z, depth), red, green, blue, propagate);
 	}
 
 	//
@@ -177,9 +177,9 @@ class ColorMapBase
 	//
 
 	template <class UnaryFunction>
-	void updateColor(Node node, UnaryFunction f, bool propagate = true)
+	Node updateColor(Node node, UnaryFunction f, bool propagate = true)
 	{
-		derived().apply(
+		return derived().apply(
 		    node,
 		    [f](auto& node, index_t index) {
 			    auto c = f(Color(node.red[index], node.green[index], node.blue[index]));
@@ -199,9 +199,9 @@ class ColorMapBase
 	}
 
 	template <class UnaryFunction>
-	void updateColor(Code code, UnaryFunction f, bool propagate = true)
+	Node updateColor(Code code, UnaryFunction f, bool propagate = true)
 	{
-		derived().apply(
+		return derived().apply(
 		    code,
 		    [f](auto& node, index_t index) {
 			    auto c = f(Color(node.red[index], node.green[index], node.blue[index]));
@@ -221,22 +221,22 @@ class ColorMapBase
 	}
 
 	template <class UnaryFunction>
-	void updateColor(Key key, UnaryFunction f, bool propagate = true)
+	Node updateColor(Key key, UnaryFunction f, bool propagate = true)
 	{
-		updateColor(derived().toCode(key), f, propagate);
+		return updateColor(derived().toCode(key), f, propagate);
 	}
 
 	template <class UnaryFunction>
-	void updateColor(Point coord, UnaryFunction f, bool propagate = true, depth_t depth = 0)
+	Node updateColor(Point coord, UnaryFunction f, bool propagate = true, depth_t depth = 0)
 	{
-		updateColor(derived().toCode(coord, depth), f, propagate);
+		return updateColor(derived().toCode(coord, depth), f, propagate);
 	}
 
 	template <class UnaryFunction>
-	void updateColor(coord_t x, coord_t y, coord_t z, UnaryFunction f,
+	Node updateColor(coord_t x, coord_t y, coord_t z, UnaryFunction f,
 	                 bool propagate = true, depth_t depth = 0)
 	{
-		updateColor(derived().toCode(x, y, z, depth), f, propagate);
+		return updateColor(derived().toCode(x, y, z, depth), f, propagate);
 	}
 
 	//
