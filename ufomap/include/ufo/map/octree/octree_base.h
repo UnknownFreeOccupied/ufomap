@@ -3305,7 +3305,7 @@ class OctreeBase
 	|                                                                                     |
 	**************************************************************************************/
 
-	[[nodiscard]] constexpr bool valid(Node node) const
+	[[nodiscard]] static constexpr bool valid(Node node)
 	{
 		if constexpr (TrackNodes) {
 			if constexpr (ReuseNodes) {
@@ -3445,14 +3445,14 @@ class OctreeBase
 					auto& children = innerChild(node, i);
 					if (children.leaf.all()) {
 						f2(children);
-					} else if (children.leaf.any()) {
-						for (index_t j = 0; 8 != j; ++j) {
-							if (std::as_const(children).leaf[j]) {
-								f(static_cast<LeafNode&>(children), j);
+					} else {
+						if (children.leaf.any()) {
+							for (index_t j = 0; 8 != j; ++j) {
+								if (std::as_const(children).leaf[j]) {
+									f(static_cast<LeafNode&>(children), j);
+								}
 							}
 						}
-						applyAllRecurs(children, ~children.leaf, depth - 1, f, f2);
-					} else {
 						applyAllRecurs(children, ~children.leaf, depth - 1, f, f2);
 					}
 					children.modified.set();
@@ -3563,12 +3563,7 @@ class OctreeBase
 	// Get node
 	//
 
-	[[nodiscard]] LeafNode const& leafNodeUnsafe(Node node) const
-	{
-		return *static_cast<LeafNode const*>(node.data());
-	}
-
-	[[nodiscard]] LeafNode& leafNodeUnsafe(Node node)
+	[[nodiscard]] static constexpr LeafNode& leafNodeUnsafe(Node node)
 	{
 		return *static_cast<LeafNode*>(node.data());
 	}
@@ -3612,12 +3607,7 @@ class OctreeBase
 		                                               : *node;
 	}
 
-	[[nodiscard]] InnerNode const& innerNodeUnsafe(Node node) const
-	{
-		return *static_cast<InnerNode const*>(node.data());
-	}
-
-	[[nodiscard]] InnerNode& innerNodeUnsafe(Node node)
+	[[nodiscard]] static constexpr InnerNode& innerNodeUnsafe(Node node)
 	{
 		return *static_cast<InnerNode*>(node.data());
 	}

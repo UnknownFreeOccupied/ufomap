@@ -190,9 +190,7 @@ class Integrator
 			auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss);
 
 			for (auto code : misses) {
-				auto node = map(code);
-
-				map.decreaseOccupancyLogit(node, prob, false);
+				auto node = map.decreaseOccupancyLogit(code, prob, false);
 
 				if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
 					map.setTime(node, time, false);
