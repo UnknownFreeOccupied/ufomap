@@ -3399,7 +3399,7 @@ class OctreeBase
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
 		auto index = code.index(depth);
 		while (min_depth != depth) {
-			createInnerChildren(*cur, index);
+			createInnerChildren(*cur, index, depth);
 			cur->modified[index] = true;
 			cur = &innerChild(*cur, index);
 			--depth;
