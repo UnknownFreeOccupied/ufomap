@@ -3352,7 +3352,7 @@ class OctreeBase
 				}
 			}
 		} else {
-			ret = applyRecurs(innerNodeUnsafe(node), node.dataDepth(), node.code(), f, f2);
+			ret = apply(innerNodeUnsafe(node), node.dataDepth(), node.code(), f, f2);
 		}
 
 		if (leafNodeUnsafe(node).modified.none()) {
@@ -3379,7 +3379,7 @@ class OctreeBase
 			return Node();
 		}
 
-		auto ret = applyRecurs(root(), rootDepth(), code, f, f2);
+		auto ret = apply(root(), rootDepth(), code, f, f2);
 
 		if (propagate) {
 			propagateModified();
@@ -3392,37 +3392,38 @@ class OctreeBase
 	template <class BinaryFunction, class UnaryFunction,
 	          typename = std::enable_if_t<std::is_copy_constructible_v<BinaryFunction> &&
 	                                      std::is_copy_constructible_v<UnaryFunction>>>
-	Node applyRecurs(InnerNode& node, depth_t depth, Code code, BinaryFunction f,
-	                 UnaryFunction f2)
+	Node apply(InnerNode& node, depth_t depth, Code code, BinaryFunction f,
+	           UnaryFunction f2)
 	{
+		InnerNode* cur = &node;
+		depth_t min_depth = std::max(code.depth(), depth_t(1));
 		auto index = code.index(depth);
+		while (min_depth != depth) {
+			createInnerChildren(*cur, index);
+			cur->modified[index] = true;
+			cur = &innerChild(*cur, index);
+			--depth;
+			index = code.index(depth);
+		}
 
-		Node ret;
-
-		if (code.depth() == depth) {
-			if (std::as_const(node).leaf[index]) {
-				f(static_cast<LeafNode&>(node), index);
-			} else {
-				IndexField indices;
-				indices[index] = true;
-				applyAllRecurs(node, indices, depth, f, f2);
-			}
-			ret = Node(&node, code, depth);
-		} else if (1 == depth) {
-			createLeafChildren(node, index);
-			LeafNode& child = leafChild(node, index);
+		if (0 == code.depth()) {
+			createLeafChildren(*cur, index);
+			LeafNode& child = leafChild(*cur, index);
 			auto child_index = code.index(0);
 			f(child, child_index);
 			child.modified[child_index] = true;
-			ret = Node(&child, code, 0);
+			return Node(&child, code, 0);
+		} else if (std::as_const(cur)->leaf[index]) {
+			f(*cur, index);
+			cur->modified[index] = true;
 		} else {
-			createInnerChildren(node, index, depth);
-			ret = applyRecurs(innerChild(node, index), depth - 1, code, f, f2);
+			IndexField indices;
+			indices[index] = true;
+			cur->modified[index] = true;
+			applyAllRecurs(*cur, indices, depth, f, f2);
 		}
 
-		node.modified[index] = true;
-
-		return ret;
+		return Node(cur, code, depth);
 	}
 
 	template <class BinaryFunction, class UnaryFunction,
@@ -3582,13 +3583,12 @@ class OctreeBase
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
 		auto index = code.index(depth);
 		while (min_depth != depth && !node->leaf[index]) {
-			node = &innerNode(*node, code.index(index));
+			node = &innerNode(*node, index);
 			--depth;
 			index = code.index(depth);
 		}
 
-		return 0 == code.depth() && !node->leaf[index] ? leafNode(*node, code.index(index))
-		                                               : *node;
+		return 0 == code.depth() && !node->leaf[index] ? leafNode(*node, index) : *node;
 	}
 
 	[[nodiscard]] LeafNode& leafNode(Code code)
@@ -3598,13 +3598,12 @@ class OctreeBase
 		depth_t min_depth = std::max(code.depth(), depth_t(1));
 		auto index = code.index(depth);
 		while (min_depth != depth && !node->leaf[index]) {
-			node = &innerNode(*node, code.index(index));
+			node = &innerNode(*node, index);
 			--depth;
 			index = code.index(depth);
 		}
 
-		return 0 == code.depth() && !node->leaf[index] ? leafNode(*node, code.index(index))
-		                                               : *node;
+		return 0 == code.depth() && !node->leaf[index] ? leafNode(*node, index) : *node;
 	}
 
 	[[nodiscard]] static constexpr InnerNode& innerNodeUnsafe(Node node)

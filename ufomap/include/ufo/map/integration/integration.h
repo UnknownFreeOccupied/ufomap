@@ -80,7 +80,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        TransformFunction trans_f, ValidFunction valid_f,
                                        DepthFunction depth_f)
 {
-	constexpr static std::size_t mode = 0;
+	constexpr static std::size_t mode = 1;
 
 	IntegrationCloud<P> i_cloud;
 	auto const cloud_size = cloud.size();
@@ -141,14 +141,14 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 
 		auto new_last = first;
 		do {
-			auto new_first = std::next(first);
+			auto new_first = first + 1;
 			auto total_size = first->points.size();
 			while (new_first == first) {
 				total_size += new_first->points.size();
-				std::advance(new_first, 1);
+				++new_first;
 			}
 			first->points.reserve(total_size);
-			for (auto it = std::next(first); it != new_first; std::advance(it, 1)) {
+			for (auto it = first + 1; it != new_first; ++it) {
 				for (auto e : it->points) {
 					first->points.push_back(e);
 				}
@@ -159,10 +159,10 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 			}
 
 			first = new_first;
-			std::advance(new_last, 1);
+			++new_last;
 		} while (first != last);
 
-		i_cloud.erase(new_last, std::end(i_cloud));
+		i_cloud.resize(std::distance(std::begin(i_cloud), new_last));
 	} else if constexpr (2 == mode) {
 		CodeUnorderedMap<std::vector<ValidPoint<P>>> temp;
 
