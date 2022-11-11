@@ -140,6 +140,8 @@ template <typename T>
 class ReadBuffer
 {
  public:
+	virtual ~ReadBuffer() {}
+
 	ReadBuffer& read(void* dest, std::size_t count)
 	{
 		if (size() < index_ + count) {
@@ -185,7 +187,7 @@ class ReadBuffer
 class WriteBuffer
 {
  public:
-	~WriteBuffer()
+	virtual ~WriteBuffer()
 	{
 		if (data_) {
 			free(data_);
@@ -239,6 +241,8 @@ class WriteBuffer
 class Buffer : public ReadBuffer, public WriteBuffer
 {
  public:
+	virtual ~Buffer() {}
+
 	// TODO: Implement
 
 	[[nodiscard]] std::size_t size() const override { return WriteBuffer::size(); }

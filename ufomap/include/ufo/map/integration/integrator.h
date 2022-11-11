@@ -100,10 +100,6 @@ class Integrator
 				return;
 			}
 
-			// Get the points [first, last) falling into the node
-			auto first_point_it = std::cbegin(p.points);
-			auto last_point_it = std::cend(p.points);
-
 			// Create and retrieve the node
 			auto node = map(p.code);
 
