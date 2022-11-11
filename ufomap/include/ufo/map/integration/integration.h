@@ -340,6 +340,7 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 	}
 
 	std::vector<Key> keys;
+	keys.reserve(cloud.size());
 	Code prev;
 	for (auto const& p : cloud) {
 		Code const cur = p.code.toDepth(depth);

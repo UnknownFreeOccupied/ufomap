@@ -2809,8 +2809,8 @@ class OctreeBase
 	                               int compression_acceleration_level = 1,
 	                               int compression_level = 0)
 	{
-		auto [tree_structure, nodes] = modifiedData<true>();
-		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		modifiedData<true>();
+		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
 		      compression_level);
 	}
 
@@ -2818,8 +2818,8 @@ class OctreeBase
 	                               int compression_acceleration_level = 1,
 	                               int compression_level = 0)
 	{
-		auto [tree_structure, nodes] = modifiedData<true>();
-		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		modifiedData<true>();
+		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
 		      compression_level);
 	}
 
@@ -2850,8 +2850,8 @@ class OctreeBase
 	                           int compression_acceleration_level = 1,
 	                           int compression_level = 0)
 	{
-		auto [tree_structure, nodes] = modifiedData<false>();
-		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		modifiedData<false>();
+		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
 		      compression_level);
 	}
 
@@ -2859,8 +2859,8 @@ class OctreeBase
 	                           int compression_acceleration_level = 1,
 	                           int compression_level = 0)
 	{
-		auto [tree_structure, nodes] = modifiedData<false>();
-		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		modifiedData<false>();
+		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
 		      compression_level);
 	}
 
@@ -3408,6 +3408,7 @@ class OctreeBase
 
 		if (0 == code.depth()) {
 			createLeafChildren(*cur, index);
+			cur->modified[index] = true;
 			LeafNode& child = leafChild(*cur, index);
 			auto child_index = code.index(0);
 			f(child, child_index);
@@ -3860,12 +3861,12 @@ class OctreeBase
 	// Set modified
 	//
 
-	void setModified(LeafNode& node, index_t index) { node.modified.set(index); }
+	void setModified(LeafNode& node, index_t index) { node.modified[index] = true; }
 
 	void setModified(InnerNode& node, index_t index, depth_t depth, depth_t min_depth)
 	{
 		if (min_depth <= depth) {
-			node.modified.set(index);
+			node.modified[index] = true;
 		}
 
 		if (min_depth < depth) {
@@ -3903,13 +3904,13 @@ class OctreeBase
 	// Reset modified
 	//
 
-	void resetModified(LeafNode& node, index_t index) { node.modified.reset(index); }
+	void resetModified(LeafNode& node, index_t index) { node.modified[index] = false; }
 
 	void resetModified(InnerNode& node, index_t index, depth_t depth, depth_t max_depth)
 	{
 		if (node.leaf[index] || !node.modified[index]) {
 			if (depth <= max_depth) {
-				node.modified.reset(index);
+				node.modified[index] = false;
 			}
 			return;
 		}
@@ -3921,7 +3922,7 @@ class OctreeBase
 		}
 
 		if (depth <= max_depth) {
-			node.modified.reset(index);
+			node.modified[index] = false;
 		}
 	}
 
@@ -3997,7 +3998,7 @@ class OctreeBase
 	void propagateModified(LeafNode& node, index_t index, bool keep_modified)
 	{
 		if (!keep_modified) {
-			node.modified.reset(index);
+			node.modified[index] = false;
 		}
 	}
 
@@ -4887,10 +4888,10 @@ class OctreeBase
 	}
 
 	template <bool Propagate>
-	[[nodiscard]] std::pair<std::vector<IndexField>, std::vector<LeafNode>> modifiedData()
+	[[nodiscard]] void modifiedData()
 	{
-		std::vector<IndexField> tree;
-		std::vector<LeafNode> nodes;
+		modified_tree_.clear();
+		modified_nodes_.clear();
 
 		depth_t depth = rootDepth();
 
@@ -4899,33 +4900,29 @@ class OctreeBase
 		bool const valid_inner = !std::as_const(root()).leaf[rootIndex()] &&
 		                         std::as_const(root()).modified[rootIndex()];
 
-		tree.push_back(valid_return);
-		tree.push_back(valid_inner);
+		modified_tree_.push_back(valid_return);
+		modified_tree_.push_back(valid_inner);
 
 		if (valid_return) {
-			nodes.emplace_back(root());
+			modified_nodes_.emplace_back(root());
 			if constexpr (Propagate) {
 				propagate(root(), valid_return);
 			}
 		} else if (valid_inner) {
-			modifiedDataRecurs<Propagate>(innerChildren(root()), IndexField(1), depth - 1, tree,
-			                              nodes);
+			modifiedDataRecurs<Propagate>(innerChildren(root()), IndexField(1), depth - 1);
 			if constexpr (Propagate) {
 				propagate(root(), valid_inner, depth);
 			}
-			if (nodes.empty()) {
-				tree.clear();
+			if (modified_nodes_.empty()) {
+				modified_tree_.clear();
 			}
 		}
 
 		root().modified.reset();
-
-		return {std::move(tree), std::move(nodes)};  // FIXME: Check if RVO
 	}
 
 	template <bool Propagate>
-	void modifiedDataRecurs(LeafNodeBlock& node_block, IndexField const indices,
-	                        std::vector<IndexField>& tree, std::vector<LeafNode>& nodes)
+	void modifiedDataRecurs(LeafNodeBlock& node_block, IndexField const indices)
 	{
 		for (index_t i = 0; node_block.size() != i; ++i) {
 			if (!indices[i]) {
@@ -4933,13 +4930,13 @@ class OctreeBase
 			}
 
 			IndexField const m = node_block[i].modified;
-			tree.push_back(m);
+			modified_tree_.push_back(m);
 
 			if (m.none()) {
 				continue;
 			}
 
-			nodes.emplace_back(node_block[i]);
+			modified_nodes_.emplace_back(node_block[i]);
 
 			if constexpr (Propagate) {
 				propagate(node_block[i], m);
@@ -4951,8 +4948,7 @@ class OctreeBase
 
 	template <bool Propagate>
 	void modifiedDataRecurs(InnerNodeBlock& node_block, IndexField const indices,
-	                        depth_t const depth, std::vector<IndexField>& tree,
-	                        std::vector<LeafNode>& nodes)
+	                        depth_t const depth)
 	{
 		for (index_t i = 0; node_block.size() != i; ++i) {
 			if (!indices[i]) {
@@ -4965,23 +4961,22 @@ class OctreeBase
 			IndexField const valid_return = m & l;
 			IndexField const valid_inner = m & ~l;
 
-			tree.push_back(valid_return);
-			tree.push_back(valid_inner);
+			modified_tree_.push_back(valid_return);
+			modified_tree_.push_back(valid_inner);
 
-			auto const cur_tree_size = tree.size();
-			auto const cur_nodes_size = nodes.size();
+			auto const cur_tree_size = modified_tree_.size();
+			auto const cur_nodes_size = modified_nodes_.size();
 
 			if (valid_return.any()) {
-				nodes.emplace_back(node_block[i]);
+				modified_nodes_.emplace_back(node_block[i]);
 			}
 
 			if (valid_inner.any()) {
 				if (1 == depth) {
-					modifiedDataRecurs<Propagate>(leafChildren(node_block[i]), valid_inner, tree,
-					                              nodes);
+					modifiedDataRecurs<Propagate>(leafChildren(node_block[i]), valid_inner);
 				} else {
 					modifiedDataRecurs<Propagate>(innerChildren(node_block[i]), valid_inner,
-					                              depth - 1, tree, nodes);
+					                              depth - 1);
 				}
 			}
 
@@ -4991,10 +4986,10 @@ class OctreeBase
 
 			node_block[i].modified.reset();
 
-			if (nodes.size() == cur_nodes_size) {
-				tree.resize(cur_tree_size);
-				tree[tree.size() - 1] = 0;
-				tree[tree.size() - 2] = 0;
+			if (modified_nodes_.size() == cur_nodes_size) {
+				modified_tree_.resize(cur_tree_size);
+				modified_tree_[modified_tree_.size() - 1] = 0;
+				modified_tree_[modified_tree_.size() - 2] = 0;
 			}
 		}
 	}
@@ -5112,6 +5107,12 @@ class OctreeBase
 	std::atomic_size_t num_allocated_inner_leaf_nodes_ = 1 * 8;
 	// Current number of allocated leaf nodes
 	std::atomic_size_t num_allocated_leaf_nodes_ = 0;
+
+	//
+	// Store for performance
+	//
+	std::vector<IndexField> modified_tree_;
+	std::vector<LeafNode> modified_nodes_;
 };
 
 }  // namespace ufo::map

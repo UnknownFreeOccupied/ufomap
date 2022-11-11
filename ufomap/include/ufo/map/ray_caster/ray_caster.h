@@ -75,7 +75,7 @@ KeyRay computeRay(Key origin, Key goal)
 
 	dir.abs();
 
-	static constexpr auto max = std::numeric_limits<float>::max();
+	constexpr auto max = std::numeric_limits<float>::max();
 	Vector3f t_delta(step.x ? size / dir.x : max, step.y ? size / dir.y : max,
 	                 step.z ? size / dir.z : max);
 
@@ -100,7 +100,7 @@ void computeRay(KeyRay& ray, Key origin, Key goal)
 
 	using namespace ufo::math;
 
-	int size = 1U << origin.depth();
+	int const size = 1U << origin.depth();
 
 	Vector3d o(origin.x(), origin.y(), origin.z());
 	Vector3d g(goal.x(), goal.y(), goal.z());
@@ -113,13 +113,13 @@ void computeRay(KeyRay& ray, Key origin, Key goal)
 
 	dir.abs();
 
-	static constexpr auto max = std::numeric_limits<double>::max();
+	constexpr auto max = std::numeric_limits<double>::max();
 	Vector3d t_delta(step.x ? size / dir.x : max, step.y ? size / dir.y : max,
 	                 step.z ? size / dir.z : max);
 
 	Vector3d t_max = t_delta / 2.0;
 
-	// ray.reserve(ray.size() + (1.5f * Vector3d::abs(g - o).norm() / size));
+	ray.reserve(ray.size() + (1.5f * Vector3d::abs(g - o).norm() / size));
 	ray.push_back(origin);
 	while (origin != goal && t_max.min() <= distance) {
 		auto advance_dim = t_max.minElementIndex();

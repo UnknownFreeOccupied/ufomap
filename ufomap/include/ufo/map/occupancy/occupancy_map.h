@@ -881,9 +881,9 @@ class OccupancyMapBase
 						break;
 				}
 
-				node.contains_unknown.set(i, containsUnknown(*first));
-				node.contains_free.set(i, containsFree(*first));
-				node.contains_occupied.set(i, containsOccupied(*first));
+				node.contains_unknown[i] = containsUnknown(*first);
+				node.contains_free[i] = containsFree(*first);
+				node.contains_occupied[i] = containsOccupied(*first);
 			}
 		} else {
 			for (index_t i = 0; first != last; ++first, ++i) {
@@ -903,9 +903,9 @@ class OccupancyMapBase
 						break;
 				}
 
-				node.contains_unknown.set(i, containsUnknown(*first));
-				node.contains_free.set(i, containsFree(*first));
-				node.contains_occupied.set(i, containsOccupied(*first));
+				node.contains_unknown[i] = containsUnknown(*first);
+				node.contains_free[i] = containsFree(*first);
+				node.contains_occupied[i] = containsOccupied(*first);
 			}
 		}
 	}
