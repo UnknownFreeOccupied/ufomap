@@ -215,9 +215,14 @@ struct OctreeInnerNode : LeafNode, Leaf, InnerData {
 	using LeafNodeBlock = std::array<LeafNode, 8>;
 
 	// Pointer to children
+	// union {
+	// 	InnerNodeBlock* inner_children = nullptr;
+	// 	LeafNodeBlock* leaf_children;
+	// };
+
 	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
+		std::uint32_t inner_children = std::numeric_limits<std::uint32_t>::max();
+		std::uint32_t leaf_children;
 	};
 
 	//
@@ -251,9 +256,14 @@ struct OctreeInnerNode<LeafNode, InnerData, true> : LeafNode, Leaf, InnerData {
 	std::atomic_flag lock;
 
 	// Pointer to children
+	// union {
+	// 	InnerNodeBlock* inner_children = nullptr;
+	// 	LeafNodeBlock* leaf_children;
+	// };
+
 	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
+		std::uint32_t inner_children = std::numeric_limits<std::uint32_t>::max();
+		std::uint32_t leaf_children;
 	};
 
 	//
@@ -284,9 +294,14 @@ struct OctreeInnerNode<LeafNode, void, false> : LeafNode, Leaf {
 	using LeafNodeBlock = std::array<LeafNode, 8>;
 
 	// Pointer to children
+	// union {
+	// 	InnerNodeBlock* inner_children = nullptr;
+	// 	LeafNodeBlock* leaf_children;
+	// };
+
 	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
+		std::uint32_t inner_children = std::numeric_limits<std::uint32_t>::max();
+		std::uint32_t leaf_children;
 	};
 
 	//
@@ -318,9 +333,14 @@ struct OctreeInnerNode<LeafNode, void, true> : LeafNode, Leaf {
 	std::atomic_flag lock;
 
 	// Pointer to children
+	// union {
+	// 	InnerNodeBlock* inner_children = nullptr;
+	// 	LeafNodeBlock* leaf_children;
+	// };
+
 	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
+		std::uint32_t inner_children = std::numeric_limits<std::uint32_t>::max();
+		std::uint32_t leaf_children;
 	};
 
 	//

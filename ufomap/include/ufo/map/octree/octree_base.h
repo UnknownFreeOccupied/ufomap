@@ -3188,8 +3188,8 @@ class OctreeBase
 		std::swap(node_size_factor_, other.node_size_factor_);
 		std::swap(automatic_prune_, other.automatic_prune_);
 		// TODO: Check locks
-		std::swap(free_inner_blocks_, other.free_inner_blocks_);
-		std::swap(free_leaf_blocks_, other.free_leaf_blocks_);
+		std::swap(free_inner_block_, other.free_inner_block_);
+		std::swap(free_leaf_block_, other.free_leaf_block_);
 
 		num_inner_nodes_ = other.num_inner_nodes_.exchange(num_inner_nodes_);
 		num_inner_leaf_nodes_ = other.num_inner_leaf_nodes_.exchange(num_inner_leaf_nodes_);
@@ -3305,7 +3305,7 @@ class OctreeBase
 	|                                                                                     |
 	**************************************************************************************/
 
-	[[nodiscard]] static constexpr bool valid(Node node)
+	[[nodiscard]] bool valid(Node node) const
 	{
 		if constexpr (TrackNodes) {
 			if constexpr (ReuseNodes) {
@@ -3563,7 +3563,12 @@ class OctreeBase
 	// Get node
 	//
 
-	[[nodiscard]] static constexpr LeafNode& leafNodeUnsafe(Node node)
+	[[nodiscard]] LeafNode const& leafNodeUnsafe(Node node) const
+	{
+		return *static_cast<LeafNode*>(node.data());
+	}
+
+	[[nodiscard]] LeafNode& leafNodeUnsafe(Node node)
 	{
 		return *static_cast<LeafNode*>(node.data());
 	}
@@ -3607,7 +3612,12 @@ class OctreeBase
 		                                               : *node;
 	}
 
-	[[nodiscard]] static constexpr InnerNode& innerNodeUnsafe(Node node)
+	[[nodiscard]] InnerNode const& innerNodeUnsafe(Node node) const
+	{
+		return *static_cast<InnerNode*>(node.data());
+	}
+
+	[[nodiscard]] InnerNode& innerNodeUnsafe(Node node)
 	{
 		return *static_cast<InnerNode*>(node.data());
 	}
@@ -3724,61 +3734,57 @@ class OctreeBase
 	// Get children
 	//
 
-	[[nodiscard]] static constexpr LeafNodeBlock const& leafChildren(InnerNode const& node)
+	[[nodiscard]] LeafNodeBlock const& leafChildren(InnerNode const& node) const
 	{
-		return *node.leaf_children;
+		return leaf_block_[node.leaf_children];
 	}
 
-	[[nodiscard]] static constexpr LeafNodeBlock& leafChildren(InnerNode& node)
+	[[nodiscard]] LeafNodeBlock& leafChildren(InnerNode& node)
 	{
-		return *node.leaf_children;
+		return leaf_block_[node.leaf_children];
 	}
 
-	[[nodiscard]] static constexpr InnerNodeBlock const& innerChildren(
-	    InnerNode const& node)
+	[[nodiscard]] InnerNodeBlock const& innerChildren(InnerNode const& node) const
 	{
-		return *node.inner_children;
+		return inner_block_[node.inner_children];
 	}
 
-	[[nodiscard]] static constexpr InnerNodeBlock& innerChildren(InnerNode& node)
+	[[nodiscard]] InnerNodeBlock& innerChildren(InnerNode& node)
 	{
-		return *node.inner_children;
+		return inner_block_[node.inner_children];
 	}
 
-	[[nodiscard]] static constexpr LeafNode const& leafChild(InnerNode const& parent,
-	                                                         index_t child_index)
-	{
-		return leafChildren(parent)[child_index];
-	}
-
-	[[nodiscard]] static constexpr LeafNode& leafChild(InnerNode& parent,
-	                                                   index_t child_index)
+	[[nodiscard]] LeafNode const& leafChild(InnerNode const& parent,
+	                                        index_t child_index) const
 	{
 		return leafChildren(parent)[child_index];
 	}
 
-	[[nodiscard]] static constexpr InnerNode const& innerChild(InnerNode const& parent,
-	                                                           index_t child_index)
+	[[nodiscard]] LeafNode& leafChild(InnerNode& parent, index_t child_index)
+	{
+		return leafChildren(parent)[child_index];
+	}
+
+	[[nodiscard]] InnerNode const& innerChild(InnerNode const& parent,
+	                                          index_t child_index) const
 	{
 		return innerChildren(parent)[child_index];
 	}
 
-	[[nodiscard]] static constexpr InnerNode& innerChild(InnerNode& parent,
-	                                                     index_t child_index)
+	[[nodiscard]] InnerNode& innerChild(InnerNode& parent, index_t child_index)
 	{
 		return innerChildren(parent)[child_index];
 	}
 
-	[[nodiscard]] static constexpr LeafNode const& child(InnerNode const& parent,
-	                                                     index_t child_index,
-	                                                     depth_t parent_depth)
+	[[nodiscard]] LeafNode const& child(InnerNode const& parent, index_t child_index,
+	                                    depth_t parent_depth) const
 	{
 		return 1 == parent_depth ? leafChild(parent, child_index)
 		                         : innerChild(parent, child_index);
 	}
 
-	[[nodiscard]] static constexpr LeafNode& child(InnerNode& parent, index_t child_index,
-	                                               depth_t parent_depth)
+	[[nodiscard]] LeafNode& child(InnerNode& parent, index_t child_index,
+	                              depth_t parent_depth)
 	{
 		return 1 == parent_depth ? leafChild(parent, child_index)
 		                         : innerChild(parent, child_index);
@@ -4080,9 +4086,8 @@ class OctreeBase
 
 	// If all children are the same as the parent they can be pruned
 	// NOTE: Only call with nodes that have children
-	[[nodiscard]] static IndexField isCollapsible(InnerNode const& node,
-	                                              IndexField const indices,
-	                                              depth_t const depth)
+	[[nodiscard]] IndexField isCollapsible(InnerNode const& node, IndexField const indices,
+	                                       depth_t const depth) const
 	{
 		IndexField collapsible;
 		for (index_t i = 0; 8 != i; ++i) {
@@ -4142,60 +4147,42 @@ class OctreeBase
 
 	inline void allocateLeafChildren(InnerNode& node)
 	{
-		if constexpr (ReuseNodes) {
-			if constexpr (UFOLock::NONE == Lock) {
-				if (!free_leaf_blocks_.empty()) {
-					takeExistingLeafChildren(node);
-					return;
-				}
-			} else if (lockIfNonEmptyLeaves()) {
-				takeExistingLeafChildren(node);
-				unlockLeaves();
-				return;
-			}
+		if (std::numeric_limits<std::uint32_t>::max() != node.leaf_children) {
+			return;
 		}
 
-		node.leaf_children = new LeafNodeBlock();
-		if constexpr (CountNodes) {
-			num_allocated_leaf_nodes_ += 8 * 8;
-			num_allocated_inner_leaf_nodes_ -= 1 * 8;
-			num_allocated_inner_nodes_ += 1 * 8;
+		if (free_leaf_block_.empty()) {
+			node.leaf_children = leaf_block_.size();
+			leaf_block_.emplace_back();
+			if constexpr (CountNodes) {
+				num_allocated_leaf_nodes_ += 8 * 8;
+				num_allocated_inner_leaf_nodes_ -= 1 * 8;
+				num_allocated_inner_nodes_ += 1 * 8;
+			}
+		} else {
+			node.leaf_children = free_leaf_block_.top();
+			free_leaf_block_.pop();
 		}
 	}
 
 	inline void allocateInnerChildren(InnerNode& node)
 	{
-		if constexpr (ReuseNodes) {
-			if constexpr (UFOLock::NONE == Lock) {
-				if (!free_inner_blocks_.empty()) {
-					takeExistingInnerChildren(node);
-					return;
-				}
-			} else if (lockIfNonEmptyInner()) {
-				takeExistingInnerChildren(node);
-				unlockInner();
-				return;
+		if (std::numeric_limits<std::uint32_t>::max() != node.inner_children) {
+			return;
+		}
+
+		if (free_inner_block_.empty()) {
+			node.inner_children = inner_block_.size();
+			inner_block_.emplace_back();
+			if constexpr (CountNodes) {
+				// Got 8 * 8 new and 1 * 8 is made into a inner node
+				num_allocated_inner_leaf_nodes_ += 7 * 8;
+				num_allocated_inner_nodes_ += 1 * 8;
 			}
+		} else {
+			node.inner_children = free_inner_block_.top();
+			free_inner_block_.pop();
 		}
-
-		node.inner_children = new InnerNodeBlock();
-		if constexpr (CountNodes) {
-			// Got 8 * 8 new and 1 * 8 is made into a inner node
-			num_allocated_inner_leaf_nodes_ += 7 * 8;
-			num_allocated_inner_nodes_ += 1 * 8;
-		}
-	}
-
-	inline void takeExistingLeafChildren(InnerNode& node)
-	{
-		node.leaf_children = free_leaf_blocks_.top();
-		free_leaf_blocks_.pop();
-	}
-
-	inline void takeExistingInnerChildren(InnerNode& node)
-	{
-		node.inner_children = free_inner_blocks_.top();
-		free_inner_blocks_.pop();
 	}
 
 	void createLeafChildren(InnerNode& node) { createLeafChildren(node, node.leaf); }
@@ -4207,21 +4194,14 @@ class OctreeBase
 			return;
 		}
 
-		if constexpr (UFOLock::NONE != Lock) {
-			if (!lockIfLeaf(node, indices, 0)) {
-				return;
-			}
-		}
-
-		if (!node.leaf_children) {
-			allocateLeafChildren(node);
-		}
+		allocateLeafChildren(node);
+		auto& children = leafChildren(node);
 
 		std::size_t num = 0;
 		for (index_t i = 0; 8 != i; ++i) {
 			if (std::as_const(indices)[i]) {
 				++num;
-				leafChild(node, i).fill(node, i);
+				children[i].fill(node, i);
 			}
 		}
 
@@ -4232,23 +4212,12 @@ class OctreeBase
 		}
 
 		node.leaf &= ~indices;
-		if constexpr (UFOLock::NONE != Lock) {
-			unlock(node, 0);
-		}
 	}
 
 	void createLeafChildren(InnerNode& node, index_t index)
 	{
-		if constexpr (UFOLock::NONE != Lock) {
-			if (!lockIfLeaf(node, index, 0)) {
-				return;
-			}
-		}
-
 		if (std::as_const(node).leaf[index]) {
-			if (!node.leaf_children) {
-				allocateLeafChildren(node);
-			}
+			allocateLeafChildren(node);
 
 			leafChild(node, index).fill(node, index);
 			if constexpr (CountNodes) {
@@ -4257,10 +4226,6 @@ class OctreeBase
 				num_inner_nodes_ += 1;
 			}
 			node.leaf[index] = false;
-		}
-
-		if constexpr (UFOLock::NONE != Lock) {
-			unlock(node, 0);
 		}
 	}
 
@@ -4276,21 +4241,14 @@ class OctreeBase
 			return;
 		}
 
-		if constexpr (UFOLock::NONE != Lock) {
-			if (!lockIfLeaf(node, indices, depth)) {
-				return;
-			}
-		}
-
-		if (!node.inner_children) {
-			allocateInnerChildren(node);
-		}
+		allocateInnerChildren(node);
+		auto& children = innerChildren(node);
 
 		std::size_t num = 0;
 		for (index_t i = 0; 8 != i; ++i) {
 			if (std::as_const(indices)[i]) {
 				++num;
-				innerChild(node, i).fill(node, i);
+				children[i].fill(node, i);
 			}
 		}
 
@@ -4300,23 +4258,12 @@ class OctreeBase
 		}
 
 		node.leaf &= ~indices;
-		if constexpr (UFOLock::DEPTH == Lock) {
-			unlock(node, depth);
-		}
 	}
 
 	void createInnerChildren(InnerNode& node, index_t index, depth_t depth)
 	{
-		if constexpr (UFOLock::DEPTH == Lock) {
-			if (!lockIfLeaf(node, index, depth)) {
-				return;
-			}
-		}
-
 		if (std::as_const(node).leaf[index]) {
-			if (!node.inner_children) {
-				allocateInnerChildren(node);
-			}
+			allocateInnerChildren(node);
 
 			innerChild(node, index).fill(node, index);
 			if constexpr (CountNodes) {
@@ -4324,10 +4271,6 @@ class OctreeBase
 				num_inner_nodes_ += 1;
 			}
 			node.leaf[index] = false;
-		}
-
-		if constexpr (UFOLock::DEPTH == Lock) {
-			unlock(node, depth);
 		}
 	}
 
@@ -4337,56 +4280,14 @@ class OctreeBase
 
 	inline void deallocateLeafChildren(InnerNode& node, bool prune)
 	{
-		if (prune) {
-			delete &leafChildren(node);
-			if constexpr (CountNodes) {
-				num_allocated_leaf_nodes_ -= 8 * 8;
-				num_allocated_inner_leaf_nodes_ += 1 * 8;
-				num_allocated_inner_nodes_ -= 1 * 8;
-			}
-			node.leaf_children = nullptr;
-		} else if constexpr (ReuseNodes) {
-			if constexpr (UFOLock::NONE != Lock) {
-				lockLeaves();
-			}
-			addExistingLeafChildren(node);
-			if constexpr (UFOLock::NONE != Lock) {
-				unlockLeaves();
-			}
-			node.leaf_children = nullptr;
-		}
+		free_leaf_block_.push(node.leaf_children);
+		node.leaf_children = std::numeric_limits<std::uint32_t>::max();
 	}
 
 	inline void deallocateInnerChildren(InnerNode& node, bool prune)
 	{
-		if (prune) {
-			delete &innerChildren(node);
-			if constexpr (CountNodes) {
-				// Remove 8*8 and 1*8 inner node is made into a inner leaf node
-				num_allocated_inner_leaf_nodes_ -= 7 * 8;
-				num_allocated_inner_nodes_ -= 1 * 8;
-			}
-			node.inner_children = nullptr;
-		} else if constexpr (ReuseNodes) {
-			if constexpr (UFOLock::DEPTH == Lock) {
-				lockInner();
-			}
-			addExistingInnerChildren(node);
-			if constexpr (UFOLock::DEPTH == Lock) {
-				unlockInner();
-			}
-			node.inner_children = nullptr;
-		}
-	}
-
-	inline void addExistingLeafChildren(InnerNode& node)
-	{
-		free_leaf_blocks_.push(&leafChildren(node));
-	}
-
-	inline void addExistingInnerChildren(InnerNode& node)
-	{
-		free_inner_blocks_.push(*innerChildren(node));
+		free_inner_block_.push(node.inner_children);
+		node.inner_children = std::numeric_limits<std::uint32_t>::max();
 	}
 
 	void deleteLeafChildren(InnerNode& node, bool manual_pruning = false)
@@ -4404,10 +4305,12 @@ class OctreeBase
 
 		node.leaf |= indices;
 
+		auto& children = leafChildren(node);
+
 		std::size_t num = 0;
 		for (index_t i = 0; 8 != i; ++i) {
 			if (new_leaf[i]) {
-				leafChild(node, i).clear();
+				children[i].clear();
 				++num;
 			}
 		}
@@ -4470,12 +4373,13 @@ class OctreeBase
 
 		node.leaf |= indices;
 
+		auto& children = innerChildren(node);
+
 		std::size_t num = 0;
 		for (index_t i = 0; 8 != i; ++i) {
 			if (new_leaf[i]) {
-				InnerNode& child = innerChild(node, i);
-				deleteChildren(child, depth - 1, manual_pruning);
-				child.clear();
+				deleteChildren(children[i], depth - 1, manual_pruning);
+				children[i].clear();
 				++num;
 			}
 		}
@@ -4519,132 +4423,6 @@ class OctreeBase
 			deallocateInnerChildren(node, manual_pruning || automaticPruning());
 		}
 	}
-
-	//
-	// (Un)lock children
-	//
-
-	[[nodiscard]] bool tryLockChildren(depth_t depth)
-	{
-		return !children_locks_[depth].test_and_set(std::memory_order_acquire);
-	}
-
-	[[nodiscard]] bool lockIfLeaf(InnerNode& node, index_t index, depth_t depth)
-	{
-		if constexpr (UFOLock::DEPTH == Lock) {
-			do {
-				if (!std::as_const(node).leaf[index]) {
-					return false;
-				}
-			} while (children_locks_[depth].test_and_set(std::memory_order_acquire));
-		} else if constexpr (UFOLock::NODE == Lock) {
-			do {
-				if (!std::as_const(node).leaf[index]) {
-					return false;
-				}
-			} while (node.lock.test_and_set(std::memory_order_acquire));
-		}
-
-		if (!std::as_const(node).leaf[index]) {
-			unlock(node, depth);
-			return false;
-		}
-
-		return true;
-	}
-
-	[[nodiscard]] bool lockIfLeaf(InnerNode& node, IndexField const indices, depth_t depth)
-	{
-		if constexpr (UFOLock::DEPTH == Lock) {
-			do {
-				if ((node.leaf & indices).none()) {
-					return false;
-				}
-			} while (children_locks_[depth].test_and_set(std::memory_order_acquire));
-		} else {
-			do {
-				if ((node.leaf & indices).none()) {
-					return false;
-				}
-			} while (node.lock.test_and_set(std::memory_order_acquire));
-		}
-
-		if ((node.leaf & indices).none()) {
-			unlock(node, depth);
-			return false;
-		}
-
-		return true;
-	}
-
-	void unlock(InnerNode& node, depth_t depth)
-	{
-		if constexpr (UFOLock::DEPTH == Lock) {
-			children_locks_[depth].clear(std::memory_order_release);
-		} else if (UFOLock::NODE == Lock) {
-			node.lock.clear(std::memory_order_release);
-		}
-	}
-
-	//
-	// Leaf/inner lock
-	//
-
-	[[nodiscard]] bool tryLockLeaves()
-	{
-		return !free_leaf_block_lock_.test_and_set(std::memory_order_acquire);
-	}
-
-	void lockLeaves()
-	{
-		while (!tryLockLeaves()) {
-		}
-	}
-
-	[[nodiscard]] bool lockIfNonEmptyLeaves()
-	{
-		do {
-			if (free_leaf_blocks_.empty()) {
-				return false;
-			}
-		} while (!tryLockLeaves());
-
-		if (free_leaf_blocks_.empty()) {
-			unlockLeaves();
-			return false;
-		}
-		return true;
-	}
-
-	void unlockLeaves() { free_leaf_block_lock_.clear(std::memory_order_release); }
-
-	[[nodiscard]] bool tryLockInner()
-	{
-		return !free_inner_block_lock_.test_and_set(std::memory_order_acquire);
-	}
-
-	void lockInner()
-	{
-		while (!tryLockInner()) {
-		}
-	}
-
-	[[nodiscard]] bool lockIfNonEmptyInner()
-	{
-		do {
-			if (free_inner_blocks_.empty()) {
-				return false;
-			}
-		} while (!tryLockInner());
-
-		if (free_inner_blocks_.empty()) {
-			unlockInner();
-			return false;
-		}
-		return true;
-	}
-
-	void unlockInner() { free_inner_block_lock_.clear(std::memory_order_release); }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -5075,6 +4853,16 @@ class OctreeBase
 	// The root of the octree
 	InnerNode root_;
 
+	// Inner node blocks
+	std::deque<InnerNodeBlock> inner_block_;
+	// Leaf node blocks
+	std::deque<LeafNodeBlock> leaf_block_;
+
+	// Lock for `inner_block_`
+	std::atomic_flag inner_block_lock_ = ATOMIC_FLAG_INIT;
+	// Lock for `leaf_block_`
+	std::atomic_flag leaf_block_lock_ = ATOMIC_FLAG_INIT;
+
 	// Stores the node size at a given depth, where the depth is the index
 	std::array<node_size_t, maxDepthLevels()> node_size_;
 	// Reciprocal of the node size at a given depth, where the depth is the index
@@ -5087,13 +4875,15 @@ class OctreeBase
 	std::array<std::atomic_flag, maxDepthLevels()> children_locks_;
 
 	// Free inner node blocks that can be used instead of allocating new
-	std::stack<InnerNodeBlock*> free_inner_blocks_;
+	// std::stack<InnerNodeBlock*> free_inner_block_;
+	std::stack<std::uint32_t> free_inner_block_;
 	// Free leaf node blocks that can be used instead of allocating new
-	std::stack<LeafNodeBlock*> free_leaf_blocks_;
+	// std::stack<LeafNodeBlock*> free_leaf_block_;
+	std::stack<std::uint32_t> free_leaf_block_;
 
-	// Lock for accessing `free_inner_blocks_`
+	// Lock for accessing `free_inner_block_`
 	std::atomic_flag free_inner_block_lock_ = ATOMIC_FLAG_INIT;
-	// Lock for accessing `free_leaf_blocks_`
+	// Lock for accessing `free_leaf_block_`
 	std::atomic_flag free_leaf_block_lock_ = ATOMIC_FLAG_INIT;
 
 	//
