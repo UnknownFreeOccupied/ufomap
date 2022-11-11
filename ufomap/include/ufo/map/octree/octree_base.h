@@ -3416,14 +3416,13 @@ class OctreeBase
 			return Node(&child, code, 0);
 		} else if (std::as_const(cur)->leaf[index]) {
 			f(*cur, index);
-			cur->modified[index] = true;
 		} else {
 			IndexField indices;
 			indices[index] = true;
-			cur->modified[index] = true;
 			applyAllRecurs(*cur, indices, depth, f, f2);
 		}
 
+		cur->modified[index] = true;
 		return Node(cur, code, depth);
 	}
 
