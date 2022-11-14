@@ -210,25 +210,19 @@ class TimeMapBase
 	// Update node
 	//
 
-	template <std::size_t N, class InputIt>
-	void updateNode(TimeNode<N>& node, IndexField const indices, InputIt first,
-	                InputIt last)
+	template <std::size_t N>
+	void updateNode(TimeNode<N>& node, index_t index, TimeNode<N> const children)
 	{
-		auto const prop = timePropagationCriteria();
-		for (index_t i = 0; first != last; ++first, ++i) {
-			if (indices[i]) {
-				switch (prop) {
-					case PropagationCriteria::MIN:
-						node.time[i] = min(first->time);
-						break;
-					case PropagationCriteria::MAX:
-						node.time[i] = max(first->time);
-						break;
-					case PropagationCriteria::MEAN:
-						node.time[i] = mean(first->time);
-						break;
-				}
-			}
+		switch (timePropagationCriteria()) {
+			case PropagationCriteria::MIN:
+				node.time[index] = min(children.time);
+				return;
+			case PropagationCriteria::MAX:
+				node.time[index] = max(children.time);
+				return;
+			case PropagationCriteria::MEAN:
+				node.time[index] = mean(children.time);
+				return;
 		}
 	}
 

@@ -3981,14 +3981,34 @@ class OctreeBase
 
 	// TODO: Add comments
 
-	void updateNode(InnerNode& node, IndexField indices, depth_t const depth)
+	void updateNode(InnerNode& node, IndexField const indices, depth_t const depth)
 	{
 		if (1 == depth) {
-			derived().updateNode(node, indices, std::cbegin(leafChildren(node)),
-			                     std::cend(leafChildren(node)));
+			auto const& children = leafChildren(node);
+			if (indices.all()) {
+				for (index_t i = 0; 8 != i; ++i) {
+					derived().updateNode(node, i, children[i]);
+				}
+			} else {
+				for (index_t i = 0; 8 != i; ++i) {
+					if (indices[i]) {
+						derived().updateNode(node, i, children[i]);
+					}
+				}
+			}
 		} else {
-			derived().updateNode(node, indices, std::cbegin(innerChildren(node)),
-			                     std::cend(innerChildren(node)));
+			auto const& children = innerChildren(node);
+			if (indices.all()) {
+				for (index_t i = 0; 8 != i; ++i) {
+					derived().updateNode(node, i, children[i]);
+				}
+			} else {
+				for (index_t i = 0; 8 != i; ++i) {
+					if (indices[i]) {
+						derived().updateNode(node, i, children[i]);
+					}
+				}
+			}
 		}
 
 		prune(node, indices, depth);

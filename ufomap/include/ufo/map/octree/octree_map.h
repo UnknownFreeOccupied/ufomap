@@ -201,10 +201,10 @@ class OctreeMap
 	// Update node
 	//
 
-	template <class NodeT, class InputIt>
-	void updateNode(NodeT& node, IndexField indices, InputIt first, InputIt last)
+	template <class NodeT, class ChildT>
+	void updateNode(NodeT& node, index_t index, ChildT const& children)
 	{
-		(Bases<OctreeMap>::updateNode(node, indices, first, last), ...);
+		(Bases<OctreeMap>::updateNode(node, index, children), ...);
 	}
 
 	//

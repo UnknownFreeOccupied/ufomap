@@ -362,31 +362,8 @@ class ColorMapBase
 	// Update node
 	//
 
-	template <std::size_t N, class InputIt>
-	void updateNode(ColorNode<N>& node, IndexField const indices, InputIt first,
-	                InputIt last)
-	{
-		if (indices.all()) {
-			for (index_t i = 0; first != last; ++first, ++i) {
-				Color color = meanColor(*first);
-				node.red[i] = color.red;
-				node.green[i] = color.green;
-				node.blue[i] = color.blue;
-			}
-		} else {
-			for (index_t i = 0; first != last; ++first, ++i) {
-				if (indices[i]) {
-					Color color = meanColor(*first);
-					node.red[i] = color.red;
-					node.green[i] = color.green;
-					node.blue[i] = color.blue;
-				}
-			}
-		}
-	}
-
 	template <std::size_t N>
-	Color meanColor(ColorNode<N> node) const
+	void updateNode(ColorNode<N>& node, index_t index, ColorNode<N> const children)
 	{
 		double red = 0;
 		double green = 0;
@@ -394,14 +371,23 @@ class ColorMapBase
 
 		std::size_t num = 0;
 		for (std::size_t i = 0; N != i; ++i) {
-			if (0 != node.red[i] || 0 != node.green[i] || 0 != node.blue[i]) {
+			if (0 != children.red[i] || 0 != children.green[i] || 0 != children.blue[i]) {
 				++num;
-				red += node.red[i];
-				green += node.green[i];
-				blue += node.blue[i];
+				red += children.red[i];
+				green += children.green[i];
+				blue += children.blue[i];
 			}
 		}
-		return 0 == num ? Color() : Color(red / num, green / num, blue / num);
+
+		if (0 == num) {
+			node.red[index] = 0;
+			node.green[index] = 0;
+			node.blue[index] = 0;
+		} else {
+			node.red[index] = red / num;
+			node.green[index] = green / num;
+			node.blue[index] = blue / num;
+		}
 	}
 
 	//

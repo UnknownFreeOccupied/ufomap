@@ -330,8 +330,6 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
                              Point const sensor_origin, bool const only_valid = false,
                              depth_t depth = 0)
 {
-	Misses misses;
-
 	static constexpr depth_t GRID_DEPTH = 6;  // FIXME: What should this be?
 
 	// NOTE: Assuming all points have same depth
@@ -373,11 +371,32 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 	KeyRay ray;
 	Code prev_at_depth;
 	Grid<GRID_DEPTH>* grid = nullptr;
+	// std::size_t g = 0;
+	// std::size_t b = 0;
+	// std::array<std::pair<Code, Grid<GRID_DEPTH>*>, 20> previous;
 	for (Key const key : keys) {
 		computeRay(ray, origin, key);
-		for (auto const key : ray) {
-			Code const code = map.toCode(key);
+		for (Code const code : ray) {
 			Code const cur_at_depth = code.toDepth(GRID_DEPTH + depth);
+
+			// bool done = false;
+			// for (auto [c, p] : previous) {
+			// 	if (c == cur_at_depth) {
+			// 		p->set(code);
+			// 		done = true;
+			// 		// ++g;
+			// 		break;
+			// 	}
+			// }
+
+			// if (!done) {
+			// 	// ++b;
+			// 	std::rotate(std::rbegin(previous), std::rbegin(previous) + 1,
+			// 	            std::rend(previous));
+			// 	previous.front().first = cur_at_depth;
+			// 	previous.front().second = &grids[cur_at_depth];
+			// 	previous.front().second->set(code);
+			// }
 
 			if (cur_at_depth != prev_at_depth) {
 				prev_at_depth = cur_at_depth;
@@ -389,19 +408,22 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 		ray.clear();
 	}
 
+	// std::cout << g << " vs " << b << '\n';
+
+	Misses misses;
+
 	for (auto const& [code, grid] : grids) {
 		auto const c = code.code();
 
 		std::size_t i = 0;
 		for (auto it = std::cbegin(grid); it != std::cend(grid); ++it, i += 64) {
 			if (0 != *it) {
-				if (*it == std::numeric_limits<uint64_t>::max()) {
-					if (0 == i % 512 &&
-					    std::all_of(std::next(it), std::next(it, 8), [](uint64_t a) {
-						    return std::numeric_limits<uint64_t>::max() == a;
+				if (std::numeric_limits<std::uint64_t>::max() == *it) {
+					if (0 == i % 512 && std::all_of(it + 1, it + 8, [](std::uint64_t a) {
+						    return std::numeric_limits<std::uint64_t>::max() == a;
 					    })) {
 						misses.emplace_back(c | (i << 3 * depth), depth + 3);
-						std::advance(it, 7);
+						it += 7;
 						i += (512 - 64);
 					} else {
 						misses.emplace_back(c | (i << 3 * depth), depth + 2);
@@ -412,7 +434,7 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 						if (0 == j % 8 && (*it >> j) & 0xFF == 0xFF) {
 							misses.emplace_back(c | ((i + j) << 3 * depth), depth + 1);
 							j += 7;
-						} else if (*it & (uint64_t(1) << j)) {
+						} else if (*it & (std::uint64_t(1) << j)) {
 							misses.emplace_back(c | ((i + j) << 3 * depth), depth);
 						}
 					}

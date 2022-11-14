@@ -144,8 +144,7 @@ class Grid
 		return Code(index << 3 * depth, depth);
 	}
 
-	static constexpr Code code(code_t prefix, std::size_t const index,
-	                           depth_t const depth)
+	static constexpr Code code(code_t prefix, std::size_t const index, depth_t const depth)
 	{
 		return Code(prefix | (index << 3 * depth), depth);
 	}

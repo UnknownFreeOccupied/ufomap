@@ -863,51 +863,24 @@ class OccupancyMapBase
 	// Update node
 	//
 
-	template <class T, class InputIt>
-	void updateNode(T& node, IndexField const indices, InputIt first, InputIt last)
+	template <class T, class ChildT>
+	void updateNode(T& node, index_t index, ChildT const& children)
 	{
-		auto prop = occupancyPropagationCriteria();
-		if (indices.all()) {
-			for (index_t i = 0; first != last; ++first, ++i) {
-				switch (prop) {
-					case PropagationCriteria::MIN:
-						node.occupancy[i] = min(first->occupancy);
-						break;
-					case PropagationCriteria::MAX:
-						node.occupancy[i] = max(first->occupancy);
-						break;
-					case PropagationCriteria::MEAN:
-						node.occupancy[i] = mean(first->occupancy);
-						break;
-				}
-
-				node.contains_unknown[i] = containsUnknown(*first);
-				node.contains_free[i] = containsFree(*first);
-				node.contains_occupied[i] = containsOccupied(*first);
-			}
-		} else {
-			for (index_t i = 0; first != last; ++first, ++i) {
-				if (!indices[i]) {
-					continue;
-				}
-
-				switch (prop) {
-					case PropagationCriteria::MIN:
-						node.occupancy[i] = min(first->occupancy);
-						break;
-					case PropagationCriteria::MAX:
-						node.occupancy[i] = max(first->occupancy);
-						break;
-					case PropagationCriteria::MEAN:
-						node.occupancy[i] = mean(first->occupancy);
-						break;
-				}
-
-				node.contains_unknown[i] = containsUnknown(*first);
-				node.contains_free[i] = containsFree(*first);
-				node.contains_occupied[i] = containsOccupied(*first);
-			}
+		switch (occupancyPropagationCriteria()) {
+			case PropagationCriteria::MIN:
+				node.occupancy[index] = min(children.occupancy);
+				break;
+			case PropagationCriteria::MAX:
+				node.occupancy[index] = max(children.occupancy);
+				break;
+			case PropagationCriteria::MEAN:
+				node.occupancy[index] = mean(children.occupancy);
+				break;
 		}
+
+		node.contains_unknown[index] = containsUnknown(children);
+		node.contains_free[index] = containsFree(children);
+		node.contains_occupied[index] = containsOccupied(children);
 	}
 
 	//
