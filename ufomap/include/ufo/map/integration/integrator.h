@@ -100,7 +100,7 @@ class Integrator
 				return;
 			}
 
-			// Create and retrieve the node
+			// Retrieve the node
 			auto node = map(p.code);
 
 			// Update occupancy
@@ -178,13 +178,10 @@ class Integrator
 	template <class Map>
 	void integrateMisses(Map& map, Misses const& misses) const
 	{
-		// Get current state
-		auto const occupancy_prob_miss = getOccupancyProbMiss();
 		auto const time = getTime();
 
 		if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
-			auto prob = map.toOccupancyChangeLogit(occupancy_prob_miss);
-
+			auto const prob = map.toOccupancyChangeLogit(getOccupancyProbMiss());
 			for (auto code : misses) {
 				auto node = map.decreaseOccupancyLogit(code, prob, false);
 
@@ -192,11 +189,9 @@ class Integrator
 					map.setTime(node, time, false);
 				}
 			}
-		} else {
+		} else if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
 			for (auto code : misses) {
-				if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-					map.setTime(code, time, false);
-				}
+				map.setTime(code, time, false);
 			}
 		}
 	}

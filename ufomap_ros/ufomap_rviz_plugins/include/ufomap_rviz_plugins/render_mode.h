@@ -49,6 +49,9 @@
 #include <ufo/map/point.h>
 #include <ufo/map/types.h>
 
+// Qt
+#include <QString>
+
 // Ogre
 #include <OGRE/OgreColourValue.h>
 
@@ -62,91 +65,90 @@ namespace ufomap_ros::rviz_plugins
 using VoxelType = ufo::map::OccupancyState;
 
 enum class ColoringMode {
-	VOXEL_COLOR,
-	time_COLOR,
-	SEMANTIC_COLOR,
-	X_AXIS_COLOR,
-	Y_AXIS_COLOR,
-	Z_AXIS_COLOR,
-	OCCUPANCY_COLOR,
-	FIXED_COLOR,
+	VOXEL,
+	TIME,
+	SEMANTIC,
+	SURFEL_NORMAL,
+	X_AXIS,
+	Y_AXIS,
+	Z_AXIS,
+	OCCUPANCY,
+	INTENSITY,
+	FIXED
 };
 
-enum class RenderStyle {
-	POINTS,
-	SQUARES,
-	FLAT_SQUARES,
-	SPHERES,
-	TILES,
-	BOXES,
-};
+enum class RenderStyle { POINTS, SQUARES, FLAT_SQUARES, SPHERES, TILES, BOXES, SURFEL };
 
-static constexpr auto getStr(VoxelType const& type)
+static inline QString getStr(VoxelType const& type)
 {
 	using namespace std::literals;
 	switch (type) {
 		case VoxelType::UNKNOWN:
-			return "Unknown"sv;
+			return "Unknown";
 		case VoxelType::FREE:
-			return "Free"sv;
+			return "Free";
 		case VoxelType::OCCUPIED:
-			return "Occupied"sv;
+			return "Occupied";
 		default:
-			return ""sv;
+			return "";
 	}
 }
 
-static constexpr auto getStr(ColoringMode const& mode)
+static inline QString getStr(ColoringMode const& mode)
 {
 	using namespace std::literals;
 	switch (mode) {
-		case ColoringMode::VOXEL_COLOR:
-			return "Voxel Color"sv;
-		case ColoringMode::time_COLOR:
-			return "Time Step Color"sv;
-		case ColoringMode::SEMANTIC_COLOR:
-			return "Semantic Color"sv;
-		case ColoringMode::X_AXIS_COLOR:
-			return "X-Axis"sv;
-		case ColoringMode::Y_AXIS_COLOR:
-			return "Y-Axis"sv;
-		case ColoringMode::Z_AXIS_COLOR:
-			return "Z-Axis"sv;
-		case ColoringMode::OCCUPANCY_COLOR:
-			return "Occupancy"sv;
-		case ColoringMode::FIXED_COLOR:
-			return "Fixed"sv;
+		case ColoringMode::VOXEL:
+			return "Voxel";
+		case ColoringMode::TIME:
+			return "Time";
+		case ColoringMode::SEMANTIC:
+			return "Semantic";
+		case ColoringMode::SURFEL_NORMAL:
+			return "Surfel Normal";
+		case ColoringMode::X_AXIS:
+			return "X-Axis";
+		case ColoringMode::Y_AXIS:
+			return "Y-Axis";
+		case ColoringMode::Z_AXIS:
+			return "Z-Axis";
+		case ColoringMode::OCCUPANCY:
+			return "Occupancy";
+		case ColoringMode::INTENSITY:
+			return "Intensity";
+		case ColoringMode::FIXED:
+			return "Fixed";
 		default:
-			return ""sv;
+			return "";
 	}
 }
 
-static constexpr auto getStr(RenderStyle const& style)
+static inline QString getStr(RenderStyle const& style)
 {
 	using namespace std::literals;
 	switch (style) {
 		case RenderStyle::POINTS:
-			return "Points"sv;
+			return "Points";
 		case RenderStyle::SQUARES:
-			return "Squares"sv;
+			return "Squares";
 		case RenderStyle::FLAT_SQUARES:
-			return "Flat Squares"sv;
+			return "Flat Squares";
 		case RenderStyle::SPHERES:
-			return "Spheres"sv;
+			return "Spheres";
 		case RenderStyle::TILES:
-			return "Tiles"sv;
+			return "Tiles";
 		case RenderStyle::BOXES:
-			return "Boxes"sv;
+			return "Boxes";
+		case RenderStyle::SURFEL:
+			return "Surfel";
 		default:
-			return ""sv;
+			return "";
 	}
 }
 
 struct RenderMode {
 	RenderMode()
-	    : style(RenderStyle::BOXES),
-	      coloring_mode(ColoringMode::VOXEL_COLOR),
-	      color(0, 0, 0)
+	    : style(RenderStyle::BOXES), coloring_mode(ColoringMode::VOXEL), color(0, 0, 0)
 	{
 	}
 

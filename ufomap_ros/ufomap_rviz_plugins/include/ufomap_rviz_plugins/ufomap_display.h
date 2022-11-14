@@ -47,12 +47,13 @@
 #include <ufo/map/code.h>
 #include <ufo/map/ufomap.h>
 #include <ufomap_msgs/UFOMap.h>
-#include <ufomap_rviz_plugins/data.h>
-#include <ufomap_rviz_plugins/filter_display.h>
-#include <ufomap_rviz_plugins/performance_display.h>
-#include <ufomap_rviz_plugins/render_data.h>
-#include <ufomap_rviz_plugins/render_display.h>
-#include <ufomap_rviz_plugins/voxels.h>
+// #include <ufomap_rviz_plugins/data.h>
+// #include <ufomap_rviz_plugins/filter_display.h>
+// #include <ufomap_rviz_plugins/performance_display.h>
+// #include <ufomap_rviz_plugins/render_data.h>
+// #include <ufomap_rviz_plugins/render_display.h>
+// #include <ufomap_rviz_plugins/voxels.h>
+#include <ufomap_rviz_plugins/render_mode.h>
 
 // ROS
 #include <rviz/message_filter_display.h>
@@ -98,49 +99,50 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 
 	void generateObjects(ufo::map::depth_t depth);
 
-	template <ufo::map::OccupancyState State>
-	void generateObjectsImpl(std::vector<ufo::map::Code> const& codes,
-	                         ufo::map::depth_t min_depth)
-	{
-		std::for_each(std::begin(codes), std::end(codes), [&](auto code) {
-			auto pred = ufo::map::predicate::Leaf(min_depth) &&
-			            ufo::map::predicate::ContainOccupancyState<State>() &&
-			            ufo::map::predicate::CodePrefix(code);
+	// template <ufo::map::OccupancyState State>
+	// void generateObjectsImpl(std::vector<ufo::map::Code> const& codes,
+	//                          ufo::map::depth_t min_depth)
+	// {
+	// 	std::for_each(std::begin(codes), std::end(codes), [&](auto code) {
+	// 		auto pred = ufo::map::predicate::Leaf(min_depth) &&
+	// 		            ufo::map::predicate::ContainOccupancyState<State>() &&
+	// 		            ufo::map::predicate::CodePrefix(code);
 
-			RenderData render_data;
-			render_data.manager_ = context_->getSceneManager();
-			render_data.position_ = Ogre::Vector3(0, 0, 0);  // FIXME: What should this be?
-			render_data.orientation_ =
-			    Ogre::Quaternion(1, 0, 0, 0);  // FIXME: What should this be?
+	// 		RenderData render_data;
+	// 		render_data.manager_ = context_->getSceneManager();
+	// 		render_data.position_ = Ogre::Vector3(0, 0, 0);  // FIXME: What should this be?
+	// 		render_data.orientation_ =
+	// 		    Ogre::Quaternion(1, 0, 0, 0);  // FIXME: What should this be?
 
-			for (auto const& node : map_.queryBV(pred)) {
-				fillData(render_data.transformed_voxels_[node.depth()], map_, node);
-			}
+	// 		for (auto const& node : map_.queryBV(pred)) {
+	// 			fillData(render_data.transformed_voxels_[node.depth()], map_, node);
+	// 		}
 
-			std::scoped_lock object_lock(object_mutex_);
-			queued_objects_[stateToIndex(State)].insert_or_assign(code, std::move(render_data));
-		});
-	}
+	// 		std::scoped_lock object_lock(object_mutex_);
+	// 		queued_objects_[stateToIndex(State)].insert_or_assign(code,
+	// std::move(render_data));
+	// 	});
+	// }
 
-	template <class Map>
-	void fillData(Data& data, Map const& map, ufo::map::NodeBV const& node)
-	{
-		data.addPosition(node.center());
+	// template <class Map>
+	// void fillData(Data& data, Map const& map, ufo::map::NodeBV const& node)
+	// {
+	// 	data.addPosition(node.center());
 
-		data.addOccupancy(map.getOccupancy(node) * 100);
+	// 	data.addOccupancy(map.getOccupancy(node) * 100);
 
-		if constexpr (ufo::map::is_base_of_template_v<ufo::map::TimeMap, Map>) {
-			data.addTime(map.getTime(node));
-		}
+	// 	if constexpr (ufo::map::is_base_of_template_v<ufo::map::TimeMap, Map>) {
+	// 		data.addTime(map.getTime(node));
+	// 	}
 
-		if constexpr (ufo::map::is_base_of_template_v<ufo::map::ColorMap, Map>) {
-			data.addColor(map.getColor(node));
-		}
+	// 	if constexpr (ufo::map::is_base_of_template_v<ufo::map::ColorMap, Map>) {
+	// 		data.addColor(map.getColor(node));
+	// 	}
 
-		// if constexpr (ufo::map::is_base_of_template_v<ufo::map::SemanticMap, Map>) {
-		// 	// TODO: Add semantics
-		// }
-	}
+	// 	// if constexpr (ufo::map::is_base_of_template_v<ufo::map::SemanticMap, Map>) {
+	// 	// 	// TODO: Add semantics
+	// 	// }
+	// }
 
 	// void filterMsgs(std::vector<ufomap_msgs::UFOMap::ConstPtr>& msgs);
 
@@ -151,9 +153,9 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 
 	ufo::geometry::Frustum getViewFrustum(Ogre::Real far_clip) const;
 
-	std::array<RenderMode, 3> getRenderMode() const;
+	// std::array<RenderMode, 3> getRenderMode() const;
 
-	std::array<Heatmap, 3> getHeatmap(Filter const& filter) const;
+	// std::array<Heatmap, 3> getHeatmap(Filter const& filter) const;
 
 	bool updateGridSizeDepth();
 
@@ -162,23 +164,21 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 	void updateStatus();
 
  private:
-	static constexpr size_t stateToIndex(ufo::map::OccupancyState state)
-	{
-		switch (state) {
-			case ufo::map::OccupancyState::UNKNOWN:
-				return 0;
-			case ufo::map::OccupancyState::FREE:
-				return 1;
-			case ufo::map::OccupancyState::OCCUPIED:
-				return 2;
-		}
-	}
+	// static constexpr size_t stateToIndex(ufo::map::OccupancyState state)
+	// {
+	// 	switch (state) {
+	// 		case ufo::map::OccupancyState::UNKNOWN:
+	// 			return 0;
+	// 		case ufo::map::OccupancyState::FREE:
+	// 			return 1;
+	// 		case ufo::map::OccupancyState::OCCUPIED:
+	// 			return 2;
+	// 	}
+	// }
 
  private:
 	//  Map
-	ufo::map::UFOMap<ufo::map::MapType::OCCUPANCY_SMALL | ufo::map::MapType::TIME |
-	                 ufo::map::MapType::COLOR>
-	    map_;
+	// void* map_;
 
 	// Flag to tell the other threads to stop
 	std::atomic_bool done_ = false;
@@ -193,38 +193,43 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 	std::vector<ufomap_msgs::UFOMap::ConstPtr> message_queue_;
 
 	// Visible
-	std::vector<RenderData*> prev_visible_;
+	// std::vector<RenderData*> prev_visible_;
 
 	//
 	// Objects
 	//
 
-	using ObjectMap = std::unordered_map<ufo::map::Code, RenderData, ufo::map::Code::Hash>;
+	// using ObjectMap = std::unordered_map<ufo::map::Code, RenderData,
+	// ufo::map::Code::Hash>;
 
-	std::mutex object_mutex_;
+	// std::mutex object_mutex_;
 
-	std::array<ObjectMap, 3> objects_;
-	std::array<ObjectMap, 3> queued_objects_;
+	// std::array<ObjectMap, 3> objects_;
+	// std::array<ObjectMap, 3> queued_objects_;
 
 	//
 	// GUI properties
 	//
 
-	// Render
-	rviz::Property* render_category_property_;
-	std::unique_ptr<RenderDisplay> occupied_display_;
-	std::unique_ptr<RenderDisplay> free_display_;
-	std::unique_ptr<RenderDisplay> unknown_display_;
+	rviz::Property* map_type_property_;
+	rviz::BoolProperty* occupancy_property_;
+	rviz::BoolProperty* color_property_;
+	rviz::BoolProperty* time_property_;
+	rviz::BoolProperty* intensity_property_;
+	rviz::BoolProperty* count_property_;
+	rviz::BoolProperty* reflection_property_;
+	rviz::BoolProperty* semantic_property_;
+	rviz::BoolProperty* surfel_property_;
 
-	// Filter
-	rviz::Property* filter_category_property_;
-	std::unique_ptr<FilterDisplay> filter_display_;
+	rviz::EnumProperty* style_property_;
+	rviz::EnumProperty* coloring_property_;
 
-	// Performance
-	rviz::Property* performance_property_;
-	std::unique_ptr<PerformanceDisplay> performance_display_;
-	ufo::map::depth_t grid_size_depth_ = 12;
-	Performance prev_performance_;
+	QString default_style_ = getStr(RenderStyle::BOXES);
+	QString default_coloring_ = getStr(ColoringMode::VOXEL);
+
+	rviz::FloatProperty* alpha_property_;
+	rviz::FloatProperty* scale_property_;
+	rviz::IntProperty* depth_property_;
 };
 
 }  // namespace ufomap_ros::rviz_plugins

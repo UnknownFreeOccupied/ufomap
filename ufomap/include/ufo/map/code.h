@@ -49,6 +49,7 @@
 // STL
 #include <immintrin.h>
 
+#include <cassert>
 #include <map>
 #include <set>
 #include <unordered_map>

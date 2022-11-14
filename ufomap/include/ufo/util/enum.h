@@ -48,11 +48,10 @@
 namespace ufo::util
 {
 template <typename Enumeration>
-constexpr typename std::underlying_type<Enumeration>::type enumToValue(
-    Enumeration const value)
+constexpr std::underlying_type_t<Enumeration> enumToValue(Enumeration const value)
 
 {
-	return static_cast<typename std::underlying_type<Enumeration>::type>(value);
+	return static_cast<std::underlying_type_t<Enumeration>>(value);
 }
 
 }  // namespace ufo::util

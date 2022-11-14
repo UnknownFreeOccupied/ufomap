@@ -417,26 +417,28 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 
 		std::size_t i = 0;
 		for (auto it = std::cbegin(grid); it != std::cend(grid); ++it, i += 64) {
-			if (0 != *it) {
-				if (std::numeric_limits<std::uint64_t>::max() == *it) {
-					if (0 == i % 512 && std::all_of(it + 1, it + 8, [](std::uint64_t a) {
-						    return std::numeric_limits<std::uint64_t>::max() == a;
-					    })) {
-						misses.emplace_back(c | (i << 3 * depth), depth + 3);
-						it += 7;
-						i += (512 - 64);
-					} else {
-						misses.emplace_back(c | (i << 3 * depth), depth + 2);
-					}
+			if (0 == *it) {
+				continue;
+			}
+			
+			if (std::numeric_limits<std::uint64_t>::max() == *it) {
+				if (0 == i % 512 && std::all_of(it + 1, it + 8, [](std::uint64_t a) {
+					    return std::numeric_limits<std::uint64_t>::max() == a;
+				    })) {
+					misses.emplace_back(c | (i << 3 * depth), depth + 3);
+					it += 7;
+					i += (512 - 64);
 				} else {
-					// FIXME: Can be improved. Step 8 steps at a time
-					for (std::size_t j = 0; 64 != j; ++j) {
-						if (0 == j % 8 && (*it >> j) & 0xFF == 0xFF) {
-							misses.emplace_back(c | ((i + j) << 3 * depth), depth + 1);
-							j += 7;
-						} else if (*it & (std::uint64_t(1) << j)) {
-							misses.emplace_back(c | ((i + j) << 3 * depth), depth);
-						}
+					misses.emplace_back(c | (i << 3 * depth), depth + 2);
+				}
+			} else {
+				// FIXME: Can be improved. Step 8 steps at a time
+				for (std::size_t j = 0; 64 != j; ++j) {
+					if (0 == j % 8 && (*it >> j) & 0xFF == 0xFF) {
+						misses.emplace_back(c | ((i + j) << 3 * depth), depth + 1);
+						j += 7;
+					} else if (*it & (std::uint64_t(1) << j)) {
+						misses.emplace_back(c | ((i + j) << 3 * depth), depth);
 					}
 				}
 			}

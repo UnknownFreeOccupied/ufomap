@@ -60,12 +60,12 @@ QT5_WRAP_CPP(MOC_FILES
 
 add_library(${PROJECT_NAME}
   src/ufomap_display.cpp
-  src/render_display.cpp
-  src/filter_display.cpp
-  src/performance_display.cpp
-  src/data.cpp
-  src/render_data.cpp
-  src/voxels.cpp
+  # src/render_display.cpp
+  # src/filter_display.cpp
+  # src/performance_display.cpp
+  # src/data.cpp
+  # src/render_data.cpp
+  # src/voxels.cpp
   ${MOC_FILES} 
 )
 

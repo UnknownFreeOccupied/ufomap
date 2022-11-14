@@ -333,8 +333,13 @@ class Timing
 		return tags;
 	}
 
+	std::string color(std::string const& tag) { return color_.at(tag); }
+
+	void setColor(std::string const& tag, std::string const& color) { color_[tag] = color; }
+
  private:
 	std::map<std::string, TimerObject> timers_;
+	std::map<std::string, std::string> color_;
 };
 }  // namespace ufo::util
 

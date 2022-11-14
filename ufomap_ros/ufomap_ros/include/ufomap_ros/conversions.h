@@ -100,8 +100,8 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	// FIXME: Add different depending on the type
 	// Perhaps make them variants?
 	sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud_in, "x");
-	std::optional<sensor_msgs::PointCloud2ConstIterator<uint8_t>> iter_rgb;
-	std::optional<sensor_msgs::PointCloud2ConstIterator<uint32_t>> iter_label;
+	std::optional<sensor_msgs::PointCloud2ConstIterator<std::uint8_t>> iter_rgb;
+	std::optional<sensor_msgs::PointCloud2ConstIterator<std::uint32_t>> iter_label;
 	std::optional<sensor_msgs::PointCloud2ConstIterator<float>> iter_value;
 	std::optional<sensor_msgs::PointCloud2ConstIterator<float>> iter_intensity;
 
@@ -126,7 +126,7 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 	}
 
 	// Preallocate
-	size_t index = cloud_out.size();
+	std::size_t index = cloud_out.size();
 	cloud_out.resize(index + (cloud_in.data.size() / cloud_in.point_step));
 
 	// Copy data
@@ -145,8 +145,12 @@ void rosToUfo(sensor_msgs::PointCloud2 const& cloud_in,
 				}
 			}
 			if constexpr (std::is_base_of_v<ufo::map::Semantic, P>) {
-				cloud_out[index].label = iter_label ? *(*iter_label) : 0;
-				cloud_out[index].value = iter_value ? *(*iter_value) : 0;
+				if (iter_label) {
+					cloud_out[index].label = *(*iter_label);
+				}
+				if (iter_value) {
+					cloud_out[index].value = *(*iter_value);
+				}
 			}
 			if constexpr (std::is_base_of_v<ufo::map::Intensity, P>) {
 				if (intensity_field) {
