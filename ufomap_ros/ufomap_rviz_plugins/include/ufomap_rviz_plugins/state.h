@@ -39,26 +39,53 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFOMAP_RVIZ_PLUGINS_BASE_H
-#define UFOMAP_RVIZ_PLUGINS_BASE_H
+#ifndef UFOMAP_RVIZ_PLUGINS_STATE_H
+#define UFOMAP_RVIZ_PLUGINS_STATE_H
 
 // UFO
-#include <ufo/map/ufomap.h>
+#include <ufo/map/code.h>
+#include <ufomap_msgs/UFOMap.h>
+#include <ufomap_rviz_plugins/render_data.h>
+#include <ufomap_rviz_plugins/state_display.h>
+
+// RViz
+#include <rviz/properties/bool_property.h>
+#include <rviz/properties/property.h>
+
+// STL
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
 
 namespace ufomap_ros::rviz_plugins
 {
-class Base
-{
-};
+struct State : StateDisplay {
+	void clearObjects()
+	{
+		std::scoped_lock object_lock(object_mutex);
+		objects.clear();
+		queued_objects.clear();
+		prev_visible.clear();
+	}
 
-template <ufo::map::MapType MapType>
-class Derived final : public Base
-{
- public:
+	// Flags
+	std::atomic_bool done = false;
+	std::atomic_bool regenerate = false;
 
- private:
-	ufo::map::UFOMap<MapType, false, ufo::map::UFOLock::NONE, false, true> map_;
+	// Messages
+	std::mutex message_mutex;
+	std::condition_variable message_cv;
+	std::vector<ufomap_msgs::UFOMap::ConstPtr> message_queue;
+
+	// Objects
+	std::mutex object_mutex;
+	std::unordered_map<ufo::map::Code, RenderData> objects;
+	std::unordered_map<ufo::map::Code, RenderData> queued_objects;
+
+	// Previous visible
+	std::vector<RenderData*> prev_visible;
 };
 }  // namespace ufomap_ros::rviz_plugins
 
-#endif  // UFOMAP_RVIZ_PLUGINS_BASE_H
+#endif  // UFOMAP_RVIZ_PLUGINS_STATE_H

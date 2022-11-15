@@ -54,6 +54,8 @@
 // #include <ufomap_rviz_plugins/render_display.h>
 // #include <ufomap_rviz_plugins/voxels.h>
 #include <ufomap_rviz_plugins/render_mode.h>
+#include <ufomap_rviz_plugins/state.h>
+#include <ufomap_rviz_plugins/worker_base.h>
 
 // ROS
 #include <rviz/message_filter_display.h>
@@ -81,6 +83,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 	Q_OBJECT
  public:
 	UFOMapDisplay();
+
 	~UFOMapDisplay() override;
 
 	void reset() override;
@@ -88,124 +91,31 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 	void update(float wall_dt, float ros_dt) override;
 
  protected:
+	void setupResources();
+
 	void onInitialize() override;
 
-	void setupResources();
+	void updateGUI();
+
+	void createWorker();
 
 	void processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg) override;
 
  private:
-	void processMessages();
-
-	void generateObjects(ufo::map::depth_t depth);
-
-	// template <ufo::map::OccupancyState State>
-	// void generateObjectsImpl(std::vector<ufo::map::Code> const& codes,
-	//                          ufo::map::depth_t min_depth)
-	// {
-	// 	std::for_each(std::begin(codes), std::end(codes), [&](auto code) {
-	// 		auto pred = ufo::map::predicate::Leaf(min_depth) &&
-	// 		            ufo::map::predicate::ContainOccupancyState<State>() &&
-	// 		            ufo::map::predicate::CodePrefix(code);
-
-	// 		RenderData render_data;
-	// 		render_data.manager_ = context_->getSceneManager();
-	// 		render_data.position_ = Ogre::Vector3(0, 0, 0);  // FIXME: What should this be?
-	// 		render_data.orientation_ =
-	// 		    Ogre::Quaternion(1, 0, 0, 0);  // FIXME: What should this be?
-
-	// 		for (auto const& node : map_.queryBV(pred)) {
-	// 			fillData(render_data.transformed_voxels_[node.depth()], map_, node);
-	// 		}
-
-	// 		std::scoped_lock object_lock(object_mutex_);
-	// 		queued_objects_[stateToIndex(State)].insert_or_assign(code,
-	// std::move(render_data));
-	// 	});
-	// }
-
-	// template <class Map>
-	// void fillData(Data& data, Map const& map, ufo::map::NodeBV const& node)
-	// {
-	// 	data.addPosition(node.center());
-
-	// 	data.addOccupancy(map.getOccupancy(node) * 100);
-
-	// 	if constexpr (ufo::map::is_base_of_template_v<ufo::map::TimeMap, Map>) {
-	// 		data.addTime(map.getTime(node));
-	// 	}
-
-	// 	if constexpr (ufo::map::is_base_of_template_v<ufo::map::ColorMap, Map>) {
-	// 		data.addColor(map.getColor(node));
-	// 	}
-
-	// 	// if constexpr (ufo::map::is_base_of_template_v<ufo::map::SemanticMap, Map>) {
-	// 	// 	// TODO: Add semantics
-	// 	// }
-	// }
-
-	// void filterMsgs(std::vector<ufomap_msgs::UFOMap::ConstPtr>& msgs);
-
-	void updateMap(std::vector<ufomap_msgs::UFOMap::ConstPtr> const& msgs);
-
-	std::vector<ufo::map::Code> getCodesInFOV(ufo::geometry::Frustum const& view,
-	                                          ufo::map::depth_t depth) const;
-
-	ufo::geometry::Frustum getViewFrustum(Ogre::Real far_clip) const;
+	ufo::geometry::Frustum viewFrustum(Ogre::Real far_clip) const;
 
 	// std::array<RenderMode, 3> getRenderMode() const;
 
 	// std::array<Heatmap, 3> getHeatmap(Filter const& filter) const;
 
-	bool updateGridSizeDepth();
-
-	void clearObjects();
-
 	void updateStatus();
 
  private:
-	// static constexpr size_t stateToIndex(ufo::map::OccupancyState state)
-	// {
-	// 	switch (state) {
-	// 		case ufo::map::OccupancyState::UNKNOWN:
-	// 			return 0;
-	// 		case ufo::map::OccupancyState::FREE:
-	// 			return 1;
-	// 		case ufo::map::OccupancyState::OCCUPIED:
-	// 			return 2;
-	// 	}
-	// }
+	//  Worker
+	std::unique_ptr<WorkerBase> worker_;
 
- private:
-	//  Map
-	// void* map_;
-
-	// Flag to tell the other threads to stop
-	std::atomic_bool done_ = false;
-
-	// Flag to tell if we have to regenerate
-	std::atomic_bool regenerate_ = false;
-
-	// Message worker
-	std::thread message_worker_;
-	std::mutex message_mutex_;
-	std::condition_variable message_cv_;
-	std::vector<ufomap_msgs::UFOMap::ConstPtr> message_queue_;
-
-	// Visible
-	// std::vector<RenderData*> prev_visible_;
-
-	//
-	// Objects
-	//
-
-	// using ObjectMap = std::unordered_map<ufo::map::Code, RenderData,
-	// ufo::map::Code::Hash>;
-
-	// std::mutex object_mutex_;
-
-	// std::array<ObjectMap, 3> objects_;
-	// std::array<ObjectMap, 3> queued_objects_;
+	// State
+	State state_;
 
 	//
 	// GUI properties

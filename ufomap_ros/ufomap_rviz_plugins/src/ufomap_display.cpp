@@ -44,6 +44,7 @@
 #include <ufomap_msgs/conversions.h>
 #include <ufomap_ros/conversions.h>
 #include <ufomap_rviz_plugins/ufomap_display.h>
+#include <ufomap_rviz_plugins/worker.h>
 
 // ROS
 #include <ros/package.h>
@@ -66,16 +67,12 @@
 
 namespace ufomap_ros::rviz_plugins
 {
-UFOMapDisplay::UFOMapDisplay() : message_worker_(&UFOMapDisplay::processMessages, this)
-{
-	setupResources();
-}
+UFOMapDisplay::UFOMapDisplay() { setupResources(); }
 
 UFOMapDisplay::~UFOMapDisplay()
 {
-	done_ = true;
-	message_cv_.notify_one();
-	message_worker_.join();
+	state_.done = true;
+	state_.message_cv.notify_one();
 }
 
 void UFOMapDisplay::setupResources()
@@ -137,13 +134,6 @@ void UFOMapDisplay::onInitialize()
 
 	coloring_property_ =
 	    new rviz::EnumProperty("Coloring", default_coloring_, "Coloring mode", this);
-	for (ColoringMode coloring :
-	     {ColoringMode::VOXEL, ColoringMode::TIME, ColoringMode::SEMANTIC,
-	      ColoringMode::SURFEL_NORMAL, ColoringMode::X_AXIS, ColoringMode::Y_AXIS,
-	      ColoringMode::Z_AXIS, ColoringMode::OCCUPANCY, ColoringMode::INTENSITY,
-	      ColoringMode::FIXED}) {
-		coloring_property_->addOption(getStr(coloring), ufo::util::enumToValue(coloring));
-	}
 
 	alpha_property_ = new rviz::FloatProperty("Alpha", 1.0, "Alpha (transparency)", this);
 	alpha_property_->setMin(0.0);
@@ -155,19 +145,70 @@ void UFOMapDisplay::onInitialize()
 	depth_property_ = new rviz::IntProperty("Min. Depth", 0, "Minimum render depth", this);
 	depth_property_->setMin(0);
 	depth_property_->setMax(22);
+
+	updateGUI();
+}
+
+void UFOMapDisplay::updateGUI()
+{
+	auto option = coloring_property_->getOptionInt();
+	coloring_property_->clearOptions();
+
+	if (color_property_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::VOXEL),
+		                              ufo::util::enumToValue(ColoringMode::VOXEL));
+	}
+	if (time_property_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::TIME),
+		                              ufo::util::enumToValue(ColoringMode::TIME));
+	}
+	if (semantic_property_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::SEMANTIC),
+		                              ufo::util::enumToValue(ColoringMode::SEMANTIC));
+	}
+	if (surfel_property_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::SURFEL_NORMAL),
+		                              ufo::util::enumToValue(ColoringMode::SURFEL_NORMAL));
+	}
+	if (occupancy_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::OCCUPANCY),
+		                              ufo::util::enumToValue(ColoringMode::OCCUPANCY));
+	}
+	if (intensity_property_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::INTENSITY),
+		                              ufo::util::enumToValue(ColoringMode::INTENSITY));
+	}
+	if (count_property_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::COUNT),
+		                              ufo::util::enumToValue(ColoringMode::COUNT));
+	}
+	if (reflection_property_->getBool()) {
+		coloring_property_->addOption(getStr(ColoringMode::REFLECTIVNESS),
+		                              ufo::util::enumToValue(ColoringMode::REFLECTIVNESS));
+		coloring_property_->addOption(getStr(ColoringMode::HITS),
+		                              ufo::util::enumToValue(ColoringMode::HITS));
+		coloring_property_->addOption(getStr(ColoringMode::MISSES),
+		                              ufo::util::enumToValue(ColoringMode::MISSES));
+	}
+
+	// TODO: Set to correct option
 }
 
 void UFOMapDisplay::reset()
 {
 	MFDClass::reset();
-	done_ = true;
-	message_cv_.notify_one();
-	message_worker_.join();
-	message_queue_.clear();
-	// map_.clear();
-	clearObjects();
-	done_ = false;
-	message_worker_ = std::thread(&UFOMapDisplay::processMessages, this);
+	state_.done = true;
+	state_.message_cv.notify_one();
+	state_.message_queue.clear();
+	state_.clearObjects();
+	worker_.reset();
+	state_.done = false;
+	// TODO: worker_ = std::make_unique<Worker<>>(state);
+}
+
+void UFOMapDisplay::createWorker()
+{
+	// TODO: Implement
 }
 
 void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
@@ -175,99 +216,6 @@ void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 	std::scoped_lock<std::mutex> message_lock(message_mutex_);
 	message_queue_.push_back(msg);
 	message_cv_.notify_one();
-}
-
-void UFOMapDisplay::processMessages()
-{
-	// while (!done_) {
-	// 	std::unique_lock<std::mutex> message_lock(message_mutex_);
-	// 	message_cv_.wait(message_lock, [this] { return !message_queue_.empty() || done_; });
-
-	// 	if (done_) {
-	// 		return;
-	// 	}
-
-	// 	auto start = std::chrono::high_resolution_clock::now();
-
-	// 	// Copy and clear global queue
-	// 	std::vector<ufomap_msgs::UFOMap::ConstPtr> local_queue;
-	// 	local_queue.swap(message_queue_);
-
-	// 	message_lock.unlock();
-
-	// 	// TODO: Get parameters
-	// 	ufo::map::depth_t depth = grid_size_depth_;
-
-	// 	updateMap(local_queue);
-
-	// 	map_.updateModifiedNodes(std::max(static_cast<ufo::map::depth_t>(1U), depth) -
-	// 	                         1);  // Reset modified up to depth-1
-
-	// 	float duration = std::chrono::duration<float, std::chrono::seconds::period>(
-	// 	                     std::chrono::high_resolution_clock::now() - start)
-	// 	                     .count();
-	// 	std::cout << "Process message time taken " << duration << " s\n";
-
-	// 	if (regenerate_) {
-	// 		regenerate_ = false;
-	// 		map_.setModified(depth);
-	// 	}
-
-	// 	generateObjects(depth);
-
-	// 	map_.clearModified();
-
-	// 	updateStatus();
-	// }
-}
-
-void UFOMapDisplay::generateObjects(ufo::map::depth_t depth)
-{
-	// auto start = std::chrono::high_resolution_clock::now();
-
-	// std::vector<ufo::map::Code> codes;
-
-	// auto pred = ufo::map::predicate::Leaf(depth) && ufo::map::predicate::Depth(depth) &&
-	//             ufo::map::predicate::Modified();
-
-	// for (auto const& node : map_.query(pred)) {
-	// 	codes.push_back(node.code());
-	// }
-
-	// Performance perf = performance_display_->getPerformance();
-
-	// std::future<void> unknown_future;
-	// std::future<void> free_future;
-
-	// if (perf.render_unknown) {
-	// 	unknown_future =
-	// 	    std::async(std::launch::async,
-	// 	               &UFOMapDisplay::generateObjectsImpl<ufo::map::OccupancyState::UNKNOWN>,
-	// 	               this, codes, perf.min_depth_unknown);
-	// }
-	// if (perf.render_free) {
-	// 	free_future =
-	// 	    std::async(std::launch::async,
-	// 	               &UFOMapDisplay::generateObjectsImpl<ufo::map::OccupancyState::FREE>,
-	// 	               this, codes, perf.min_depth_free);
-	// }
-
-	// if (perf.render_occupied) {
-	// 	generateObjectsImpl<ufo::map::OccupancyState::OCCUPIED>(codes,
-	// 	                                                        perf.min_depth_occupied);
-	// }
-
-	// if (perf.render_unknown) {
-	// 	unknown_future.wait();
-	// }
-	// if (perf.render_free) {
-	// 	free_future.wait();
-	// }
-
-	// float duration = std::chrono::duration<float, std::chrono::seconds::period>(
-	//                      std::chrono::high_resolution_clock::now() - start)
-	//                      .count();
-	// std::cout << "Generate objects time taken " << duration << " s\n";
 }
 
 void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
@@ -319,7 +267,7 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 	// auto heatmap = getHeatmap(filter);
 
 	// // Set things inside FOV visible
-	// for (auto code : getCodesInFOV(getViewFrustum(performance.far_clip), depth)) {
+	// for (auto code : codesInFOV(viewFrustum(performance.far_clip), depth)) {
 	// 	for (size_t s = 0; s < objects_.size(); ++s) {
 	// 		if (!render_mode[s].should_render) {
 	// 			continue;
@@ -353,52 +301,7 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 	// // std::cout << "Updating time taken " << duration << " s\n";
 }
 
-std::vector<ufo::map::Code> UFOMapDisplay::getCodesInFOV(
-    ufo::geometry::Frustum const& view, ufo::map::depth_t depth) const
-{
-	std::vector<ufo::map::Code> codes;
-	// auto pred = ufo::map::predicate::Leaf(depth) &&
-	// ufo::map::predicate::Intersects(view); for (auto const& node : map_.query(pred)) {
-	// 	codes.push_back(node.code());
-	// }
-	return codes;
-}
-
-// void UFOMapDisplay::filterMsgs(std::vector<ufomap_msgs::UFOMap::ConstPtr>& msgs)
-// {
-// 	if (msgs.empty()) {
-// 		return;
-// 	}
-
-// 	// Check if all messages has same type. If not, take the type of last message and
-// 	// remove all message from first until last message that is not of the same type as
-// 	// the last message
-// 	for (auto it = std::next(msgs.crbegin()); it != msgs.crend(); ++it) {
-// 		if (map_.canMerge((*it)->map.data)) {
-// 			// Remove from first to and including currently pointed to
-// 			msgs.erase(msgs.cbegin(), std::prev(it).base());
-// 			break;
-// 		}
-// 	}
-// }
-
-void UFOMapDisplay::updateMap(std::vector<ufomap_msgs::UFOMap::ConstPtr> const& msgs)
-{
-	// auto res = map_.resolution();
-	// auto depth = map_.depthLevels();
-
-	// for (auto const& msg : msgs) {
-	// 	msgToUfo(msg->map, map_, false);
-	// }
-
-	// if (map_.resolution() != res || map_.depthLevels() != depth) {
-	// 	clearObjects();
-	// 	updateGridSizeDepth();
-	// 	regenerate_ = true;
-	// }
-}
-
-ufo::geometry::Frustum UFOMapDisplay::getViewFrustum(Ogre::Real far_clip) const
+ufo::geometry::Frustum UFOMapDisplay::viewFrustum(Ogre::Real far_clip) const
 {
 	Ogre::Viewport* viewport = scene_manager_->getCurrentViewport();
 	if (!viewport) {
@@ -537,59 +440,88 @@ ufo::geometry::Frustum UFOMapDisplay::getViewFrustum(Ogre::Real far_clip) const
 // return heatmap;
 // }
 
-bool UFOMapDisplay::updateGridSizeDepth()
-{
-	// auto prev = grid_size_depth_;
+// bool UFOMapDisplay::updateGridSizeDepth()
+// {
+// auto prev = grid_size_depth_;
 
-	// Performance perf = performance_display_->getPerformance();
-	// grid_size_depth_ = 0;
-	// for (; grid_size_depth_ < map_.depthLevels() &&
-	//        map_.getNodeSize(grid_size_depth_) < perf.grid_size;
-	//      ++grid_size_depth_) {
-	// }
+// Performance perf = performance_display_->getPerformance();
+// grid_size_depth_ = 0;
+// for (; grid_size_depth_ < map_.depthLevels() &&
+//        map_.getNodeSize(grid_size_depth_) < perf.grid_size;
+//      ++grid_size_depth_) {
+// }
 
-	// return prev != grid_size_depth_;
-}
-
-void UFOMapDisplay::clearObjects()
-{
-	// std::scoped_lock object_lock(object_mutex_);
-	// for (auto& obj : objects_) {
-	// 	obj.clear();
-	// }
-	// for (auto& obj : queued_objects_) {
-	// 	obj.clear();
-	// }
-	// prev_visible_.clear();
-}
+// return prev != grid_size_depth_;
+// }
 
 void UFOMapDisplay::updateStatus()
 {
-	// double res = map_.resolution();
+	if (!worker_) {
+		setStatus(rviz::StatusProperty::Ok, "Resolution", "");
+		setStatus(rviz::StatusProperty::Ok, "Num. leaf nodes", QString("%L1").arg(0));
+		setStatus(rviz::StatusProperty::Ok, "Num. inner leaf nodes", QString("%L1").arg(0));
+		setStatus(rviz::StatusProperty::Ok, "Num. inner nodes", QString("%L1").arg(0));
+		setStatus(rviz::StatusProperty::Ok, "Memory usage", "0");
+		setStatus(rviz::StatusProperty::Ok, "Memory allocated", "0");
+		return;
+	}
 
-	// QString res_str;
-	// if (0.01 > res) {
-	// 	res_str.setNum(res * 1000.0, 'g', 3);
-	// 	res_str += " mm";
-	// } else if (1 > res) {
-	// 	res_str.setNum(res * 100.0, 'g', 3);
-	// 	res_str += " cm";
-	// } else {
-	// 	res_str.setNum(res, 'g', 3);
-	// 	res_str += " m";
-	// }
-	// // QLocale locale;
-	// setStatus(rviz::StatusProperty::Ok, "Resolution", res_str);
-	// setStatus(rviz::StatusProperty::Ok, "Num. leaf nodes",
-	//           QString("%L1").arg(map_.numLeafNodes()));
-	// setStatus(rviz::StatusProperty::Ok, "Num. inner leaf nodes",
-	//           QString("%L1").arg(map_.numInnerLeafNodes()));
-	// setStatus(rviz::StatusProperty::Ok, "Num. inner nodes",
-	//           QString("%L1").arg(map_.numInnerNodes()));
-	// // setStatus(rviz::StatusProperty::Ok, "Memory usage",
-	// //           locale.formattedDataSize(map_.memoryUsage()));
-	// // setStatus(rviz::StatusProperty::Ok, "Memory allocated",
-	// //           locale.formattedDataSize(map_.memoryUsageAllocated()));
+	double res = worker_->resolution();
+	std::size_t mem_usage = worker_->memoryUSage();
+	std::size_t mem_alloc = worker_->memoryAllocated();
+
+	QString res_str;
+	if (0.01 > res) {
+		res_str.setNum(res * 1000.0, 'g', 3);
+		res_str += " mm";
+	} else if (1 > res) {
+		res_str.setNum(res * 100.0, 'g', 3);
+		res_str += " cm";
+	} else {
+		res_str.setNum(res, 'g', 3);
+		res_str += " m";
+	}
+
+	QString mem_usage_str;
+	if (1024 > mem_usage) {
+		mem_usage_str.setNum(mem_usage, 'g', 3);
+		mem_usage_str += " B";
+	} else if (1024 * 1024 > mem_usage) {
+		mem_usage_str.setNum(mem_usage / 1024, 'g', 3);
+		mem_usage_str += " KiB";
+	} else if (1024 * 1024 * 1024 > mem_usage) {
+		mem_usage_str.setNum(mem_usage / (1024 * 1024), 'g', 3);
+		mem_usage_str += " MiB";
+	} else {
+		mem_usage_str.setNum(mem_usage / (1024 * 1024 * 1024), 'g', 3);
+		mem_usage_str += " GiB";
+	}
+
+	QString mem_alloc_str;
+	if (1024 > mem_alloc) {
+		mem_alloc_str.setNum(mem_alloc, 'g', 3);
+		mem_alloc_str += " B";
+	} else if (1024 * 1024 > mem_alloc) {
+		mem_alloc_str.setNum(mem_alloc / 1024, 'g', 3);
+		mem_alloc_str += " KiB";
+	} else if (1024 * 1024 * 1024 > mem_alloc) {
+		mem_alloc_str.setNum(mem_alloc / (1024 * 1024), 'g', 3);
+		mem_alloc_str += " MiB";
+	} else {
+		mem_alloc_str.setNum(mem_alloc / (1024 * 1024 * 1024), 'g', 3);
+		mem_alloc_str += " GiB";
+	}
+
+	// QLocale locale;
+	setStatus(rviz::StatusProperty::Ok, "Resolution", res_str);
+	setStatus(rviz::StatusProperty::Ok, "Num. leaf nodes",
+	          QString("%L1").arg(worker_->numLeafNodes()));
+	setStatus(rviz::StatusProperty::Ok, "Num. inner leaf nodes",
+	          QString("%L1").arg(worker_->numInnerLeafNodes()));
+	setStatus(rviz::StatusProperty::Ok, "Num. inner nodes",
+	          QString("%L1").arg(worker_->numInnerNodes()));
+	setStatus(rviz::StatusProperty::Ok, "Memory usage", mem_usage_str);
+	setStatus(rviz::StatusProperty::Ok, "Memory allocated", mem_alloc_str);
 }
 
 }  // namespace ufomap_ros::rviz_plugins
