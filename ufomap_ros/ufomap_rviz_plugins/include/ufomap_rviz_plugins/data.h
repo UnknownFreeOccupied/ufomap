@@ -127,16 +127,34 @@ class Data
 
  private:
 	std::vector<Ogre::Vector3> position_;
-	std::vector<float> occupancy_;
+	std::vector<ufo::map::occupancy_t> occupancy_;
 	std::vector<ufo::map::time_t> time_;
-	std::vector<Ogre::ColourValue> color_;
-	std::vector<std::vector<ufo::map::SemanticPair>> semantics_;
+	std::vector<ufo::map::intensity_t> intensity_;
+	std::vector<ufo::map::count_t> count_;
+	std::vector<ufo::map::count_t> hits_;
+	std::vector<ufo::map::count_t> misses_;
+	std::vector<ufo::map::Color> color_;
+	std::vector<std::vector<ufo::map::Semantic>> semantics_;
+	std::vector<ufo::map::Surfel> surfel_;
 
 	ufo::map::Point min_position_;
 	ufo::map::Point max_position_;
 
 	ufo::map::time_t min_time_;
 	ufo::map::time_t max_time_;
+
+	ufo::map::intensity_t min_intensity_;
+	ufo::map::intensity_t max_intensity_;
+
+	ufo::map::count_t min_count_;
+	ufo::map::count_t max_count_;
+
+	ufo::map::count_t min_hits_;
+	ufo::map::count_t max_hits_;
+	ufo::map::count_t min_misses_;
+	ufo::map::count_t max_misses_;
+	ufo::map::count_t min_reflectivness_;
+	ufo::map::count_t max_reflectivness_;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

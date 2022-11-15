@@ -221,7 +221,7 @@ class IteratorWrapper
 
 template <class BaseNodeType, bool EarlyStopping, class Tree, class NodeType = Node,
           class Predicates = predicate::TRUE>
-class Iterator : public IteratorBase<Tree, BaseNodeType>
+class Iterator final : public IteratorBase<Tree, BaseNodeType>
 {
  private:
 	static constexpr bool OnlyLeavesOrFixedDepth =
@@ -373,7 +373,7 @@ struct NearestNode {
 
 template <bool EarlyStopping, class Tree, class Geometry = geometry::Point,
           class Predicates = predicate::TRUE>
-class NearestIterator : public IteratorBase<Tree, NearestNode>
+class NearestIterator final : public IteratorBase<Tree, NearestNode>
 {
  private:
 	static constexpr bool OnlyLeavesOrFixedDepth =
