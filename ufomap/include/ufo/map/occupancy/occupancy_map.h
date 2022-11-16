@@ -1040,71 +1040,45 @@ class OccupancyMapBase
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, OutputIt last)
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
-		double clamping_thres_min_logit;
-		double clamping_thres_max_logit;
-		in.read(reinterpret_cast<char*>(&clamping_thres_min_logit),
-		        sizeof(clamping_thres_min_logit));
-		in.read(reinterpret_cast<char*>(&clamping_thres_max_logit),
-		        sizeof(clamping_thres_max_logit));
+		decltype(clamping_thres_min_logit_) clamping_thres_min_logit;
+		decltype(clamping_thres_max_logit_) clamping_thres_max_logit;
+		in.read(&clamping_thres_min_logit, sizeof(clamping_thres_min_logit));
+		in.read(&clamping_thres_max_logit, sizeof(clamping_thres_max_logit));
 
-		constexpr uint8_t const N = numData<OutputIt>();
-		auto const num_data = std::distance(first, last) * N;
-		auto data = std::make_unique<logit_t[]>(num_data);
-		in.read(reinterpret_cast<char*>(data.get()),
-		        num_data * sizeof(typename decltype(data)::element_type));
-		if (!equal(clamping_thres_min_logit, clamping_thres_min_logit_) ||
-		    !equal(clamping_thres_max_logit, clamping_thres_max_logit_)) {
-			for (auto d = data.get(); first != last; ++first, d += N) {
+		if (equal(clamping_thres_min_logit, clamping_thres_min_logit_) &&
+		    equal(clamping_thres_max_logit, clamping_thres_max_logit_)) {
+			for (; first != last; ++first) {
 				if (first->index_field.all()) {
-					std::copy(d, d + N, first->node.occupancy.data());
-					// TODO: Implement
+					in.read(first->node.occupancy.data(),
+					        first->node.occupancy.size() *
+					            sizeof(typename decltype(first->node.occupancy)::value_type));
 				} else {
-					for (index_t i = 0; N != i; ++i) {
-						if (first->index_field[i]) {
-							first->node.occupancy[i] = *(d + i);
-							// TODO: Implement
-						}
+					decltype(first->node.occupancy) occupancy;
+					in.read(occupancy.data(),
+					        occupancy.size() * sizeof(typename decltype(occupancy)::value_type));
+					for (index_t i = 0; occupancy.size() != i; ++i) {
+						first->node.occupancy[i] = occupancy[i];
 					}
 				}
 			}
 		} else {
-			for (auto d = data.get(); first != last; ++first, d += N) {
-				if (first->index_field.all()) {
-					std::copy(d, d + N, first->node.occupancy.data());
-				} else {
-					for (index_t i = 0; N != i; ++i) {
-						if (first->index_field[i]) {
-							first->node.occupancy[i] = *(d + i);
-						}
-					}
+			if (first->index_field.all()) {
+				in.read(first->node.occupancy.data(),
+				        first->node.occupancy.size() *
+				            sizeof(typename decltype(first->node.occupancy)::value_type));
+				// TODO: Convert
+			} else {
+				decltype(first->node.occupancy) occupancy;
+				in.read(occupancy.data(),
+				        occupancy.size() * sizeof(typename decltype(occupancy)::value_type));
+				for (index_t i = 0; occupancy.size() != i; ++i) {
+					// TODO: Convert
+					first->node.occupancy[i] = occupancy[i];
 				}
 			}
 		}
-	}
-
-	template <class OutputIt>
-	void readNodes(ReadBuffer&, OutputIt, OutputIt)
-	{
-		// TODO: Implement
-	}
-
-	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
-	{
-		constexpr uint8_t const N = 8;  // FIXME: numData<InputIt>();
-		auto const num_data = std::distance(first, last) * N;
-		auto data = std::make_unique<logit_t[]>(num_data);
-		for (auto d = data.get(); first != last; ++first) {
-			d = copy(first->occupancy, d);
-		}
-		out.write(reinterpret_cast<char const*>(&clamping_thres_min_logit_),
-		          sizeof(clamping_thres_min_logit_));
-		out.write(reinterpret_cast<char const*>(&clamping_thres_max_logit_),
-		          sizeof(clamping_thres_max_logit_));
-		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_data * sizeof(typename decltype(data)::element_type));
 	}
 
 	template <class InputIt>
@@ -1114,7 +1088,9 @@ class OccupancyMapBase
 		out.write(&clamping_thres_min_logit_, sizeof(clamping_thres_min_logit_));
 		out.write(&clamping_thres_max_logit_, sizeof(clamping_thres_max_logit_));
 		for (; first != last; ++first) {
-			out.write(first->occupancy.data(), first->occupancy.size() * sizeof(logit_t));
+			out.write(first->occupancy.data(),
+			          first->occupancy.size() *
+			              sizeof(typename decltype(first->occupancy)::value_type));
 		}
 	}
 

@@ -255,61 +255,24 @@ class CountMapBase
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, OutputIt last)
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
-		constexpr auto N = numData<OutputIt>();
-
-		auto size = std::distance(first, last) * N;
-
-		auto data = std::make_unique<count_t[]>(size);
-		in.read(reinterpret_cast<char*>(data.get()),
-		        size * sizeof(typename decltype(data)::element_type));
-
-		auto const d = data.get();
-		for (; first != last; ++first, d += N) {
+		for (; first != last; ++first) {
 			if (first->index_field.all()) {
-				std::copy(d, d + N, first->node.count.data());
+				in.read(first->node.count.data(),
+				        first->node.count.size() *
+				            sizeof(typename decltype(first->node.count)::value_type));
 			} else {
-				for (index_t i = 0; N != i; ++i) {
+				decltype(first->node.count) count;
+				in.read(count.data(),
+				        count.size() * sizeof(typename decltype(count)::value_type));
+				for (index_t i = 0; count.size() != i; ++i) {
 					if (first->index_field[i]) {
-						first->node.count[i] = *(d + i);
+						first->node.count[i] = count[i];
 					}
 				}
 			}
 		}
-	}
-
-	template <class OutputIt>
-	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
-	{
-		constexpr std::size_t const N = numData<OutputIt>();
-		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.count.data(), N * sizeof(count_t));
-			} else {
-				for (index_t i = 0; N != i; ++i) {
-					if (first->index_field[i]) {
-						in.read(&first->node.count[i], sizeof(count_t));
-					} else
-						in.skipRead(sizeof(count_t));
-				}
-			}
-		}
-	}
-
-	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
-	{
-		auto size = std::distance(first, last) * 8;  // FIXME: numData<InputIt>();
-
-		auto data = std::make_unique<count_t[]>(size);
-		auto d = data.get();
-		for (; first != last; ++first) {
-			d = copy(first->count, d);
-		}
-
-		out.write(reinterpret_cast<char const*>(data.get()),
-		          size * sizeof(typename decltype(data)::element_type));
 	}
 
 	template <class InputIt>
@@ -317,7 +280,9 @@ class CountMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->count.data(), first->count.size() * sizeof(count_t));
+			out.write(
+			    first->count.data(),
+			    first->count.size() * sizeof(typename decltype(first->count)::value_type));
 		}
 	}
 

@@ -96,7 +96,7 @@ enum MapType : mt_t {
 	TIME       = mt_t(1) << 1,
 	COLOR      = mt_t(1) << 2,
 	// SEMANTIC   = mt_t(1) << 3,
-	// SURFEL     = mt_t(1) << 4,
+	SURFEL     = mt_t(1) << 4,
 	// DISTANCE   = mt_t(1) << 5,
 	INTENSITY  = mt_t(1) << 6,
 	COUNT      = mt_t(1) << 7,
@@ -116,7 +116,7 @@ class UFOMap
           OctreeNode<
 							// These should be ordered based on size
 							//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
-							//  cond_node_t<MapType, SURFEL,     SurfelNode>,
+							cond_node_t<MapType, SURFEL,     SurfelNode>,
 							//  cond_node_t<MapType, DISTANCE,   DistanceNode>,
 							cond_node_t<MapType, REFLECTION, ReflectionNode>,
 							cond_node_t<MapType, COUNT,      CountNode>,
@@ -127,9 +127,9 @@ class UFOMap
 					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
           ReuseNodes, Lock, TrackNodes, CountNodes,
 					// Order does not matter
-          // cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
-          // cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
-          // cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
+          // cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMapBase>::template type,
+          cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMapBase>::template type,
+          // cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMapBase>::template type,
           cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMapBase>::template type,
           cond_map_base<MapType & COUNT,      COUNT,      CountMapBase>::template type,
           cond_map_base<MapType & TIME,       TIME,       TimeMapBase>::template type,
@@ -144,7 +144,7 @@ class UFOMap
 	    // clang-format off
 			OctreeNode<
 					//  cond_node_t<MapType, SEMANTIC,   SemanticNode>,
-					//  cond_node_t<MapType, SURFEL,     SurfelNode>,
+					cond_node_t<MapType, SURFEL,     SurfelNode>,
 					//  cond_node_t<MapType, DISTANCE,   DistanceNode>,
 					cond_node_t<MapType, REFLECTION, ReflectionNode>,
 					cond_node_t<MapType, COUNT,      CountNode>,
@@ -154,9 +154,9 @@ class UFOMap
 					cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
 			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
 			ReuseNodes, Lock, TrackNodes, CountNodes,
-			// cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
-			// cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
-			// cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
+			// cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMapBase>::template type,
+			cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMapBase>::template type,
+			// cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMapBase>::template type,
 			cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMapBase>::template type,
 			cond_map_base<MapType & COUNT,      COUNT,      CountMapBase>::template type,
 			cond_map_base<MapType & TIME,       TIME,       TimeMapBase>::template type,

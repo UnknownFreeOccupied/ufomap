@@ -56,7 +56,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class SemanticMap
+class SemanticMapBase
 {
  public:
 	//

@@ -420,51 +420,36 @@ class ColorMapBase
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, OutputIt last)
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
-		constexpr std::uint8_t const N = numData<OutputIt>();
-		constexpr auto const S = 3 * N;
-		auto const num_data = std::distance(first, last) * S;
-		auto data = std::make_unique<color_t[]>(num_data);
-		in.read(reinterpret_cast<char*>(data.get()),
-		        num_data * sizeof(typename decltype(data)::element_type));
-		for (auto d = data.get(); first != last; ++first, d += S) {
+		for (; first != last; ++first) {
 			if (first->index_field.all()) {
-				std::copy(d, d + N, first->node.red.data());
-				std::copy(d + N, d + (2 * N), first->node.green.data());
-				std::copy(d + (2 * N), d + (3 * N), first->node.blue.data());
+				in.read(first->node.red.data(),
+				        first->node.red.size() *
+				            sizeof(typename decltype(first->node.red)::value_type));
+				in.read(first->node.green.data(),
+				        first->node.green.size() *
+				            sizeof(typename decltype(first->node.green)::value_type));
+				in.read(first->node.blue.data(),
+				        first->node.blue.size() *
+				            sizeof(typename decltype(first->node.blue)::value_type));
 			} else {
-				for (index_t i = 0; N != i; ++i) {
+				decltype(first->node.red) red;
+				decltype(first->node.green) green;
+				decltype(first->node.blue) blue;
+				in.read(red.data(), red.size() * sizeof(typename decltype(red)::value_type));
+				in.read(green.data(),
+				        green.size() * sizeof(typename decltype(green)::value_type));
+				in.read(blue.data(), blue.size() * sizeof(typename decltype(blue)::value_type));
+				for (index_t i = 0; red.size() != i; ++i) {
 					if (first->index_field[i]) {
-						first->node.red[i] = *(d + i);
-						first->node.green[i] = *(d + N + i);
-						first->node.blue[i] = *(d + (2 * N) + i);
+						first->node.red[i] = red[i];
+						first->node.green[i] = green[i];
+						first->node.blue[i] = blue[i];
 					}
 				}
 			}
 		}
-	}
-
-	template <class OutputIt>
-	void readNodes(ReadBuffer&, OutputIt, OutputIt)
-	{
-		// TODO: Implement
-	}
-
-	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
-	{
-		constexpr std::uint8_t const N = 8;  // FIXME: numData<InputIt>();
-		constexpr auto const S = 3 * N;
-		auto const num_data = std::distance(first, last) * S;
-		auto data = std::make_unique<color_t[]>(num_data);
-		for (auto d = data.get(); first != last; ++first) {
-			d = copy(first->red, d);
-			d = copy(first->green, d);
-			d = copy(first->blue, d);
-		}
-		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_data * sizeof(typename decltype(data)::element_type));
 	}
 
 	template <class InputIt>
@@ -472,9 +457,13 @@ class ColorMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->red.data(), first->red.size() * sizeof(color_t));
-			out.write(first->green.data(), first->green.size() * sizeof(color_t));
-			out.write(first->blue.data(), first->blue.size() * sizeof(color_t));
+			out.write(first->red.data(),
+			          first->red.size() * sizeof(typename decltype(first->red)::value_type));
+			out.write(
+			    first->green.data(),
+			    first->green.size() * sizeof(typename decltype(first->green)::value_type));
+			out.write(first->blue.data(),
+			          first->blue.size() * sizeof(typename decltype(first->blue)::value_type));
 		}
 	}
 };

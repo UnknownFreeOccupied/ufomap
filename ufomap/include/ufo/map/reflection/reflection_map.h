@@ -532,7 +532,28 @@ class ReflectionMapBase
 	template <class OutputIt>
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
-		// TODO: Implement
+		for (; first != last; ++first) {
+			if (first->index_field.all()) {
+				in.read(first->node.hits.data(),
+				        first->node.hits.size() *
+				            sizeof(typename decltype(first->node.hits)::value_type));
+				in.read(first->node.misses.data(),
+				        first->node.misses.size() *
+				            sizeof(typename decltype(first->node.misses)::value_type));
+			} else {
+				decltype(first->node.hits) hits;
+				decltype(first->node.misses) misses;
+				in.read(hits.data(), hits.size() * sizeof(typename decltype(hits)::value_type));
+				in.read(misses.data(),
+				        misses.size() * sizeof(typename decltype(misses)::value_type));
+				for (index_t i = 0; hits.size() != i; ++i) {
+					if (first->index_field[i]) {
+						first->node.hits[i] = hits[i];
+						first->node.misses[i] = misses[i];
+					}
+				}
+			}
+		}
 	}
 
 	template <class InputIt>
@@ -540,8 +561,11 @@ class ReflectionMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->hits.data(), first->hits.size() * sizeof(count_t));
-			out.write(first->misses.data(), first->misses.size() * sizeof(count_t));
+			out.write(first->hits.data(),
+			          first->hits.size() * sizeof(typename decltype(first->hits)::value_type));
+			out.write(
+			    first->misses.data(),
+			    first->misses.size() * sizeof(typename decltype(first->misses)::value_type));
 		}
 	}
 

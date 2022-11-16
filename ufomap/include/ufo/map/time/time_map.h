@@ -256,61 +256,23 @@ class TimeMapBase
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, OutputIt last)
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
-		constexpr auto N = numData<OutputIt>();
-
-		auto size = std::distance(first, last) * N;
-
-		auto data = std::make_unique<time_t[]>(size);
-		in.read(reinterpret_cast<char*>(data.get()),
-		        size * sizeof(typename decltype(data)::element_type));
-
-		auto const d = data.get();
-		for (; first != last; ++first, d += N) {
+		for (; first != last; ++first) {
 			if (first->index_field.all()) {
-				std::copy(d, d + N, first->node.time.data());
+				in.read(first->node.time.data(),
+				        first->node.time.size() *
+				            sizeof(typename decltype(first->node.time)::value_type));
 			} else {
-				for (index_t i = 0; N != i; ++i) {
+				decltype(first->node.time) time;
+				in.read(time.data(), time.size() * sizeof(typename decltype(time)::value_type));
+				for (index_t i = 0; time.size() != i; ++i) {
 					if (first->index_field[i]) {
-						first->node.time[i] = *(d + i);
+						first->node.time[i] = time[i];
 					}
 				}
 			}
 		}
-	}
-
-	template <class OutputIt>
-	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
-	{
-		constexpr std::size_t const N = numData<OutputIt>();
-		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.time.data(), N * sizeof(time_t));
-			} else {
-				for (index_t i = 0; N != i; ++i) {
-					if (first->index_field[i]) {
-						in.read(&first->node.time[i], sizeof(time_t));
-					} else
-						in.skipRead(sizeof(time_t));
-				}
-			}
-		}
-	}
-
-	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
-	{
-		auto size = std::distance(first, last) * 8;  // FIXME: numData<InputIt>();
-
-		auto data = std::make_unique<time_t[]>(size);
-		auto d = data.get();
-		for (; first != last; ++first) {
-			d = copy(first->time, d);
-		}
-
-		out.write(reinterpret_cast<char const*>(data.get()),
-		          size * sizeof(typename decltype(data)::element_type));
 	}
 
 	template <class InputIt>
@@ -318,7 +280,8 @@ class TimeMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->time.data(), first->time.size() * sizeof(time_t));
+			out.write(first->time.data(),
+			          first->time.size() * sizeof(typename decltype(first->time)::value_type));
 		}
 	}
 

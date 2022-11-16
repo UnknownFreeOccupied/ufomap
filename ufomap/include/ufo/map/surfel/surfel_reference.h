@@ -39,64 +39,66 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SURFEL_NODE_H
-#define UFO_MAP_SURFEL_NODE_H
+#ifndef UFO_MAP_SURFEL_REFERENCE_H
+#define UFO_MAP_SURFEL_REFERENCE_H
 
 // UFO
 #include <ufo/map/surfel/surfel.h>
-#include <ufo/map/types.h>
-
-// STL
-#include <array>
-#include <cstdint>
-#include <memory>
-#include <type_traits>
+#include <ufo/map/surfel/surfel_node.h>
 
 namespace ufo::map
 {
-template <std::size_t N>
-struct SurfelNode {
-	// Data
-	std::array<math::Vector3<surfel_scalar_t>, N> sum;
-	std::array<std::array<surfel_scalar_t, 6>, N> sum_squares;
-	std::array<count_t, N> num_points;
-	// std::array<math::Vector3<surfel_scalar_t>, N> eigen_values;
-
+class SurfelReference
+{
+ public:
 	//
-	// Size
+	// Constructor
 	//
 
-	[[nodiscard]] static constexpr std::size_t surfelSize() { return N; }
+	constexpr SurfelReference() = default;
+
+	constexpr SurfelReference(SurfelReference const&) = default;
+
+	constexpr SurfelReference(SurfelReference&&) = default;
 
 	//
-	// Fill
+	// Assignment operator
 	//
 
-	void fill(SurfelNode const& parent, index_t const index)
+	SurfelReference& operator=(SurfelReference const&) = default;
+
+	SurfelReference& operator=(SurfelReference&&) = default;
+
+	//
+	// Conversion
+	//
+
+	operator Surfel() const
 	{
-		sum.fill(parent.sum[index]);
-		sum_squares.fill(parent.sum_squares[index]);
-		num_points.fill(parent.num_points[index]);
+		return Surfel(surfel_->sum[index_], surfel_->sum_squares[index_],
+		              surfel_->num_points[index_]);
 	}
 
 	//
-	// Clear
+	// Swap
 	//
 
-	void clear() {}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
+	void swap(SurfelReference& other)
 	{
-		// NOTE: Impossible that two surfels next to each other is equal as there center would
-		// differ
-		return std::all_of(std::begin(num_points), std::end(num_points),
-		                   [](auto e) { return 0 == e; });
+		std::swap(surfel_, other.surfel_);
+		std::swap(index_, other.index_);
 	}
+
+ private:
+	SurfelReference(SurfelNode<8> const* node, index_t const index)
+	    : surfel_(node), index_(index)
+	{
+	}
+
+ private:
+	SurfelNode<8> const* surfel_ = nullptr;
+	index_t index_ = 0;
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_SURFEL_NODE_H
+#endif  // UFO_MAP_SURFEL_REFERENCE_H
