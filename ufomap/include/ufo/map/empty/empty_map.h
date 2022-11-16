@@ -101,8 +101,7 @@ class EmptyMap
 	// Update node
 	//
 
-	template <class T, class InputIt>
-	static constexpr void updateNode(T const&, index_t, T const&) noexcept
+	static constexpr void updateNode(EmptyNode<Num>, index_t, EmptyNode<Num>) noexcept
 	{
 	}
 

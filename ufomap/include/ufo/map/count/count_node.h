@@ -46,6 +46,7 @@
 #include <ufo/map/types.h>
 
 // STL
+#include <algorithm>
 #include <array>
 
 namespace ufo::map

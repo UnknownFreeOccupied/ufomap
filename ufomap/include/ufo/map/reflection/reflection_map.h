@@ -53,7 +53,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class ReflectionMap
+class ReflectionMapBase
 {
  public:
 	//
@@ -62,13 +62,13 @@ class ReflectionMap
 
 	[[nodiscard]] count_t hits(Node node) const
 	{
-		return derived().leafNode(node).hits(node.index());
+		return derived().leafNode(node).hits[node.index()];
 	}
 
 	[[nodiscard]] count_t hits(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.hits(code.index(depth));
+		return node.hits[code.index(depth)];
 	}
 
 	[[nodiscard]] count_t hits(Key key) const { return hits(derived().toCode(key)); }
@@ -90,15 +90,15 @@ class ReflectionMap
 	void setHits(Node node, count_t hits, bool propagate = true)
 	{
 		derived().apply(
-		    node, [hits](auto& node, index_t index) { node.setHits(index, hits); },
-		    [hits](auto& node) { node.setHits(hits); }, propagate);
+		    node, [hits](auto& node, index_t index) { node.hits[index] = hits; },
+		    [hits](auto& node) { node.hits.fill(hits); }, propagate);
 	}
 
 	void setHits(Code code, count_t hits, bool propagate = true)
 	{
 		derived().apply(
-		    code, [hits](auto& node, index_t index) { node.setHits(index, hits); },
-		    [hits](auto& node) { node.setHits(hits); }, propagate);
+		    code, [hits](auto& node, index_t index) { node.hits[index] = hits; },
+		    [hits](auto& node) { node.hits.fill(hits); }, propagate);
 	}
 
 	void setHits(Key key, count_t hits, bool propagate = true)
@@ -124,15 +124,25 @@ class ReflectionMap
 	void incrementHits(Node node, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node, [inc](auto& node, index_t index) { node.incrementHits(index, inc); },
-		    [inc](auto& node) { node.incrementHits(inc); }, propagate);
+		    node, [inc](auto& node, index_t index) { node.hits[index] += inc; },
+		    [inc](auto& node) {
+			    for (auto& h : node.hits) {
+				    h += inc;
+			    }
+		    },
+		    propagate);
 	}
 
 	void incrementHits(Code code, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code, [inc](auto& node, index_t index) { node.incrementHits(index, inc); },
-		    [inc](auto& node) { node.incrementHits(inc); }, propagate);
+		    code, [inc](auto& node, index_t index) { node.hits[index] += inc; },
+		    [inc](auto& node) {
+			    for (auto& h : node.hits) {
+				    h += inc;
+			    }
+		    },
+		    propagate);
 	}
 
 	void incrementHits(Key key, count_t inc, bool propagate = true)
@@ -184,6 +194,12 @@ class ReflectionMap
 	{
 		decrementHits(derived().toCode(x, y, z, depth), dec, propagate);
 	}
+
+	//
+	// Update hits
+	//
+
+	// TODO: Implement
 
 	//
 	// Get misses
@@ -315,6 +331,12 @@ class ReflectionMap
 	}
 
 	//
+	// Update misses
+	//
+
+	// TODO: Implement
+
+	//
 	// Get reflectiveness
 	//
 
@@ -322,8 +344,8 @@ class ReflectionMap
 	{
 		auto const& n = derived().leafNode(node);
 		auto const index = node.index();
-		double const hits = n.hits(index);
-		double const misses = n.misses(index);
+		double const hits = n.hits[index];
+		double const misses = n.misses[index];
 		return hits / (hits + misses);
 	}
 
@@ -331,8 +353,8 @@ class ReflectionMap
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
 		auto const index = code.index(depth);
-		double const hits = node.hits(index);
-		double const misses = node.misses(index);
+		double const hits = node.hits[index];
+		double const misses = node.misses[index];
 		return hits / (hits + misses);
 	}
 
@@ -351,6 +373,18 @@ class ReflectionMap
 	{
 		return reflectiveness(derived().toCode(x, y, z, depth));
 	}
+
+	//
+	// Set reflectiveness
+	//
+
+	// TODO: Implement
+
+	//
+	// Update reflectiveness
+	//
+
+	// TODO: Implement
 
 	//
 	// Propagation criteria
@@ -385,14 +419,14 @@ class ReflectionMap
 	// Constructors
 	//
 
-	ReflectionMap() = default;
+	ReflectionMapBase() = default;
 
-	ReflectionMap(ReflectionMap const& other) = default;
+	ReflectionMapBase(ReflectionMapBase const& other) = default;
 
-	ReflectionMap(ReflectionMap&& other) = default;
+	ReflectionMapBase(ReflectionMapBase&& other) = default;
 
 	template <class Derived2>
-	ReflectionMap(ReflectionMap<Derived2> const& other)
+	ReflectionMapBase(ReflectionMapBase<Derived2> const& other)
 	    : prop_criteria_(other.reflectionPropagationCriteria())
 	{
 	}
@@ -401,12 +435,12 @@ class ReflectionMap
 	// Assignment operator
 	//
 
-	ReflectionMap& operator=(ReflectionMap const& rhs) = default;
+	ReflectionMapBase& operator=(ReflectionMapBase const& rhs) = default;
 
-	ReflectionMap& operator=(ReflectionMap&& rhs) = default;
+	ReflectionMapBase& operator=(ReflectionMapBase&& rhs) = default;
 
 	template <class Derived2>
-	ReflectionMap& operator=(ReflectionMap<Derived2> const& rhs)
+	ReflectionMapBase& operator=(ReflectionMapBase<Derived2> const& rhs)
 	{
 		prop_criteria_ = rhs.reflectionPropagationCriteria();
 		return *this;
@@ -416,7 +450,7 @@ class ReflectionMap
 	// Swap
 	//
 
-	void swap(ReflectionMap& other) noexcept
+	void swap(ReflectionMapBase& other) noexcept
 	{
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
@@ -438,56 +472,31 @@ class ReflectionMap
 
 	void initRoot()
 	{
-		derived().root().setHits(derived().rootIndex(), 0);
-		derived().root().setMisses(derived().rootIndex(), 0);
+		derived().root().hits[derived().rootIndex()] = 0;
+		derived().root().misses[derived().rootIndex()] = 0;
 	}
 
 	//
 	// Update node
 	//
 
-	template <std::size_t N, class InputIt>
-	void updateNode(ReflectionNode<N>& node, IndexField const indices, InputIt first,
-	                InputIt last)
+	template <std::size_t N>
+	void updateNode(ReflectionNode<N>& node, index_t index,
+	                ReflectionNode<N> const& children)
 	{
-		prop = reflectionPropagationCriteria();
-		if constexpr (1 == N) {
-			auto hits_fun = [](ReflectionNode<N> node) { return node.hits[0]; };
-			auto misses_fun = [](ReflectionNode<N> node) { return node.misses[0]; };
-			switch (prop) {
-				case PropagationCriteria::MIN:
-					node.setHits(min(first, last, hits_fun));
-					node.setMisses(min(first, last, misses_fun));
-					break;
-				case PropagationCriteria::MAX:
-					node.setHits(max(first, last, hits_fun));
-					node.setMisses(max(first, last, misses_fun));
-					break;
-				case PropagationCriteria::MEAN:
-					node.setHits(mean(first, last, hits_fun));
-					node.setMisses(mean(first, last, misses_fun));
-					break;
-			}
-		} else {
-			for (index_t i = 0; first != last; ++first, ++i) {
-				if (!indices[i]) {
-					continue;
-				}
-				switch (prop) {
-					case PropagationCriteria::MIN:
-						node.setHits(i, min(first->beginHits(), first->endHits()));
-						node.setMisses(i, min(first->beginMisses(), first->endMisses()));
-						break;
-					case PropagationCriteria::MAX:
-						node.setHits(i, max(first->beginHits(), first->endHits()));
-						node.setMisses(i, max(first->beginMisses(), first->endMisses()));
-						break;
-					case PropagationCriteria::MEAN:
-						node.setHits(i, mean(first->beginHits(), first->endHits()));
-						node.setMisses(i, mean(first->beginMisses(), first->endMisses()));
-						break;
-				}
-			}
+		switch (reflectionPropagationCriteria()) {
+			case PropagationCriteria::MIN:
+				node.hits[index] = min(children.hits);
+				node.misses[index] = min(children.misses);
+				return;
+			case PropagationCriteria::MAX:
+				node.hits[index] = max(children.hits);
+				node.misses[index] = max(children.misses);
+				return;
+			case PropagationCriteria::MEAN:
+				node.hits[index] = mean(children.hits);
+				node.misses[index] = mean(children.misses);
+				return;
 		}
 	}
 
@@ -513,94 +522,27 @@ class ReflectionMap
 		return node_type::reflectionSize();
 	}
 
-	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, std::size_t num_nodes)
+	template <class InputIt>
+	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
-		uint8_t n;
-		in.read(reinterpret_cast<char*>(&n), sizeof(n));
-		std::size_t const s = 2 * n;
-		num_nodes *= s;
+		return std::iterator_traits<InputIt>::value_type::reflectionSize() *
+		       std::distance(first, last) * 2 * sizeof(count_t);
+	}
 
-		auto data = std::make_unique<count_t[]>(num_nodes);
-		in.read(reinterpret_cast<char*>(data.get()),
-		        num_nodes * sizeof(typename decltype(data)::element_type));
-
-		auto const d = data.get();
-		if constexpr (1 == numData<OutputIt>()) {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 2) {
-					first->node.hits[0] = *(d + i);
-					first->node.misses[0] = *(d + i + 1);
-				}
-			} else {
-				auto const prop_criteria = prop_criteria_;
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 16) {
-					switch (prop_criteria) {
-						case PropagationCriteria::MIN:
-							first->node.hits[0] = min(d + i, d + i + 8);
-							first->node.misses[0] = min(d + i + 8, d + i + 16);
-							break;
-						case PropagationCriteria::MAX:
-							first->node.hits[0] = max(d + i, d + i + 8);
-							first->node.misses[0] = max(d + i + 8, d + i + 16);
-							break;
-						case PropagationCriteria::MEAN:
-							first->node.hits[0] = mean(d + i, d + i + 8);
-							first->node.misses[0] = mean(d + i + 8, d + i + 16);
-							break;
-					}
-				}
-			}
-		} else {
-			if (1 == n) {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 2) {
-					if (first->index_field.all()) {
-						first->node.hits.fill(*(d + i));
-						first->node.misses.fill(*(d + i + 1));
-					} else {
-						for (std::size_t index = 0; first->node.hits.size() != index; ++index) {
-							if (first.index_field[index]) {
-								first->node.hits[index] = *(d + i);
-								first->node.misses[index] = *(d + i + 1);
-							}
-						}
-					}
-				}
-			} else {
-				for (std::size_t i = 0; i != num_nodes; ++first, i += 16) {
-					if (first->index_field.all()) {
-						std::copy(d + i, d + i + 8, first->node.hits.data());
-						std::copy(d + i + 8, d + i + 16, first->node.misses.data());
-					} else {
-						for (index_t index = 0; first->node.hits.size() != index; ++i, ++index) {
-							if (first.index_field[index]) {
-								first->node.hits[index] = *(d + i + index);
-								first->node.misses[index] = *(d + i + index + 8);
-							}
-						}
-					}
-				}
-			}
-		}
+	template <class OutputIt>
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
+	{
+		// TODO: Implement
 	}
 
 	template <class InputIt>
-	void writeNodes(std::ostream& out, InputIt first, std::size_t num_nodes)
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
 	{
-		constexpr uint8_t const n = numData<InputIt>();
-		constexpr std::size_t const s = 2 * n;
-		num_nodes *= s;
-
-		auto data = std::make_unique<count_t[]>(num_nodes);
-		auto d = data.get();
-		for (std::size_t i = 0; i != num_nodes; ++first, i += s) {
-			std::copy(first->node.beginHits(), first->node.endHits(), d + i);
-			std::copy(first->node.beginMisses(), first->node.endMisses(), d + i + n);
+		out.reserve(out.size() + serializedSize(first, last));
+		for (; first != last; ++first) {
+			out.write(first->hits.data(), first->hits.size() * sizeof(count_t));
+			out.write(first->misses.data(), first->misses.size() * sizeof(count_t));
 		}
-
-		out.write(reinterpret_cast<char const*>(&n), sizeof(n));
-		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_nodes * sizeof(typename decltype(data)::element_type));
 	}
 
  protected:

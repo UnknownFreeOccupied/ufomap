@@ -82,6 +82,7 @@ enum struct DataIdentifier : std::uint8_t {
 	OCCUPANCY,
 	TIME,
 	COLOR,
+	INTENSITY,
 	SEMANTIC,
 	SURFEL,
 	DISTANCE,

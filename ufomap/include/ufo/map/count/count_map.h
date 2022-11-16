@@ -56,7 +56,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class CountMap
+class CountMapBase
 {
  public:
 	//
@@ -152,14 +152,15 @@ class CountMap
 	// Constructors
 	//
 
-	CountMap() = default;
+	CountMapBase() = default;
 
-	CountMap(CountMap const&) = default;
+	CountMapBase(CountMapBase const&) = default;
 
-	CountMap(CountMap&&) = default;
+	CountMapBase(CountMapBase&&) = default;
 
 	template <class Derived2>
-	CountMap(CountMap<Derived2> const&) : prop_criteria_(other.countPropagationCriteria())
+	CountMapBase(CountMapBase<Derived2> const& other)
+	    : prop_criteria_(other.countPropagationCriteria())
 	{
 	}
 
@@ -167,13 +168,14 @@ class CountMap
 	// Assignment operator
 	//
 
-	CountMap& operator=(CountMap const&) = default;
+	CountMapBase& operator=(CountMapBase const&) = default;
 
-	CountMap& operator=(CountMap&&) = default;
+	CountMapBase& operator=(CountMapBase&&) = default;
 
 	template <class Derived2>
-	CountMap& operator=(CountMap<Derived2> const&)
+	CountMapBase& operator=(CountMapBase<Derived2> const& rhs)
 	{
+		prop_criteria_ = rhs.countPropagationCriteria();
 		return *this;
 	}
 
@@ -181,9 +183,9 @@ class CountMap
 	// Swap
 	//
 
-	void swap(CountMap& other) noexcept
+	void swap(CountMapBase& other) noexcept
 	{
-		std::swap(distance_prop_criteria_, other.distance_prop_criteria_);
+		std::swap(prop_criteria_, other.prop_criteria_);
 	}
 
 	//
@@ -194,7 +196,6 @@ class CountMap
 
 	[[nodiscard]] constexpr Derived const& derived() const
 	{
-		prop_criteria_ = rhs.countPropagationCriteria();
 		return *static_cast<Derived const*>(this);
 	}
 
@@ -208,41 +209,19 @@ class CountMap
 	// Update node
 	//
 
-	template <std::size_t N, class InputIt>
-	void updateNode(CountMap<N>& node, IndexField const indices, InputIt first,
-	                InputIt last)
+	template <std::size_t N>
+	void updateNode(CountNode<N>& node, index_t index, CountNode<N> const children)
 	{
-		auto const prop = countPropagationCriteria();
-		if (indices.all()) {
-			for (index_t i = 0; first != last; ++first, ++i) {
-				switch (prop) {
-					case PropagationCriteria::MIN:
-						node.count[i] = min(first->count);
-						break;
-					case PropagationCriteria::MAX:
-						node.count[i] = max(first->count);
-						break;
-					case PropagationCriteria::MEAN:
-						node.count[i] = mean(first->count);
-						break;
-				}
-			}
-		} else {
-			for (index_t i = 0; first != last; ++first, ++i) {
-				if (indices[i]) {
-					switch (prop) {
-						case PropagationCriteria::MIN:
-							node.count[i] = min(first->count);
-							break;
-						case PropagationCriteria::MAX:
-							node.count[i] = max(first->count);
-							break;
-						case PropagationCriteria::MEAN:
-							node.count[i] = mean(first->count);
-							break;
-					}
-				}
-			}
+		switch (countPropagationCriteria()) {
+			case PropagationCriteria::MIN:
+				node.count[index] = min(children.count);
+				return;
+			case PropagationCriteria::MAX:
+				node.count[index] = max(children.count);
+				return;
+			case PropagationCriteria::MEAN:
+				node.count[index] = mean(children.count);
+				return;
 		}
 	}
 
@@ -268,15 +247,26 @@ class CountMap
 		return node_type::countSize();
 	}
 
+	template <class InputIt>
+	std::size_t serializedSize(InputIt first, InputIt last) const
+	{
+		return std::iterator_traits<InputIt>::value_type::countSize() *
+		       std::distance(first, last) * sizeof(count_t);
+	}
+
 	template <class OutputIt>
 	void readNodes(std::istream& in, OutputIt first, OutputIt last)
 	{
-		constexpr uint8_t const N = numData<OutputIt>();
-		auto const num_data = std::distance(first, last) * N;
-		auto data = std::make_unique<count_t[]>(num_data);
+		constexpr auto N = numData<OutputIt>();
+
+		auto size = std::distance(first, last) * N;
+
+		auto data = std::make_unique<count_t[]>(size);
 		in.read(reinterpret_cast<char*>(data.get()),
-		        num_data * sizeof(typename decltype(data)::element_type));
-		for (auto d = data.get(); first != last; ++first, d += N) {
+		        size * sizeof(typename decltype(data)::element_type));
+
+		auto const d = data.get();
+		for (; first != last; ++first, d += N) {
 			if (first->index_field.all()) {
 				std::copy(d, d + N, first->node.count.data());
 			} else {
@@ -289,22 +279,51 @@ class CountMap
 		}
 	}
 
+	template <class OutputIt>
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
+	{
+		constexpr std::size_t const N = numData<OutputIt>();
+		for (; first != last; ++first) {
+			if (first->index_field.all()) {
+				in.read(first->node.count.data(), N * sizeof(count_t));
+			} else {
+				for (index_t i = 0; N != i; ++i) {
+					if (first->index_field[i]) {
+						in.read(&first->node.count[i], sizeof(count_t));
+					} else
+						in.skipRead(sizeof(count_t));
+				}
+			}
+		}
+	}
+
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last) const
 	{
-		constexpr uint8_t const N = numData<InputIt>();
-		auto const num_data = std::distance(first, last) * N;
-		auto data = std::make_unique<count_t[]>(num_data);
-		for (auto d = data.get(); first != last; ++first) {
-			d = copy(first->node.count, d);
+		auto size = std::distance(first, last) * 8;  // FIXME: numData<InputIt>();
+
+		auto data = std::make_unique<count_t[]>(size);
+		auto d = data.get();
+		for (; first != last; ++first) {
+			d = copy(first->count, d);
 		}
+
 		out.write(reinterpret_cast<char const*>(data.get()),
-		          num_data * sizeof(typename decltype(data)::element_type));
+		          size * sizeof(typename decltype(data)::element_type));
+	}
+
+	template <class InputIt>
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
+	{
+		out.reserve(out.size() + serializedSize(first, last));
+		for (; first != last; ++first) {
+			out.write(first->count.data(), first->count.size() * sizeof(count_t));
+		}
 	}
 
  protected:
 	// Propagation criteria
-	PropagationCriteria distance_prop_criteria_ = PropagationCriteria::MIN;
+	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
 };
 }  // namespace ufo::map
 
