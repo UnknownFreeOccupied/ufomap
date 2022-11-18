@@ -50,10 +50,10 @@
 #include <ufo/map/occupancy/occupancy_map.h>
 #include <ufo/map/octree/octree_map.h>
 // #include <ufo/map/semantic/semantic_map.h>
-// #include <ufo/map/surfel/surfel_map.h>
 #include <ufo/map/count/count_map.h>
 #include <ufo/map/intensity/intensity_map.h>
 #include <ufo/map/reflection/reflection_map.h>
+#include <ufo/map/surfel/surfel_map.h>
 #include <ufo/map/time/time_map.h>
 
 // STL
@@ -224,7 +224,7 @@ using OccupancyMap    = UFOMap<OCCUPANCY>;
 using TimeMap         = UFOMap<TIME>;
 using ColorMap        = UFOMap<COLOR>;
 // using SemanticMap     = UFOMap<SEMANTIC>;
-// using SurfelMap       = UFOMap<SURFEL>;
+using SurfelMap       = UFOMap<SURFEL>;
 // using DistanceMap     = UFOMap<DISTANCE>;
 using IntensityMap    = UFOMap<INTENSITY>;
 using CountMap        = UFOMap<COUNT>;

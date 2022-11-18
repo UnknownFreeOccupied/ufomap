@@ -45,6 +45,7 @@
 // UFO
 #include <ufo/map/surfel/surfel.h>
 #include <ufo/map/surfel/surfel_node.h>
+#include <ufo/map/surfel/surfel_util.h>
 
 namespace ufo::map
 {
@@ -73,11 +74,7 @@ class SurfelReference
 	// Conversion
 	//
 
-	operator Surfel() const
-	{
-		return Surfel(surfel_->sum[index_], surfel_->sum_squares[index_],
-		              surfel_->num_points[index_]);
-	}
+	operator Surfel() const { return Surfel(sum(), sumSquares(), numPoints()); }
 
 	//
 	// Swap
@@ -89,6 +86,87 @@ class SurfelReference
 		std::swap(index_, other.index_);
 	}
 
+	//
+	// Empty
+	//
+
+	[[nodiscard]] constexpr bool empty() const { return 0 == numPoints(); }
+
+	//
+	// Mean
+	//
+
+	[[nodiscard]] constexpr math::Vector3<surfel_scalar_t> mean() const
+	{
+		return surfel::mean(sum(), numPoints());
+	}
+
+	//
+	// Normal
+	//
+
+	constexpr math::Vector3d normal() const
+	{
+		return surfel::normal(sumSquares(), numPoints());
+	}
+
+	//
+	// Planarity
+	//
+
+	constexpr double planarity() const
+	{
+		return surfel::planarity(sumSquares(), numPoints());
+	}
+
+	//
+	// Covariance
+	//
+
+	constexpr std::array<std::array<double, 3>, 3> covariance() const
+	{
+		return surfel::covariance(sumSquares(), numPoints());
+	}
+
+	//
+	// Eigenvalues
+	//
+
+	constexpr math::Vector3d eigenValues() const
+	{
+		return surfel::eigenValues(sumSquares(), numPoints());
+	}
+
+	//
+	// Eigen vectors
+	//
+
+	constexpr std::array<math::Vector3d, 3> eigenVectors() const
+	{
+		return surfel::eigenVectors(sumSquares(), numPoints());
+	}
+
+	//
+	// Num points
+	//
+
+	constexpr count_t numPoints() const { return surfel_->num_points[index_]; }
+
+	//
+	// Sum
+	//
+
+	constexpr math::Vector3<surfel_scalar_t> sum() const { return surfel_->sum[index_]; }
+
+	//
+	// Sum squares
+	//
+
+	constexpr std::array<surfel_scalar_t, 6> const& sumSquares() const
+	{
+		return surfel_->sum_squares[index_];
+	}
+
  private:
 	SurfelReference(SurfelNode<8> const* node, index_t const index)
 	    : surfel_(node), index_(index)
@@ -98,6 +176,9 @@ class SurfelReference
  private:
 	SurfelNode<8> const* surfel_ = nullptr;
 	index_t index_ = 0;
+
+	template <class Derived>
+	friend class SurfelMapBase;
 };
 }  // namespace ufo::map
 

@@ -47,6 +47,8 @@
 #include <ufo/map/surfel/surfel.h>
 #include <ufo/map/surfel/surfel_node.h>
 #include <ufo/map/surfel/surfel_predicate.h>
+#include <ufo/map/surfel/surfel_reference.h>
+#include <ufo/map/surfel/surfel_util.h>
 #include <ufo/util/enum.h>
 
 // STL
@@ -97,15 +99,17 @@ class SurfelMapBase
 	{
 		derived().apply(
 		    node,
-		    [&surfel](auto& node, index_t const index) {
-			    node.sum[index] = surfel.sum();
-			    node.sum_squares[index] = surfel.sumSquares();
-			    node.num_points[index] = surfel.numPoints();
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node, index_t const index) {
+			    node.sum[index] = sum;
+			    node.sum_squares[index] = sum_squares;
+			    node.num_points[index] = num_points;
 		    },
-		    [&surfel](auto& node) {
-			    node.sum.fill(surfel.sum());
-			    node.sum_squares.fill(surfel.sumSquares());
-			    node.num_points.fill(surfel.numPoints());
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node) {
+			    node.sum.fill(sum);
+			    node.sum_squares.fill(sum_squares);
+			    node.num_points.fill(num_points);
 		    },
 		    propagate);
 	}
@@ -114,15 +118,17 @@ class SurfelMapBase
 	{
 		derived().apply(
 		    code,
-		    [&surfel](auto& node, index_t const index) {
-			    node.sum[index] = surfel.sum();
-			    node.sum_squares[index] = surfel.sumSquares();
-			    node.num_points[index] = surfel.numPoints();
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node, index_t const index) {
+			    node.sum[index] = sum;
+			    node.sum_squares[index] = sum_squares;
+			    node.num_points[index] = num_points;
 		    },
-		    [&surfel](auto& node) {
-			    node.sum.fill(surfel.sum());
-			    node.sum_squares.fill(surfel.sumSquares());
-			    node.num_points.fill(surfel.numPoints());
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node) {
+			    node.sum.fill(sum);
+			    node.sum_squares.fill(sum_squares);
+			    node.num_points.fill(num_points);
 		    },
 		    propagate);
 	}
@@ -148,15 +154,6 @@ class SurfelMapBase
 	// Insert surfel
 	//
 
-	void insertSurfel(Surfel const& surfel, depth_t depth = 0, bool propagate = true)
-	{
-		if (surfel.empty()) {
-			return;
-		}
-
-		insertSurfel(surfel.getSum() / surfel.getNumPoints(), surfel, depth, propagate);
-	}
-
 	void insertSurfel(Node node, Surfel const& surfel, bool propagate = true)
 	{
 		if (surfel.empty()) {
@@ -165,8 +162,19 @@ class SurfelMapBase
 
 		derived().apply(
 		    node,
-		    [&surfel](auto& node, index_t const index) { insertSurfel(node, index, surfel); },
-		    [&surfel](auto& node) { insertSurfel(node, surfel); }, propagate);
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node, index_t const index) {
+			    surfel::add(node.sum[index], node.sum_squares[index], node.num_points[index],
+			                sum, sum_squares, num_points);
+		    },
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node) {
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::add(node.sum[i], node.sum_squares[i], node.num_points[i], sum,
+				                sum_squares, num_points);
+			    }
+		    },
+		    propagate);
 	}
 
 	void insertSurfel(Code code, Surfel const& surfel, bool propagate = true)
@@ -177,8 +185,19 @@ class SurfelMapBase
 
 		derived().apply(
 		    code,
-		    [&surfel](auto& node, index_t const index) { insertSurfel(node, index, surfel); },
-		    [&surfel](auto& node) { insertSurfel(node, surfel); }, propagate);
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node, index_t const index) {
+			    surfel::add(node.sum[index], node.sum_squares[index], node.num_points[index],
+			                sum, sum_squares, num_points);
+		    },
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node) {
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::add(node.sum[i], node.sum_squares[i], node.num_points[i], sum,
+				                sum_squares, num_points);
+			    }
+		    },
+		    propagate);
 	}
 
 	void insertSurfel(Key key, Surfel const& surfel, bool propagate = true)
@@ -202,15 +221,6 @@ class SurfelMapBase
 	// Erase surfel
 	//
 
-	void eraseSurfel(Surfel const& surfel, depth_t depth = 0, bool propagate = true)
-	{
-		if (surfel.empty()) {
-			return;
-		}
-
-		eraseSurfel(surfel.getSum() / surfel.getNumPoints(), surfel, depth, propagate);
-	}
-
 	void eraseSurfel(Node node, Surfel const& surfel, bool propagate = true)
 	{
 		if (surfel.empty()) {
@@ -219,8 +229,19 @@ class SurfelMapBase
 
 		derived().apply(
 		    node,
-		    [&surfel](auto& node, index_t const index) { eraseSurfel(node, index, surfel); },
-		    [&surfel](auto& node) { eraseSurfel(node, surfel); }, propagate);
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node, index_t const index) {
+			    surfel::remove(node.sum[index], node.sum_squares[index], node.num_points[index],
+			                   sum, sum_squares, num_points);
+		    },
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node) {
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::remove(node.sum[i], node.sum_squares[i], node.num_points[i], sum,
+				                   sum_squares, num_points);
+			    }
+		    },
+		    propagate);
 	}
 
 	void eraseSurfel(Code code, Surfel const& surfel, bool propagate = true)
@@ -231,8 +252,19 @@ class SurfelMapBase
 
 		derived().apply(
 		    code,
-		    [&surfel](auto& node, index_t const index) { eraseSurfel(node, index, surfel); },
-		    [&surfel](auto& node) { eraseSurfel(node, surfel); }, propagate);
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node, index_t const index) {
+			    surfel::remove(node.sum[index], node.sum_squares[index], node.num_points[index],
+			                   sum, sum_squares, num_points);
+		    },
+		    [sum = surfel.sum(), sum_squares = surfel.sumSquares(),
+		     num_points = surfel.numPoints()](auto& node) {
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::remove(node.sum[i], node.sum_squares[i], node.num_points[i], sum,
+				                   sum_squares, num_points);
+			    }
+		    },
+		    propagate);
 	}
 
 	void eraseSurfel(Key key, Surfel const& surfel, bool propagate = true)
@@ -260,7 +292,16 @@ class SurfelMapBase
 	{
 		derived().apply(
 		    derived().toCode(point, depth),
-		    [point](LeafNode const& node) { insertSurfelPoint(node, point); }, propagate);
+		    [point](auto& node, index_t const index) {
+			    surfel::addPoint(node.sum[index], node.sum_squares[index],
+			                     node.num_points[index], point);
+		    },
+		    [point](auto& node) {
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::addPoint(node.sum[i], node.sum_squares[i], node.num_points[i], point);
+			    }
+		    },
+		    propagate);
 	}
 
 	template <class InputIt>
@@ -288,11 +329,16 @@ class SurfelMapBase
 
 			derived().apply(
 			    it->first,
-			    [&points](auto& node, index_t const index) {
-				    insertSurfelPoint(node, index, std::begin(points), std::end(points));
+			    [first = std::cbegin(points), last = std::cend(points)](auto& node,
+			                                                            index_t const index) {
+				    surfel::addPoint(node.sum[index], node.sum_squares[index],
+				                     node.num_points[index], first, last);
 			    },
-			    [&points](auto& node) {
-				    insertSurfelPoint(node, std::begin(points), std::end(points));
+			    [first = std::cbegin(points), last = std::cend(points)](auto& node) {
+				    for (index_t i = 0; node.surfelSize() != i; ++i) {
+					    surfel::addPoint(node.sum[i], node.sum_squares[i], node.num_points[i],
+					                     first, last);
+				    }
 			    },
 			    false);
 
@@ -320,9 +366,16 @@ class SurfelMapBase
 		derived().apply(
 		    derived().toCode(point, depth),
 		    [point](auto& node, index_t const index) {
-			    eraseSurfelPoint(node, index, point);
+			    surfel::removePoint(node.sum[index], node.sum_squares[index],
+			                        node.num_points[index], point);
 		    },
-		    [point](auto& node) { eraseSurfelPoint(node, point); }, propagate);
+		    [point](auto& node) {
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::removePoint(node.sum[i], node.sum_squares[i], node.num_points[i],
+				                        point);
+			    }
+		    },
+		    propagate);
 	}
 
 	template <class InputIt>
@@ -350,11 +403,16 @@ class SurfelMapBase
 
 			derived().apply(
 			    it->first,
-			    [&points](auto& node, index_t const index) {
-				    eraseSurfelPoint(node, index, std::begin(points), std::end(points));
+			    [first = std::cbegin(points), last = std::cend(points)](auto& node,
+			                                                            index_t const index) {
+				    surfel::removePoint(node.sum[index], node.sum_squares[index],
+				                        node.num_points[index], first, last);
 			    },
-			    [&points](auto& node) {
-				    eraseSurfelPoint(node, std::begin(points), std::end(points));
+			    [first = std::cbegin(points), last = std::cend(points)](auto& node) {
+				    for (index_t i = 0; node.surfelSize() != i; ++i) {
+					    surfel::removePoint(node.sum[i], node.sum_squares[i], node.num_points[i],
+					                        first, last);
+				    }
 			    },
 			    false);
 
@@ -382,14 +440,12 @@ class SurfelMapBase
 		derived().apply(
 		    node,
 		    [](auto& node, index_t const index) {
-			    node.sum[index] = ...;
-			    node.sum_squares[index] = ...;
-			    node.num_points[index] = 0;
+			    surfel::clear(node.sum[index], node.sum_squares[index], node.num_points[index]);
 		    },
 		    [](auto& node) {
-			    node.sum.fill(...);
-			    node.sum_squares.fill(...);
-			    node.num_points.fill(0);
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::clear(node.sum[i], node.sum_squares[i], node.num_points[i]);
+			    }
 		    },
 		    propagate);
 	}
@@ -399,14 +455,12 @@ class SurfelMapBase
 		derived().apply(
 		    code,
 		    [](auto& node, index_t const index) {
-			    node.sum[index] = ...;
-			    node.sum_squares[index] = ...;
-			    node.num_points[index] = 0;
+			    surfel::clear(node.sum[index], node.sum_squares[index], node.num_points[index]);
 		    },
 		    [](auto& node) {
-			    node.sum.fill(...);
-			    node.sum_squares.fill(...);
-			    node.num_points.fill(0);
+			    for (index_t i = 0; node.surfelSize() != i; ++i) {
+				    surfel::clear(node.sum[i], node.sum_squares[i], node.num_points[i]);
+			    }
 		    },
 		    propagate);
 	}
@@ -432,14 +486,14 @@ class SurfelMapBase
 	// Constructors
 	//
 
-	SurfelMap() = default;
+	SurfelMapBase() = default;
 
-	SurfelMap(SurfelMap const& other) = default;
+	SurfelMapBase(SurfelMapBase const& other) = default;
 
-	SurfelMap(SurfelMap&& other) = default;
+	SurfelMapBase(SurfelMapBase&& other) = default;
 
 	template <class Derived2>
-	SurfelMap(SurfelMap<Derived2> const& other)
+	SurfelMapBase(SurfelMapBase<Derived2> const& other)
 	{
 	}
 
@@ -447,12 +501,12 @@ class SurfelMapBase
 	// Assignment operator
 	//
 
-	SurfelMap& operator=(SurfelMap const& rhs) = default;
+	SurfelMapBase& operator=(SurfelMapBase const& rhs) = default;
 
-	SurfelMap& operator=(SurfelMap&& rhs) = default;
+	SurfelMapBase& operator=(SurfelMapBase&& rhs) = default;
 
 	template <class Derived2>
-	SurfelMap& operator=(SurfelMap<Derived2> const& rhs)
+	SurfelMapBase& operator=(SurfelMapBase<Derived2> const& rhs)
 	{
 		return *this;
 	}
@@ -461,7 +515,7 @@ class SurfelMapBase
 	// Swap
 	//
 
-	void swap(SurfelMap&) noexcept {}
+	void swap(SurfelMapBase&) noexcept {}
 
 	//
 	// Derived
@@ -477,9 +531,9 @@ class SurfelMapBase
 
 	void initRoot()
 	{
-		derived().root().sum[derived().rootIndex()] = ...;
-		derived().root().sum_squares[derived().rootIndex()] = ...;
-		derived().root().num_points[derived().rootIndex()] = 0;
+		auto& root = derived().root();
+		auto const index = derived().rootIndex();
+		surfel::clear(root.sum[index], root.sum_squares[index], root.num_points[index]);
 	}
 
 	//
@@ -489,11 +543,11 @@ class SurfelMapBase
 	template <std::size_t N>
 	void updateNode(SurfelNode<N>& node, index_t const index, SurfelNode<N> const& children)
 	{
-		node.sum[index] = ...;
-		node.sum_squares[index] = ...;
-		node.num_points[index] = 0;
-
-		// TODO: Implement
+		surfel::clear(node.sum[index], node.sum_squares[index], node.num_points[index]);
+		for (index_t i = 0; N != i; ++i) {
+			surfel::add(node.sum[index], node.sum_squares[index], node.num_points[index],
+			            children.sum[i], children.sum_squares[i], children.num_points[i]);
+		}
 	}
 
 	//

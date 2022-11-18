@@ -71,7 +71,7 @@ struct AnyLabel {
 		add(std::forward<Args>(args)...);
 	}
 
-	void add(std::string const& arg)
+	void add(std::string const& tag)
 	{
 		need_fetch = strings.insert(arg).second || need_fetch;
 	}
@@ -96,8 +96,8 @@ struct AnyLabel {
 	}
 
  private:
-	std::unordered_set<std::string> strings;
-	SemanticRangeSet ranges;
+	std::unordered_set<std::string> tags;
+	SemanticRangeSet labels;
 	bool need_fetch;
 };
 
