@@ -313,6 +313,8 @@ class OctreeMap
 			return false;
 		}
 
+		// TODO: Use Buffer instead
+
 		if (compressed) {
 			std::stringstream data_stream(std::ios_base::in | std::ios_base::out |
 			                              std::ios_base::binary);
@@ -366,6 +368,8 @@ class OctreeMap
 		if constexpr (DataIdentifier::NO_DATA == identifier) {
 			return;
 		}
+		
+		// TODO: Use Buffer instead
 
 		out.write(reinterpret_cast<char const*>(&identifier), sizeof(identifier));
 
