@@ -43,6 +43,7 @@
 #define UFO_MAP_IO_H
 
 // UFO
+#include <ufo/map/buffer.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -136,124 +137,6 @@ template <typename T>
 {
 	return dataType<T>();
 }
-
-// Data storage
-class ReadBuffer
-{
- public:
-	virtual ~ReadBuffer() {}
-
-	ReadBuffer& read(void* dest, std::size_t count)
-	{
-		if (size() < index_ + count) {
-			// TODO: Fill in exception message
-			throw std::out_of_range("");
-		}
-
-		std::memmove(dest, data_ + index_, count);
-		index_ += count;
-
-		return *this;
-	}
-
-	[[nodiscard]] virtual std::size_t size() const { return size_; }
-
-	[[nodiscard]] constexpr std::size_t readIndex() const noexcept { return index_; }
-
-	constexpr void skipRead(std::size_t count) noexcept { index_ += count; }
-
-	constexpr void setReadIndex(std::size_t index) noexcept { index_ = index; }
-
-	[[nodiscard]] std::size_t readLeft() const noexcept
-	{
-		return size_ < index_ ? 0 : index_ - size_;
-	}
-
-	[[nodiscard]] bool good() const noexcept
-	{
-		return true;  // TODO: Implement correctly
-	}
-
-	[[nodiscard]] bool fail() const noexcept
-	{
-		return false;  // TODO: Implement correctly
-	}
-
- protected:
-	std::uint8_t const* data_ = nullptr;
-	std::size_t size_ = 0;
-	std::size_t index_ = 0;
-};
-
-class WriteBuffer
-{
- public:
-	virtual ~WriteBuffer()
-	{
-		if (data_) {
-			free(data_);
-		}
-	}
-
-	WriteBuffer& write(void const* src, std::size_t count)
-	{
-		if (capacity() < index_ + count) {
-			reserve(index_ + count);
-		}
-
-		std::memmove(data_ + index_, src, count);
-		index_ += count;
-
-		size_ = std::max(size_, index_);
-
-		return *this;
-	}
-
-	virtual void reserve(std::size_t new_cap)
-	{
-		if (cap_ >= new_cap) {
-			return;
-		}
-
-		if (auto p_new =
-		        static_cast<std::uint8_t*>(realloc(data_, new_cap * sizeof(std::uint8_t)))) {
-			data_ = p_new;
-			cap_ = new_cap;
-		} else {
-			throw std::bad_alloc();
-		}
-	}
-
-	[[nodiscard]] virtual std::size_t size() const { return size_; }
-
-	[[nodiscard]] constexpr std::size_t capacity() const noexcept { return cap_; }
-
-	[[nodiscard]] constexpr std::size_t writeIndex() const noexcept { return index_; }
-
-	constexpr void setWriteIndex(std::size_t index) noexcept { index_ = index; }
-
- protected:
-	std::uint8_t* data_ = nullptr;
-	std::size_t size_ = 0;
-	std::size_t cap_ = 0;
-	std::size_t index_ = 0;
-};
-
-class Buffer : public ReadBuffer, public WriteBuffer
-{
- public:
-	virtual ~Buffer() {}
-
-	// TODO: Implement
-
-	[[nodiscard]] std::size_t size() const override { return WriteBuffer::size(); }
-
-	void reserve(std::size_t new_cap) override
-	{
-		WriteBuffer::reserve(new_cap);
-		ReadBuffer::data_ = WriteBuffer::data_;
-	}
-};
 
 [[nodiscard]] bool isUFOMap(std::filesystem::path const& filename);
 

@@ -66,25 +66,22 @@ struct State : StateDisplay {
 		std::scoped_lock object_lock(object_mutex);
 		objects.clear();
 		queued_objects.clear();
-		prev_visible.clear();
+		prev_visible_objects.clear();
 	}
 
 	// Flags
-	std::atomic_bool done = false;
 	std::atomic_bool regenerate = false;
 
 	// Messages
 	std::mutex message_mutex;
-	std::condition_variable message_cv;
 	std::vector<ufomap_msgs::UFOMap::ConstPtr> message_queue;
 
 	// Objects
 	std::mutex object_mutex;
 	std::unordered_map<ufo::map::Code, RenderData> objects;
-	std::unordered_map<ufo::map::Code, RenderData> queued_objects;
-
-	// Previous visible
-	std::vector<RenderData*> prev_visible;
+	std::unordered_map<ufo::map::Code, std::unordered_map<ufo::map::depth_t, Data>>
+	    queued_objects;
+	std::vector<RenderData*> prev_visible_objects;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

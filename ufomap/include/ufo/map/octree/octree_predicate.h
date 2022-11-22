@@ -62,6 +62,10 @@ struct PureLeaf {
 };
 
 struct Leaf {
+	constexpr Leaf(depth_t min_depth = 0) : min_depth(min_depth) {}
+
+	// Depth to consider as leaf
+	depth_t min_depth;
 };
 
 struct Inner {
@@ -195,9 +199,9 @@ struct PredicateValueCheck<Leaf> {
 	using Pred = Leaf;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const& m, Node n)
+	static constexpr bool apply(Pred p, Map const& m, Node n)
 	{
-		return m.isLeaf(n);
+		return m.isLeaf(n) || p.min_depth == n.depth();
 	}
 };
 
@@ -359,9 +363,9 @@ struct PredicateInnerCheck<Leaf> {
 	using Pred = Leaf;
 
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node) noexcept
+	static constexpr bool apply(Pred p, Map const&, Node n) noexcept
 	{
-		return true;
+		return p.min_depth < n.depth();
 	}
 };
 

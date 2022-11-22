@@ -160,16 +160,6 @@ struct FALSE {
 };
 
 //
-// BOOL
-//
-
-struct BOOL {
-	constexpr BOOL(bool value) : value(value) {}
-
-	bool value;
-};
-
-//
 // Static assert check
 //
 
@@ -259,13 +249,13 @@ struct PredicateValueCheck<FALSE> {
 };
 
 template <>
-struct PredicateValueCheck<BOOL> {
-	using Pred = BOOL;
+struct PredicateValueCheck<bool> {
+	using Pred = bool;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred p, Map const&, Node const&)
 	{
-		return p.value;
+		return p;
 	}
 };
 
@@ -347,13 +337,13 @@ struct PredicateInnerCheck<FALSE> {
 };
 
 template <>
-struct PredicateInnerCheck<BOOL> {
-	using Pred = BOOL;
+struct PredicateInnerCheck<bool> {
+	using Pred = bool;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred p, Map const&, Node const&)
 	{
-		return p.value;
+		return p;
 	}
 };
 

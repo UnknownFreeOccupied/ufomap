@@ -44,8 +44,15 @@
 
 // UFO
 #include <ufo/map/ufomap.h>
+#include <ufomap_msgs/UFOMap.h>
 #include <ufomap_rviz_plugins/state.h>
 #include <ufomap_rviz_plugins/worker_base.h>
+
+// STL
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 namespace ufomap_ros::rviz_plugins
 {
@@ -55,11 +62,18 @@ class Worker final : public WorkerBase
 	using Map = ufo::map::UFOMap<MapType, false, ufo::map::UFOLock::NONE, false, true>;
 
  public:
-	Worker(State& state) : state_(state) {
-		// TODO: Start thread
+	Worker(State& state) : state_(state), thread_(&Worker::processMessages(), this) {}
+
+	Worker(ufo::map::ReadBuffer& in, State& state) : map_(in), Worker(state) {}
+
+	void stop()
+	{
+		done_ = true;
+		notify();
+		thread_.join();
 	}
 
-	Worker(ReadBuffer& in, State& state) : map_(in), Worker(state) {}
+	void notify() { message_cv_.notify_all(); }
 
 	double resolution() const { return map_.size(); }
 
@@ -78,39 +92,39 @@ class Worker final : public WorkerBase
 	{
 		std::vector<ufo::map::Code> codes;
 		// TODO: Make correct
-		using Pred = ufo::map::predicate;
+		namespace Pred = ufo::map::predicate;
 		for (auto node : map_.query(Pred::Depth(depth) && Pred::Intersects(view))) {
 			codes.push_back(node.code());
 		}
 		return codes;
 	}
 
-	Buffer write() const { return map_.write(); }
+	ufo::map::Buffer write() const { return map_.write(); }
 
  private:
 	void processMessages()
 	{
-		while (!state_.done) {
+		while (!done_) {
 			std::unique_lock<std::mutex> message_lock(state_.message_mutex);
-			state_.message_cv.wait(
-			    message_lock, [this] { return !state_.message_queue.empty() || state_.done; });
+			message_cv_.wait(message_lock,
+			                 [this] { return !state_.message_queue.empty() || done_; });
 
 			if (done_) {
-				// TODO: Implement
+				return;
 			}
 
 			std::vector<ufomap_msgs::UFOMap::ConstPtr> queue;
-			queue.swap(message_queue_);
+			queue.reserve(state_.message_queue.size());
+			queue.swap(state_.message_queue);
 			message_lock.unlock();
 
 			updateMap(queue);
 
-			if (regenerate_) {
-				state_.regenerate = false;
-				map_.setModified(depth);
+			if (updateGridSizeDepth()) {
+				state_.regenerate = true;
 			}
 
-			generateObjects(depth);
+			generateObjects();
 
 			map_.resetModified();
 		}
@@ -118,22 +132,15 @@ class Worker final : public WorkerBase
 
 	void updateMap(std::vector<ufomap_msgs::UFOMap::ConstPtr> const& queue)
 	{
-		auto const size = map_.size();
-		auto const depth_levels = map_.depthLevels();
-
-		for (auto const& msg : msgs) {
+		for (auto const& msg : queue) {
 			msgToUfo(msg, map_, false);
-		}
-
-		if (map_.size() != size || map_.depthLevels() != depth_levels) {
-			clearObjects();
-			updateGridSizeDepth();
-			state_.regenerate = true;
 		}
 	}
 
-	void updateGridSizeDepth()
+	bool updateGridSizeDepth()
 	{
+		// TODO: Implement
+
 		auto const prev = grid_size_depth_;
 
 		Performance perf = performance_display_->getPerformance();
@@ -148,65 +155,85 @@ class Worker final : public WorkerBase
 
 	void generateObjects()
 	{
-		using Pred = ufo::map::predicate;
-		for (auto node :
-		     map_.query(Pred::Depth(depth) && Pred::Exists() && Pred::Modified())) {
-			RenderData data;
-			data.manager_ = ...;
-			data.position_ = ...;
-			data.orientation_ = ...;
+		namespace Pred = ufo::map::predicate;
 
-			auto pred =
-			    Pred::Leaf() && Pred::DepthMin(min_depth) && Pred::Exists() &&
-			    Pred::THEN(Pred::OccupancyMap(), ...) && Pred::THEN(Pred::ColorMap(), ...) &&
-			    Pred::THEN(Pred::TimeMap(), ...) && Pred::THEN(Pred::IntensityMap(), ...) &&
-			    Pred::THEN(Pred::CountMap(), ...) && Pred::THEN(Pred::ReflectionMap(), ...) &&
-			    Pred::THEN(Pred::SurfelMap(), ...) && Pred::THEN(Pred::SemanticMap(), ...);
+		bool only_modified = true;
+		if (state_.regenerate) {
+			state_.clearObjects();
+			state_.regenerate = false;
+			only_modified = false;
+		}
+
+		// TODO: Implement
+		auto pred =
+		    Pred::Leaf(min_depth) && Pred::Exists() &&
+		    Pred::THEN(
+		        Pred::OccupancyMap(),
+		        !filter_.occupancy ||
+		            Pred::OccupancyStates(filter_.unknown, filter_.free, filter_.occupied)) &&
+		    Pred::THEN(Pred::ColorMap(), !filter_.color || Pred::HasColor()) &&
+		    Pred::THEN(
+		        Pred::TimeMap(),
+		        !filter_.time || Pred::TimeInterval(filter_.min_time, filter_.max_time)) &&
+		    Pred::THEN(
+		        Pred::IntensityMap(),
+		        !filter_.intensity ||
+		            Pred::IntensityInterval(filter_.min_intensity, filter_.max_intensity)) &&
+		    Pred::THEN(Pred::CountMap(),
+		               !filter_.count ||
+		                   Pred::CountInterval(filter_.min_count, filter_.max_count)) &&
+		    Pred::THEN(Pred::ReflectionMap(), !filter_.reflection || ...) &&
+		    Pred::THEN(Pred::SurfelMap(), !filter_.surfel || ...) &&
+		    Pred::THEN(Pred::SemanticMap(), !filter_.semantic || ...);
+
+		for (auto node : map_.query(Pred::Depth(depth) && Pred::Exists() &&
+		                            (!only_modified || Pred::Modified()))) {
+			std::unordered_map<ufo::map::depth_t, Data> data;
 
 			for (auto node : map_.queryBV(node, pred)) {
-				fillData(data.transformed_voxels_[node.depth()], map_, node);
+				fillData(data[node.depth()], node);
 			}
 
 			std::scoped_lock object_lock(state_.object_mutex);
-			state_.queued_objects.insert_or_assign(node.code(), std::move(render_data));
+			state_.queued_objects.insert_or_assign(node.code(), std::move(data));
 		}
 	}
 
 	void fillData(Data& data, ufo::map::NodeBV node) const
 	{
-		data.addPosition(node.center());
+		data.addPosition(map_.center(node));
 
 		if constexpr (ufo::util::is_base_of_template_v<OccupancyMapBase, Map>) {
-			data.addOccupancy(map.occupancy(node) * 100);
+			data.addOccupancy(map_.occupancy(node) * 100);
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<TimeMapBase, Map>) {
-			data.addTime(map.time(node));
+			data.addTime(map_.time(node));
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<IntensityMapBase, Map>) {
-			data.addIntensity(map.intensity(node));
+			data.addIntensity(map_.intensity(node));
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<CountMapBase, Map>) {
-			data.addCount(map.count(node));
+			data.addCount(map_.count(node));
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<ReflectionMapBase, Map>) {
-			data.addHits(map.hits(node));
-			data.addMisses(map.misses(node));
+			data.addHits(map_.hits(node));
+			data.addMisses(map_.misses(node));
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<ColorMapBase, Map>) {
-			data.addColor(map.color(node));
+			data.addColor(map_.color(node));
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<SemanticMapBase, Map>) {
-			data.addSemantics(map.semantics(node));
+			data.addSemantics(map_.semantics(node));
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<SurfelMapBase, Map>) {
-			data.addSurfel(map.surfel(node));
+			data.addSurfel(map_.surfel(node));
 		}
 	}
 
@@ -216,6 +243,18 @@ class Worker final : public WorkerBase
 
 	// State
 	State& state_;
+
+	// Filter
+	Filter& filter_;
+
+	// Done
+	bool done_ = false;
+
+	// Condition variable
+	std::condition_variable message_cv_;
+
+	// Thread
+	std::thread thread_;
 };
 
 }  // namespace ufomap_ros::rviz_plugins
