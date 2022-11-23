@@ -71,7 +71,7 @@ class Worker final : public WorkerBase
 	}
 
 	Worker(ufo::map::ReadBuffer& in, State& state, Filter& filter)
-	    : map_(in), Worker(state, filter)
+	    : map_(in), state_(state), filter_(filter), thread_(&Worker::processMessages(), this)
 	{
 	}
 
