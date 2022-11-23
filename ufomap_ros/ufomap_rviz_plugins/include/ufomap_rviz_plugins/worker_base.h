@@ -42,10 +42,31 @@
 #ifndef UFOMAP_RVIZ_PLUGINS_WORKER_BASE_H
 #define UFOMAP_RVIZ_PLUGINS_WORKER_BASE_H
 
+// STL
+#include <cstdint>
+
 namespace ufomap_ros::rviz_plugins
 {
 class WorkerBase
 {
+ public:
+	virtual ~WorkerBase() {}
+
+	virtual void stop() = 0;
+
+	virtual void notify() = 0;
+
+	virtual double resolution() = 0;
+
+	virtual std::size_t numLeafNodes() = 0;
+
+	virtual std::size_t numInnerLeafNodes() = 0;
+
+	virtual std::size_t numInnerNodes() = 0;
+
+	virtual std::size_t memoryUsage() = 0;
+
+	virtual std::size_t memoryAllocated() = 0;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

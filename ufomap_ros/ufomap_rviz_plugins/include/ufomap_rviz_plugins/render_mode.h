@@ -73,6 +73,10 @@ enum class ColoringMode {
 	Y_AXIS,
 	Z_AXIS,
 	OCCUPANCY,
+	COUNT,
+	REFLECTIVENESS,
+	HITS,
+	MISSES,
 	INTENSITY,
 	FIXED
 };
@@ -114,6 +118,12 @@ static inline QString getStr(ColoringMode const& mode)
 			return "Z-Axis";
 		case ColoringMode::OCCUPANCY:
 			return "Occupancy";
+		case ColoringMode::REFLECTIVENESS:
+			return "Reflectiveness";
+		case ColoringMode::HITS:
+			return "Hits";
+		case ColoringMode::MISSES:
+			return "Misses";
 		case ColoringMode::INTENSITY:
 			return "Intensity";
 		case ColoringMode::FIXED:

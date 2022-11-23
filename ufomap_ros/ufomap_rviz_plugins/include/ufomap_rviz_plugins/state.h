@@ -46,7 +46,6 @@
 #include <ufo/map/code.h>
 #include <ufomap_msgs/UFOMap.h>
 #include <ufomap_rviz_plugins/render_data.h>
-#include <ufomap_rviz_plugins/state_display.h>
 
 // RViz
 #include <rviz/properties/bool_property.h>
@@ -60,7 +59,7 @@
 
 namespace ufomap_ros::rviz_plugins
 {
-struct State : StateDisplay {
+struct State {
 	void clearObjects()
 	{
 		std::scoped_lock object_lock(object_mutex);

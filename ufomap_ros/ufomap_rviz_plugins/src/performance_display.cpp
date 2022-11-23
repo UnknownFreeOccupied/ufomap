@@ -46,85 +46,36 @@ namespace ufomap_ros::rviz_plugins
 {
 PerformanceDisplay::PerformanceDisplay(rviz::Property* parent)
 {
+	performance_ =
+	    new rviz::Property("Performance", QVariant(), "Performance settings", parent);
+
 	far_clip_ = new rviz::FloatProperty("Far clip distance (m)", -1.0,
-	                                    "Infinity if negative", parent);
+	                                    "Infinity if negative", performance_);
 	far_clip_->setMin(-1.0);
 
-	// lod_levels_ =
-	//     new rviz::IntProperty("LOD levels", 5, "Number of level of detail levels",
-	//     parent);
-	// lod_levels_->setMin(0);
-	// lod_levels_->setMax(21);
-	// lod_distance_ = new rviz::FloatProperty("LOD distance drop-off (m)", 30.0,
-	//                                         "Distance for selecting other LOD", parent);
-	// lod_distance_->setMin(0.0);
-	// lod_distance_->setMax(100000.0);
-
-	grid_size_ = new rviz::FloatProperty("Grid size (m)", 10.0, "", parent);
+	grid_size_ = new rviz::FloatProperty("Grid size (m)", 10.0, "", performance_);
 	grid_size_->setMin(1.0);
 	grid_size_->setMax(100.0);
 
-	// target_fps_ = new rviz::FloatProperty("Target FPS", 60.0, "Target frame rate",
-	// parent); target_fps_->setMin(0.0); target_fps_->setMax(10000.0);
-
-	normalized_min_change_ =
-	    new rviz::IntProperty("Normalized min change (%)", 10, "", parent);
-	normalized_min_change_->setMin(0);
-	normalized_min_change_->setMax(100);
+	min_change_ = new rviz::IntProperty("Min change (%)", 10, "", performance_);
+	min_change_->setMin(0);
+	min_change_->setMax(100);
 
 	multithreaded_ =
-	    new rviz::BoolProperty("Multithreading", true, "Use multithreading", parent);
-
-	render_states_ = new rviz::Property("Render states", QVariant(),
-	                                    "Should which states to render", parent);
-	render_unknown_ =
-	    new rviz::BoolProperty("Unknown", true, "Render unknown space", render_states_);
-	render_free_ =
-	    new rviz::BoolProperty("Free", true, "Render free space", render_states_);
-	render_occupied_ =
-	    new rviz::BoolProperty("Occupied", true, "Render occupied space", render_states_);
-
-	render_depths_ = new rviz::Property("Render depths", QVariant(),
-	                                    "Min depth to render for state", parent);
-	min_depth_unknown_ =
-	    new rviz::IntProperty("Unknown", 0, "Min depth for unknown space", render_depths_);
-	min_depth_free_ =
-	    new rviz::IntProperty("Free", 0, "Min depth for free space", render_depths_);
-	min_depth_occupied_ = new rviz::IntProperty(
-	    "Occupied", 0, "Min depth for occupied space", render_depths_);
-	min_depth_unknown_->setMin(0);
-	min_depth_unknown_->setMax(21);
-	min_depth_free_->setMin(0);
-	min_depth_free_->setMax(21);
-	min_depth_occupied_->setMin(0);
-	min_depth_occupied_->setMax(21);
+	    new rviz::BoolProperty("Multithreading", true, "Use multithreading", performance_);
 }
 
-Performance PerformanceDisplay::getPerformance() const
+Performance PerformanceDisplay::performance() const
 {
 	Performance performance;
 
 	performance.far_clip = far_clip_->getFloat();
 
-	// performance.lod_levels = lod_levels_->getInt();
-
-	// performance.lod_distance = lod_distance_->getFloat();
-
 	performance.grid_size = grid_size_->getFloat();
 
-	// performance.target_fps = target_fps_->getFloat();
-
-	performance.normalized_min_change = normalized_min_change_->getInt() / 100.0;
+	performance.normalized_min_change = min_change_->getInt() / 100.0;
 
 	performance.multithreaded = multithreaded_->getBool();
-
-	performance.render_unknown = render_unknown_->getBool();
-	performance.render_free = render_free_->getBool();
-	performance.render_occupied = render_occupied_->getBool();
-
-	performance.min_depth_unknown = min_depth_unknown_->getInt();
-	performance.min_depth_free = min_depth_free_->getInt();
-	performance.min_depth_occupied = min_depth_occupied_->getInt();
 
 	return performance;
 }

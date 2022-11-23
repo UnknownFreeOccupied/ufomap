@@ -50,6 +50,7 @@
 #include <immintrin.h>
 
 #include <cassert>
+#include <functional>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -287,13 +288,24 @@ class Code
 	// The depth of the Morton code
 	depth_t depth_ = 0;
 };
+}  // namespace ufo::map
 
+namespace std
+{
+template <>
+struct hash<ufo::map::Code> {
+	std::size_t operator()(ufo::map::Code code) const { return code.code(); }
+};
+}  // namespace std
+
+namespace ufo::map
+{
 using CodeSet = std::set<Code>;
-using CodeUnorderedSet = std::unordered_set<Code, Code::Hash>;
+using CodeUnorderedSet = std::unordered_set<Code>;
 template <typename T>
 using CodeMap = std::map<Code, T>;
 template <typename T>
-using CodeUnorderedMap = std::unordered_map<Code, T, Code::Hash>;
+using CodeUnorderedMap = std::unordered_map<Code, T>;
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_CODE_H

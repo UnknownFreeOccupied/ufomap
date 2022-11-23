@@ -71,8 +71,9 @@ UFOMapDisplay::UFOMapDisplay() { setupResources(); }
 
 UFOMapDisplay::~UFOMapDisplay()
 {
-	state_.done = true;
-	state_.message_cv.notify_one();
+	if (worker_) {
+		worker_->stop();
+	}
 }
 
 void UFOMapDisplay::setupResources()
@@ -146,6 +147,21 @@ void UFOMapDisplay::onInitialize()
 	depth_property_->setMin(0);
 	depth_property_->setMax(22);
 
+	occupancy_thres_property_ =
+	    new rviz::Property("Occupancy", QVariant(), "Occupancy threshold", this);
+	occupied_thres_property_ = new rviz::IntProperty(
+	    "Occupied thres.", 50, "Occupied threshold", occupancy_thres_property_);
+	free_thres_property_ = new rviz::IntProperty("Free thres.", 50, "Free threshold",
+	                                             occupancy_thres_property_);
+	occupied_thres_property_->setMin(0);
+	occupied_thres_property_->setMax(100);
+	free_thres_property_->setMin(0);
+	free_thres_property_->setMax(100);
+
+	filter_display_ = std::make_unique<FilterDisplay>(this, context_->getFrameManager());
+
+	performance_display_ = std::make_unique<PerformanceDisplay>(this);
+
 	updateGUI();
 }
 
@@ -170,7 +186,7 @@ void UFOMapDisplay::updateGUI()
 		coloring_property_->addOption(getStr(ColoringMode::SURFEL_NORMAL),
 		                              ufo::util::enumToValue(ColoringMode::SURFEL_NORMAL));
 	}
-	if (occupancy_->getBool()) {
+	if (occupancy_property_->getBool()) {
 		coloring_property_->addOption(getStr(ColoringMode::OCCUPANCY),
 		                              ufo::util::enumToValue(ColoringMode::OCCUPANCY));
 	}
@@ -183,8 +199,8 @@ void UFOMapDisplay::updateGUI()
 		                              ufo::util::enumToValue(ColoringMode::COUNT));
 	}
 	if (reflection_property_->getBool()) {
-		coloring_property_->addOption(getStr(ColoringMode::REFLECTIVNESS),
-		                              ufo::util::enumToValue(ColoringMode::REFLECTIVNESS));
+		coloring_property_->addOption(getStr(ColoringMode::REFLECTIVENESS),
+		                              ufo::util::enumToValue(ColoringMode::REFLECTIVENESS));
 		coloring_property_->addOption(getStr(ColoringMode::HITS),
 		                              ufo::util::enumToValue(ColoringMode::HITS));
 		coloring_property_->addOption(getStr(ColoringMode::MISSES),
@@ -215,58 +231,58 @@ void UFOMapDisplay::something()
 	if (reflection_property_->getBool()) {
 		map_type |= ufo::map::MapType::REFLECTION;
 	}
-	if (semantic_property_->getBool()) {
-		map_type |= ufo::map::MapType::SEMANTIC;
-	}
+	// if (semantic_property_->getBool()) {
+	// 	map_type |= ufo::map::MapType::SEMANTIC;
+	// }
 	if (surfel_property_->getBool()) {
 		map_type |= ufo::map::MapType::SURFEL;
 	}
 
-#define REPEAT_2(M, N) M(N)  // M(N + 1)
-#define REPEAT_4(M, N) REPEAT_2(M, N) REPEAT_2(M, N + 2)
-#define REPEAT_8(M, N) REPEAT_4(M, N) REPEAT_4(M, N + 4)
-#define REPEAT_16(M, N) REPEAT_8(M, N) REPEAT_8(M, N + 8)
-#define REPEAT_32(M, N) REPEAT_16(M, N) REPEAT_16(M, N + 16)
-#define REPEAT_64(M, N) REPEAT_32(M, N) REPEAT_32(M, N + 32)
-#define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
-#define REPEAT_256(M, N) REPEAT_128(M, N) REPEAT_128(M, N + 128)
-#define REPEAT_512(M, N) REPEAT_256(M, N) REPEAT_256(M, N + 256)
-#define REPEAT_1024(M, N) REPEAT_512(M, N) REPEAT_512(M, N + 512)
-#define REPEAT_2048(M, N) REPEAT_1024(M, N) REPEAT_1024(M, N + 1024)
-#define REPEAT_4096(M, N) REPEAT_2048(M, N) REPEAT_2048(M, N + 2048)
-#define REPEAT_8192(M, N) REPEAT_4096(M, N) REPEAT_4096(M, N + 4096)
-#define REPEAT_16384(M, N) REPEAT_8192(M, N) REPEAT_8192(M, N + 8192)
-#define REPEAT_32768(M, N) REPEAT_16384(M, N) REPEAT_16384(M, N + 16384)
+	// #define REPEAT_2(M, N) M(N)  // M(N + 1)
+	// #define REPEAT_4(M, N) REPEAT_2(M, N) REPEAT_2(M, N + 2)
+	// #define REPEAT_8(M, N) REPEAT_4(M, N) REPEAT_4(M, N + 4)
+	// #define REPEAT_16(M, N) REPEAT_8(M, N) REPEAT_8(M, N + 8)
+	// #define REPEAT_32(M, N) REPEAT_16(M, N) REPEAT_16(M, N + 16)
+	// #define REPEAT_64(M, N) REPEAT_32(M, N) REPEAT_32(M, N + 32)
+	// #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
+	// #define REPEAT_256(M, N) REPEAT_128(M, N) REPEAT_128(M, N + 128)
+	// #define REPEAT_512(M, N) REPEAT_256(M, N) REPEAT_256(M, N + 256)
+	// #define REPEAT_1024(M, N) REPEAT_512(M, N) REPEAT_512(M, N + 512)
+	// #define REPEAT_2048(M, N) REPEAT_1024(M, N) REPEAT_1024(M, N + 1024)
+	// #define REPEAT_4096(M, N) REPEAT_2048(M, N) REPEAT_2048(M, N + 2048)
+	// #define REPEAT_8192(M, N) REPEAT_4096(M, N) REPEAT_4096(M, N + 4096)
+	// #define REPEAT_16384(M, N) REPEAT_8192(M, N) REPEAT_8192(M, N + 8192)
+	// #define REPEAT_32768(M, N) REPEAT_16384(M, N) REPEAT_16384(M, N + 16384)
 	// #define REPEAT_65536(M, N) REPEAT_32768(M, N) REPEAT_32768(M, N + 32768)
 	// #define REPEAT_131072(M, N) REPEAT_65536(M, N) REPEAT_65536(M, N + 65536)
 	// #define REPEAT_262144(M, N) REPEAT_131072(M, N) REPEAT_131072(M, N + 131072)
 	// #define REPEAT_524288(M, N) REPEAT_262144(M, N) REPEAT_262144(M, N + 262144)
 	// #define REPEAT_1048576(M, N) REPEAT_524288(M, N) REPEAT_524288(M, N + 524288)
 
-#define CASES(N)                                               \
-	case N: {                                                    \
-		worker_ = std::make_unique<Worker<N, ...>>(..., ..., ...); \
-		break;                                                     \
-	}
+	// #define CASES(N)                                               \
+// 	case N: {                                                    \
+// 		worker_ = std::make_unique<Worker<N, ...>>(..., ..., ...); \
+// 		break;                                                     \
+// 	}
 
-	switch (map_type) {
-		REPEAT_256(CASES, 1);  // FIXME: Change depending on how many map types there are
-		default:
-			worker_.reset();
-			break;
-	}
+	// 	switch (map_type) {
+	// 		REPEAT_256(CASES, 1);  // FIXME: Change depending on how many map types there are
+	// 		default:
+	// 			worker_.reset();
+	// 			break;
+	// 	}
 }
 
 void UFOMapDisplay::reset()
 {
 	MFDClass::reset();
-	state_.done = true;
-	state_.message_cv.notify_one();
+	if (worker_) {
+		worker_->stop();
+	}
 	state_.message_queue.clear();
 	state_.clearObjects();
 	worker_.reset();
-	state_.done = false;
-	// TODO: worker_ = std::make_unique<Worker<>>(state);
+	something();
 }
 
 void UFOMapDisplay::createWorker()
@@ -276,9 +292,11 @@ void UFOMapDisplay::createWorker()
 
 void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 {
-	std::scoped_lock<std::mutex> message_lock(message_mutex_);
-	message_queue_.push_back(msg);
-	message_cv_.notify_one();
+	std::scoped_lock<std::mutex> message_lock(state_.message_mutex);
+	state_.message_queue.push_back(msg);
+	if (worker_) {
+		worker_->notify();
+	}
 }
 
 void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
@@ -531,8 +549,8 @@ void UFOMapDisplay::updateStatus()
 	}
 
 	double res = worker_->resolution();
-	std::size_t mem_usage = worker_->memoryUSage();
-	std::size_t mem_alloc = worker_->memoryAllocated();
+	double mem_usage = worker_->memoryUsage();
+	double mem_alloc = worker_->memoryAllocated();
 
 	QString res_str;
 	if (0.01 > res) {

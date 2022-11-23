@@ -48,8 +48,8 @@
 #include <ufo/map/ufomap.h>
 #include <ufomap_msgs/UFOMap.h>
 // #include <ufomap_rviz_plugins/data.h>
-// #include <ufomap_rviz_plugins/filter_display.h>
-// #include <ufomap_rviz_plugins/performance_display.h>
+#include <ufomap_rviz_plugins/filter_display.h>
+#include <ufomap_rviz_plugins/performance_display.h>
 // #include <ufomap_rviz_plugins/render_data.h>
 // #include <ufomap_rviz_plugins/render_display.h>
 // #include <ufomap_rviz_plugins/voxels.h>
@@ -101,6 +101,8 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 
 	void processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg) override;
 
+	void something();
+
  private:
 	ufo::geometry::Frustum viewFrustum(Ogre::Real far_clip) const;
 
@@ -116,6 +118,13 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 
 	// State
 	State state_;
+
+	// Filter
+	std::unique_ptr<FilterDisplay> filter_display_;
+	Filter filter_;
+
+	// Performance
+	std::unique_ptr<PerformanceDisplay> performance_display_;
 
 	//
 	// GUI properties
@@ -140,6 +149,10 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 	rviz::FloatProperty* alpha_property_;
 	rviz::FloatProperty* scale_property_;
 	rviz::IntProperty* depth_property_;
+
+	rviz::Property* occupancy_thres_property_;
+	rviz::IntProperty* occupied_thres_property_;
+	rviz::IntProperty* free_thres_property_;
 };
 
 }  // namespace ufomap_ros::rviz_plugins

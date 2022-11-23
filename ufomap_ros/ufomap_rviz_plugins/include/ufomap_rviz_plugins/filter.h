@@ -53,19 +53,53 @@
 namespace ufomap_ros::rviz_plugins
 {
 struct Filter {
+	// Depth
+	ufo::map::depth_t min_depth;
+
 	// Occupancy
-	bool filter_occupancy;
-	uint8_t min_occupancy;
-	uint8_t max_occupancy;
+	bool occupancy;
+	bool unknown;
+	bool free;
+	bool occupied;
+	ufo::map::logit_t min_occupancy;
+	ufo::map::logit_t max_occupancy;
+
+	// Color
+	bool color;
 
 	// Time step
-	bool filter_time;
+	bool time;
 	ufo::map::time_t min_time;
 	ufo::map::time_t max_time;
 
+	// Intensity
+	bool intensity;
+	ufo::map::intensity_t min_intensity;
+	ufo::map::intensity_t max_intensity;
+
+	// Count
+	bool count;
+	ufo::map::count_t min_count;
+	ufo::map::count_t max_count;
+
+	// Reflection
+	bool reflection;
+	double min_reflection;
+	double max_reflection;
+	ufo::map::count_t min_hits;
+	ufo::map::count_t max_hits;
+	ufo::map::count_t min_misses;
+	ufo::map::count_t max_misses;
+
+	// Surfel
+	bool surfel;
+	ufo::map::count_t min_surfel_points;
+	ufo::map::count_t max_surfel_points;
+	double min_planarity;
+	double max_planarity;
+
 	// Semantics
-	bool filter_semantics;
-	// TODO: Add labels
+	bool semantics;
 	ufo::map::value_t min_semantic_value;
 	ufo::map::value_t max_semantic_value;
 
@@ -75,22 +109,23 @@ struct Filter {
 
 	bool operator==(Filter const& rhs) const
 	{
-		bool occ = rhs.filter_occupancy == filter_occupancy &&
-		           (!filter_occupancy || (rhs.min_occupancy == min_occupancy &&
-		                                  rhs.max_occupancy == max_occupancy));
+		return true;
+		// TODO: Implement
+		// bool occ = rhs.filter_occupancy == filter_occupancy &&
+		//            (!filter_occupancy || (rhs.min_occupancy == min_occupancy &&
+		//                                   rhs.max_occupancy == max_occupancy));
 
-		bool ts = rhs.filter_time == filter_time &&
-		          (!filter_time || (rhs.min_time == min_time &&
-		                                 rhs.max_time == max_time));
+		// bool ts = rhs.filter_time == filter_time &&
+		//           (!filter_time || (rhs.min_time == min_time && rhs.max_time == max_time));
 
-		bool sem = rhs.filter_semantics == filter_semantics &&
-		           (!filter_semantics || (rhs.min_semantic_value == min_semantic_value &&
-		                                  rhs.max_semantic_value == max_semantic_value));
+		// bool sem = rhs.filter_semantics == filter_semantics &&
+		//            (!filter_semantics || (rhs.min_semantic_value == min_semantic_value &&
+		//                                   rhs.max_semantic_value == max_semantic_value));
 
-		bool bv = rhs.filter_bounding_volume == filter_bounding_volume &&
-		          (!filter_bounding_volume || (rhs.bounding_volume == bounding_volume));
+		// bool bv = rhs.filter_bounding_volume == filter_bounding_volume &&
+		//           (!filter_bounding_volume || (rhs.bounding_volume == bounding_volume));
 
-		return occ && ts && sem && bv;
+		// return occ && ts && sem && bv;
 	}
 
 	bool operator!=(Filter const& rhs) const { return !(*this == rhs); }

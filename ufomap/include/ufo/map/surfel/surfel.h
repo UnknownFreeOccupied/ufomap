@@ -260,13 +260,13 @@ struct Surfel {
 };
 }  // namespace ufo::map
 
-ufo::map::Surfel operator+(ufo::map::Surfel lhs, ufo::map::Surfel const& rhs)
+inline ufo::map::Surfel operator+(ufo::map::Surfel lhs, ufo::map::Surfel const& rhs)
 {
 	lhs += rhs;
 	return lhs;
 }
 
-ufo::map::Surfel operator-(ufo::map::Surfel lhs, ufo::map::Surfel const& rhs)
+inline ufo::map::Surfel operator-(ufo::map::Surfel lhs, ufo::map::Surfel const& rhs)
 {
 	lhs -= rhs;
 	return lhs;

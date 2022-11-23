@@ -77,21 +77,29 @@ class Data
 		}
 	}
 
-	void addOccupancy(float occupancy) { occupancy_.emplace_back(occupancy); }
+	void addOccupancy(float occupancy) { occupancy_.push_back(occupancy); }
+
+	void addColor(ufo::map::Color color) { color_.push_back(color); }
 
 	void addTime(ufo::map::time_t time)
 	{
-		time_.emplace_back(time);
+		time_.push_back(time);
 
 		min_time_ = std::min(min_time_, time);
 		max_time_ = std::max(max_time_, time);
 	}
 
-	void addColor(ufo::map::Color color)
+	void addIntensity(ufo::map::intensity_t intensity) { intensity_.push_back(intensity); }
+
+	void addCount(ufo::map::count_t count) { count_.push_back(count); }
+
+	void addReflection(ufo::map::count_t hits, ufo::map::count_t misses)
 	{
-		color_.emplace_back(color_lut[color.blue], color_lut[color.green],
-		                    color_lut[color.red], 1.0f);
+		hits_.push_back(hits);
+		misses_.push_back(misses);
 	}
+
+	void addSurfel(ufo::map::Surfel const& surfel) { surfel_.push_back(surfel); }
 
 	template <class SemanticContainer>
 	void addSemantics(SemanticContainer const& semantics)
@@ -128,14 +136,14 @@ class Data
  private:
 	std::vector<Ogre::Vector3> position_;
 	std::vector<ufo::map::occupancy_t> occupancy_;
+	std::vector<ufo::map::Color> color_;
 	std::vector<ufo::map::time_t> time_;
 	std::vector<ufo::map::intensity_t> intensity_;
 	std::vector<ufo::map::count_t> count_;
 	std::vector<ufo::map::count_t> hits_;
 	std::vector<ufo::map::count_t> misses_;
-	std::vector<ufo::map::Color> color_;
-	std::vector<std::vector<ufo::map::Semantic>> semantics_;
 	std::vector<ufo::map::Surfel> surfel_;
+	std::vector<std::vector<ufo::map::Semantic>> semantics_;
 
 	ufo::map::Point min_position_;
 	ufo::map::Point max_position_;

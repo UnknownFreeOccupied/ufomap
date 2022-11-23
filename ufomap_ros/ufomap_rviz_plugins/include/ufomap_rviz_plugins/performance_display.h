@@ -58,28 +58,18 @@ class PerformanceDisplay
  public:
 	PerformanceDisplay(rviz::Property* parent);
 
-	Performance getPerformance() const;
+	Performance performance() const;
 
  private:
-	rviz::FloatProperty* far_clip_;
-	// rviz::IntProperty* lod_levels_;
-	// rviz::FloatProperty* lod_distance_;
-	rviz::FloatProperty* grid_size_;
-	// rviz::FloatProperty* target_fps_;
+	rviz::Property* performance_;
 
-	rviz::IntProperty* normalized_min_change_;
+	rviz::FloatProperty* far_clip_;
+
+	rviz::FloatProperty* grid_size_;
+
+	rviz::IntProperty* min_change_;
 
 	rviz::BoolProperty* multithreaded_;
-
-	rviz::Property* render_states_;
-	rviz::BoolProperty* render_unknown_;
-	rviz::BoolProperty* render_free_;
-	rviz::BoolProperty* render_occupied_;
-
-	rviz::Property* render_depths_;
-	rviz::IntProperty* min_depth_unknown_;
-	rviz::IntProperty* min_depth_free_;
-	rviz::IntProperty* min_depth_occupied_;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

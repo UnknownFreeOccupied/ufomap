@@ -52,22 +52,12 @@ namespace ufomap_ros::rviz_plugins
 {
 struct Performance {
 	double far_clip;
-	// size_t lod_levels;
-	// double lod_distance;
+
 	double grid_size;
-	// double target_fps;
 
 	double normalized_min_change;
 
 	bool multithreaded;
-
-	bool render_unknown;
-	bool render_free;
-	bool render_occupied;
-
-	ufo::map::depth_t min_depth_unknown;
-	ufo::map::depth_t min_depth_free;
-	ufo::map::depth_t min_depth_occupied;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

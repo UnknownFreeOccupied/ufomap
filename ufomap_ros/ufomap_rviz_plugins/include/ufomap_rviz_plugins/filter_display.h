@@ -48,10 +48,15 @@
 // ROS
 #include <rviz/frame_manager.h>
 #include <rviz/properties/bool_property.h>
+#include <rviz/properties/color_property.h>
+#include <rviz/properties/float_property.h>
 #include <rviz/properties/int_property.h>
 #include <rviz/properties/property.h>
 #include <rviz/properties/tf_frame_property.h>
 #include <rviz/properties/vector_property.h>
+
+// STL
+#include <unordered_map>
 
 namespace ufomap_ros::rviz_plugins
 {
@@ -63,27 +68,73 @@ class FilterDisplay
 	Filter getFilter() const;
 
  private:
-	// Occupancy thresholds
-	rviz::BoolProperty* filter_occupancy_;
+	// Filter
+	rviz::Property* filter_;
+
+	// Occupancy
+	rviz::BoolProperty* occupancy_;
+	rviz::BoolProperty* unknown_;
+	rviz::BoolProperty* free_;
+	rviz::BoolProperty* occupied_;
 	rviz::IntProperty* min_occupancy_;
 	rviz::IntProperty* max_occupancy_;
 
-	// Time step
-	rviz::BoolProperty* filter_time_;
-	rviz::IntProperty* min_time_;
-	rviz::IntProperty* max_time_;
+	// Color
+	rviz::BoolProperty* color_;
 
-	// Semantics
-	rviz::BoolProperty* filter_semantics_;
-	// TODO: Add labels
-	rviz::IntProperty* min_semantic_value_;
-	rviz::IntProperty* max_semantic_value_;
+	// Time
+	rviz::BoolProperty* time_;
+	rviz::FloatProperty* min_time_;
+	rviz::FloatProperty* max_time_;
+
+	// Intensity
+	rviz::BoolProperty* intensity_;
+	rviz::FloatProperty* min_intensity_;
+	rviz::FloatProperty* max_intensity_;
+
+	// Count
+	rviz::BoolProperty* count_;
+	rviz::IntProperty* min_count_;
+	rviz::IntProperty* max_count_;
+
+	// Reflection
+	rviz::BoolProperty* reflection_;
+	rviz::BoolProperty* reflectiveness_;
+	rviz::FloatProperty* min_reflectivness_;
+	rviz::FloatProperty* max_reflectivness_;
+	rviz::BoolProperty* hits_;
+	rviz::IntProperty* min_hits_;
+	rviz::IntProperty* max_hits_;
+	rviz::BoolProperty* misses_;
+	rviz::IntProperty* min_misses_;
+	rviz::IntProperty* max_misses_;
+
+	// Surfel
+	rviz::BoolProperty* surfel_;
+	rviz::BoolProperty* planarity_;
+	rviz::FloatProperty* min_planarity_;
+	rviz::FloatProperty* max_planarity_;
+
+	// Semantic
+	rviz::BoolProperty* semantics_;
+	rviz::BoolProperty* semantic_value_;
+	rviz::FloatProperty* min_semantic_value_;
+	rviz::FloatProperty* max_semantic_value_;
+	rviz::BoolProperty* semantic_tag_;
+	std::vector<rviz::BoolProperty*> semantic_tags_;
+	std::unordered_map<rviz::BoolProperty*, rviz::BoolProperty*> semantic_tag_set_color_;
+	std::unordered_map<rviz::BoolProperty*, rviz::ColorProperty*> semantic_tag_colors_;
+	std::unordered_map<rviz::BoolProperty*, rviz::BoolProperty*> semantic_tag_set_label_;
+	std::unordered_map<rviz::BoolProperty*, std::vector<rviz::BoolProperty*>>
+	    semantic_tag_labels_;
+	rviz::BoolProperty* semantic_label_;
+	std::vector<rviz::BoolProperty*> semantic_labels_;
 
 	// Frame manager
 	mutable rviz::FrameManager* frame_manager_;
 
 	// Bounding box
-	rviz::BoolProperty* filter_bbx_;
+	rviz::BoolProperty* bbx_;
 	rviz::TfFrameProperty* tf_bbx_;
 	rviz::VectorProperty* min_bbx_;
 	rviz::VectorProperty* max_bbx_;
