@@ -258,17 +258,17 @@ class CountMapBase
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
 		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.count.data(),
-				        first->node.count.size() *
-				            sizeof(typename decltype(first->node.count)::value_type));
+			if (first->indices.all()) {
+				in.read(first->node->count.data(),
+				        first->node->count.size() *
+				            sizeof(typename decltype(first->node->count)::value_type));
 			} else {
-				decltype(first->node.count) count;
+				decltype(first->node->count) count;
 				in.read(count.data(),
 				        count.size() * sizeof(typename decltype(count)::value_type));
 				for (index_t i = 0; count.size() != i; ++i) {
-					if (first->index_field[i]) {
-						first->node.count[i] = count[i];
+					if (first->indices[i]) {
+						first->node->count[i] = count[i];
 					}
 				}
 			}

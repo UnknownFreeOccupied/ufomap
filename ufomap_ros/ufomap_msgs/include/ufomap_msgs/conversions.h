@@ -43,6 +43,7 @@
 #define UFOMAP_ROS_MSGS_CONVERSIONS_H
 
 // UFO ROS
+#include <ufo/map/buffer.h>
 #include <ufomap_msgs/UFOMap.h>
 
 // STL
@@ -63,7 +64,11 @@ void msgToUfo(ufomap_msgs::UFOMap const& msg, Map& map, bool propagate = true)
 		return;
 	}
 
-	map.read(msg.data, propagate);
+	ufo::map::Buffer buffer;
+	buffer.write(msg.data.data(),
+	             msg.data.size() * sizeof(decltype(ufomap_msgs::UFOMap::data)::value_type));
+
+	map.read(buffer, propagate);
 
 	// std::stringstream data(std::ios_base::in | std::ios_base::out |
 	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |

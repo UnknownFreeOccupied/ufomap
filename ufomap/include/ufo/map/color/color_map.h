@@ -423,29 +423,29 @@ class ColorMapBase
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
 		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.red.data(),
-				        first->node.red.size() *
-				            sizeof(typename decltype(first->node.red)::value_type));
-				in.read(first->node.green.data(),
-				        first->node.green.size() *
-				            sizeof(typename decltype(first->node.green)::value_type));
-				in.read(first->node.blue.data(),
-				        first->node.blue.size() *
-				            sizeof(typename decltype(first->node.blue)::value_type));
+			if (first->indices.all()) {
+				in.read(first->node->red.data(),
+				        first->node->red.size() *
+				            sizeof(typename decltype(first->node->red)::value_type));
+				in.read(first->node->green.data(),
+				        first->node->green.size() *
+				            sizeof(typename decltype(first->node->green)::value_type));
+				in.read(first->node->blue.data(),
+				        first->node->blue.size() *
+				            sizeof(typename decltype(first->node->blue)::value_type));
 			} else {
-				decltype(first->node.red) red;
-				decltype(first->node.green) green;
-				decltype(first->node.blue) blue;
+				decltype(first->node->red) red;
+				decltype(first->node->green) green;
+				decltype(first->node->blue) blue;
 				in.read(red.data(), red.size() * sizeof(typename decltype(red)::value_type));
 				in.read(green.data(),
 				        green.size() * sizeof(typename decltype(green)::value_type));
 				in.read(blue.data(), blue.size() * sizeof(typename decltype(blue)::value_type));
 				for (index_t i = 0; red.size() != i; ++i) {
-					if (first->index_field[i]) {
-						first->node.red[i] = red[i];
-						first->node.green[i] = green[i];
-						first->node.blue[i] = blue[i];
+					if (first->indices[i]) {
+						first->node->red[i] = red[i];
+						first->node->green[i] = green[i];
+						first->node->blue[i] = blue[i];
 					}
 				}
 			}

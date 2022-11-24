@@ -290,12 +290,12 @@ class DistanceMap
 
 		auto const d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += 8) {
-			if (first->index_field.all()) {
-				std::copy(d + i, d + i + 8, first->node.distance.data());
+			if (first->indices.all()) {
+				std::copy(d + i, d + i + 8, first->node->distance.data());
 			} else {
-				for (index_t index = 0; first->node.distance.size() != index; ++i, ++index) {
+				for (index_t index = 0; first->node->distance.size() != index; ++i, ++index) {
 					if (first.index_field[index]) {
-						first->node.distance[index] = *(d + i + index);
+						first->node->distance[index] = *(d + i + index);
 					}
 				}
 			}
@@ -311,7 +311,7 @@ class DistanceMap
 		auto data = std::make_unique<distance_t[]>(num_nodes);
 		auto d = data.get();
 		for (std::size_t i = 0; i != num_nodes; ++first, i += n) {
-			std::copy(first->node.beginDistance(), first->node.endDistance(), d + i);
+			std::copy(first->node->beginDistance(), first->node->endDistance(), d + i);
 		}
 
 		out.write(reinterpret_cast<char const*>(&n), sizeof(n));

@@ -57,6 +57,12 @@ struct ReflectionNode {
 	std::array<count_t, N> misses;
 
 	//
+	// Size
+	//
+
+	[[nodiscard]] static constexpr std::size_t reflectionSize() { return N; }
+
+	//
 	// Fill
 	//
 

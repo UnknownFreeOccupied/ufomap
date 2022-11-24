@@ -210,9 +210,9 @@ struct PredicateValueCheck<Spatial<Geometry, Tag, Negated>> {
 	static inline bool apply(Pred const& p, Tree const&, Node const& n)
 	{
 		if constexpr (Negated) {
-			return !SpatialCall<Tag>::apply(n.getBoundingVolume(), p.geometry);
+			return !SpatialCall<Tag>::apply(n.boundingVolume(), p.geometry);
 		} else {
-			return SpatialCall<Tag>::apply(n.getBoundingVolume(), p.geometry);
+			return SpatialCall<Tag>::apply(n.boundingVolume(), p.geometry);
 		}
 	}
 };
@@ -229,7 +229,7 @@ struct PredicateInnerCheck<Spatial<Geometry, Tag, false>> {
 	template <class Tree, class Node>
 	static inline bool apply(Pred const& p, Tree const&, Node const& n)
 	{
-		return SpatialCall<SpatialTag::INTERSECTS>::apply(n.getBoundingVolume(), p.geometry);
+		return SpatialCall<SpatialTag::INTERSECTS>::apply(n.boundingVolume(), p.geometry);
 	}
 };
 
@@ -241,7 +241,7 @@ struct PredicateInnerCheck<Spatial<Geometry, SpatialTag::CONTAINS, false>> {
 	template <class Tree, class Node>
 	static inline bool apply(Pred const& p, Tree const&, Node const& n)
 	{
-		return SpatialCall<SpatialTag::CONTAINS>::apply(n.getBoundingVolume(), p.geometry);
+		return SpatialCall<SpatialTag::CONTAINS>::apply(n.boundingVolume(), p.geometry);
 	}
 };
 
@@ -253,7 +253,7 @@ struct PredicateInnerCheck<Spatial<Geometry, SpatialTag::DISJOINT, false>> {
 	template <class Tree, class Node>
 	static inline bool apply(Pred const& p, Tree const&, Node const& n)
 	{
-		return !SpatialCall<SpatialTag::WITHIN>::apply(n.getBoundingVolume(), p.geometry);
+		return !SpatialCall<SpatialTag::WITHIN>::apply(n.boundingVolume(), p.geometry);
 	}
 };
 
@@ -269,7 +269,7 @@ struct PredicateInnerCheck<Spatial<Geometry, Tag, true>> {
 	template <class Tree, class Node>
 	static inline bool apply(Pred const& p, Tree const&, Node const& n)
 	{
-		return !SpatialCall<SpatialTag::WITHIN>::apply(n.getBoundingVolume(), p.geometry);
+		return !SpatialCall<SpatialTag::WITHIN>::apply(n.boundingVolume(), p.geometry);
 	}
 };
 
@@ -293,7 +293,7 @@ struct PredicateInnerCheck<Spatial<Geometry, SpatialTag::DISJOINT, true>> {
 	template <class Tree, class Node>
 	static inline bool apply(Pred const& p, Tree const&, Node const& n)
 	{
-		return SpatialCall<SpatialTag::INTERSECTS>::apply(n.getBoundingVolume(), p.geometry);
+		return SpatialCall<SpatialTag::INTERSECTS>::apply(n.boundingVolume(), p.geometry);
 	}
 };
 

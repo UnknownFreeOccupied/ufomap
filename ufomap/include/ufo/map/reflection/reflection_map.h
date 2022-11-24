@@ -207,13 +207,13 @@ class ReflectionMapBase
 
 	[[nodiscard]] count_t misses(Node node) const
 	{
-		return derived().leafNode(node).misses(node.index());
+		return derived().leafNode(node).misses[derived().dataIndex(node)];
 	}
 
 	[[nodiscard]] count_t misses(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.misses(code.index(depth));
+		return node.misses[code.index(depth)];
 	}
 
 	[[nodiscard]] count_t misses(Key key) const { return misses(derived().toCode(key)); }
@@ -533,23 +533,23 @@ class ReflectionMapBase
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
 		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.hits.data(),
-				        first->node.hits.size() *
-				            sizeof(typename decltype(first->node.hits)::value_type));
-				in.read(first->node.misses.data(),
-				        first->node.misses.size() *
-				            sizeof(typename decltype(first->node.misses)::value_type));
+			if (first->indices.all()) {
+				in.read(first->node->hits.data(),
+				        first->node->hits.size() *
+				            sizeof(typename decltype(first->node->hits)::value_type));
+				in.read(first->node->misses.data(),
+				        first->node->misses.size() *
+				            sizeof(typename decltype(first->node->misses)::value_type));
 			} else {
-				decltype(first->node.hits) hits;
-				decltype(first->node.misses) misses;
+				decltype(first->node->hits) hits;
+				decltype(first->node->misses) misses;
 				in.read(hits.data(), hits.size() * sizeof(typename decltype(hits)::value_type));
 				in.read(misses.data(),
 				        misses.size() * sizeof(typename decltype(misses)::value_type));
 				for (index_t i = 0; hits.size() != i; ++i) {
-					if (first->index_field[i]) {
-						first->node.hits[i] = hits[i];
-						first->node.misses[i] = misses[i];
+					if (first->indices[i]) {
+						first->node->hits[i] = hits[i];
+						first->node->misses[i] = misses[i];
 					}
 				}
 			}

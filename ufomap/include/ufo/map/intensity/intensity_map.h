@@ -275,12 +275,12 @@ class IntensityMapBase
 
 		auto const d = data.get();
 		for (; first != last; ++first, d += N) {
-			if (first->index_field.all()) {
-				std::copy(d, d + N, first->node.intensity.data());
+			if (first->indices.all()) {
+				std::copy(d, d + N, first->node->intensity.data());
 			} else {
 				for (index_t i = 0; N != i; ++i) {
-					if (first->index_field[i]) {
-						first->node.intensity[i] = *(d + i);
+					if (first->indices[i]) {
+						first->node->intensity[i] = *(d + i);
 					}
 				}
 			}
@@ -292,12 +292,12 @@ class IntensityMapBase
 	{
 		constexpr std::size_t const N = numData<OutputIt>();
 		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.intensity.data(), N * sizeof(intensity_t));
+			if (first->indices.all()) {
+				in.read(first->node->intensity.data(), N * sizeof(intensity_t));
 			} else {
 				for (index_t i = 0; N != i; ++i) {
-					if (first->index_field[i]) {
-						in.read(&first->node.intensity[i], sizeof(intensity_t));
+					if (first->indices[i]) {
+						in.read(&first->node->intensity[i], sizeof(intensity_t));
 					} else
 						in.skipRead(sizeof(intensity_t));
 				}

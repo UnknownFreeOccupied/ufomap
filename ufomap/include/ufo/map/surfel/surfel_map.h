@@ -577,30 +577,30 @@ class SurfelMapBase
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
 		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.sum.data(),
-				        first->node.sum.size() *
-				            sizeof(typename decltype(first->node.sum)::value_type));
-				in.read(first->node.sum_squares.data(),
-				        first->node.sum_squares.size() *
-				            sizeof(typename decltype(first->node.sum_squares)::value_type));
-				in.read(first->node.num_points.data(),
-				        first->node.num_points.size() *
-				            sizeof(typename decltype(first->node.num_points)::value_type));
+			if (first->indices.all()) {
+				in.read(first->node->sum.data(),
+				        first->node->sum.size() *
+				            sizeof(typename decltype(first->node->sum)::value_type));
+				in.read(first->node->sum_squares.data(),
+				        first->node->sum_squares.size() *
+				            sizeof(typename decltype(first->node->sum_squares)::value_type));
+				in.read(first->node->num_points.data(),
+				        first->node->num_points.size() *
+				            sizeof(typename decltype(first->node->num_points)::value_type));
 			} else {
-				decltype(first->node.sum) sum;
-				decltype(first->node.sum_squares) sum_squares;
-				decltype(first->node.num_points) num_points;
+				decltype(first->node->sum) sum;
+				decltype(first->node->sum_squares) sum_squares;
+				decltype(first->node->num_points) num_points;
 				in.read(sum.data(), sum.size() * sizeof(typename decltype(sum)::value_type));
 				in.read(sum_squares.data(),
 				        sum_squares.size() * sizeof(typename decltype(sum_squares)::value_type));
 				in.read(num_points.data(),
 				        num_points.size() * sizeof(typename decltype(num_points)::value_type));
 				for (index_t i = 0; sum.size() != i; ++i) {
-					if (first->index_field[i]) {
-						first->node.sum[i] = sum[i];
-						first->node.sum_squares[i] = sum_squares[i];
-						first->node.num_points[i] = num_points[i];
+					if (first->indices[i]) {
+						first->node->sum[i] = sum[i];
+						first->node->sum_squares[i] = sum_squares[i];
+						first->node->num_points[i] = num_points[i];
 					}
 				}
 			}

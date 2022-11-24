@@ -1404,7 +1404,7 @@ class SemanticMapBase
 
 			out.write(reinterpret_cast<char*>(sizes.data()), N * sizeof(size_type));
 
-			if (first->index_field.all()) {
+			if (first->indices.all()) {
 				sem.resizeLazy(sizes);
 				auto size = std::accumulate(std::cbegin(sizes), std::cend(sizes), std::size_t(0));
 				if (0 != size) {
@@ -1413,7 +1413,7 @@ class SemanticMapBase
 			} else {
 				auto cur_sizes = sem.sizes();
 				for (index_t i = 0; N != i; ++i) {
-					if (!first->index_field[i]) {
+					if (!first->indices[i]) {
 						sizes[i] = cur_sizes[i];
 					}
 				}
@@ -1421,7 +1421,7 @@ class SemanticMapBase
 				sem.resize(sizes);
 
 				for (index_t i = 0; N != i; ++i) {
-					if (first->index_field[i]) {
+					if (first->indices[i]) {
 						in.read(reinterpret_cast<char*>(sem.begin(i)), sizes[i] * sizeof(Semantic));
 					} else {
 						// Skip forward

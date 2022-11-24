@@ -45,12 +45,17 @@
 // UFO
 #include <ufo/map/predicate/predicates.h>
 #include <ufo/map/types.h>
+#include <ufo/util/type_traits.h>
 
 // STL
 #include <functional>
 
 namespace ufo::map::predicate
 {
+// Forward declare
+template <class Derived>
+class OccupancyMapBase;
+
 //
 // Predicates
 //
@@ -144,22 +149,20 @@ struct PredicateValueCheck<OccupancyMap> {
 	using Pred = OccupancyMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred, Map const& m, Node n)
-	    -> decltype(m.isUnknown(n), true)
+	static constexpr bool apply(Pred, Map const&, Node)
 	{
+		return util::is_base_of_template_v<OccupancyMapBase, Map>;
 	}
-
-	static constexpr bool apply(...) { return false; }
 };
 
 template <class PredPost>
 struct PredicateValueCheck<THEN<OccupancyMap, PredPost>> {
 	using Pred = THEN<OccupancyMap, PredPost>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
-		if constexpr (PredicateValueCheck<OccupancyMap>::apply(p.pre, m, n)) {
+		if constexpr (util::is_base_of_template_v<OccupancyMapBase, Map>) {
 			return PredicateValueCheck<PredPost>::apply(p.post, m, n);
 		} else {
 			return true;
@@ -298,23 +301,20 @@ struct PredicateInnerCheck<OccupancyMap> {
 	using Pred = OccupancyMap;
 
 	template <class Map>
-	static constexpr auto apply(Pred, Map const& m, Node n)
-	    -> decltype(m.isOccupied(n), true)
+	static constexpr bool apply(Pred, Map const&, Node)
 	{
-		return true;
+		return util::is_base_of_template_v<OccupancyMapBase, Map>;
 	}
-
-	static constexpr bool apply(...) { return false; }
 };
 
 template <class PredPost>
 struct PredicateInnerCheck<THEN<OccupancyMap, PredPost>> {
 	using Pred = THEN<OccupancyMap, PredPost>;
 
-	template <class Map>
+	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
 	{
-		if constexpr (PredicateInnerCheck<OccupancyMap>::apply(p.pre, m, n)) {
+		if constexpr (util::is_base_of_template_v<OccupancyMapBase, Map>) {
 			return PredicateInnerCheck<PredPost>::apply(p.post, m, n);
 		} else {
 			return true;

@@ -1050,32 +1050,32 @@ class OccupancyMapBase
 		if (equal(clamping_thres_min_logit, clamping_thres_min_logit_) &&
 		    equal(clamping_thres_max_logit, clamping_thres_max_logit_)) {
 			for (; first != last; ++first) {
-				if (first->index_field.all()) {
-					in.read(first->node.occupancy.data(),
-					        first->node.occupancy.size() *
-					            sizeof(typename decltype(first->node.occupancy)::value_type));
+				if (first->indices.all()) {
+					in.read(first->node->occupancy.data(),
+					        first->node->occupancy.size() *
+					            sizeof(typename decltype(first->node->occupancy)::value_type));
 				} else {
-					decltype(first->node.occupancy) occupancy;
+					decltype(first->node->occupancy) occupancy;
 					in.read(occupancy.data(),
 					        occupancy.size() * sizeof(typename decltype(occupancy)::value_type));
 					for (index_t i = 0; occupancy.size() != i; ++i) {
-						first->node.occupancy[i] = occupancy[i];
+						first->node->occupancy[i] = occupancy[i];
 					}
 				}
 			}
 		} else {
-			if (first->index_field.all()) {
-				in.read(first->node.occupancy.data(),
-				        first->node.occupancy.size() *
-				            sizeof(typename decltype(first->node.occupancy)::value_type));
+			if (first->indices.all()) {
+				in.read(first->node->occupancy.data(),
+				        first->node->occupancy.size() *
+				            sizeof(typename decltype(first->node->occupancy)::value_type));
 				// TODO: Convert
 			} else {
-				decltype(first->node.occupancy) occupancy;
+				decltype(first->node->occupancy) occupancy;
 				in.read(occupancy.data(),
 				        occupancy.size() * sizeof(typename decltype(occupancy)::value_type));
 				for (index_t i = 0; occupancy.size() != i; ++i) {
 					// TODO: Convert
-					first->node.occupancy[i] = occupancy[i];
+					first->node->occupancy[i] = occupancy[i];
 				}
 			}
 		}

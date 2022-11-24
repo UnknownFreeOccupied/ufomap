@@ -184,6 +184,8 @@ class UFOMap
 
 	UFOMap(std::istream& in, bool auto_prune = false) : Base(in, auto_prune) {}
 
+	UFOMap(ReadBuffer& in, bool auto_prune = false) : Base(in, auto_prune) {}
+
 	UFOMap(UFOMap const& other) = default;
 
 	template <mt_t MapType2, bool ReuseNodes2, UFOLock Lock2, bool CountNodes2>

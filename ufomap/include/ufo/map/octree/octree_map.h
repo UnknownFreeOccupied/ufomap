@@ -111,6 +111,11 @@ class OctreeMap
 		Octree::read(in);
 	}
 
+	OctreeMap(ReadBuffer& in, bool auto_prune = false) : OctreeMap(0.1, 16, auto_prune)
+	{
+		Octree::read(in);
+	}
+
 	OctreeMap(OctreeMap const& other) : Octree(other), Bases<OctreeMap>(other)...
 	{
 		readFromOtherMap(other);
@@ -262,7 +267,7 @@ class OctreeMap
 			std::uint64_t next_index = in.readIndex() + data_size;
 
 			(readNodes<Bases<OctreeMap>>(in, compress_buf, first, last, identifier, data_size,
-			                             res, parallel, compressed) ||
+			                             compressed) ||
 			 ...);
 
 			// Skip forward

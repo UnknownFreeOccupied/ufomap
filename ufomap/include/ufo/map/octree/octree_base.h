@@ -1108,7 +1108,7 @@ class OctreeBase
 		if constexpr (std::is_same_v<NodeBV, NodeType>) {
 			return node.center();
 		} else {
-			return coord(node.code());
+			return toCoord(node.code());
 		}
 	}
 
@@ -1394,7 +1394,8 @@ class OctreeBase
 		node = operator()(node);
 		return isLeaf(node)
 		           ? Node(node.data(), node.code().child(child_index), node.dataDepth())
-		           : Node(&child(innerNode(node), node.index(), node.depth()),
+		           : Node(const_cast<LeafNode*>(
+		                      &child(innerNode(node), node.index(), node.depth())),
 		                  node.code().child(child_index), node.dataDepth() - 1);
 	}
 
@@ -1485,7 +1486,10 @@ class OctreeBase
 	 * @param node The node.
 	 * @return The node with bounding volume.
 	 */
-	[[nodiscard]] NodeBV toNodeBV(Node node) { return NodeBV(node, boundingVolume(node)); }
+	[[nodiscard]] NodeBV toNodeBV(Node node) const
+	{
+		return NodeBV(node, boundingVolume(node));
+	}
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -2427,7 +2431,7 @@ class OctreeBase
 
 	[[nodiscard]] const_query_iterator endQuery() const
 	{
-		return const_query_iterator(new Iterator<Node, true, Derived>(rootNode()));
+		return const_query_iterator(new Iterator<Node, true, Derived>(&derived()));
 	}
 
 	template <class Predicates>
@@ -2497,7 +2501,7 @@ class OctreeBase
 	[[nodiscard]] const_bounding_volume_query_iterator endQueryBV() const
 	{
 		return const_bounding_volume_query_iterator(
-		    new Iterator<NodeBV, true, Derived, NodeBV>(rootNodeBV()));
+		    new Iterator<NodeBV, true, Derived, NodeBV>(&derived()));
 	}
 
 	template <class Geometry, class Predicates>
@@ -2703,7 +2707,7 @@ class OctreeBase
 		}
 
 		auto nodes = readNodes(in);
-		derived().readNodes(in, std::begin(nodes), std::end(nodes), header.compressed);
+		derived().readNodes(in, std::begin(nodes), std::end(nodes), false, header.compressed);
 
 		if (propagate) {
 			propagateModified();
@@ -2783,7 +2787,7 @@ class OctreeBase
 	template <class Predicates,
 	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
 	Buffer write(Predicates&& predicates, depth_t min_depth = 0, bool compress = false,
-	             int compression_acceleration_level = 1, int compression_level = 0)
+	             int compression_acceleration_level = 1, int compression_level = 0) const
 	{
 		Buffer buffer;
 		write(buffer, predicates, min_depth, compress, compression_acceleration_level,
@@ -3317,6 +3321,14 @@ class OctreeBase
 			return true;
 		}
 	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Node                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	[[nodiscard]] index_t dataIndex(Node node) const { return node.dataIndex(); }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -3937,14 +3949,14 @@ class OctreeBase
 		}
 
 		if (1 == depth) {
-			// All are allocated so we can just resset all, even if they are leaves
+			// All are allocated so we can just reset all, even if they are leaves
 			for (auto& child : leafChildren(node)) {
 				child.modified.reset();
 			}
 		} else {
 			for (index_t i = 0; 8 != i; ++i) {
 				if (modified_parents[i]) {
-					resetModifiedRecurs(innerNode(node, i), depth - 1, max_depth);
+					resetModifiedRecurs(innerChild(node, i), depth - 1, max_depth);
 				}
 			}
 		}
@@ -4674,12 +4686,12 @@ class OctreeBase
 	struct NodeAndIndices {
 		using node_type = LeafNode;
 
-		std::reference_wrapper<node_type> node;
+		node_type* node;
 		IndexField indices;
 
 		NodeAndIndices() = default;
 
-		NodeAndIndices(LeafNode& node, IndexField indices) : node(node), indices(indices) {}
+		NodeAndIndices(LeafNode& node, IndexField indices) : node(&node), indices(indices) {}
 
 		NodeAndIndices(NodeAndIndices const&) = default;
 
@@ -4752,7 +4764,7 @@ class OctreeBase
 
 		if (tree[0].any()) {
 			nodes.emplace_back(root(), tree[0]);
-			setModified(root());
+			root().modified[rootIndex()] = true;
 		} else if (tree[1].any()) {
 			createInnerChildren(root(), rootIndex(), rootDepth());
 			retrieveNodesRecurs(innerChildren(root()), tree[1], rootDepth() - 1, tree.get() + 2,
@@ -4797,7 +4809,7 @@ class OctreeBase
 
 			if (valid_inner.any()) {
 				if (1 == depth) {
-					createLeafChildren(node[i], valid_inner, depth);
+					createLeafChildren(node[i], valid_inner);
 					tree = retrieveNodesRecurs(leafChildren(node[i]), valid_inner, tree, nodes);
 				} else {
 					createInnerChildren(node[i], valid_inner, depth);
@@ -4820,25 +4832,25 @@ class OctreeBase
 		std::vector<LeafNode> nodes;
 
 		std::conditional_t<predicate::contains_spatial_predicate_v<Predicates>, NodeBV, Node>
-		    root;
+		    root_node;
 		if constexpr (predicate::contains_spatial_predicate_v<Predicates>) {
-			root = rootNodeBV();
+			root_node = rootNodeBV();
 		} else {
-			root = rootNode();
+			root_node = rootNode();
 		}
 
-		bool valid_return =
-		    predicate::PredicateValueCheck<Predicates>::apply(predicates, derived(), root);
+		bool valid_return = predicate::PredicateValueCheck<Predicates>::apply(
+		    predicates, derived(), root_node);
 		bool valid_inner = !valid_return && predicate::PredicateInnerCheck<Predicates>::apply(
-		                                        predicates, derived(), root);
+		                                        predicates, derived(), root_node);
 
 		tree.emplace_back(valid_return ? 1U : 0U);
 		tree.emplace_back(valid_inner ? 1U : 0U);
 
 		if (valid_return) {
-			nodes.emplace_back(root());
+			nodes.push_back(root());
 		} else if (valid_inner) {
-			dataRecurs(child(root, 0), predicates, tree, nodes);
+			dataRecurs(child(root_node, 0), predicates, tree, nodes);
 			if (nodes.empty()) {
 				tree.clear();
 			}

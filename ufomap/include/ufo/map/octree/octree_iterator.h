@@ -91,9 +91,10 @@ class IteratorBase
 	constexpr Tree const* tree() const { return tree_; }
 
 	virtual bool equal(IteratorBase const& other) const = 0;
+	
+	virtual std::size_t status() const = 0;
 
  protected:
-	virtual std::size_t status() const = 0;
 
 	template <class NodeType>
 	[[nodiscard]] constexpr depth_t depth(NodeType const& node) const
@@ -134,14 +135,14 @@ class IteratorBase
 	template <class NodeType>
 	[[nodiscard]] constexpr NodeType child(NodeType const& node, index_t child_index) const
 	{
-		return tree_->nodeChild(node, child_index);
+		return tree_->child(node, child_index);
 	}
 
 	template <class NodeType>
 	[[nodiscard]] constexpr NodeType sibling(NodeType const& node,
 	                                         index_t sibling_index) const
 	{
-		return tree_->nodeSibling(node, sibling_index);
+		return tree_->sibling(node, sibling_index);
 	}
 
 	template <class NodeType, class Predicates>
@@ -172,13 +173,13 @@ class IteratorWrapper
 
  public:
 	// Tags
-	using typename Base::const_pointer;
-	using typename Base::const_reference;
-	using typename Base::difference_type;
-	using typename Base::iterator_category;
-	using typename Base::pointer;
-	using typename Base::reference;
-	using typename Base::value_type;
+	using const_pointer = typename Base::const_pointer;
+	using const_reference = typename Base::const_reference;
+	using difference_type = typename Base::difference_type;
+	using iterator_category = typename Base::iterator_category;
+	using pointer = typename Base::pointer;
+	using reference = typename Base::reference;
+	using value_type = typename Base::value_type;
 
 	IteratorWrapper(Base* it_base) : it_base_(it_base) {}
 
@@ -232,7 +233,7 @@ class Iterator final : public IteratorBase<Tree, BaseNodeType>
 	using Base = IteratorBase<Tree, BaseNodeType>;
 
 	using Stack = std::stack<NodeType, std::vector<NodeType>>;
-	using Queue = std::queue<NodeType, std::vector<NodeType>>;
+	using Queue = std::queue<NodeType, std::deque<NodeType>>;
 
  public:
 	// Tags

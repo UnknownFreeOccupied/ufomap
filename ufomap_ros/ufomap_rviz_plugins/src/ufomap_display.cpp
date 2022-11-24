@@ -210,7 +210,7 @@ void UFOMapDisplay::updateGUI()
 	// TODO: Set to correct option
 }
 
-void UFOMapDisplay::something()
+void UFOMapDisplay::createMap()
 {
 	ufo::map::mt_t map_type = 0;
 	if (occupancy_property_->getBool()) {
@@ -238,40 +238,47 @@ void UFOMapDisplay::something()
 		map_type |= ufo::map::MapType::SURFEL;
 	}
 
-	// #define REPEAT_2(M, N) M(N)  // M(N + 1)
-	// #define REPEAT_4(M, N) REPEAT_2(M, N) REPEAT_2(M, N + 2)
-	// #define REPEAT_8(M, N) REPEAT_4(M, N) REPEAT_4(M, N + 4)
-	// #define REPEAT_16(M, N) REPEAT_8(M, N) REPEAT_8(M, N + 8)
-	// #define REPEAT_32(M, N) REPEAT_16(M, N) REPEAT_16(M, N + 16)
-	// #define REPEAT_64(M, N) REPEAT_32(M, N) REPEAT_32(M, N + 32)
-	// #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
-	// #define REPEAT_256(M, N) REPEAT_128(M, N) REPEAT_128(M, N + 128)
-	// #define REPEAT_512(M, N) REPEAT_256(M, N) REPEAT_256(M, N + 256)
-	// #define REPEAT_1024(M, N) REPEAT_512(M, N) REPEAT_512(M, N + 512)
-	// #define REPEAT_2048(M, N) REPEAT_1024(M, N) REPEAT_1024(M, N + 1024)
-	// #define REPEAT_4096(M, N) REPEAT_2048(M, N) REPEAT_2048(M, N + 2048)
-	// #define REPEAT_8192(M, N) REPEAT_4096(M, N) REPEAT_4096(M, N + 4096)
-	// #define REPEAT_16384(M, N) REPEAT_8192(M, N) REPEAT_8192(M, N + 8192)
-	// #define REPEAT_32768(M, N) REPEAT_16384(M, N) REPEAT_16384(M, N + 16384)
-	// #define REPEAT_65536(M, N) REPEAT_32768(M, N) REPEAT_32768(M, N + 32768)
-	// #define REPEAT_131072(M, N) REPEAT_65536(M, N) REPEAT_65536(M, N + 65536)
-	// #define REPEAT_262144(M, N) REPEAT_131072(M, N) REPEAT_131072(M, N + 131072)
-	// #define REPEAT_524288(M, N) REPEAT_262144(M, N) REPEAT_262144(M, N + 262144)
-	// #define REPEAT_1048576(M, N) REPEAT_524288(M, N) REPEAT_524288(M, N + 524288)
+// clang-format off
+#define MAP_CASES_REPEAT_2(M, N) M(N) M(N + 1)
+#define MAP_CASES_REPEAT_4(M, N) MAP_CASES_REPEAT_2(M, N) MAP_CASES_REPEAT_2(M, N + 2)
+#define MAP_CASES_REPEAT_8(M, N) MAP_CASES_REPEAT_4(M, N) MAP_CASES_REPEAT_4(M, N + 4)
+#define MAP_CASES_REPEAT_16(M, N) MAP_CASES_REPEAT_8(M, N) MAP_CASES_REPEAT_8(M, N + 8)
+#define MAP_CASES_REPEAT_32(M, N) MAP_CASES_REPEAT_16(M, N) MAP_CASES_REPEAT_16(M, N + 16)
+#define MAP_CASES_REPEAT_64(M, N) MAP_CASES_REPEAT_32(M, N) MAP_CASES_REPEAT_32(M, N + 32)
+#define MAP_CASES_REPEAT_128(M, N) MAP_CASES_REPEAT_64(M, N) MAP_CASES_REPEAT_64(M, N + 64)
+#define MAP_CASES_REPEAT_256(M, N) MAP_CASES_REPEAT_128(M, N) MAP_CASES_REPEAT_128(M, N + 128)
+// #define MAP_CASES_REPEAT_512(M, N) MAP_CASES_REPEAT_256(M, N) MAP_CASES_REPEAT_256(M, N + 256)
+// #define MAP_CASES_REPEAT_1024(M, N) MAP_CASES_REPEAT_512(M, N) MAP_CASES_REPEAT_512(M, N + 512)
+// #define MAP_CASES_REPEAT_2048(M, N) MAP_CASES_REPEAT_1024(M, N) MAP_CASES_REPEAT_1024(M, N + 1024)
+// #define MAP_CASES_REPEAT_4096(M, N) MAP_CASES_REPEAT_2048(M, N) MAP_CASES_REPEAT_2048(M, N + 2048)
+// #define MAP_CASES_REPEAT_8192(M, N) MAP_CASES_REPEAT_4096(M, N) MAP_CASES_REPEAT_4096(M, N + 4096)
+// #define MAP_CASES_REPEAT_16384(M, N) MAP_CASES_REPEAT_8192(M, N) MAP_CASES_REPEAT_8192(M, N + 8192)
+// #define MAP_CASES_REPEAT_32768(M, N) MAP_CASES_REPEAT_16384(M, N) MAP_CASES_REPEAT_16384(M, N + 16384)
+// #define MAP_CASES_REPEAT_65536(M, N) MAP_CASES_REPEAT_32768(M, N) MAP_CASES_REPEAT_32768(M, N + 32768)
+// #define MAP_CASES_REPEAT_131072(M, N) MAP_CASES_REPEAT_65536(M, N) MAP_CASES_REPEAT_65536(M, N + 65536)
+// #define MAP_CASES_REPEAT_262144(M, N) MAP_CASES_REPEAT_131072(M, N) MAP_CASES_REPEAT_131072(M, N + 131072)
+// #define MAP_CASES_REPEAT_524288(M, N) MAP_CASES_REPEAT_262144(M, N) MAP_CASES_REPEAT_262144(M, N + 262144)
+// #define MAP_CASES_REPEAT_1048576(M, N) MAP_CASES_REPEAT_524288(M, N) MAP_CASES_REPEAT_524288(M, N + 524288)
+	// clang-format on
 
-	// #define CASES(N)                                               \
-// 	case N: {                                                    \
-// 		worker_ = std::make_unique<Worker<N, ...>>(..., ..., ...); \
-// 		break;                                                     \
-// 	}
+#define MAP_CASES(N)                                               \
+	case N: {                                                        \
+		if (worker_) {                                                 \
+			auto buf = worker_->write();                                 \
+			worker_ = std::make_unique<Worker<N>>(buf, state_, filter_); \
+		} else {                                                       \
+			worker_ = std::make_unique<Worker<N>>(state_, filter_);      \
+		}                                                              \
+		break;                                                         \
+	}
 
-	// 	switch (map_type) {
-	// 		REPEAT_256(CASES, 1);  // FIXME: Change depending on how many map types there are
-	// 		default:
-	// 			worker_.reset();
-	// 			break;
-	// 	}
-}
+	switch (map_type) {
+		MAP_CASES_REPEAT_256(MAP_CASES, ufo::map::mt_t(1));
+		default:
+			worker_.reset();
+			break;
+	}
+}  // namespace ufomap_ros::rviz_plugins
 
 void UFOMapDisplay::reset()
 {
@@ -282,7 +289,7 @@ void UFOMapDisplay::reset()
 	state_.message_queue.clear();
 	state_.clearObjects();
 	worker_.reset();
-	something();
+	createMap();
 }
 
 void UFOMapDisplay::createWorker()
@@ -292,8 +299,9 @@ void UFOMapDisplay::createWorker()
 
 void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 {
-	std::scoped_lock<std::mutex> message_lock(state_.message_mutex);
+	std::unique_lock<std::mutex> message_lock(state_.message_mutex);
 	state_.message_queue.push_back(msg);
+	message_lock.unlock();
 	if (worker_) {
 		worker_->notify();
 	}

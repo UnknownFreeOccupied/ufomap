@@ -42,8 +42,15 @@
 #ifndef UFOMAP_RVIZ_PLUGINS_WORKER_BASE_H
 #define UFOMAP_RVIZ_PLUGINS_WORKER_BASE_H
 
+// UFO
+#include <ufo/geometry/frustum.h>
+#include <ufo/map/buffer.h>
+#include <ufo/map/code.h>
+#include <ufo/map/types.h>
+
 // STL
 #include <cstdint>
+#include <vector>
 
 namespace ufomap_ros::rviz_plugins
 {
@@ -56,17 +63,24 @@ class WorkerBase
 
 	virtual void notify() = 0;
 
-	virtual double resolution() = 0;
+	virtual void setGridSize(double grid_size) = 0;
 
-	virtual std::size_t numLeafNodes() = 0;
+	virtual double resolution() const = 0;
 
-	virtual std::size_t numInnerLeafNodes() = 0;
+	virtual std::size_t numLeafNodes() const = 0;
 
-	virtual std::size_t numInnerNodes() = 0;
+	virtual std::size_t numInnerLeafNodes() const = 0;
 
-	virtual std::size_t memoryUsage() = 0;
+	virtual std::size_t numInnerNodes() const = 0;
 
-	virtual std::size_t memoryAllocated() = 0;
+	virtual std::size_t memoryUsage() const = 0;
+
+	virtual std::size_t memoryAllocated() const = 0;
+
+	virtual std::vector<ufo::map::Code> codesInFOV(ufo::geometry::Frustum const& view,
+	                                               ufo::map::depth_t depth) const = 0;
+
+	virtual ufo::map::Buffer write() const = 0;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

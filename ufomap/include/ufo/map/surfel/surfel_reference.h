@@ -168,6 +168,11 @@ class SurfelReference
 	}
 
  private:
+	SurfelReference(SurfelNode<8> const& node, index_t const index)
+	    : surfel_(&node), index_(index)
+	{
+	}
+
 	SurfelReference(SurfelNode<8> const* node, index_t const index)
 	    : surfel_(node), index_(index)
 	{

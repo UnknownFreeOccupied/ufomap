@@ -259,16 +259,16 @@ class TimeMapBase
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
 		for (; first != last; ++first) {
-			if (first->index_field.all()) {
-				in.read(first->node.time.data(),
-				        first->node.time.size() *
-				            sizeof(typename decltype(first->node.time)::value_type));
+			if (first->indices.all()) {
+				in.read(first->node->time.data(),
+				        first->node->time.size() *
+				            sizeof(typename decltype(first->node->time)::value_type));
 			} else {
-				decltype(first->node.time) time;
+				decltype(first->node->time) time;
 				in.read(time.data(), time.size() * sizeof(typename decltype(time)::value_type));
 				for (index_t i = 0; time.size() != i; ++i) {
-					if (first->index_field[i]) {
-						first->node.time[i] = time[i];
+					if (first->indices[i]) {
+						first->node->time[i] = time[i];
 					}
 				}
 			}
