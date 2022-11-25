@@ -95,7 +95,7 @@ enum MapType : mt_t {
 	OCCUPANCY  = mt_t(1),
 	TIME       = mt_t(1) << 1,
 	COLOR      = mt_t(1) << 2,
-	// SEMANTIC   = mt_t(1) << 3,
+	SEMANTIC   = mt_t(1) << 3,
 	SURFEL     = mt_t(1) << 4,
 	// DISTANCE   = mt_t(1) << 5,
 	INTENSITY  = mt_t(1) << 6,

@@ -314,12 +314,20 @@ class SemanticsReference
 	// Constructor
 	//
 
-	SemanticsReference(SemanticNode<8> const* semantics, index_t const index)
-	    : semantics_(semantics), index_(index)
+	SemanticsReference(SemanticMapping const* mapping, SemanticNode<8> const* semantics,
+	                   index_t const index)
+	    : mapping_(mapping), semantics_(semantics), index_(index)
+	{
+	}
+
+	SemanticsReference(SemanticMapping const& mapping, SemanticNode<8> const& semantics,
+	                   index_t const index)
+	    : mapping_(&mapping), semantics_(&semantics), index_(index)
 	{
 	}
 
  private:
+	SemanticMapping const* mapping_ = nullptr;
 	SemanticNode<8> const* semantics_ = nullptr;
 	index_t index_ = 0;
 };

@@ -56,7 +56,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class SemanticMapBase
+class SemanticMapBase : public SemanticMapping
 {
  public:
 	//
@@ -65,13 +65,15 @@ class SemanticMapBase
 
 	[[nodiscard]] SemanticsReference semantics(Node node) const
 	{
-		return SemanticsReference(derived().leafNode(node), node.index());
+		return SemanticsReference(static_cast<SemanticMapping const&>(*this),
+		                          derived().leafNode(node), node.index());
 	}
 
 	[[nodiscard]] SemanticsReference semantics(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return SemanticsReference(node, code.index(depth));
+		return SemanticsReference(static_cast<SemanticMapping const&>(*this), node,
+		                          code.index(depth));
 	}
 
 	[[nodiscard]] SemanticsReference semantics(Key key) const
@@ -1459,3 +1461,8 @@ class SemanticMapBase
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_SEMANTIC_MAP_H
+
+map.anySemantics(node, "car");
+map.allSemantics(node, "car");
+map.noneSemantics(node, "car");
+map.anySemantics(node, [](Semantic sem) { return 100 < sem.value; });
