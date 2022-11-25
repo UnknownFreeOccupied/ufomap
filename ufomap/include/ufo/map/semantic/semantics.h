@@ -46,7 +46,6 @@
 #include <ufo/container/range.h>
 #include <ufo/container/range_map.h>
 #include <ufo/container/ranges.h>
-#include <ufo/map/semantic/semantic_propagation.h>
 #include <ufo/util/iterator_wrapper.h>
 #include <ufo/util/type_traits.h>
 

@@ -78,24 +78,19 @@ UFOMapDisplay::~UFOMapDisplay()
 
 void UFOMapDisplay::setupResources()
 {
-	if (Ogre::ResourceGroupManager::getSingleton().resourceGroupExists("ufomap")) {
+	auto& rgm = Ogre::ResourceGroupManager::getSingleton();
+	if (rgm.resourceGroupExists("ufomap")) {
 		return;
 	}
 
-	std::string pkg_path = ros::package::getPath("ufomap_rviz_plugins");
+	std::string pkg = ros::package::getPath("ufomap_rviz_plugins");
 
-	Ogre::ResourceGroupManager::getSingleton().createResourceGroup("ufomap");
-
-	Ogre::ResourceGroupManager::getSingleton().addResourceLocation(pkg_path + "/ogre_media",
-	                                                               "FileSystem", "ufomap");
-	Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-	    pkg_path + "/ogre_media/materials", "FileSystem", "ufomap");
-	Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-	    pkg_path + "/ogre_media/materials/scripts", "FileSystem", "ufomap");
-	Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-	    pkg_path + "/ogre_media/materials/glsl", "FileSystem", "ufomap");
-
-	Ogre::ResourceGroupManager::getSingleton().initialiseResourceGroup("ufomap");
+	rgm.createResourceGroup("ufomap");
+	rgm.addResourceLocation(pkg + "/ogre_media", "FileSystem", "ufomap");
+	rgm.addResourceLocation(pkg + "/ogre_media/materials", "FileSystem", "ufomap");
+	rgm.addResourceLocation(pkg + "/ogre_media/materials/scripts", "FileSystem", "ufomap");
+	rgm.addResourceLocation(pkg + "/ogre_media/materials/glsl", "FileSystem", "ufomap");
+	rgm.initialiseResourceGroup("ufomap");
 }
 
 void UFOMapDisplay::onInitialize()
