@@ -101,23 +101,15 @@ class EmptyMap
 	// Update node
 	//
 
-	static constexpr void updateNode(EmptyNode<Num>, index_t, EmptyNode<Num>) noexcept
-	{
-	}
+	static constexpr void updateNode(EmptyNode<Num>, index_t, EmptyNode<Num>) noexcept {}
 
 	//
 	// Input/ouput (read/write)
 	//
 
-	static constexpr DataIdentifier dataIdentifier() noexcept
-	{
-		return DataIdentifier::NO_DATA;
-	}
+	static constexpr MapType mapType() noexcept { return MapType::NONE; }
 
-	static constexpr bool canReadData(DataIdentifier identifier) noexcept
-	{
-		return dataIdentifier() == identifier;
-	}
+	static constexpr bool canReadData(MapType mt) noexcept { return mapType() == mt; }
 
 	template <class InputIt>
 	static constexpr std::size_t serializedSize(InputIt first, InputIt last) noexcept

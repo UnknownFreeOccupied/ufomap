@@ -77,20 +77,6 @@ struct FileHeader : FileOptions {
 	std::uint8_t patch;
 };
 
-// Data identifiers
-enum struct DataIdentifier : std::uint8_t {
-	NO_DATA,
-	OCCUPANCY,
-	TIME,
-	COLOR,
-	INTENSITY,
-	SEMANTIC,
-	SURFEL,
-	DISTANCE,
-	COUNT,
-	REFLECTION,
-};
-
 enum struct DataType : std::uint8_t {
 	UINT8,
 	UINT16,

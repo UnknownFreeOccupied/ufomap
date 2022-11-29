@@ -101,8 +101,6 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
 
 	void processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg) override;
 
-	void createMap();
-
  private:
 	ufo::geometry::Frustum viewFrustum(Ogre::Real far_clip) const;
 
@@ -115,6 +113,7 @@ class UFOMapDisplay : public rviz::MessageFilterDisplay<ufomap_msgs::UFOMap>
  private:
 	//  Worker
 	std::unique_ptr<WorkerBase> worker_;
+	ufo::map::mt_t map_type_ = 0;
 
 	// State
 	State state_;

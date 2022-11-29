@@ -1377,14 +1377,11 @@ class SemanticMapBase : public SemanticMapping
 	// Input/output (read/write)
 	//
 
-	[[nodiscard]] static constexpr DataIdentifier dataIdentifier() noexcept
-	{
-		return DataIdentifier::SEMANTIC;
-	}
+	[[nodiscard]] static constexpr MapType mapType() noexcept { return MapType::SEMANTIC; }
 
-	[[nodiscard]] static constexpr bool canReadData(DataIdentifier identifier) noexcept
+	[[nodiscard]] static constexpr bool canReadData(MapType mt) noexcept
 	{
-		return dataIdentifier() == identifier;
+		return mapType() == mt;
 	}
 
 	template <class InputIt>

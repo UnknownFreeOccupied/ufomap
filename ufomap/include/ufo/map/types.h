@@ -70,6 +70,26 @@ using intensity_t = float;
 using count_t = std::uint32_t;
 using distance_t = float;
 using surfel_scalar_t = float;
+
+//
+// Map types
+//
+using mt_t = std::uint64_t;
+
+enum MapType : mt_t {
+	// clang-format off
+	NONE       = mt_t(0),
+	OCCUPANCY  = mt_t(1),
+	TIME       = mt_t(1) << 1,
+	COLOR      = mt_t(1) << 2,
+	SEMANTIC   = mt_t(1) << 3,
+	SURFEL     = mt_t(1) << 4,
+	DISTANCE   = mt_t(1) << 5,
+	INTENSITY  = mt_t(1) << 6,
+	COUNT      = mt_t(1) << 7,
+	REFLECTION = mt_t(1) << 8,
+	// clang-format on
+};
 }  // namespace ufo::map
 
 #endif  // UFO_MAP_TYPES_H

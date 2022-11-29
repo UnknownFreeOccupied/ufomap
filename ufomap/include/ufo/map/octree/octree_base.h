@@ -2710,7 +2710,9 @@ class OctreeBase
 		derived().readNodes(in, std::begin(nodes), std::end(nodes), false, header.compressed);
 
 		if (propagate) {
+			std::cout << "Propagating\n";
 			propagateModified();
+			std::cout << "Propagated\n";
 		}
 	}
 

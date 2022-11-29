@@ -133,7 +133,7 @@ FileHeader readHeader(ReadBuffer& in)
 
 	in.read(&header.leaf_size, sizeof(header.leaf_size));
 	in.read(&header.depth_levels, sizeof(header.depth_levels));
-
+	
 	return header;
 }
 

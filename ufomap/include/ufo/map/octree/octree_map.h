@@ -182,7 +182,9 @@ class OctreeMap
 		// 	map.set(node.code(), other.get(node));
 		// }
 
-		Octree::read(other.write());
+		// TODO: Make it possible to only write the parts that they share
+		auto buf = other.write();
+		Octree::read(buf);
 
 		// std::stringstream io(std::ios_base::in | std::ios_base::out |
 		// std::ios_base::binary); io.exceptions(std::ifstream::failbit |
@@ -216,8 +218,14 @@ class OctreeMap
 	// Input/output (read/write)
 	//
 
+	[[nodiscard]] static constexpr MapType mapType() noexcept
+	{
+		return (Bases<OctreeMap>::mapType() | ...);
+	}
+
 	template <class InputIt>
-	std::size_t serializedSize(InputIt first, InputIt last, bool compress) const
+	[[nodiscard]] std::size_t serializedSize(InputIt first, InputIt last,
+	                                         bool compress) const
 	{
 		return (serializedSize<Bases<OctreeMap>>(first, last, compress) + ...);
 	}
@@ -233,15 +241,15 @@ class OctreeMap
 		Buffer buf;
 		Buffer compress_buf;
 		while (in.tellg() != end_pos && in.good()) {
-			DataIdentifier identifier;
+			MapType mt;
 			std::uint64_t data_size;
 
-			in.read(reinterpret_cast<char*>(&identifier), sizeof(identifier));
+			in.read(reinterpret_cast<char*>(&mt), sizeof(mt));
 			in.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if ((Bases<OctreeMap>::canReadData(identifier) || ...)) {
-				(readNodes<Bases<OctreeMap>>(in, buf, compress_buf, first, last, identifier,
-				                             data_size, compressed) ||
+			if ((Bases<OctreeMap>::canReadData(mt) || ...)) {
+				(readNodes<Bases<OctreeMap>>(in, buf, compress_buf, first, last, mt, data_size,
+				                             compressed) ||
 				 ...);
 			} else {
 				// Skip forward
@@ -254,29 +262,31 @@ class OctreeMap
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last, bool const parallel,
 	               bool const compressed)
 	{
-		std::vector<std::future<void>> res;
+		// std::vector<std::future<void>> res;
 
 		Buffer compress_buf;
 		while (in.readIndex() < in.size()) {
-			DataIdentifier identifier;
+			std::cout << "Start: " << in.readIndex() << " vs " << in.size() << '\n';
+			MapType mt;
 			std::uint64_t data_size;
 
-			in.read(&identifier, sizeof(identifier));
+			in.read(&mt, sizeof(mt));
 			in.read(&data_size, sizeof(data_size));
 
 			std::uint64_t next_index = in.readIndex() + data_size;
 
-			(readNodes<Bases<OctreeMap>>(in, compress_buf, first, last, identifier, data_size,
+			(readNodes<Bases<OctreeMap>>(in, compress_buf, first, last, mt, data_size,
 			                             compressed) ||
 			 ...);
 
 			// Skip forward
 			in.setReadIndex(next_index);
+			std::cout << "End: " << in.readIndex() << " vs " << in.size() << '\n';
 		}
 
-		for (auto const& r : res) {
-			r.wait();
-		}
+		// for (auto const& r : res) {
+		// 	r.wait();
+		// }
 	}
 
 	template <class InputIt>
@@ -310,20 +320,19 @@ class OctreeMap
 	std::size_t serializedSize(InputIt first, InputIt last, bool compress) const
 	{
 		if (compress) {
-			return sizeof(DataIdentifier) + sizeof(std::uint64_t) + sizeof(std::uint64_t) +
+			return sizeof(MapType) + sizeof(std::uint64_t) + sizeof(std::uint64_t) +
 			       maxSizeCompressed(Base::serializedSize(first, last));
 		} else {
-			return sizeof(DataIdentifier) + sizeof(std::uint64_t) +
-			       Base::serializedSize(first, last);
+			return sizeof(MapType) + sizeof(std::uint64_t) + Base::serializedSize(first, last);
 		}
 	}
 
 	template <class Base, class OutputIt>
 	bool readNodes(std::istream& in, Buffer& buf, Buffer& compress_buf, OutputIt first,
-	               OutputIt last, DataIdentifier const identifier, uint64_t const data_size,
+	               OutputIt last, MapType const mt, uint64_t const data_size,
 	               bool const compressed)
 	{
-		if (!Base::canReadData(identifier)) {
+		if (!Base::canReadData(mt)) {
 			return false;
 		}
 
@@ -331,15 +340,14 @@ class OctreeMap
 		// TODO: Implement better (should probably be resize?)
 		buf.reserve(data_size);
 		in.read(reinterpret_cast<char*>(buf.data()), data_size);
-		return readNodes(buf, compress_buf, first, last, identifier, data_size, compressed);
+		return readNodes(buf, compress_buf, first, last, mt, data_size, compressed);
 	}
 
 	template <class Base, class OutputIt>
 	bool readNodes(ReadBuffer& in, Buffer& compress_buf, OutputIt first, OutputIt last,
-	               DataIdentifier const identifier, uint64_t const data_size,
-	               bool const compressed)
+	               MapType const mt, uint64_t const data_size, bool const compressed)
 	{
-		if (!Base::canReadData(identifier)) {
+		if (!Base::canReadData(mt)) {
 			return false;
 		}
 
@@ -378,12 +386,12 @@ class OctreeMap
 	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		constexpr DataIdentifier identifier = Base::dataIdentifier();
-		if constexpr (DataIdentifier::NO_DATA == identifier) {
+		constexpr MapType mt = Base::mapType();
+		if constexpr (MapType::NONE == mt) {
 			return;
 		}
 
-		out.write(&identifier, sizeof(identifier));
+		out.write(&mt, sizeof(mt));
 
 		std::uint64_t size;
 		auto size_index = out.writeIndex();

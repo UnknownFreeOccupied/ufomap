@@ -554,15 +554,9 @@ class SurfelMapBase
 	// Input/output (read/write)
 	//
 
-	static constexpr DataIdentifier dataIdentifier() noexcept
-	{
-		return DataIdentifier::SURFEL;
-	}
+	static constexpr MapType mapType() noexcept { return MapType::SURFEL; }
 
-	static constexpr bool canReadData(DataIdentifier identifier) noexcept
-	{
-		return dataIdentifier() == identifier;
-	}
+	static constexpr bool canReadData(MapType mt) noexcept { return mapType() == mt; }
 
 	template <class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last) const

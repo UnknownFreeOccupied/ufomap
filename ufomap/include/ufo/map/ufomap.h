@@ -55,6 +55,7 @@
 #include <ufo/map/reflection/reflection_map.h>
 #include <ufo/map/surfel/surfel_map.h>
 #include <ufo/map/time/time_map.h>
+#include <ufo/map/types.h>
 
 // STL
 #include <cstdint>
@@ -69,8 +70,6 @@ namespace ufo::map
 // Helpers
 //
 
-using mt_t = std::uint64_t;
-
 template <mt_t MT, mt_t T, template <std::size_t> class Node>
 using cond_node_t = std::conditional_t<MT & T, Node<8>, EmptyNode<T>>;
 
@@ -84,24 +83,6 @@ template <mt_t T, template <class> class Map>
 struct cond_map_base<false, T, Map> {
 	template <class D>
 	using type = EmptyMap<T, D>;
-};
-
-//
-// Map types
-//
-
-enum MapType : mt_t {
-	// clang-format off
-	OCCUPANCY  = mt_t(1),
-	TIME       = mt_t(1) << 1,
-	COLOR      = mt_t(1) << 2,
-	SEMANTIC   = mt_t(1) << 3,
-	SURFEL     = mt_t(1) << 4,
-	DISTANCE   = mt_t(1) << 5,
-	INTENSITY  = mt_t(1) << 6,
-	COUNT      = mt_t(1) << 7,
-	REFLECTION = mt_t(1) << 8,
-	// clang-format on
 };
 
 //

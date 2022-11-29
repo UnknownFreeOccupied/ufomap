@@ -1006,14 +1006,11 @@ class OccupancyMapBase
 	// Input/output (read/write)
 	//
 
-	[[nodiscard]] static constexpr DataIdentifier dataIdentifier() noexcept
-	{
-		return DataIdentifier::OCCUPANCY;
-	}
+	[[nodiscard]] static constexpr MapType mapType() noexcept { return MapType::OCCUPANCY; }
 
-	[[nodiscard]] static constexpr bool canReadData(DataIdentifier identifier) noexcept
+	[[nodiscard]] static constexpr bool canReadData(MapType mt) noexcept
 	{
-		return dataIdentifier() == identifier;
+		return mapType() == mt;
 	}
 
 	template <class InputIt>

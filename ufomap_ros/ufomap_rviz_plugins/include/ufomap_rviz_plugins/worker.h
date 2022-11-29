@@ -76,13 +76,15 @@ class Worker final : public WorkerBase
 	{
 	}
 
-	virtual ~Worker() {}
+	virtual ~Worker() { stop(); }
 
 	void stop() override
 	{
 		done_ = true;
 		notify();
-		thread_.join();
+		if (thread_.joinable()) {
+			thread_.join();
+		}
 	}
 
 	void notify() override { message_cv_.notify_all(); }
@@ -132,15 +134,15 @@ class Worker final : public WorkerBase
 			queue.swap(state_.message_queue);
 			message_lock.unlock();
 
-			updateMap(queue);
+			// updateMap(queue);
 
-			if (updateGridSizeDepth()) {
-				state_.regenerate = true;
-			}
+			// if (updateGridSizeDepth()) {
+			// 	state_.regenerate = true;
+			// }
 
-			generateObjects();
+			// generateObjects();
 
-			map_.resetModified();
+			// map_.resetModified();
 		}
 	}
 

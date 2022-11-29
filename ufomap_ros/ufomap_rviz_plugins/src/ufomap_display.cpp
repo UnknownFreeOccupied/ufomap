@@ -165,47 +165,85 @@ void UFOMapDisplay::updateGUI()
 	auto option = coloring_property_->getOptionInt();
 	coloring_property_->clearOptions();
 
+	std::array<bool, 12> available_options;
+	available_options.fill(false);
+
 	if (color_property_->getBool()) {
-		coloring_property_->addOption(getStr(ColoringMode::VOXEL),
-		                              ufo::util::enumToValue(ColoringMode::VOXEL));
+		auto num = ufo::util::enumToValue(ColoringMode::VOXEL);
+		available_options[num] = true;
+		coloring_property_->addOption(getStr(ColoringMode::VOXEL), num);
 	}
 	if (time_property_->getBool()) {
-		coloring_property_->addOption(getStr(ColoringMode::TIME),
-		                              ufo::util::enumToValue(ColoringMode::TIME));
+		auto num = ufo::util::enumToValue(ColoringMode::TIME);
+		available_options[num] = true;
+		coloring_property_->addOption(getStr(ColoringMode::TIME), num);
 	}
 	if (semantic_property_->getBool()) {
+		auto num = ufo::util::enumToValue(ColoringMode::SEMANTIC);
+		available_options[num] = true;
 		coloring_property_->addOption(getStr(ColoringMode::SEMANTIC),
 		                              ufo::util::enumToValue(ColoringMode::SEMANTIC));
 	}
 	if (surfel_property_->getBool()) {
+		auto num = ufo::util::enumToValue(ColoringMode::SURFEL_NORMAL);
+		available_options[num] = true;
 		coloring_property_->addOption(getStr(ColoringMode::SURFEL_NORMAL),
 		                              ufo::util::enumToValue(ColoringMode::SURFEL_NORMAL));
 	}
 	if (occupancy_property_->getBool()) {
+		auto num = ufo::util::enumToValue(ColoringMode::OCCUPANCY);
+		available_options[num] = true;
 		coloring_property_->addOption(getStr(ColoringMode::OCCUPANCY),
 		                              ufo::util::enumToValue(ColoringMode::OCCUPANCY));
 	}
 	if (intensity_property_->getBool()) {
+		auto num = ufo::util::enumToValue(ColoringMode::INTENSITY);
+		available_options[num] = true;
 		coloring_property_->addOption(getStr(ColoringMode::INTENSITY),
 		                              ufo::util::enumToValue(ColoringMode::INTENSITY));
 	}
 	if (count_property_->getBool()) {
+		auto num = ufo::util::enumToValue(ColoringMode::COUNT);
+		available_options[num] = true;
 		coloring_property_->addOption(getStr(ColoringMode::COUNT),
 		                              ufo::util::enumToValue(ColoringMode::COUNT));
 	}
 	if (reflection_property_->getBool()) {
-		coloring_property_->addOption(getStr(ColoringMode::REFLECTIVENESS),
-		                              ufo::util::enumToValue(ColoringMode::REFLECTIVENESS));
-		coloring_property_->addOption(getStr(ColoringMode::HITS),
-		                              ufo::util::enumToValue(ColoringMode::HITS));
-		coloring_property_->addOption(getStr(ColoringMode::MISSES),
-		                              ufo::util::enumToValue(ColoringMode::MISSES));
+		for (auto opt :
+		     {ColoringMode::REFLECTIVENESS, ColoringMode::HITS, ColoringMode::MISSES}) {
+			auto num = ufo::util::enumToValue(opt);
+			available_options[num] = true;
+			coloring_property_->addOption(getStr(opt), num);
+		}
 	}
 
-	// TODO: Set to correct option
+	for (auto opt : {ColoringMode::X_AXIS, ColoringMode::Y_AXIS, ColoringMode::Z_AXIS,
+	                 ColoringMode::FIXED}) {
+		auto num = ufo::util::enumToValue(opt);
+		available_options[num] = true;
+		coloring_property_->addOption(getStr(opt), num);
+	}
+
+	if (available_options[option]) {
+		coloring_property_->setString(getStr(static_cast<ColoringMode>(option)));
+	} else {
+		coloring_property_->setString(getStr(ColoringMode::Z_AXIS));
+	}
 }
 
-void UFOMapDisplay::createMap()
+void UFOMapDisplay::reset()
+{
+	MFDClass::reset();
+	if (worker_) {
+		worker_->stop();
+	}
+	state_.message_queue.clear();
+	state_.clearObjects();
+	worker_.reset();
+	createWorker();
+}
+
+void UFOMapDisplay::createWorker()
 {
 	ufo::map::mt_t map_type = 0;
 	if (occupancy_property_->getBool()) {
@@ -226,12 +264,20 @@ void UFOMapDisplay::createMap()
 	if (reflection_property_->getBool()) {
 		map_type |= ufo::map::MapType::REFLECTION;
 	}
-	// if (semantic_property_->getBool()) {
-	// 	map_type |= ufo::map::MapType::SEMANTIC;
-	// }
+	if (semantic_property_->getBool()) {
+		map_type |= ufo::map::MapType::SEMANTIC;
+	}
 	if (surfel_property_->getBool()) {
 		map_type |= ufo::map::MapType::SURFEL;
 	}
+
+	if (map_type == map_type_) {
+		return;
+	}
+
+	bool share_data = map_type & map_type_;
+	updateGUI();
+	map_type_ = map_type;
 
 // clang-format off
 #define MAP_CASES_REPEAT_2(M, N) M(N) M(N + 1)
@@ -258,7 +304,7 @@ void UFOMapDisplay::createMap()
 
 #define MAP_CASES(N)                                               \
 	case N: {                                                        \
-		if (worker_) {                                                 \
+		if (worker_ && share_data) {                                   \
 			auto buf = worker_->write();                                 \
 			worker_ = std::make_unique<Worker<N>>(buf, state_, filter_); \
 		} else {                                                       \
@@ -273,23 +319,6 @@ void UFOMapDisplay::createMap()
 			worker_.reset();
 			break;
 	}
-}  // namespace ufomap_ros::rviz_plugins
-
-void UFOMapDisplay::reset()
-{
-	MFDClass::reset();
-	if (worker_) {
-		worker_->stop();
-	}
-	state_.message_queue.clear();
-	state_.clearObjects();
-	worker_.reset();
-	createMap();
-}
-
-void UFOMapDisplay::createWorker()
-{
-	// TODO: Implement
 }
 
 void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
@@ -297,6 +326,7 @@ void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 	std::unique_lock<std::mutex> message_lock(state_.message_mutex);
 	state_.message_queue.push_back(msg);
 	message_lock.unlock();
+	createWorker();
 	if (worker_) {
 		worker_->notify();
 	}
