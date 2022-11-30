@@ -44,6 +44,7 @@
 
 // UFO ROS
 #include <ufo/map/buffer.h>
+#include <ufo/map/io.h>
 #include <ufomap_msgs/UFOMap.h>
 
 // STL
@@ -56,6 +57,23 @@ namespace ufomap_msgs
 //
 // ROS message type to UFO type
 //
+
+inline ufo::map::FileHeader msgToHeader(ufomap_msgs::UFOMap const& msg)
+{
+	if (msg.data.empty()) {
+		return ufo::map::FileHeader();
+	}
+
+	constexpr std::size_t max_header_size = 200;
+
+	ufo::map::Buffer buffer;
+	buffer.write(msg.data.data(),
+	             std::min(max_header_size,
+	                      msg.data.size() *
+	                          sizeof(decltype(ufomap_msgs::UFOMap::data)::value_type)));
+
+	return ufo::map::readHeader(buffer);
+}
 
 template <class Map>
 void msgToUfo(ufomap_msgs::UFOMap const& msg, Map& map, bool propagate = true)

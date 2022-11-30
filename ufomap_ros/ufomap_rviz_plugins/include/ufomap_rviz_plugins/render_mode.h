@@ -93,8 +93,6 @@ static inline QString getStr(VoxelType const& type)
 			return "Free";
 		case VoxelType::OCCUPIED:
 			return "Occupied";
-		default:
-			return "";
 	}
 }
 
@@ -118,6 +116,8 @@ static inline QString getStr(ColoringMode const& mode)
 			return "Z-Axis";
 		case ColoringMode::OCCUPANCY:
 			return "Occupancy";
+		case ColoringMode::COUNT:
+			return "Count";
 		case ColoringMode::REFLECTIVENESS:
 			return "Reflectiveness";
 		case ColoringMode::HITS:
@@ -128,8 +128,6 @@ static inline QString getStr(ColoringMode const& mode)
 			return "Intensity";
 		case ColoringMode::FIXED:
 			return "Fixed";
-		default:
-			return "";
 	}
 }
 
@@ -151,8 +149,6 @@ static inline QString getStr(RenderStyle const& style)
 			return "Boxes";
 		case RenderStyle::SURFEL:
 			return "Surfel";
-		default:
-			return "";
 	}
 }
 

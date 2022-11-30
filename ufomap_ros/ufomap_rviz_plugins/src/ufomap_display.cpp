@@ -324,6 +324,13 @@ void UFOMapDisplay::createWorker()
 void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 {
 	std::unique_lock<std::mutex> message_lock(state_.message_mutex);
+	if (!state_.message_queue.empty()) {
+		auto h1 = ufomap_msgs::msgToHeader(*msg);
+		auto h2 = ufomap_msgs::msgToHeader(*state_.message_queue.front());
+		if (h1.leaf_size != h2.leaf_size || h1.depth_levels != h2.depth_levels) {
+			state_.message_queue.clear();
+		}
+	}
 	state_.message_queue.push_back(msg);
 	message_lock.unlock();
 	createWorker();
@@ -334,6 +341,7 @@ void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 
 void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 {
+	updateStatus();
 	// auto start = std::chrono::high_resolution_clock::now();
 
 	// Performance performance = performance_display_->getPerformance();
@@ -413,6 +421,20 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 	//                      std::chrono::high_resolution_clock::now() - start)
 	//                      .count();
 	// // std::cout << "Updating time taken " << duration << " s\n";
+
+	if (!state_.timing.empty()) {
+		printf("Timings\n");
+		printf("\t component\tTotal\tLast\tMean\tStDev\t Min\t Max\t Steps\n");
+		std::lock_guard lock(state_.timing_mutex);
+		for (auto const& tag : state_.timing.tags()) {
+			printf("\t%s%s\t%5.2f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%6lu%s\n",
+			       state_.timing.color(tag).c_str(), tag.c_str(),
+			       state_.timing.totalSeconds(tag), state_.timing.lastSeconds(tag),
+			       state_.timing.meanSeconds(tag), state_.timing.stdSeconds(tag),
+			       state_.timing.minSeconds(tag), state_.timing.maxSeconds(tag),
+			       state_.timing.numSamples(tag), ufo::util::Timing::resetColor());
+		}
+	}
 }
 
 ufo::geometry::Frustum UFOMapDisplay::viewFrustum(Ogre::Real far_clip) const

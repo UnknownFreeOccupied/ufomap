@@ -333,9 +333,29 @@ class Timing
 		return tags;
 	}
 
-	std::string color(std::string const& tag) { return color_.at(tag); }
+	bool empty() const { return timers_.empty(); }
+
+	std::string color(std::string const& tag) { return color_[tag]; }
 
 	void setColor(std::string const& tag, std::string const& color) { color_[tag] = color; }
+
+	static constexpr char const* resetColor() { return "\033[0m"; }
+	static constexpr char const* blackColor() { return "\033[30m"; }
+	static constexpr char const* redColor() { return "\033[31m"; }
+	static constexpr char const* greenColor() { return "\033[32m"; }
+	static constexpr char const* yellowColor() { return "\033[33m"; }
+	static constexpr char const* blueColor() { return "\033[34m"; }
+	static constexpr char const* magentaColor() { return "\033[35m"; }
+	static constexpr char const* cyanColor() { return "\033[36m"; }
+	static constexpr char const* whiteColor() { return "\033[37m"; }
+	static constexpr char const* boldBlackColor() { return "\033[1m\033[30m"; }
+	static constexpr char const* boldRedColor() { return "\033[1m\033[31m"; }
+	static constexpr char const* boldGreenColor() { return "\033[1m\033[32m"; }
+	static constexpr char const* boldYellowColor() { return "\033[1m\033[33m"; }
+	static constexpr char const* boldBlueColor() { return "\033[1m\033[34m"; }
+	static constexpr char const* boldMagentaColor() { return "\033[1m\033[35m"; }
+	static constexpr char const* boldCyanColor() { return "\033[1m\033[36m"; }
+	static constexpr char const* boldWhiteColor() { return "\033[1m\033[37m"; }
 
  private:
 	std::map<std::string, TimerObject> timers_;

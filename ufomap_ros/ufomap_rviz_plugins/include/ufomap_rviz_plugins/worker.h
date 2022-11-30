@@ -69,11 +69,17 @@ class Worker final : public WorkerBase
 	Worker(State& state, Filter& filter)
 	    : state_(state), filter_(filter), thread_(&Worker::processMessages, this)
 	{
+		std::lock_guard lock(state_.timing_mutex);
+		state_.timing.setColor("Update map", ufo::util::Timing::boldMagentaColor());
+		state_.timing.setColor("Generate objs", ufo::util::Timing::boldCyanColor());
 	}
 
 	Worker(ufo::map::ReadBuffer& in, State& state, Filter& filter)
 	    : map_(in), state_(state), filter_(filter), thread_(&Worker::processMessages, this)
 	{
+		std::lock_guard lock(state_.timing_mutex);
+		state_.timing.setColor("Update map", ufo::util::Timing::boldMagentaColor());
+		state_.timing.setColor("Generate objs", ufo::util::Timing::boldCyanColor());
 	}
 
 	virtual ~Worker() { stop(); }
@@ -134,22 +140,28 @@ class Worker final : public WorkerBase
 			queue.swap(state_.message_queue);
 			message_lock.unlock();
 
-			// updateMap(queue);
+			updateMap(queue);
 
-			// if (updateGridSizeDepth()) {
-			// 	state_.regenerate = true;
-			// }
+			if (updateGridSizeDepth()) {
+				state_.regenerate = true;
+			}
 
-			// generateObjects();
+			generateObjects();
 
-			// map_.resetModified();
+			map_.resetModified();
 		}
 	}
 
 	void updateMap(std::vector<ufomap_msgs::UFOMap::ConstPtr> const& queue)
 	{
 		for (auto const& msg : queue) {
+			std::unique_lock lock(state_.timing_mutex);
+			state_.timing.start("Update map");
+			lock.unlock();
 			ufomap_msgs::msgToUfo(*msg, map_, false);
+			lock.lock();
+			state_.timing.stop("Update map");
+			lock.unlock();
 		}
 	}
 
@@ -163,6 +175,7 @@ class Worker final : public WorkerBase
 
 	void generateObjects()
 	{
+		state_.timing.start("Generate objs");
 		namespace Pred = ufo::map::predicate;
 
 		bool only_modified = true;
@@ -173,39 +186,40 @@ class Worker final : public WorkerBase
 		}
 
 		// TODO: Implement
-		auto pred = Pred::Leaf(filter_.min_depth) && Pred::Exists() &&
-		            Pred::THEN(Pred::OccupancyMap(),
-		                       !filter_.occupancy ||
-		                           Pred::OccupancyStates(filter_.unknown, filter_.free,
-		                                                 filter_.occupied));
-		// 				 &&
-		// Pred::THEN(Pred::ColorMap(), !filter_.color || Pred::HasColor()) &&
-		// Pred::THEN(
-		//     Pred::TimeMap(),
-		//     !filter_.time || Pred::TimeInterval(filter_.min_time, filter_.max_time)) &&
-		// Pred::THEN(
-		//     Pred::IntensityMap(),
-		//     !filter_.intensity ||
-		//         Pred::IntensityInterval(filter_.min_intensity, filter_.max_intensity)) &&
-		// Pred::THEN(
-		//     Pred::CountMap(),
-		//     !filter_.count || Pred::CountInterval(filter_.min_count, filter_.max_count));
-		// 							  &&
-		// Pred::THEN(Pred::ReflectionMap(), !filter_.reflection || ...) &&
-		// Pred::THEN(Pred::SurfelMap(), !filter_.surfel || ...) &&
-		// Pred::THEN(Pred::SemanticMap(), !filter_.semantic || ...);
+		// auto pred = Pred::Leaf(filter_.min_depth) && Pred::Exists() &&
+		//             Pred::THEN(Pred::OccupancyMap(),
+		//                        !filter_.occupancy ||
+		//                            Pred::OccupancyStates(filter_.unknown, filter_.free,
+		//                                                  filter_.occupied));
+		// // 				 &&
+		// // Pred::THEN(Pred::ColorMap(), !filter_.color || Pred::HasColor()) &&
+		// // Pred::THEN(
+		// //     Pred::TimeMap(),
+		// //     !filter_.time || Pred::TimeInterval(filter_.min_time, filter_.max_time)) &&
+		// // Pred::THEN(
+		// //     Pred::IntensityMap(),
+		// //     !filter_.intensity ||
+		// //         Pred::IntensityInterval(filter_.min_intensity, filter_.max_intensity)) &&
+		// // Pred::THEN(
+		// //     Pred::CountMap(),
+		// //     !filter_.count || Pred::CountInterval(filter_.min_count, filter_.max_count));
+		// // 							  &&
+		// // Pred::THEN(Pred::ReflectionMap(), !filter_.reflection || ...) &&
+		// // Pred::THEN(Pred::SurfelMap(), !filter_.surfel || ...) &&
+		// // Pred::THEN(Pred::SemanticMap(), !filter_.semantic || ...);
 
-		for (auto node : map_.query(Pred::Depth(grid_size_depth_) && Pred::Exists() &&
-		                            (!only_modified || Pred::Modified()))) {
-			std::unordered_map<ufo::map::depth_t, Data> data;
+		// for (auto node : map_.query(Pred::Depth(grid_size_depth_) && Pred::Exists() &&
+		//                             (!only_modified || Pred::Modified()))) {
+		// 	std::unordered_map<ufo::map::depth_t, Data> data;
 
-			for (auto node : map_.queryBV(node, pred)) {
-				fillData(data[node.depth()], node);
-			}
+		// 	for (auto node : map_.queryBV(node, pred)) {
+		// 		fillData(data[node.depth()], node);
+		// 	}
 
-			std::scoped_lock object_lock(state_.object_mutex);
-			state_.queued_objects.insert_or_assign(node.code(), std::move(data));
-		}
+		// 	std::scoped_lock object_lock(state_.object_mutex);
+		// 	state_.queued_objects.insert_or_assign(node.code(), std::move(data));
+		// }
+		state_.timing.stop("Generate objs");
 	}
 
 	void fillData(Data& data, ufo::map::NodeBV node) const

@@ -2683,7 +2683,11 @@ class OctreeBase
 
 	void read(ReadBuffer& in, bool propagate = true)
 	{
-		readData(in, readHeader(in), propagate);
+		std::cout << "Read\n";
+		std::cout << "\tEmpty: " << in.readIndex() << '\n';
+		auto header = readHeader(in);
+		std::cout << "\tHeader: " << in.readIndex() << '\n';
+		readData(in, header, propagate);
 	}
 
 	void readData(std::istream& in, FileHeader const& header, bool propagate = true)
@@ -2708,9 +2712,12 @@ class OctreeBase
 
 		auto nodes = readNodes(in);
 		derived().readNodes(in, std::begin(nodes), std::end(nodes), false, header.compressed);
+		std::cout << "\tData: " << in.readIndex() << "\n";
 
 		if (propagate) {
+			std::cout << "Propagating\n";
 			propagateModified();
+			std::cout << "Propagated\n";
 		}
 	}
 
@@ -4044,7 +4051,6 @@ class OctreeBase
 			if (!keep_modified && depth <= max_depth) {
 				node.modified[index] = false;
 			}
-
 			return;
 		}
 
@@ -4729,7 +4735,9 @@ class OctreeBase
 	[[nodiscard]] std::vector<NodeAndIndices> readNodes(ReadBuffer& in)
 	{
 		auto tree = readTreeStructure(in);
+		std::cout << "\tTree: " << in.readIndex() << '\n';
 		auto num_nodes = readNum(in);
+		std::cout << "\tNum Nodes: " << in.readIndex() << '\n';
 		return retrieveNodes(tree, num_nodes);
 	}
 
@@ -5048,11 +5056,17 @@ class OctreeBase
 	           std::vector<LeafNode> const& nodes, bool compress,
 	           int compression_acceleration_level, int compression_level) const
 	{
+		std::cout << "Write\n";
+		std::cout << "\tEmpty: " << out.size() << '\n';
 		writeHeader(out, fileOptions(compress));
+		std::cout << "\tHeader: " << out.size() << '\n';
 		writeTreeStructure(out, tree);
+		std::cout << "\tTree: " << out.size() << '\n';
 		writeNumNodes(out, nodes.size());
+		std::cout << "\tNum nodes: " << out.size() << '\n';
 		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress,
 		           compression_acceleration_level, compression_level);
+		std::cout << "\tData: " << out.size() << '\n';
 	}
 
 	void writeTreeStructure(std::ostream& out, std::vector<IndexField> const& tree) const

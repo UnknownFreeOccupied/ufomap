@@ -44,6 +44,7 @@
 
 // UFO
 #include <ufo/map/code.h>
+#include <ufo/util/timing.h>
 #include <ufomap_msgs/UFOMap.h>
 #include <ufomap_rviz_plugins/render_data.h>
 
@@ -81,6 +82,10 @@ struct State {
 	std::unordered_map<ufo::map::Code, std::unordered_map<ufo::map::depth_t, Data>>
 	    queued_objects;
 	std::vector<RenderData*> prev_visible_objects;
+
+	// Timing
+	std::mutex timing_mutex;
+	ufo::util::Timing timing;
 };
 }  // namespace ufomap_ros::rviz_plugins
 

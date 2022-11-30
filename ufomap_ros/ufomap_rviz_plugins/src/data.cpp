@@ -97,8 +97,7 @@ bool Data::includeVoxel(Filter const& filter, double size, size_t index) const
 	}
 
 	if (filter.filter_time && (time_.size() == position_.size()) &&
-	    (filter.min_time > time_[index] ||
-	     time_[index] > filter.max_time)) {
+	    (filter.min_time > time_[index] || time_[index] > filter.max_time)) {
 		return false;
 	}
 
@@ -120,41 +119,46 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
 	// FIXME: Use alpha?
 
 	switch (render.coloring_mode) {
-		case ColoringMode::FIXED_COLOR:
+		case ColoringMode::FIXED:
 			return render.color;
-		case ColoringMode::X_AXIS_COLOR:
+		case ColoringMode::X_AXIS:
 			return render.normalized_value
 			           ? Heatmap::getColor(position_[index].x, heatmap.min_position.x,
 			                               heatmap.max_position.x, render.color_factor)
 			           : Heatmap::getColor(position_[index].x, render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
-		case ColoringMode::Y_AXIS_COLOR:
+		case ColoringMode::Y_AXIS:
 			return render.normalized_value
 			           ? Heatmap::getColor(position_[index].y, heatmap.min_position.y,
 			                               heatmap.max_position.y, render.color_factor)
 			           : Heatmap::getColor(position_[index].y, render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
-		case ColoringMode::Z_AXIS_COLOR:
+		case ColoringMode::Z_AXIS:
 			return render.normalized_value
 			           ? Heatmap::getColor(position_[index].z, heatmap.min_position.z,
 			                               heatmap.max_position.z, render.color_factor)
 			           : Heatmap::getColor(position_[index].z, render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
-		case ColoringMode::time_COLOR:
+		case ColoringMode::TIME:
 			assert(position_.size() == time_.size());
 			return render.normalized_value
-			           ? Heatmap::getColor(time_[index], heatmap.min_time,
-			                               heatmap.max_time, render.color_factor)
+			           ? Heatmap::getColor(time_[index], heatmap.min_time, heatmap.max_time,
+			                               render.color_factor)
 			           : Heatmap::getColor(time_[index], render.min_normalized_value,
 			                               render.max_normalized_value, render.color_factor);
-		case ColoringMode::OCCUPANCY_COLOR:
+		case ColoringMode::OCCUPANCY:
 			assert(position_.size() == occupancy_.size());
 			return Heatmap::getColor(occupancy_[index], 0, 100, render.color_factor);
-		case ColoringMode::VOXEL_COLOR:
+		case ColoringMode::VOXEL:
 			assert(position_.size() == color_.size());
 			return color_[index];
-		case ColoringMode::SEMANTIC_COLOR:
-		default:
+		case ColoringMode::SEMANTIC:
+		case ColoringMode::SURFEL_NORMAL:
+		case ColoringMode::COUNT:
+		case ColoringMode::REFLECTIVENESS:
+		case ColoringMode::HITS:
+		case ColoringMode::MISSES:
+		case ColoringMode::INTENSITY:
 			return Ogre::ColourValue(0, 0, 0, 1);
 	}
 }
