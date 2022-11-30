@@ -266,7 +266,6 @@ class OctreeMap
 
 		Buffer compress_buf;
 		while (in.readIndex() < in.size()) {
-			std::cout << "Start: " << in.readIndex() << " vs " << in.size() << '\n';
 			MapType mt;
 			std::uint64_t data_size;
 
@@ -281,7 +280,6 @@ class OctreeMap
 
 			// Skip forward
 			in.setReadIndex(next_index);
-			std::cout << "End: " << in.readIndex() << " vs " << in.size() << '\n';
 		}
 
 		// for (auto const& r : res) {
@@ -408,7 +406,7 @@ class OctreeMap
 		}
 
 		auto cur_index = out.writeIndex();
-		size = cur_index - size_index;
+		size = cur_index - (size_index + sizeof(size));
 		out.setWriteIndex(size_index);
 		out.write(&size, sizeof(size));
 		out.setWriteIndex(cur_index);

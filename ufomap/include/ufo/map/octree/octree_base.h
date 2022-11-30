@@ -2710,9 +2710,7 @@ class OctreeBase
 		derived().readNodes(in, std::begin(nodes), std::end(nodes), false, header.compressed);
 
 		if (propagate) {
-			std::cout << "Propagating\n";
 			propagateModified();
-			std::cout << "Propagated\n";
 		}
 	}
 
@@ -4040,6 +4038,14 @@ class OctreeBase
 	{
 		if (!std::as_const(node).modified[index]) {
 			return;  // Nothing modified here
+		}
+
+		if (std::as_const(node).leaf[index]) {
+			if (!keep_modified && depth <= max_depth) {
+				node.modified[index] = false;
+			}
+
+			return;
 		}
 
 		if (1 == depth) {
