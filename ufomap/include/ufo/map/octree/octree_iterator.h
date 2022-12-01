@@ -91,11 +91,10 @@ class IteratorBase
 	constexpr Tree const* tree() const { return tree_; }
 
 	virtual bool equal(IteratorBase const& other) const = 0;
-	
+
 	virtual std::size_t status() const = 0;
 
  protected:
-
 	template <class NodeType>
 	[[nodiscard]] constexpr depth_t depth(NodeType const& node) const
 	{
@@ -294,8 +293,9 @@ class Iterator final : public IteratorBase<Tree, BaseNodeType>
 
 	bool equal(Base const& other) const override
 	{
-		return other.tree() == this->tree() && other.status() == status() &&
-		       (!return_nodes_.empty() && other.data() == data());
+		return status() == other.status();
+		// return other.tree() == this->tree() && other.status() == status() &&
+		//        (!return_nodes_.empty() && other.data() == data());
 	}
 
 	std::size_t status() const override

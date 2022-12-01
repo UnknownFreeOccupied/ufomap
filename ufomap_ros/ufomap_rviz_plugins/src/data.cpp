@@ -40,6 +40,7 @@
  */
 
 // UFO
+#include <ufomap_rviz_plugins/color.h>
 #include <ufomap_rviz_plugins/data.h>
 
 namespace ufomap_ros::rviz_plugins
@@ -90,13 +91,13 @@ void Data::clear()
 
 bool Data::includeVoxel(Filter const& filter, double size, size_t index) const
 {
-	if (filter.filter_occupancy && (occupancy_.size() == position_.size()) &&
+	if (filter.occupancy && (occupancy_.size() == position_.size()) &&
 	    (filter.min_occupancy > occupancy_[index] ||
 	     occupancy_[index] > filter.max_occupancy)) {
 		return false;
 	}
 
-	if (filter.filter_time && (time_.size() == position_.size()) &&
+	if (filter.time && (time_.size() == position_.size()) &&
 	    (filter.min_time > time_[index] || time_[index] > filter.max_time)) {
 		return false;
 	}
@@ -151,7 +152,9 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
 			return Heatmap::getColor(occupancy_[index], 0, 100, render.color_factor);
 		case ColoringMode::VOXEL:
 			assert(position_.size() == color_.size());
-			return color_[index];
+			return Ogre::ColourValue(color_lut[color_[index].red],
+			                         color_lut[color_[index].green],
+			                         color_lut[color_[index].blue]);
 		case ColoringMode::SEMANTIC:
 		case ColoringMode::SURFEL_NORMAL:
 		case ColoringMode::COUNT:

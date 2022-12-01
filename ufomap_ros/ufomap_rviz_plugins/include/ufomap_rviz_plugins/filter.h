@@ -54,7 +54,7 @@ namespace ufomap_ros::rviz_plugins
 {
 struct Filter {
 	// Depth
-	ufo::map::depth_t min_depth;
+	ufo::map::depth_t min_depth = 0;
 
 	// Occupancy
 	bool occupancy;

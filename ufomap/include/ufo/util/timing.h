@@ -333,6 +333,15 @@ class Timing
 		return tags;
 	}
 
+	std::size_t maxSize() const
+	{
+		std::size_t s = 0;
+		for (auto const& [tag, _] : timers_) {
+			s = std::max(s, tag.size());
+		}
+		return s;
+	}
+
 	bool empty() const { return timers_.empty(); }
 
 	std::string color(std::string const& tag) { return color_[tag]; }

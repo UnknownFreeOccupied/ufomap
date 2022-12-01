@@ -359,7 +359,7 @@ class OctreeBase
 	 */
 	[[nodiscard]] constexpr bool isLeaf(Node node) const
 	{
-		return isPureLeaf(node) || innerNode(node).leaf[node.index()];
+		return isPureLeaf(node) || innerNode(node).leaf[node.dataIndex()];
 	}
 
 	/*!
@@ -4785,6 +4785,7 @@ class OctreeBase
 			createInnerChildren(root(), rootIndex(), rootDepth());
 			retrieveNodesRecurs(innerChildren(root()), tree[1], rootDepth() - 1, tree.get() + 2,
 			                    nodes);
+			root().modified[rootIndex()] = true;
 		}
 
 		return nodes;

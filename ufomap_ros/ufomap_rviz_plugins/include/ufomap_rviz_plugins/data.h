@@ -47,8 +47,8 @@
 #include <ufo/geometry/intersects.h>
 #include <ufo/map/point.h>
 #include <ufo/map/semantic/semantic.h>
+#include <ufo/map/surfel/surfel.h>
 #include <ufo/map/types.h>
-#include <ufomap_rviz_plugins/color.h>
 #include <ufomap_rviz_plugins/filter.h>
 #include <ufomap_rviz_plugins/heatmap.h>
 #include <ufomap_rviz_plugins/render_mode.h>

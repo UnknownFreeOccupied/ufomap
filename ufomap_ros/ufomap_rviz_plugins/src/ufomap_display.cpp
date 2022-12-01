@@ -314,7 +314,7 @@ void UFOMapDisplay::createWorker()
 	}
 
 	switch (map_type) {
-		MAP_CASES_REPEAT_256(MAP_CASES, ufo::map::mt_t(1));
+		MAP_CASES_REPEAT_2(MAP_CASES, ufo::map::mt_t(1));
 		default:
 			worker_.reset();
 			break;
@@ -423,8 +423,10 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 	// // std::cout << "Updating time taken " << duration << " s\n";
 
 	if (!state_.timing.empty()) {
+		std::size_t s = state_.timing.maxSize();
+		std::size_t h_s = s / 2;
 		printf("Timings\n");
-		printf("\t component\tTotal\tLast\tMean\tStDev\t Min\t Max\t Steps\n");
+		printf("\t Component\tTotal\tLast\tMean\tStDev\t Min\t Max\t Steps\n");
 		std::lock_guard lock(state_.timing_mutex);
 		for (auto const& tag : state_.timing.tags()) {
 			printf("\t%s%s\t%5.2f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%6lu%s\n",
