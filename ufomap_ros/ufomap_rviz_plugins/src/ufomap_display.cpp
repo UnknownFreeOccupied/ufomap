@@ -224,11 +224,9 @@ void UFOMapDisplay::updateGUI()
 		coloring_property_->addOption(getStr(opt), num);
 	}
 
-	if (available_options[option]) {
-		coloring_property_->setString(getStr(static_cast<ColoringMode>(option)));
-	} else {
-		coloring_property_->setString(getStr(ColoringMode::Z_AXIS));
-	}
+	coloring_property_->setString(getStr(available_options[option]
+	                                         ? static_cast<ColoringMode>(option)
+	                                         : ColoringMode::Z_AXIS));
 }
 
 void UFOMapDisplay::reset()
@@ -341,7 +339,62 @@ void UFOMapDisplay::processMessage(ufomap_msgs::UFOMap::ConstPtr const& msg)
 
 void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 {
+	state_.timing.start("Update");
 	updateStatus();
+
+	// decltype(state_.queued_objects) queued_objects;
+	// {
+	// 	std::scoped_lock object_lock(state_.object_mutex);
+	// 	queued_objects.swap(state_.queued_objects);
+	// }
+
+	// // Set previous invisible
+	// for (auto const& v : prev_visible_objects_) {
+	// 	scene_node_->removeChild(v->scene_node_);
+	// }
+	// prev_visible_objects_.clear();
+
+	// // Something
+	// for (auto& [code, data] : queued_objects) {
+	// 	if (data.empty()) {
+	// 		objects_.erase(code);
+	// 	} else {
+	// 		auto& obj = objects_[code];
+	// 		obj.transformed_voxels_ = std::move(data);
+	// 	}
+	// }
+
+	// // // Read all values
+	// // auto render_mode = getRenderMode();
+	// // for (auto& rm : render_mode) {
+	// // 	rm.normalized_min_change = performance.normalized_min_change;
+	// // }
+	// // Filter filter = filter_display_->getFilter();
+	// // auto heatmap = getHeatmap(filter);
+
+	// // Set things inside FOV visible
+	// for (auto code : worker_.codesInFOV(viewFrustum(performance.far_clip), depth)) {
+	// 	for (auto& obj : objects_) {
+	// 		auto obj_it = obj.find(code);
+	// 		if (std::end(obj) == obj_it) {
+	// 			continue;
+	// 		}
+
+	// 		if (nullptr == obj_it->second.scene_node_) {
+	// 			obj_it->second.scene_node_ = scene_node_->createChildSceneNode(
+	// 			    obj_it->second.position_, obj_it->second.orientation_);
+	// 			obj_it->second.generateVoxels(...);
+	// 		} else {
+	// 			obj_it->second.generateVoxels(...);
+	// 			scene_node_->addChild(obj_it->second.scene_node_);
+	// 		}
+
+	// 		prev_visible_objects_.push_back(&(obj_it->second));
+	// 	}
+	// }
+
+	state_.timing.stop("Update");
+
 	// auto start = std::chrono::high_resolution_clock::now();
 
 	// Performance performance = performance_display_->getPerformance();
