@@ -77,6 +77,8 @@ struct Node {
 	{
 		std::swap(data_, other.data_);
 		std::swap(code_, other.code_);
+		std::swap(code_depth_, other.code_depth_);
+		std::swap(data_depth_, other.data_depth_);
 	}
 
 	/*!
@@ -123,14 +125,14 @@ struct Node {
 	 *
 	 * @return The code for the node.
 	 */
-	[[nodiscard]] constexpr Code code() const noexcept { return code_; }
+	[[nodiscard]] constexpr Code code() const noexcept { return Code(code_, code_depth_); }
 
 	/*!
 	 * @brief Get the depth of the node.
 	 *
 	 * @return The depth of the node.
 	 */
-	[[nodiscard]] constexpr depth_t depth() const noexcept { return code_.depth(); }
+	[[nodiscard]] constexpr depth_t depth() const noexcept { return code_depth_; }
 
 	/*!
 	 * @brief Get the index of the node (i.e., the child index from the parent's
@@ -138,19 +140,17 @@ struct Node {
 	 *
 	 * @return The index of the node.
 	 */
-	[[nodiscard]] constexpr index_t index() const noexcept { return code_.index(); }
-
-	struct Hash {
-		static constexpr code_t hash(Node node) { return node.code().code(); }
-
-		constexpr code_t operator()(Node node) const { return hash(node); }
-
-		static constexpr bool equal(Node lhs, Node rhs) { return lhs == rhs; }
-	};
+	[[nodiscard]] constexpr index_t index() const noexcept
+	{
+		return (code_ >> (code_t(3) * depth())) & code_t(0x7);
+	}
 
  protected:
 	constexpr Node(void* data, Code code, depth_t data_depth) noexcept
-	    : data_(data), code_(code), data_depth_(data_depth)
+	    : data_(data),
+	      code_(code.code()),
+	      code_depth_(code.depth()),
+	      data_depth_(data_depth)
 	{
 	}
 
@@ -182,7 +182,7 @@ struct Node {
 	 */
 	[[nodiscard]] constexpr Code dataCode() const noexcept
 	{
-		return code_.toDepth(dataDepth());
+		return Code(code_, data_depth_);
 	}
 
 	/*!
@@ -190,7 +190,7 @@ struct Node {
 	 */
 	[[nodiscard]] constexpr index_t dataIndex() const noexcept
 	{
-		return code_.index(dataDepth());
+		return (code_ >> (code_t(3) * dataDepth())) & code_t(0x7);
 	}
 
 	/*!
@@ -205,13 +205,17 @@ struct Node {
 	// Pointer to the actual node
 	void* data_ = nullptr;
 	// The code for the node
-	Code code_;
+	code_t code_ = 0;
+	// The depth of the code
+	depth_t code_depth_ = 0;
 	// The depth of the data
 	depth_t data_depth_ = 0;
 
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, UFOLock Lock,
 	          bool TrackNodes, bool CountNodes>
 	friend class OctreeBase;
+
+	friend class std::hash<Node>;
 };
 
 struct NodeBV : public Node {
@@ -333,7 +337,22 @@ struct NodeBV : public Node {
 	template <class Derived, class Data, class InnerData, bool ReuseNodes, UFOLock Lock,
 	          bool TrackNodes, bool CountNodes>
 	friend class OctreeBase;
+
+	friend class std::hash<NodeBV>;
 };
 }  // namespace ufo::map
+
+namespace std
+{
+template <>
+struct hash<ufo::map::Node> {
+	std::size_t operator()(ufo::map::Node node) const { return node.code_; }
+};
+
+template <>
+struct hash<ufo::map::NodeBV> {
+	std::size_t operator()(ufo::map::NodeBV node) const { return node.code_; }
+};
+}  // namespace std
 
 #endif  // UFO_MAP_OCTREE_NODE_H

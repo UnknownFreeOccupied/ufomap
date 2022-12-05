@@ -77,6 +77,8 @@ class WorkerBase
 
 	virtual std::size_t memoryAllocated() const = 0;
 
+	virtual ufo::map::depth_t gridSizeDepth() const = 0;
+
 	virtual std::vector<ufo::map::Code> codesInFOV(ufo::geometry::Frustum const& view,
 	                                               ufo::map::depth_t depth) const = 0;
 

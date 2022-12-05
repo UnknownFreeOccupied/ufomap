@@ -342,27 +342,29 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 	state_.timing.start("Update");
 	updateStatus();
 
-	// decltype(state_.queued_objects) queued_objects;
-	// {
-	// 	std::scoped_lock object_lock(state_.object_mutex);
-	// 	queued_objects.swap(state_.queued_objects);
-	// }
+	decltype(state_.queued_objects) queued_objects;
+	{
+		std::scoped_lock object_lock(state_.object_mutex);
+		queued_objects.swap(state_.queued_objects);
+	}
 
-	// // Set previous invisible
-	// for (auto const& v : prev_visible_objects_) {
-	// 	scene_node_->removeChild(v->scene_node_);
-	// }
-	// prev_visible_objects_.clear();
+	// Set previous invisible
+	for (auto const& v : state_.prev_visible_objects) {
+		scene_node_->removeChild(v->scene_node_);
+	}
+	state_.prev_visible_objects.clear();
 
-	// // Something
-	// for (auto& [code, data] : queued_objects) {
-	// 	if (data.empty()) {
-	// 		objects_.erase(code);
-	// 	} else {
-	// 		auto& obj = objects_[code];
-	// 		obj.transformed_voxels_ = std::move(data);
-	// 	}
-	// }
+	// Process queued objects
+	for (auto& [code, data] : queued_objects) {
+		if (data.empty()) {
+			state_.objects.erase(code);
+		} else {
+			auto& obj = state_.objects[code];
+			obj.transformed_voxels_ = std::move(data);
+		}
+	}
+
+	Performance performance = performance_display_->performance();
 
 	// // // Read all values
 	// // auto render_mode = getRenderMode();
@@ -372,26 +374,28 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 	// // Filter filter = filter_display_->getFilter();
 	// // auto heatmap = getHeatmap(filter);
 
-	// // Set things inside FOV visible
-	// for (auto code : worker_.codesInFOV(viewFrustum(performance.far_clip), depth)) {
-	// 	for (auto& obj : objects_) {
-	// 		auto obj_it = obj.find(code);
-	// 		if (std::end(obj) == obj_it) {
-	// 			continue;
-	// 		}
+	if (worker_) {
+		// Set things inside FOV visible
+		for (auto code : worker_->codesInFOV(viewFrustum(performance.far_clip),
+		                                     worker_->gridSizeDepth())) {
+			auto obj_it = state_.objects.find(code);
+			if (std::end(state_.objects) == obj_it) {
+				continue;
+			}
 
-	// 		if (nullptr == obj_it->second.scene_node_) {
-	// 			obj_it->second.scene_node_ = scene_node_->createChildSceneNode(
-	// 			    obj_it->second.position_, obj_it->second.orientation_);
-	// 			obj_it->second.generateVoxels(...);
-	// 		} else {
-	// 			obj_it->second.generateVoxels(...);
-	// 			scene_node_->addChild(obj_it->second.scene_node_);
-	// 		}
+			if (obj_it->second.scene_node_) {
+				// obj_it->second.generateVoxels(...);
+				scene_node_->addChild(obj_it->second.scene_node_);
+			} else {
+				obj_it->second.position_ = Ogre::Vector3(0, 0, 0);
+				obj_it->second.scene_node_ = scene_node_->createChildSceneNode(
+				    obj_it->second.position_, obj_it->second.orientation_);
+				// obj_it->second.generateVoxels(...);
+			}
 
-	// 		prev_visible_objects_.push_back(&(obj_it->second));
-	// 	}
-	// }
+			state_.prev_visible_objects.push_back(&(obj_it->second));
+		}
+	}
 
 	state_.timing.stop("Update");
 
@@ -476,14 +480,15 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 	// // std::cout << "Updating time taken " << duration << " s\n";
 
 	if (!state_.timing.empty()) {
-		std::size_t s = state_.timing.maxSize();
-		std::size_t h_s = s / 2;
+		std::string comp = "Component";
+		int s = std::max(comp.size(), state_.timing.maxSize());
+		int c_s = s - ((s - comp.size()) / 2) - 1;
 		printf("Timings\n");
-		printf("\t Component\tTotal\tLast\tMean\tStDev\t Min\t Max\t Steps\n");
+		printf("\t %*s\tTotal\tLast\tMean\tStDev\t Min\t Max\t Steps\n", c_s, comp.c_str());
 		std::lock_guard lock(state_.timing_mutex);
 		for (auto const& tag : state_.timing.tags()) {
-			printf("\t%s%s\t%5.2f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%6lu%s\n",
-			       state_.timing.color(tag).c_str(), tag.c_str(),
+			printf("\t%s%-*s\t%5.2f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%5.4f\t%6lu%s\n",
+			       state_.timing.color(tag).c_str(), s, tag.c_str(),
 			       state_.timing.totalSeconds(tag), state_.timing.lastSeconds(tag),
 			       state_.timing.meanSeconds(tag), state_.timing.stdSeconds(tag),
 			       state_.timing.minSeconds(tag), state_.timing.maxSeconds(tag),

@@ -46,6 +46,9 @@
 #include <ufo/map/point.h>
 #include <ufo/map/types.h>
 
+// OGRE
+#include <OGRE/OgreColourValue.h>
+
 struct Heatmap {
 	// Position
 	ufo::map::Point min_position;

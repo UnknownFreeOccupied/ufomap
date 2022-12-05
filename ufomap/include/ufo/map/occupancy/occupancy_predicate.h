@@ -52,10 +52,6 @@
 
 namespace ufo::map::predicate
 {
-// Forward declare
-template <class Derived>
-class OccupancyMapBase;
-
 //
 // Predicates
 //
@@ -148,11 +144,20 @@ template <>
 struct PredicateValueCheck<OccupancyMap> {
 	using Pred = OccupancyMap;
 
+	// template <class Map>
+	// static constexpr bool apply(Pred, Map const&, Node)
+	// {
+	// 	return util::is_base_of_template_v<OccupancyMapBase, Map>;
+	// }
+
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node)
+	static constexpr auto apply(Pred, Map const& m, Node n)
+	    -> decltype(m.isOccupied(n), true)
 	{
-		return util::is_base_of_template_v<OccupancyMapBase, Map>;
+		return true;  // TODO: Improve
 	}
+
+	static constexpr bool apply(...) { return false; }
 };
 
 template <class PredPost>
@@ -160,14 +165,13 @@ struct PredicateValueCheck<THEN<OccupancyMap, PredPost>> {
 	using Pred = THEN<OccupancyMap, PredPost>;
 
 	template <class Map, class Node>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	static constexpr auto apply(Pred const& p, Map const& m, Node const& n)
+	    -> decltype(m.isOccupied(n), true)
 	{
-		if constexpr (util::is_base_of_template_v<OccupancyMapBase, Map>) {
-			return PredicateValueCheck<PredPost>::apply(p.post, m, n);
-		} else {
-			return true;
-		}
+		return PredicateValueCheck<PredPost>::apply(p.post, m, n);
 	}
+
+	static constexpr bool apply(...) { return true; }
 };
 
 template <map::OccupancyState State>
@@ -300,11 +304,20 @@ template <>
 struct PredicateInnerCheck<OccupancyMap> {
 	using Pred = OccupancyMap;
 
+	// template <class Map>
+	// static constexpr bool apply(Pred, Map const&, Node)
+	// {
+	// 	return util::is_base_of_template_v<OccupancyMapBase, Map>;
+	// }
+
 	template <class Map>
-	static constexpr bool apply(Pred, Map const&, Node)
+	static constexpr auto apply(Pred, Map const& m, Node n)
+	    -> decltype(m.isOccupied(n), true)
 	{
-		return util::is_base_of_template_v<OccupancyMapBase, Map>;
+		return true;  // TODO: Improve
 	}
+
+	static constexpr bool apply(...) { return false; }
 };
 
 template <class PredPost>
@@ -312,14 +325,13 @@ struct PredicateInnerCheck<THEN<OccupancyMap, PredPost>> {
 	using Pred = THEN<OccupancyMap, PredPost>;
 
 	template <class Map, class Node>
-	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
+	static constexpr auto apply(Pred const& p, Map const& m, Node const& n)
+	    -> decltype(m.isOccupied(n), true)
 	{
-		if constexpr (util::is_base_of_template_v<OccupancyMapBase, Map>) {
-			return PredicateInnerCheck<PredPost>::apply(p.post, m, n);
-		} else {
-			return true;
-		}
+		return PredicateInnerCheck<PredPost>::apply(p.post, m, n);
 	}
+
+	static constexpr bool apply(...) { return true; }
 };
 
 template <map::OccupancyState State>

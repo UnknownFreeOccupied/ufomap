@@ -66,9 +66,8 @@ add_library(${PROJECT_NAME}
   src/filter_display.cpp
   src/performance_display.cpp
   src/data.cpp
-
-  # src/render_data.cpp
-  # src/voxels.cpp
+  src/render_data.cpp
+  src/voxels.cpp
   ${MOC_FILES}
 )
 

@@ -109,6 +109,8 @@ class Worker final : public WorkerBase
 
 	std::size_t memoryAllocated() const override { return map_.memoryUsageAllocated(); }
 
+	ufo::map::depth_t gridSizeDepth() const override { return grid_size_depth_; }
+
 	std::vector<ufo::map::Code> codesInFOV(ufo::geometry::Frustum const& view,
 	                                       ufo::map::depth_t depth) const override
 	{
@@ -187,10 +189,11 @@ class Worker final : public WorkerBase
 
 		// TODO: Implement
 		auto pred = Pred::Leaf(filter_.min_depth) && Pred::Exists() &&
-		            Pred::THEN(Pred::OccupancyMap(),
-		                       !filter_.occupancy ||
-		                           Pred::OccupancyStates(filter_.unknown, filter_.free,
-		                                                 filter_.occupied));
+		            Pred::THEN(Pred::OccupancyMap(), Pred::Occupied());
+		// Pred::THEN(Pred::OccupancyMap(),
+		//            !filter_.occupancy ||
+		//                Pred::OccupancyStates(filter_.unknown, filter_.free,
+		//                                      filter_.occupied));
 		// 				 &&
 		// Pred::THEN(Pred::ColorMap(), !filter_.color || Pred::HasColor()) &&
 		// Pred::THEN(
@@ -226,7 +229,8 @@ class Worker final : public WorkerBase
 		state_.timing.stop("Generate objs");
 	}
 
-	void fillData(Data& data, ufo::map::NodeBV node) const
+	template <class Node>
+	void fillData(Data& data, Node node) const
 	{
 		data.addPosition(map_.center(node));
 

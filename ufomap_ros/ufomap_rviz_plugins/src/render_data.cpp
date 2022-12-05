@@ -64,18 +64,17 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 
 	// Filter
 	if (!regenerate) {
-		bool occ = filter.filter_occupancy != voxels_filter_.filter_occupancy ||
-		           (filter.filter_occupancy &&
-		            (filter.min_occupancy != voxels_filter_.min_occupancy ||
-		             filter.max_occupancy != voxels_filter_.max_occupancy));
+		bool occ =
+		    filter.occupancy != voxels_filter_.occupancy ||
+		    (filter.occupancy && (filter.min_occupancy != voxels_filter_.min_occupancy ||
+		                          filter.max_occupancy != voxels_filter_.max_occupancy));
 
-		bool ts = filter.filter_time != voxels_filter_.filter_time ||
-		          (filter.filter_time &&
-		           (filter.min_time != voxels_filter_.min_time ||
-		            filter.max_time != voxels_filter_.max_time));
+		bool ts = filter.time != voxels_filter_.time ||
+		          (filter.time && (filter.min_time != voxels_filter_.min_time ||
+		                           filter.max_time != voxels_filter_.max_time));
 
-		bool sem = filter.filter_semantics != voxels_filter_.filter_semantics ||
-		           (filter.filter_semantics &&
+		bool sem = filter.semantics != voxels_filter_.semantics ||
+		           (filter.semantics &&
 		            (filter.min_semantic_value != voxels_filter_.min_semantic_value ||
 		             filter.max_semantic_value != voxels_filter_.max_semantic_value));
 
@@ -102,10 +101,10 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 
 	if (!regenerate) {
 		switch (render_mode.coloring_mode) {
-			case ColoringMode::time_COLOR:
-			case ColoringMode::X_AXIS_COLOR:
-			case ColoringMode::Y_AXIS_COLOR:
-			case ColoringMode::Z_AXIS_COLOR:
+			case ColoringMode::TIME:
+			case ColoringMode::X_AXIS:
+			case ColoringMode::Y_AXIS:
+			case ColoringMode::Z_AXIS:
 				regenerate = render_mode.color_factor != voxels_render_mode_.color_factor ||
 				             render_mode.normalized_value != voxels_render_mode_.normalized_value;
 				if (regenerate) {
@@ -123,28 +122,28 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 					double max_diff;
 
 					switch (render_mode.coloring_mode) {
-						case ColoringMode::time_COLOR:
+						case ColoringMode::TIME:
 							new_diff = heatmap.max_time - heatmap.min_time;
 							min_diff = std::abs(static_cast<double>(voxels_heatmap_.min_time) -
 							                    static_cast<double>(heatmap.min_time));
 							max_diff = std::abs(static_cast<double>(voxels_heatmap_.max_time) -
 							                    static_cast<double>(heatmap.max_time));
 							break;
-						case ColoringMode::X_AXIS_COLOR:
+						case ColoringMode::X_AXIS:
 							new_diff = heatmap.max_position.x - heatmap.min_position.x;
 							min_diff =
 							    std::abs(voxels_heatmap_.min_position.x - heatmap.min_position.x);
 							max_diff =
 							    std::abs(voxels_heatmap_.max_position.x - heatmap.max_position.x);
 							break;
-						case ColoringMode::Y_AXIS_COLOR:
+						case ColoringMode::Y_AXIS:
 							new_diff = heatmap.max_position.y - heatmap.min_position.y;
 							min_diff =
 							    std::abs(voxels_heatmap_.min_position.y - heatmap.min_position.y);
 							max_diff =
 							    std::abs(voxels_heatmap_.max_position.y - heatmap.max_position.y);
 							break;
-						case ColoringMode::Z_AXIS_COLOR:
+						case ColoringMode::Z_AXIS:
 							new_diff = heatmap.max_position.z - heatmap.min_position.z;
 							min_diff =
 							    std::abs(voxels_heatmap_.min_position.z - heatmap.min_position.z);
@@ -160,10 +159,10 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 				}
 
 				break;
-			case ColoringMode::FIXED_COLOR:
+			case ColoringMode::FIXED:
 				regenerate = render_mode.color != voxels_render_mode_.color;
 				break;
-			case ColoringMode::OCCUPANCY_COLOR:
+			case ColoringMode::OCCUPANCY:
 			// TODO: Implement
 			default:
 				break;
