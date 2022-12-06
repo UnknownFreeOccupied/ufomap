@@ -43,6 +43,7 @@
 #define UFO_MAP_REFLECTION_NODE_H
 
 // UFO
+#include <ufo/map/reflection/reflection.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -53,8 +54,7 @@ namespace ufo::map
 template <std::size_t N>
 struct ReflectionNode {
 	// Data
-	std::array<count_t, N> hits;
-	std::array<count_t, N> misses;
+	std::array<Reflection, N> reflection;
 
 	//
 	// Size
@@ -68,8 +68,7 @@ struct ReflectionNode {
 
 	void fill(ReflectionNode const parent, index_t const index)
 	{
-		hits.fill(parent.hits[index]);
-		misses.fill(parent.misses[index]);
+		reflection.fill(parent.reflection[index]);
 	}
 
 	//
@@ -79,10 +78,8 @@ struct ReflectionNode {
 	[[nodiscard]] bool isCollapsible() const
 	{
 		// TODO: Use floor(log2(X))?
-		return std::all_of(std::begin(hits) + 1, std::end(hits),
-		                   [p = hits.front()](auto e) { return e == p; }) &&
-		       std::all_of(std::begin(misses) + 1, std::end(misses),
-		                   [p = misses.front()](auto e) { return e == p; });
+		return std::all_of(std::begin(reflection) + 1, std::end(reflection),
+		                   [p = reflection.front()](auto e) { return e == p; });
 	}
 };
 }  // namespace ufo::map

@@ -387,9 +387,7 @@ void UFOMapDisplay::update(float /* wall_dt */, float /* ros_dt */)
 				// obj_it->second.generateVoxels(...);
 				scene_node_->addChild(obj_it->second.scene_node_);
 			} else {
-				obj_it->second.position_ = Ogre::Vector3(0, 0, 0);
-				obj_it->second.scene_node_ = scene_node_->createChildSceneNode(
-				    obj_it->second.position_, obj_it->second.orientation_);
+				obj_it->second.scene_node_ = scene_node_->createChildSceneNode();
 				// obj_it->second.generateVoxels(...);
 			}
 

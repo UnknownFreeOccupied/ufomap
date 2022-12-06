@@ -91,9 +91,6 @@ struct RenderData {
 	// TODO: selection_handler_;
 
 	std::unordered_map<ufo::map::depth_t, Data> transformed_voxels_;
-
-	Ogre::Quaternion orientation_;
-	Ogre::Vector3 position_;
 };
 }  // namespace ufomap_ros::rviz_plugins
 #endif  // UFOMAP_RVIZ_PLUGINS_UFOMAP_RENDER_DATA_H

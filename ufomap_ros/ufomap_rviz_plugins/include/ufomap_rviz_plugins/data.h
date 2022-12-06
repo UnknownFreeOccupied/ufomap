@@ -93,10 +93,9 @@ class Data
 
 	void addCount(ufo::map::count_t count) { count_.push_back(count); }
 
-	void addReflection(ufo::map::count_t hits, ufo::map::count_t misses)
+	void addReflection(ufo::map::Reflection reflection)
 	{
-		hits_.push_back(hits);
-		misses_.push_back(misses);
+		reflection_.push_back(reflection);
 	}
 
 	void addSurfel(ufo::map::Surfel const& surfel) { surfel_.push_back(surfel); }
@@ -130,8 +129,8 @@ class Data
  protected:
 	bool includeVoxel(Filter const& filter, double size, size_t index) const;
 
-	Ogre::ColourValue getColor(RenderMode const& mode, Heatmap const& heatmap,
-	                           size_t index) const;
+	Ogre::ColourValue color(RenderMode const& mode, Heatmap const& heatmap,
+	                        size_t index) const;
 
  private:
 	std::vector<Ogre::Vector3> position_;
@@ -154,10 +153,9 @@ class Data
 	ufo::map::count_t min_count_;
 	ufo::map::count_t max_count_;
 
-	std::vector<ufo::map::count_t> hits_;
+	std::vector<ufo::map::Reflection> reflection_;
 	ufo::map::count_t min_hits_;
 	ufo::map::count_t max_hits_;
-	std::vector<ufo::map::count_t> misses_;
 	ufo::map::count_t min_misses_;
 	ufo::map::count_t max_misses_;
 	ufo::map::count_t min_reflectivness_;

@@ -84,8 +84,8 @@ struct Filter {
 
 	// Reflection
 	bool reflection;
-	double min_reflection;
-	double max_reflection;
+	ufo::map::reflection_t min_reflection;
+	ufo::map::reflection_t max_reflection;
 	ufo::map::count_t min_hits;
 	ufo::map::count_t max_hits;
 	ufo::map::count_t min_misses;
@@ -104,8 +104,8 @@ struct Filter {
 	ufo::map::value_t max_semantic_value;
 
 	// Bounding volume
-	bool filter_bounding_volume;
-	ufo::geometry::AABB bounding_volume;
+	bool bounding_volume;
+	ufo::geometry::AABB bv;
 
 	bool operator==(Filter const& rhs) const
 	{

@@ -58,6 +58,24 @@ struct Heatmap {
 	ufo::map::time_t min_time;
 	ufo::map::time_t max_time;
 
+	// Intensity
+	ufo::map::intensity_t min_intensity;
+	ufo::map::intensity_t max_intensity;
+
+	// Count
+	ufo::map::count_t min_count;
+	ufo::map::count_t max_count;
+
+	// Reflection
+	ufo::map::reflection_t min_reflection;
+	ufo::map::reflection_t max_reflection;
+	ufo::map::count_t min_hits;
+	ufo::map::count_t max_hits;
+	ufo::map::count_t min_misses;
+	ufo::map::count_t max_misses;
+
+	// TODO: Add surfel and semantics
+
 	bool operator==(Heatmap const& rhs) const
 	{
 		return rhs.min_position == min_position && rhs.max_position == max_position &&
@@ -66,11 +84,11 @@ struct Heatmap {
 
 	bool operator!=(Heatmap const& rhs) const { return !(*this == rhs); }
 
-	static Ogre::ColourValue getColor(double value, double min_value, double max_value,
-	                                  double color_factor)
+	static Ogre::ColourValue color(double value, double min_value, double max_value,
+	                               double color_factor)
 	{
-		constexpr double s = 1;
-		constexpr double v = 1;
+		double const s = 1;
+		double const v = 1;
 
 		value = std::clamp((value - min_value) / (max_value - min_value), 0.0, 1.0);
 

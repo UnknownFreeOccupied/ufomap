@@ -255,7 +255,7 @@ class Worker final : public WorkerBase
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<ufo::map::ReflectionMapBase, Map>) {
-			data.addReflection(map_.hits(node), map_.misses(node));
+			data.addReflection(map_.reflection(node));
 		}
 
 		if constexpr (ufo::util::is_base_of_template_v<ufo::map::SurfelMapBase, Map>) {

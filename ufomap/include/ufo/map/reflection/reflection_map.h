@@ -57,19 +57,47 @@ class ReflectionMapBase
 {
  public:
 	//
+	// Get reflection
+	//
+
+	[[nodiscard]] Reflection reflection(Node node) const
+	{
+		return derived().leafNode(node).reflection[node.index()];
+	}
+
+	[[nodiscard]] Reflection reflection(Code code) const
+	{
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		return node.reflection[code.index(depth)];
+	}
+
+	[[nodiscard]] Reflection reflection(Key key) const
+	{
+		return reflection(derived().toCode(key));
+	}
+
+	[[nodiscard]] Reflection reflection(Point coord, depth_t depth = 0) const
+	{
+		return reflection(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] Reflection reflection(coord_t x, coord_t y, coord_t z,
+	                                    depth_t depth = 0) const
+	{
+		return reflection(derived().toCode(x, y, z, depth));
+	}
+
+	//
+	// Set reflection
+	//
+
+	//
 	// Get hits
 	//
 
-	[[nodiscard]] count_t hits(Node node) const
-	{
-		return derived().leafNode(node).hits[node.index()];
-	}
+	[[nodiscard]] count_t hits(Node node) const { return reflection(node).hits; }
 
-	[[nodiscard]] count_t hits(Code code) const
-	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.hits[code.index(depth)];
-	}
+	[[nodiscard]] count_t hits(Code code) const { return reflection(code).hits; }
 
 	[[nodiscard]] count_t hits(Key key) const { return hits(derived().toCode(key)); }
 
@@ -340,7 +368,7 @@ class ReflectionMapBase
 	// Get reflectiveness
 	//
 
-	[[nodiscard]] double reflectiveness(Node node) const
+	[[nodiscard]] reflection_t reflectiveness(Node node) const
 	{
 		auto const& n = derived().leafNode(node);
 		auto const index = node.index();
@@ -349,7 +377,7 @@ class ReflectionMapBase
 		return hits / (hits + misses);
 	}
 
-	[[nodiscard]] double reflectiveness(Code code) const
+	[[nodiscard]] reflection_t reflectiveness(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
 		auto const index = code.index(depth);
@@ -358,18 +386,18 @@ class ReflectionMapBase
 		return hits / (hits + misses);
 	}
 
-	[[nodiscard]] double reflectiveness(Key key) const
+	[[nodiscard]] reflection_t reflectiveness(Key key) const
 	{
 		return reflectiveness(derived().toCode(key));
 	}
 
-	[[nodiscard]] double reflectiveness(Point coord, depth_t depth = 0) const
+	[[nodiscard]] reflection_t reflectiveness(Point coord, depth_t depth = 0) const
 	{
 		return reflectiveness(derived().toCode(coord, depth));
 	}
 
-	[[nodiscard]] double reflectiveness(coord_t x, coord_t y, coord_t z,
-	                                    depth_t depth = 0) const
+	[[nodiscard]] reflection_t reflectiveness(coord_t x, coord_t y, coord_t z,
+	                                          depth_t depth = 0) const
 	{
 		return reflectiveness(derived().toCode(x, y, z, depth));
 	}

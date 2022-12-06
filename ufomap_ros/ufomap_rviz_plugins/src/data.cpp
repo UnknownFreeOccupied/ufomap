@@ -72,9 +72,9 @@ std::vector<Voxels::Voxel> Data::generateVoxels(RenderMode const& render,
 	std::vector<Voxels::Voxel> voxels;
 	voxels.reserve(position_.size());
 
-	for (size_t i = 0; i < position_.size(); ++i) {
+	for (std::size_t i = 0; i < position_.size(); ++i) {
 		if (includeVoxel(filter, size, i)) {
-			voxels.emplace_back(position_[i], getColor(render, heatmap, i));
+			voxels.emplace_back(position_[i], color(render, heatmap, i));
 		}
 	}
 
@@ -89,24 +89,41 @@ void Data::clear()
 	semantics_.clear();
 }
 
-bool Data::includeVoxel(Filter const& filter, double size, size_t index) const
+bool Data::includeVoxel(Filter const& filter, double size, std::size_t index) const
 {
-	if (filter.occupancy && (occupancy_.size() == position_.size()) &&
-	    (filter.min_occupancy > occupancy_[index] ||
+	if (filter.occupancy && occupancy_.size() == position_.size() &&
+	    (occupancy_[index] < filter.min_occupancy ||
 	     occupancy_[index] > filter.max_occupancy)) {
 		return false;
 	}
 
-	if (filter.time && (time_.size() == position_.size()) &&
-	    (filter.min_time > time_[index] || time_[index] > filter.max_time)) {
+	if (filter.color && color_.size() == position_.size() && !color_[index].isSet()) {
 		return false;
 	}
 
-	if (filter.filter_bounding_volume) {
+	if (filter.time && time_.size() == position_.size() &&
+	    (time_[index] < filter.min_time || time_[index] > filter.max_time)) {
+		return false;
+	}
+
+	if (filter.intensity && intensity_.size() == position_.size() &&
+	    (intensity_[index] < filter.min_intensity ||
+	     intensity_[index] > filter.max_intensity)) {
+		return false;
+	}
+
+	if (filter.count && count_.size() == position_.size() &&
+	    (count_[index] < filter.min_count || count_[index] > filter.max_count)) {
+		return false;
+	}
+
+	// TODO: Add reflection, surfel, and semantics
+
+	if (filter.bounding_volume) {
 		ufo::geometry::AAEBB aaebb(position_[index][0], position_[index][1],
 		                           position_[index][2], size / 2.0);
 
-		if (!ufo::geometry::intersects(aaebb, filter.bounding_volume)) {
+		if (!ufo::geometry::intersects(aaebb, filter.bv)) {
 			return false;
 		}
 	}
@@ -114,8 +131,8 @@ bool Data::includeVoxel(Filter const& filter, double size, size_t index) const
 	return true;
 }
 
-Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatmap,
-                                 size_t index) const
+Ogre::ColourValue Data::color(RenderMode const& render, Heatmap const& heatmap,
+                              std::size_t index) const
 {
 	// FIXME: Use alpha?
 
@@ -124,44 +141,66 @@ Ogre::ColourValue Data::getColor(RenderMode const& render, Heatmap const& heatma
 			return render.color;
 		case ColoringMode::X_AXIS:
 			return render.normalized_value
-			           ? Heatmap::getColor(position_[index].x, heatmap.min_position.x,
-			                               heatmap.max_position.x, render.color_factor)
-			           : Heatmap::getColor(position_[index].x, render.min_normalized_value,
-			                               render.max_normalized_value, render.color_factor);
+			           ? Heatmap::color(position_[index].x, heatmap.min_position.x,
+			                            heatmap.max_position.x, render.color_factor)
+			           : Heatmap::color(position_[index].x, render.min_normalized_value,
+			                            render.max_normalized_value, render.color_factor);
 		case ColoringMode::Y_AXIS:
 			return render.normalized_value
-			           ? Heatmap::getColor(position_[index].y, heatmap.min_position.y,
-			                               heatmap.max_position.y, render.color_factor)
-			           : Heatmap::getColor(position_[index].y, render.min_normalized_value,
-			                               render.max_normalized_value, render.color_factor);
+			           ? Heatmap::color(position_[index].y, heatmap.min_position.y,
+			                            heatmap.max_position.y, render.color_factor)
+			           : Heatmap::color(position_[index].y, render.min_normalized_value,
+			                            render.max_normalized_value, render.color_factor);
 		case ColoringMode::Z_AXIS:
 			return render.normalized_value
-			           ? Heatmap::getColor(position_[index].z, heatmap.min_position.z,
-			                               heatmap.max_position.z, render.color_factor)
-			           : Heatmap::getColor(position_[index].z, render.min_normalized_value,
-			                               render.max_normalized_value, render.color_factor);
+			           ? Heatmap::color(position_[index].z, heatmap.min_position.z,
+			                            heatmap.max_position.z, render.color_factor)
+			           : Heatmap::color(position_[index].z, render.min_normalized_value,
+			                            render.max_normalized_value, render.color_factor);
 		case ColoringMode::TIME:
 			assert(position_.size() == time_.size());
 			return render.normalized_value
-			           ? Heatmap::getColor(time_[index], heatmap.min_time, heatmap.max_time,
-			                               render.color_factor)
-			           : Heatmap::getColor(time_[index], render.min_normalized_value,
-			                               render.max_normalized_value, render.color_factor);
+			           ? Heatmap::color(time_[index], heatmap.min_time, heatmap.max_time,
+			                            render.color_factor)
+			           : Heatmap::color(time_[index], render.min_normalized_value,
+			                            render.max_normalized_value, render.color_factor);
 		case ColoringMode::OCCUPANCY:
 			assert(position_.size() == occupancy_.size());
-			return Heatmap::getColor(occupancy_[index], 0, 100, render.color_factor);
+			return Heatmap::color(occupancy_[index], 0, 100, render.color_factor);
 		case ColoringMode::VOXEL:
 			assert(position_.size() == color_.size());
 			return Ogre::ColourValue(color_lut[color_[index].red],
 			                         color_lut[color_[index].green],
 			                         color_lut[color_[index].blue]);
-		case ColoringMode::SEMANTIC:
-		case ColoringMode::SURFEL_NORMAL:
-		case ColoringMode::COUNT:
-		case ColoringMode::REFLECTIVENESS:
-		case ColoringMode::HITS:
-		case ColoringMode::MISSES:
 		case ColoringMode::INTENSITY:
+			assert(position_.size() == intensity_.size());
+			return render.normalized_value
+			           ? Heatmap::color(intensity_[index], heatmap.min_intensity,
+			                            heatmap.max_intensity, render.color_factor)
+			           : Heatmap::color(intensity_[index], render.min_normalized_value,
+			                            render.max_normalized_value, render.color_factor);
+		case ColoringMode::COUNT:
+			assert(position_.size() == count_.size());
+			return render.normalized_value
+			           ? Heatmap::color(count_[index], heatmap.min_count, heatmap.max_count,
+			                            render.color_factor)
+			           : Heatmap::color(count_[index], render.min_normalized_value,
+			                            render.max_normalized_value, render.color_factor);
+		case ColoringMode::HITS:
+			assert(position_.size() == hits_.size());
+			return render.normalized_value
+			           ? Heatmap::color(hits_[index], heatmap.min_hits, heatmap.max_hits,
+			                            render.color_factor)
+			           : Heatmap::color(hits_[index], render.min_normalized_value,
+			                            render.max_normalized_value, render.color_factor);
+		case ColoringMode::MISSES:
+			assert(position_.size() == misses_.size());
+		case ColoringMode::REFLECTIVENESS:
+			assert(position_.size() == hits_.size());
+		case ColoringMode::SEMANTIC:
+			assert(position_.size() == semantics_.size());
+		case ColoringMode::SURFEL_NORMAL:
+			assert(position_.size() == surfel_.size());
 			return Ogre::ColourValue(0, 0, 0, 1);
 	}
 }

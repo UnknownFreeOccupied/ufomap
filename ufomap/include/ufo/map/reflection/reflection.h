@@ -25,7 +25,7 @@
  *
  * 3. Neither the name of the copyright holder nor the names of its
  *     contributors may be used to endorse or promote products derived from
- *     this software without specific prior written permission.
+ *     this software without specific prior written permissesion.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -39,58 +39,51 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TYPES_H
-#define UFO_MAP_TYPES_H
+#ifndef UFO_MAP_REFLECTION_H
+#define UFO_MAP_REFLECTION_H
 
 // UFO
-#include <ufo/map/index_field.h>
+#include <ufo/map/types.h>
 
 // STL
-#include <cstdint>
+#include <algorithm>
 
 namespace ufo::map
 {
-enum class UFOLock { NONE, DEPTH, NODE };
-enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
-enum class PropagationCriteria { MIN, MAX, MEAN, FIRST };
+struct Reflection {
+	count_t hits = 0;
+	count_t misses = 0;
 
-using coord_t = float;
-using node_size_t = double;
-using index_t = std::uint_fast8_t;
-using depth_t = std::uint_fast8_t;
-using key_t = std::uint_fast32_t;
-using code_t = std::uint_fast64_t;
-using occupancy_t = float;
-using logit_t = std::uint8_t;
-using time_t = float;
-using color_t = std::uint8_t;
-using label_t = std::uint32_t;
-using value_t = float;
-using intensity_t = float;
-using count_t = std::uint32_t;
-using reflection_t = double;
-using distance_t = float;
-using surfel_scalar_t = float;
+	constexpr Reflection() = default;
 
-//
-// Map types
-//
-using mt_t = std::uint64_t;
+	constexpr Reflection(count_t hits, count_t misses) : hits(hits), misses(misses) {}
 
-enum MapType : mt_t {
-	// clang-format off
-	NONE       = mt_t(0),
-	OCCUPANCY  = mt_t(1),
-	TIME       = mt_t(1) << 1,
-	COLOR      = mt_t(1) << 2,
-	SEMANTIC   = mt_t(1) << 3,
-	SURFEL     = mt_t(1) << 4,
-	DISTANCE   = mt_t(1) << 5,
-	INTENSITY  = mt_t(1) << 6,
-	COUNT      = mt_t(1) << 7,
-	REFLECTION = mt_t(1) << 8,
-	// clang-format on
+	constexpr Reflection(Reflection const&) = default;
+
+	constexpr Reflection(Reflection&&) = default;
+
+	constexpr Reflection& operator=(Reflection const&) = default;
+
+	constexpr Reflection& operator=(Reflection&&) = default;
+
+	friend void swap(Reflection& lhs, Reflection& rhs) noexcept
+	{
+		std::swap(lhs.hits, rhs.hits);
+		std::swap(lhs.misses, rhs.misses);
+	}
+
+	friend bool operator==(Reflection lhs, Reflection rhs)
+	{
+		return lhs.hits == rhs.hits && lhs.misses == rhs.misses;
+	}
+
+	friend bool operator!=(Reflection lhs, Reflection rhs) { return !(lhs == rhs); }
+
+	constexpr reflection_t reflectiveness() const
+	{
+		return hits / static_cast<double>(hits + misses);
+	}
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_TYPES_H
+#endif  // UFO_MAP_REFLECTION_H

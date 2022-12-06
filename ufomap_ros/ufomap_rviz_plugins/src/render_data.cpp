@@ -78,14 +78,14 @@ void RenderData::generateVoxels(RenderMode const& render_mode, Filter const& fil
 		            (filter.min_semantic_value != voxels_filter_.min_semantic_value ||
 		             filter.max_semantic_value != voxels_filter_.max_semantic_value));
 
-		regenerate = occ || ts || sem ||
-		             filter.filter_bounding_volume != voxels_filter_.filter_bounding_volume;
+		regenerate =
+		    occ || ts || sem || filter.bounding_volume != voxels_filter_.bounding_volume;
 
-		if (!regenerate && filter.filter_bounding_volume) {
-			auto new_min = filter.bounding_volume.min();
-			auto new_max = filter.bounding_volume.max();
-			auto old_min = voxels_filter_.bounding_volume.min();
-			auto old_max = voxels_filter_.bounding_volume.max();
+		if (!regenerate && filter.bounding_volume) {
+			auto new_min = filter.bv.min();
+			auto new_max = filter.bv.max();
+			auto old_min = voxels_filter_.bv.min();
+			auto old_max = voxels_filter_.bv.max();
 
 			for (size_t i = 0; 3 != i; ++i) {
 				double new_diff = new_max[i] - new_min[i];
