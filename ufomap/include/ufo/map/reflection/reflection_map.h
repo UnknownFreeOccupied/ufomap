@@ -43,6 +43,7 @@
 #define UFO_MAP_REFLECTION_MAP_H
 
 // UFO
+#include <ufo/map/reflection/reflection.h>
 #include <ufo/map/reflection/reflection_node.h>
 #include <ufo/map/reflection/reflection_predicate.h>
 #include <ufo/map/types.h>
@@ -62,7 +63,7 @@ class ReflectionMapBase
 
 	[[nodiscard]] Reflection reflection(Node node) const
 	{
-		return derived().leafNode(node).reflection[node.index()];
+		return derived().leafNode(node).reflection[derived().dataIndex(node)];
 	}
 
 	[[nodiscard]] Reflection reflection(Code code) const
@@ -91,6 +92,39 @@ class ReflectionMapBase
 	// Set reflection
 	//
 
+	void setReflection(Node node, Reflection reflection, bool propagate = true)
+	{
+		derived().apply(
+		    node,
+		    [reflection](auto& node, index_t index) { node.reflection[index] = reflection; },
+		    [reflection](auto& node) { node.reflection.fill(reflection); }, propagate);
+	}
+
+	void setReflection(Code code, Reflection reflection, bool propagate = true)
+	{
+		derived().apply(
+		    code,
+		    [reflection](auto& node, index_t index) { node.reflection[index] = reflection; },
+		    [reflection](auto& node) { node.reflection.fill(reflection); }, propagate);
+	}
+
+	void setReflection(Key key, Reflection reflection, bool propagate = true)
+	{
+		setReflection(derived().toCode(key), reflection, propagate);
+	}
+
+	void setReflection(Point coord, Reflection reflection, bool propagate = true,
+	                   depth_t depth = 0)
+	{
+		setReflection(derived().toCode(coord, depth), reflection, propagate);
+	}
+
+	void setReflection(coord_t x, coord_t y, coord_t z, Reflection reflection,
+	                   bool propagate = true, depth_t depth = 0)
+	{
+		setReflection(derived().toCode(x, y, z, depth), reflection, propagate);
+	}
+
 	//
 	// Get hits
 	//
@@ -118,15 +152,25 @@ class ReflectionMapBase
 	void setHits(Node node, count_t hits, bool propagate = true)
 	{
 		derived().apply(
-		    node, [hits](auto& node, index_t index) { node.hits[index] = hits; },
-		    [hits](auto& node) { node.hits.fill(hits); }, propagate);
+		    node, [hits](auto& node, index_t index) { node.reflection[index].hits = hits; },
+		    [hits](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.hits = hits;
+			    }
+		    },
+		    propagate);
 	}
 
 	void setHits(Code code, count_t hits, bool propagate = true)
 	{
 		derived().apply(
-		    code, [hits](auto& node, index_t index) { node.hits[index] = hits; },
-		    [hits](auto& node) { node.hits.fill(hits); }, propagate);
+		    code, [hits](auto& node, index_t index) { node.reflection[index].hits = hits; },
+		    [hits](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.hits = hits;
+			    }
+		    },
+		    propagate);
 	}
 
 	void setHits(Key key, count_t hits, bool propagate = true)
@@ -152,10 +196,10 @@ class ReflectionMapBase
 	void incrementHits(Node node, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node, [inc](auto& node, index_t index) { node.hits[index] += inc; },
+		    node, [inc](auto& node, index_t index) { node.reflection[index].hits += inc; },
 		    [inc](auto& node) {
-			    for (auto& h : node.hits) {
-				    h += inc;
+			    for (auto& r : node.reflection) {
+				    r.hits += inc;
 			    }
 		    },
 		    propagate);
@@ -164,10 +208,10 @@ class ReflectionMapBase
 	void incrementHits(Code code, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code, [inc](auto& node, index_t index) { node.hits[index] += inc; },
+		    code, [inc](auto& node, index_t index) { node.reflection[index].hits += inc; },
 		    [inc](auto& node) {
-			    for (auto& h : node.hits) {
-				    h += inc;
+			    for (auto& r : node.reflection) {
+				    r.hits += inc;
 			    }
 		    },
 		    propagate);
@@ -196,15 +240,25 @@ class ReflectionMapBase
 	void decrementHits(Node node, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    node, [dec](auto& node, index_t index) { node.decrementHits(index, dec); },
-		    [dec](auto& node) { node.decrementHits(dec); }, propagate);
+		    node, [dec](auto& node, index_t index) { node.reflection[index].hits -= dec; },
+		    [dec](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.hits -= dec;
+			    }
+		    },
+		    propagate);
 	}
 
 	void decrementHits(Code code, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    code, [dec](auto& node, index_t index) { node.decrementHits(index, dec); },
-		    [dec](auto& node) { node.decrementHits(dec); }, propagate);
+		    code, [dec](auto& node, index_t index) { node.reflection[index].hits -= dec; },
+		    [dec](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.hits -= dec;
+			    }
+		    },
+		    propagate);
 	}
 
 	void decrementHits(Key key, count_t dec, bool propagate = true)
@@ -224,25 +278,12 @@ class ReflectionMapBase
 	}
 
 	//
-	// Update hits
-	//
-
-	// TODO: Implement
-
-	//
 	// Get misses
 	//
 
-	[[nodiscard]] count_t misses(Node node) const
-	{
-		return derived().leafNode(node).misses[derived().dataIndex(node)];
-	}
+	[[nodiscard]] count_t misses(Node node) const { return reflection(node).misses; }
 
-	[[nodiscard]] count_t misses(Code code) const
-	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.misses[code.index(depth)];
-	}
+	[[nodiscard]] count_t misses(Code code) const { return reflection(code).hits; }
 
 	[[nodiscard]] count_t misses(Key key) const { return misses(derived().toCode(key)); }
 
@@ -263,15 +304,27 @@ class ReflectionMapBase
 	void setMisses(Node node, count_t misses, bool propagate = true)
 	{
 		derived().apply(
-		    node, [misses](auto& node, index_t index) { node.setMisses(index, misses); },
-		    [misses](auto& node) { node.setMisses(misses); }, propagate);
+		    node,
+		    [misses](auto& node, index_t index) { node.reflection[index].misses = misses; },
+		    [misses](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.misses = misses;
+			    }
+		    },
+		    propagate);
 	}
 
 	void setMisses(Code code, count_t misses, bool propagate = true)
 	{
 		derived().apply(
-		    code, [misses](auto& node, index_t index) { node.setMisses(index, misses); },
-		    [misses](auto& node) { node.setMisses(misses); }, propagate);
+		    code,
+		    [misses](auto& node, index_t index) { node.reflection[index].misses = misses; },
+		    [misses](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.misses = misses;
+			    }
+		    },
+		    propagate);
 	}
 
 	void setMisses(Key key, count_t misses, bool propagate = true)
@@ -297,15 +350,25 @@ class ReflectionMapBase
 	void incrementMisses(Node node, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    node, [inc](auto& node, index_t index) { node.incrementMisses(index, inc); },
-		    [inc](auto& node) { node.incrementMisses(inc); }, propagate);
+		    node, [inc](auto& node, index_t index) { node.reflection[index].misses += inc; },
+		    [inc](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.misses += inc;
+			    }
+		    },
+		    propagate);
 	}
 
 	void incrementMisses(Code code, count_t inc, bool propagate = true)
 	{
 		derived().apply(
-		    code, [inc](auto& node, index_t index) { node.incrementMisses(index, inc); },
-		    [inc](auto& node) { node.incrementMisses(inc); }, propagate);
+		    code, [inc](auto& node, index_t index) { node.reflection[index].misses += inc; },
+		    [inc](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.misses += inc;
+			    }
+		    },
+		    propagate);
 	}
 
 	void incrementMisses(Key key, count_t inc, bool propagate = true)
@@ -331,15 +394,25 @@ class ReflectionMapBase
 	void decrementMisses(Node node, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    node, [dec](auto& node, index_t index) { node.decrementMisses(index, dec); },
-		    [dec](auto& node) { node.decrementMisses(dec); }, propagate);
+		    node, [dec](auto& node, index_t index) { node.reflection[index].misses -= dec; },
+		    [dec](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.misses -= dec;
+			    }
+		    },
+		    propagate);
 	}
 
 	void decrementMisses(Code code, count_t dec, bool propagate = true)
 	{
 		derived().apply(
-		    code, [dec](auto& node, index_t index) { node.decrementMisses(index, dec); },
-		    [dec](auto& node) { node.decrementMisses(dec); }, propagate);
+		    code, [dec](auto& node, index_t index) { node.reflection[index].misses -= dec; },
+		    [dec](auto& node) {
+			    for (auto& r : node.reflection) {
+				    r.misses -= dec;
+			    }
+		    },
+		    propagate);
 	}
 
 	void decrementMisses(Key key, count_t dec, bool propagate = true)
@@ -359,31 +432,17 @@ class ReflectionMapBase
 	}
 
 	//
-	// Update misses
-	//
-
-	// TODO: Implement
-
-	//
 	// Get reflectiveness
 	//
 
 	[[nodiscard]] reflection_t reflectiveness(Node node) const
 	{
-		auto const& n = derived().leafNode(node);
-		auto const index = node.index();
-		double const hits = n.hits[index];
-		double const misses = n.misses[index];
-		return hits / (hits + misses);
+		return reflection(node).reflectiveness();
 	}
 
 	[[nodiscard]] reflection_t reflectiveness(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		auto const index = code.index(depth);
-		double const hits = node.hits[index];
-		double const misses = node.misses[index];
-		return hits / (hits + misses);
+		return reflection(code).reflectiveness();
 	}
 
 	[[nodiscard]] reflection_t reflectiveness(Key key) const
@@ -401,18 +460,6 @@ class ReflectionMapBase
 	{
 		return reflectiveness(derived().toCode(x, y, z, depth));
 	}
-
-	//
-	// Set reflectiveness
-	//
-
-	// TODO: Implement
-
-	//
-	// Update reflectiveness
-	//
-
-	// TODO: Implement
 
 	//
 	// Propagation criteria
@@ -500,8 +547,7 @@ class ReflectionMapBase
 
 	void initRoot()
 	{
-		derived().root().hits[derived().rootIndex()] = 0;
-		derived().root().misses[derived().rootIndex()] = 0;
+		derived().root().reflection[derived().rootIndex()] = Reflection(0, 0);
 	}
 
 	//
@@ -514,18 +560,60 @@ class ReflectionMapBase
 	{
 		switch (reflectionPropagationCriteria()) {
 			case PropagationCriteria::MIN:
-				node.hits[index] = min(children.hits);
-				node.misses[index] = min(children.misses);
+				node.reflection[index] = min(children);
 				return;
 			case PropagationCriteria::MAX:
-				node.hits[index] = max(children.hits);
-				node.misses[index] = max(children.misses);
+				node.reflection[index] = max(children);
 				return;
 			case PropagationCriteria::MEAN:
-				node.hits[index] = mean(children.hits);
-				node.misses[index] = mean(children.misses);
+				node.reflection[index] = mean(children);
 				return;
 		}
+	}
+
+	template <std::size_t N>
+	Reflection min(ReflectionNode<N> const& children)
+	{
+		Reflection res(std::numeric_limits<count_t>::max(),
+		               std::numeric_limits<count_t>::max());
+		for (auto r : children.reflection) {
+			if (r.hits < res.hits) {
+				res.hits = r.hits;
+			}
+			if (r.misses < res.misses) {
+				res.misses = r.misses;
+			}
+		}
+		return res;
+	}
+
+	template <std::size_t N>
+	Reflection max(ReflectionNode<N> const& children)
+	{
+		Reflection res(std::numeric_limits<count_t>::lowest(),
+		               std::numeric_limits<count_t>::lowest());
+		for (auto r : children.reflection) {
+			if (r.hits > res.hits) {
+				res.hits = r.hits;
+			}
+			if (r.misses > res.misses) {
+				res.misses = r.misses;
+			}
+		}
+		return res;
+	}
+
+	template <std::size_t N>
+	Reflection mean(ReflectionNode<N> const& children)
+	{
+		Reflection res;
+		for (auto r : children.reflection) {
+			res.hits += r.hits;
+			res.misses += r.misses;
+		}
+		res.hits /= N;
+		res.misses /= N;
+		return res;
 	}
 
 	//
@@ -554,7 +642,7 @@ class ReflectionMapBase
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
 		return std::iterator_traits<InputIt>::value_type::reflectionSize() *
-		       std::distance(first, last) * 2 * sizeof(count_t);
+		       std::distance(first, last) * sizeof(Reflection);
 	}
 
 	template <class OutputIt>
@@ -562,22 +650,16 @@ class ReflectionMapBase
 	{
 		for (; first != last; ++first) {
 			if (first->indices.all()) {
-				in.read(first->node->hits.data(),
-				        first->node->hits.size() *
-				            sizeof(typename decltype(first->node->hits)::value_type));
-				in.read(first->node->misses.data(),
-				        first->node->misses.size() *
-				            sizeof(typename decltype(first->node->misses)::value_type));
+				in.read(first->node->reflection.data(),
+				        first->node->reflection.size() *
+				            sizeof(typename decltype(first->node->reflection)::value_type));
 			} else {
-				decltype(first->node->hits) hits;
-				decltype(first->node->misses) misses;
-				in.read(hits.data(), hits.size() * sizeof(typename decltype(hits)::value_type));
-				in.read(misses.data(),
-				        misses.size() * sizeof(typename decltype(misses)::value_type));
-				for (index_t i = 0; hits.size() != i; ++i) {
+				decltype(first->node->reflection) reflection;
+				in.read(reflection.data(),
+				        reflection.size() * sizeof(typename decltype(reflection)::value_type));
+				for (index_t i = 0; reflection.size() != i; ++i) {
 					if (first->indices[i]) {
-						first->node->hits[i] = hits[i];
-						first->node->misses[i] = misses[i];
+						first->node->reflection[i] = reflection[i];
 					}
 				}
 			}
@@ -589,11 +671,9 @@ class ReflectionMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->hits.data(),
-			          first->hits.size() * sizeof(typename decltype(first->hits)::value_type));
-			out.write(
-			    first->misses.data(),
-			    first->misses.size() * sizeof(typename decltype(first->misses)::value_type));
+			out.write(first->reflection.data(),
+			          first->reflection.size() *
+			              sizeof(typename decltype(first->reflection)::value_type));
 		}
 	}
 

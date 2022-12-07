@@ -46,6 +46,7 @@
 #include <ufo/geometry/aaebb.h>
 #include <ufo/geometry/intersects.h>
 #include <ufo/map/point.h>
+#include <ufo/map/reflection/reflection.h>
 #include <ufo/map/semantic/semantic.h>
 #include <ufo/map/surfel/surfel.h>
 #include <ufo/map/types.h>

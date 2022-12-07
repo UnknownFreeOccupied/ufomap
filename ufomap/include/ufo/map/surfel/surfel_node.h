@@ -57,45 +57,13 @@ namespace ufo::map
 template <std::size_t N>
 struct SurfelNode {
 	// Data
-	std::array<math::Vector3<surfel_scalar_t>, N> sum;
-	std::array<std::array<surfel_scalar_t, 6>, N> sum_squares;
-	std::array<count_t, N> num_points;
-	// std::array<math::Vector3<surfel_scalar_t>, N> eigen_values;
+	std::array<std::uint32_t, N> surfel_index;
 
 	//
 	// Size
 	//
 
 	[[nodiscard]] static constexpr std::size_t surfelSize() { return N; }
-
-	//
-	// Fill
-	//
-
-	void fill(SurfelNode const& parent, index_t const index)
-	{
-		sum.fill(parent.sum[index]);
-		sum_squares.fill(parent.sum_squares[index]);
-		num_points.fill(parent.num_points[index]);
-	}
-
-	//
-	// Clear
-	//
-
-	void clear() {}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
-	{
-		// NOTE: Impossible that two surfels next to each other is equal as there center would
-		// differ
-		return std::all_of(std::begin(num_points), std::end(num_points),
-		                   [](auto e) { return 0 == e; });
-	}
 };
 }  // namespace ufo::map
 

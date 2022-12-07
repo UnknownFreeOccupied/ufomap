@@ -89,7 +89,7 @@ void UFOMapDisplay::setupResources()
 	rgm.addResourceLocation(pkg + "/ogre_media", "FileSystem", "ufomap");
 	rgm.addResourceLocation(pkg + "/ogre_media/materials", "FileSystem", "ufomap");
 	rgm.addResourceLocation(pkg + "/ogre_media/materials/scripts", "FileSystem", "ufomap");
-	rgm.addResourceLocation(pkg + "/ogre_media/materials/glsl", "FileSystem", "ufomap");
+	rgm.addResourceLocation(pkg +   "/ogre_media/materials/glsl", "FileSystem", "ufomap");
 	rgm.initialiseResourceGroup("ufomap");
 }
 

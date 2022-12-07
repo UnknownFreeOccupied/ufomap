@@ -188,11 +188,11 @@ Ogre::ColourValue Data::color(RenderMode const& render, Heatmap const& heatmap,
 			                            render.max_normalized_value, render.color_factor);
 		case ColoringMode::HITS:
 			assert(position_.size() == hits_.size());
-			return render.normalized_value
-			           ? Heatmap::color(hits_[index], heatmap.min_hits, heatmap.max_hits,
-			                            render.color_factor)
-			           : Heatmap::color(hits_[index], render.min_normalized_value,
-			                            render.max_normalized_value, render.color_factor);
+			// return render.normalized_value
+			//            ? Heatmap::color(hits_[index], heatmap.min_hits, heatmap.max_hits,
+			//                             render.color_factor)
+			//            : Heatmap::color(hits_[index], render.min_normalized_value,
+			//                             render.max_normalized_value, render.color_factor);
 		case ColoringMode::MISSES:
 			assert(position_.size() == misses_.size());
 		case ColoringMode::REFLECTIVENESS:

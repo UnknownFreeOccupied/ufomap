@@ -47,7 +47,6 @@
 #include <ufo/map/surfel/surfel.h>
 #include <ufo/map/surfel/surfel_node.h>
 #include <ufo/map/surfel/surfel_predicate.h>
-#include <ufo/map/surfel/surfel_reference.h>
 #include <ufo/map/surfel/surfel_util.h>
 #include <ufo/util/enum.h>
 
@@ -68,27 +67,58 @@ class SurfelMapBase
 	// Get surfel
 	//
 
-	SurfelReference surfel(Node node) const
+	[[nodiscard]] Surfel surfel(Node node) const
 	{
-		return SurfelReference(derived().leafNode(node), node.index());
+		auto index = derived().leafNode(node).surfel_index[derived().dataIndex(node)];
+		return null_index == index ? Surfel() : surfel_[index];
 	}
 
-	SurfelReference surfel(Code code) const
+	[[nodiscard]] Surfel surfel(Code code) const
 	{
 		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return SurfelReference(node, code.index(depth));
+		auto index = node.surfel_index[depth];
+		return null_index == index ? Surfel() : surfel_[index];
 	}
 
-	SurfelReference surfel(Key key) const { return surfel(derived().toCode(key)); }
+	[[nodiscard]] Surfel surfel(Key key) const { return surfel(derived().toCode(key)); }
 
-	SurfelReference surfel(Point coord, depth_t depth = 0) const
+	[[nodiscard]] Surfel surfel(Point coord, depth_t depth = 0) const
 	{
 		return surfel(derived().toCode(coord, depth));
 	}
 
-	SurfelReference surfel(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	[[nodiscard]] Surfel surfel(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
 		return surfel(derived().toCode(x, y, z, depth));
+	}
+
+	//
+	// Has surfel
+	//
+
+	[[nodiscard]] bool hasSurfel(Node node) const
+	{
+		auto index = derived().leafNode(node).surfel_index[derived().dataIndex(node)];
+		return null_index == index ? false : !surfel_[index].empty();
+	}
+
+	[[nodiscard]] bool hasSurfel(Code code) const
+	{
+		auto [node, depth] = derived().leafNodeAndDepth(code);
+		auto index = node.surfel_index[depth];
+		return null_index == index ? false : !surfel_[index].empty();
+	}
+
+	[[nodiscard]] bool hasSurfel(Key key) const { return hasSurfel(derived().toCode(key)); }
+
+	[[nodiscard]] bool hasSurfel(Point coord, depth_t depth = 0) const
+	{
+		return hasSurfel(derived().toCode(coord, depth));
+	}
+
+	[[nodiscard]] bool hasSurfel(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
+	{
+		return hasSurfel(derived().toCode(x, y, z, depth));
 	}
 
 	//
@@ -531,9 +561,44 @@ class SurfelMapBase
 
 	void initRoot()
 	{
-		auto& root = derived().root();
-		auto const index = derived().rootIndex();
-		surfel::clear(root.sum[index], root.sum_squares[index], root.num_points[index]);
+		derived().root().surfel_index[derived.rootIndex()] = null_index;
+		surfel_.clear();
+		while (!free_indices_.empty()) {
+			free_indices_.pop();
+		}
+	}
+
+	//
+	// Fill
+	//
+
+	template <std::size_t N>
+	void fill(SurfelNode<N>& node, SurfelNode<N> const& parent, index_t const index)
+	{
+		if (null_index == parent.surfel_index[index]) {
+			node.surfel_index.fill(null_index);
+		} else {
+			Surfel surfel = surfel_[parent.surfel_index[index]];
+			for (auto& x : node.surfel_index) {
+				x = createSurfel(surfel);
+			}
+		}
+	}
+
+	//
+	// Clear
+	//
+
+	template <std::size_t N>
+	void clear(SurfelNode<N>& node)
+	{
+		for (auto x : node.surfel_index) {
+			if (null_index != x) {
+				surfel_[x].clear();
+				free_indices_.push(x);
+			}
+		}
+		node.surfel_index.fill(null_index);
 	}
 
 	//
@@ -543,11 +608,84 @@ class SurfelMapBase
 	template <std::size_t N>
 	void updateNode(SurfelNode<N>& node, index_t const index, SurfelNode<N> const& children)
 	{
-		surfel::clear(node.sum[index], node.sum_squares[index], node.num_points[index]);
-		for (index_t i = 0; N != i; ++i) {
-			surfel::add(node.sum[index], node.sum_squares[index], node.num_points[index],
-			            children.sum[i], children.sum_squares[i], children.num_points[i]);
+		if (all_of(children.surfel_index, [](auto x) { return null_index == x; })) {
+			auto s_index = node.surfel_index[index];
+			if (null_index != s_index) {
+				surfel_[s_index].clear();
+				free_indices_.push(s_index);
+				node.surfel_index[index] = null_index;
+			}
+			return;
 		}
+
+		if (null_index == node.surfel_index[index]) {
+			node.surfel_index[index] = createSurfel();
+		} else {
+			surfel_[node.surfel_index[index]].clear();
+		}
+
+		auto& s = surfel_[node.surfel_index[index]];
+		for (auto x : children.surfel_index) {
+			if (null_index != x) {
+				s += surfel_[x];
+			}
+		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <std::size_t N>
+	[[nodiscard]] bool isCollapsible(SurfelNode<N> const& node) const
+	{
+		if (all_of(node.surfel_index, [](auto x) { return null_index == x; })) {
+			return true;
+		}
+
+		if (any_of(node.surfel_index, [](auto x) { return null_index == x; })) {
+			return false;
+		}
+
+		auto num = surfels_[node.surfel_index[0]].numPoints();
+		for (std::size_t i = 1; N != i; ++i) {
+			if (surfels_[node.surfel_index[i]].numPoints() != num) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	//
+	// Create surfel
+	//
+
+	[[nodiscard]] std::uint32_t createSurfel()
+	{
+		std::uint32_t index;
+		if (free_indices_.empty()) {
+			index = surfel_.size();
+			surfel_.emplace_back();
+		} else {
+			index = free_indices_.top();
+			free_indices_.pop();
+		}
+		return index;
+	}
+
+	[[nodiscard]] std::uint32_t createSurfel(Surfel const& surfel)
+	{
+		std::uint32_t index;
+		if (free_indices_.empty()) {
+			index = surfel_.size();
+			surfel_.push_back(surfel);
+		} else {
+			index = free_indices_.top();
+			free_indices_.pop();
+			surfel_[index] = surfel;
+		}
+		return index;
 	}
 
 	//
@@ -561,6 +699,7 @@ class SurfelMapBase
 	template <class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
+		// TODO: Implement
 		return std::iterator_traits<InputIt>::value_type::surfelSize() *
 		       std::distance(first, last) *
 		       (sizeof(math::Vector3<surfel_scalar_t>) +
@@ -570,8 +709,11 @@ class SurfelMapBase
 	template <class OutputIt>
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
+		IndexField indices;
 		for (; first != last; ++first) {
+			in.read(&indices, sizeof(indices));
 			if (first->indices.all()) {
+				// TODO: Implement
 				in.read(first->node->sum.data(),
 				        first->node->sum.size() *
 				            sizeof(typename decltype(first->node->sum)::value_type));
@@ -582,6 +724,7 @@ class SurfelMapBase
 				        first->node->num_points.size() *
 				            sizeof(typename decltype(first->node->num_points)::value_type));
 			} else {
+				// TODO: Implement
 				decltype(first->node->sum) sum;
 				decltype(first->node->sum_squares) sum_squares;
 				decltype(first->node->num_points) num_points;
@@ -605,17 +748,26 @@ class SurfelMapBase
 	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
 	{
 		out.reserve(out.size() + serializedSize(first, last));
+		IndexField indices;
 		for (; first != last; ++first) {
-			out.write(first->sum.data(),
-			          first->sum.size() * sizeof(typename decltype(first->sum)::value_type));
-			out.write(first->sum_squares.data(),
-			          first->sum_squares.size() *
-			              sizeof(typename decltype(first->sum_squares)::value_type));
-			out.write(first->num_points.data(),
-			          first->num_points.size() *
-			              sizeof(typename decltype(first->num_points)::value_type));
+			for (index_t index{}; auto x : first->surfel_index) {
+				indices[index] = null_index != x;
+			}
+			out.write(&indices, sizeof(indices));
+			for (auto x : first->surfel_index) {
+				if (null_index != x) {
+					out.write(&surfel_[x], sizeof(Surfel));
+				}
+			}
 		}
 	}
+
+ private:
+	std::deque<Surfel> surfels_;
+	std::stack<std::uint32_t> free_indices_;
+
+	static constexpr std::uint32_t const null_index =
+	    std::numeric_limits<std::uint32_t>::max();
 };
 }  // namespace ufo::map
 
