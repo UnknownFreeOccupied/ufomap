@@ -187,29 +187,11 @@ class Worker final : public WorkerBase
 			only_modified = false;
 		}
 
-		// TODO: Implement
 		auto pred = Pred::Leaf(filter_.min_depth) && Pred::Exists() &&
-		            Pred::THEN(Pred::OccupancyMap(), Pred::Occupied());
-		// Pred::THEN(Pred::OccupancyMap(),
-		//            !filter_.occupancy ||
-		//                Pred::OccupancyStates(filter_.unknown, filter_.free,
-		//                                      filter_.occupied));
-		// 				 &&
-		// Pred::THEN(Pred::ColorMap(), !filter_.color || Pred::HasColor()) &&
-		// Pred::THEN(
-		//     Pred::TimeMap(),
-		//     !filter_.time || Pred::TimeInterval(filter_.min_time, filter_.max_time)) &&
-		// Pred::THEN(
-		//     Pred::IntensityMap(),
-		//     !filter_.intensity ||
-		//         Pred::IntensityInterval(filter_.min_intensity, filter_.max_intensity)) &&
-		// Pred::THEN(
-		//     Pred::CountMap(),
-		//     !filter_.count || Pred::CountInterval(filter_.min_count, filter_.max_count));
-		// 							  &&
-		// Pred::THEN(Pred::ReflectionMap(), !filter_.reflection || ...) &&
-		// Pred::THEN(Pred::SurfelMap(), !filter_.surfel || ...) &&
-		// Pred::THEN(Pred::SemanticMap(), !filter_.semantic || ...);
+		            Pred::THEN(Pred::OccupancyMap(),
+		                       !filter_.occupancy ||
+		                           Pred::OccupancyStates(filter_.unknown, filter_.free,
+		                                                 filter_.occupied));
 
 		auto grid_depth = grid_size_depth_;
 
