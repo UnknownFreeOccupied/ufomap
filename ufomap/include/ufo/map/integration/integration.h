@@ -80,7 +80,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
                                        TransformFunction trans_f, ValidFunction valid_f,
                                        DepthFunction depth_f)
 {
-	constexpr static std::size_t mode = 1;
+	constexpr static std::size_t mode = 3;
 
 	IntegrationCloud<P> i_cloud;
 	auto const cloud_size = cloud.size();
@@ -184,8 +184,9 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 		std::sort(std::begin(i_cloud), std::end(i_cloud));
 	} else if constexpr (3 == mode) {
 		// CodeUnorderedMap<IntegrationCloudSmall<P>> temp;
-		auto cmp = [](auto const& a, auto const& b) { return a.code() < b.code(); };
-		std::map<Code, IntegrationCloudSmall<P>, decltype(cmp)> temp(cmp);
+		// auto cmp = [](auto const& a, auto const& b) { return a.code() < b.code(); };
+		// std::map<Code, IntegrationCloudSmall<P>, decltype(cmp)> temp(cmp);
+		std::unordered_map<Code, IntegrationCloudSmall<P>> temp;
 
 		// Get the corresponding code for each point
 		Code prev_code;
@@ -195,8 +196,8 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> const& clo
 			auto valid = valid_f(point);
 			point = trans_f(point);
 			auto code = map.toCode(point, depth);
-			if (code.toDepth(4) != prev_code) {
-				prev_code = code.toDepth(4);
+			if (code.toDepth(depth + 5) != prev_code) {
+				prev_code = code.toDepth(depth + 5);
 				prev = &temp[prev_code];
 			}
 			prev->emplace_back(code, point, valid);
@@ -420,7 +421,7 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 			if (0 == *it) {
 				continue;
 			}
-			
+
 			if (std::numeric_limits<std::uint64_t>::max() == *it) {
 				if (0 == i % 512 && std::all_of(it + 1, it + 8, [](std::uint64_t a) {
 					    return std::numeric_limits<std::uint64_t>::max() == a;
