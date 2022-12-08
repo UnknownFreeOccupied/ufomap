@@ -61,22 +61,6 @@ struct TimeNode {
 	//
 
 	[[nodiscard]] static constexpr std::size_t timeSize() { return N; }
-
-	//
-	// Fill
-	//
-
-	void fill(TimeNode const parent, index_t const index) { time.fill(parent.time[index]); }
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
-	{
-		return std::all_of(std::begin(time) + 1, std::end(time),
-		                   [t = time.front()](auto e) { return e == t; });
-	}
 };
 }  // namespace ufo::map
 

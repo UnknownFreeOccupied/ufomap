@@ -89,8 +89,7 @@ struct cond_map_base<false, T, Map> {
 // UFOMap
 //
 
-template <mt_t MapType, bool ReuseNodes = false, UFOLock Lock = UFOLock::DEPTH,
-          bool TrackNodes = false, bool CountNodes = true>
+template <mt_t MapType>
 class UFOMap
     : public OctreeMap<
           // clang-format off
@@ -106,7 +105,6 @@ class UFOMap
 							cond_node_t<MapType, COLOR,      ColorNode>,
 							cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
 					std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
-          ReuseNodes, Lock, TrackNodes, CountNodes,
 					// Order does not matter
           // cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMapBase>::template type,
           cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMapBase>::template type,
@@ -134,7 +132,6 @@ class UFOMap
 					cond_node_t<MapType, COLOR,      ColorNode>,
 					cond_node_t<MapType, OCCUPANCY,  OccupancyNode>>,
 			std::conditional_t<MapType & OCCUPANCY, ContainsOccupancy<8>, void>,
-			ReuseNodes, Lock, TrackNodes, CountNodes,
 			// cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMapBase>::template type,
 			cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMapBase>::template type,
 			// cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMapBase>::template type,
@@ -169,8 +166,8 @@ class UFOMap
 
 	UFOMap(UFOMap const& other) = default;
 
-	template <mt_t MapType2, bool ReuseNodes2, UFOLock Lock2, bool CountNodes2>
-	UFOMap(UFOMap<MapType2, ReuseNodes2, Lock2, CountNodes2> const& other) : Base(other)
+	template <mt_t MapType2>
+	UFOMap(UFOMap<MapType2> const& other) : Base(other)
 	{
 	}
 
@@ -182,8 +179,8 @@ class UFOMap
 
 	UFOMap& operator=(UFOMap const& rhs) = default;
 
-	template <mt_t MapType2, bool ReuseNodes2, UFOLock Lock2, bool CountNodes2>
-	UFOMap& operator=(UFOMap<MapType2, ReuseNodes2, Lock2, CountNodes2> const& rhs)
+	template <mt_t MapType2>
+	UFOMap& operator=(UFOMap<MapType2> const& rhs)
 	{
 		Base::operator=(rhs);
 		return *this;
@@ -217,11 +214,9 @@ using ReflectionMap   = UFOMap<REFLECTION>;
 
 namespace std
 {
-template <ufo::map::mt_t MapType, bool ReuseNodes, ufo::map::UFOLock Lock,
-          bool TrackNodes, bool CountNodes>
-void swap(ufo::map::UFOMap<MapType, ReuseNodes, Lock, TrackNodes, CountNodes>& lhs,
-          ufo::map::UFOMap<MapType, ReuseNodes, Lock, TrackNodes, CountNodes>&
-              rhs) noexcept(noexcept(lhs.swap(rhs)))
+template <ufo::map::mt_t MapType>
+void swap(ufo::map::UFOMap<MapType>& lhs,
+          ufo::map::UFOMap<MapType>& rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }

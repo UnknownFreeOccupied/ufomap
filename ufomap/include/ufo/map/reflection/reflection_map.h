@@ -551,6 +551,25 @@ class ReflectionMapBase
 	}
 
 	//
+	// Fill
+	//
+
+	template <std::size_t N>
+	void fill(ReflectionNode<N>& node, ReflectionNode<N> const& parent, index_t index)
+	{
+		node.reflection.fill(parent.reflection[index]);
+	}
+
+	//
+	// Clear
+	//
+
+	template <std::size_t N>
+	void clear(ReflectionNode<N>&)
+	{
+	}
+
+	//
 	// Update node
 	//
 
@@ -614,6 +633,18 @@ class ReflectionMapBase
 		res.hits /= N;
 		res.misses /= N;
 		return res;
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <std::size_t N>
+	[[nodiscard]] bool isCollapsible(ReflectionNode<N> const& node) const
+	{
+		// TODO: Use floor(log2(X))?
+		return std::all_of(std::begin(node.reflection) + 1, std::end(node.reflection),
+		                   [p = node.reflection.front()](auto e) { return e == p; });
 	}
 
 	//

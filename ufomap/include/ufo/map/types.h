@@ -47,6 +47,7 @@
 
 // STL
 #include <cstdint>
+#include <limits>
 
 namespace ufo::map
 {
@@ -56,7 +57,7 @@ enum class PropagationCriteria { MIN, MAX, MEAN, FIRST };
 
 using coord_t = float;
 using node_size_t = double;
-using index_t = std::uint_fast8_t;
+using index_t = std::uint32_t;
 using depth_t = std::uint_fast8_t;
 using key_t = std::uint_fast32_t;
 using code_t = std::uint_fast64_t;
@@ -71,6 +72,12 @@ using count_t = std::uint32_t;
 using reflection_t = double;
 using distance_t = float;
 using surfel_scalar_t = float;
+
+//
+// Null index
+//
+
+static constexpr index_t const NULL_INDEX = std::numeric_limits<index_t>::max();
 
 //
 // Map types

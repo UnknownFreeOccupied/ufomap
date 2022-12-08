@@ -61,26 +61,6 @@ struct ReflectionNode {
 	//
 
 	[[nodiscard]] static constexpr std::size_t reflectionSize() { return N; }
-
-	//
-	// Fill
-	//
-
-	void fill(ReflectionNode const parent, index_t const index)
-	{
-		reflection.fill(parent.reflection[index]);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
-	{
-		// TODO: Use floor(log2(X))?
-		return std::all_of(std::begin(reflection) + 1, std::end(reflection),
-		                   [p = reflection.front()](auto e) { return e == p; });
-	}
 };
 }  // namespace ufo::map
 

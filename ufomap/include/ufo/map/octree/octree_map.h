@@ -60,22 +60,17 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Data, class InnerData, bool ReuseNodes, UFOLock Lock, bool TrackNodes,
-          bool CountNodes, template <class> class... Bases>
+template <class Data, class InnerData, template <class> class... Bases>
 class OctreeMap
-    : public OctreeBase<
-          OctreeMap<Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes, Bases...>,
-          Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes>,
-      public Bases<OctreeMap<Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes,
-                             Bases...>>...
+    : public OctreeBase<OctreeMap<Data, InnerData, Bases...>, Data, InnerData>,
+      public Bases<OctreeMap<Data, InnerData, Bases...>>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree =
-	    OctreeBase<OctreeMap, Data, InnerData, ReuseNodes, Lock, TrackNodes, CountNodes>;
+	using Octree = OctreeBase<OctreeMap, Data, InnerData>;
 
 	//
 	// Friends
@@ -121,10 +116,8 @@ class OctreeMap
 		readFromOtherMap(other);
 	}
 
-	template <class Data2, class InnerData2, bool ReuseNodes2, UFOLock Lock2,
-	          bool TrackNodes2, bool CountNodes2, template <class> class... Bases2>
-	OctreeMap(OctreeMap<Data2, InnerData2, ReuseNodes2, Lock2, TrackNodes2, CountNodes2,
-	                    Bases2...> const& other)
+	template <class Data2, class InnerData2, template <class> class... Bases2>
+	OctreeMap(OctreeMap<Data2, InnerData2, Bases2...> const& other)
 	    : Octree(other), Bases<OctreeMap>(other)...
 	{
 		readFromOtherMap(other);
@@ -142,10 +135,8 @@ class OctreeMap
 		return *this;
 	}
 
-	template <class Data2, class InnerData2, bool ReuseNodes2, UFOLock Lock2,
-	          bool TrackNodes2, bool CountNodes2, template <class> class... Bases2>
-	OctreeMap& operator=(OctreeMap<Data2, InnerData2, ReuseNodes2, Lock2, TrackNodes2,
-	                               CountNodes2, Bases2...> const& rhs)
+	template <class Data2, class InnerData2, template <class> class... Bases2>
+	OctreeMap& operator=(OctreeMap<Data2, InnerData2, Bases2...> const& rhs)
 	{
 		Octree::operator=(rhs);
 		(Bases<OctreeMap>::operator=(rhs), ...);
@@ -205,6 +196,26 @@ class OctreeMap
 	}
 
 	//
+	// Fill
+	//
+
+	template <class NodeT, class ParentT>
+	void fill(NodeT& node, ParentT const& parent, index_t const index)
+	{
+		(Bases<OctreeMap>::fill(node, parent, index), ...);
+	}
+
+	//
+	// Clear
+	//
+
+	template <class NodeT>
+	void clear(NodeT& node)
+	{
+		(Bases<OctreeMap>::clear(node), ...);
+	}
+
+	//
 	// Update node
 	//
 
@@ -212,6 +223,16 @@ class OctreeMap
 	void updateNode(NodeT& node, index_t index, ChildT const& children)
 	{
 		(Bases<OctreeMap>::updateNode(node, index, children), ...);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <class NodeT>
+	[[nodiscard]] bool isCollapsible(NodeT const& node) const
+	{
+		return (Bases<OctreeMap>::isCollapsible(node) && ...);
 	}
 
 	//

@@ -61,25 +61,6 @@ struct IntensityNode {
 	//
 
 	[[nodiscard]] static constexpr std::size_t intensitySize() { return N; }
-
-	//
-	// Fill
-	//
-
-	void fill(IntensityNode const parent, index_t const index)
-	{
-		intensity.fill(parent.intensity[index]);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] constexpr bool isCollapsible() const
-	{
-		return std::all_of(std::begin(intensity) + 1, std::end(intensity),
-		                   [t = intensity.front()](auto e) { return e == t; });
-	}
 };
 }  // namespace ufo::map
 

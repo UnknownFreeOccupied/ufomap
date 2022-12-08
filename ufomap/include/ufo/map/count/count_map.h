@@ -206,6 +206,25 @@ class CountMapBase
 	void initRoot() { derived().root().count[derived().rootIndex()] = 0; }
 
 	//
+	// Fill
+	//
+
+	template <std::size_t N>
+	void fill(CountNode<N>& node, CountNode<N> parent, index_t index)
+	{
+		node.count.fill(parent.count[index]);
+	}
+
+	//
+	// Clear
+	//
+
+	template <std::size_t N>
+	void clear(CountNode<N>&)
+	{
+	}
+
+	//
 	// Update node
 	//
 
@@ -223,6 +242,17 @@ class CountMapBase
 				node.count[index] = mean(children.count);
 				return;
 		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <std::size_t N>
+	[[nodiscard]] constexpr bool isCollapsible(CountNode<N> node) const
+	{
+		return std::all_of(std::begin(node.count) + 1, std::end(node.count),
+		                   [a = node.count.front()](auto b) { return a == b; });
 	}
 
 	//

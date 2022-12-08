@@ -214,6 +214,25 @@ class IntensityMapBase
 	void initRoot() { derived().root().intensity[derived().rootIndex()] = 0; }
 
 	//
+	// Fill
+	//
+
+	template <std::size_t N>
+	void fill(IntensityNode<N>& node, IntensityNode<N> const& parent, index_t index)
+	{
+		node.intensity.fill(parent.intensity[index]);
+	}
+
+	//
+	// Clear
+	//
+
+	template <std::size_t N>
+	void clear(IntensityNode<N>&)
+	{
+	}
+
+	//
 	// Update node
 	//
 
@@ -231,6 +250,17 @@ class IntensityMapBase
 				node.intensity[index] = mean(children.intensity);
 				return;
 		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <std::size_t N>
+	[[nodiscard]] constexpr bool isCollapsible(IntensityNode<N> const& node) const
+	{
+		return std::all_of(std::begin(node.intensity) + 1, std::end(node.intensity),
+		                   [t = node.intensity.front()](auto e) { return e == t; });
 	}
 
 	//

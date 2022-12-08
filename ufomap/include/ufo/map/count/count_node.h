@@ -61,25 +61,6 @@ struct CountNode {
 	//
 
 	[[nodiscard]] static constexpr std::size_t countSize() noexcept { return N; }
-
-	//
-	// Fill
-	//
-
-	void fill(CountNode const parent, index_t const index)
-	{
-		count.fill(parent.count[index]);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] constexpr bool isCollapsible() const
-	{
-		return std::all_of(std::begin(count) + 1, std::end(count),
-		                   [a = count.front()](auto b) { return a == b; });
-	}
 };
 }  // namespace ufo::map
 

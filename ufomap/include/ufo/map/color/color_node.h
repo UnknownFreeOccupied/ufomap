@@ -63,31 +63,6 @@ struct ColorNode {
 	//
 
 	[[nodiscard]] static constexpr std::size_t colorSize() { return N; }
-
-	//
-	// Fill
-	//
-
-	void fill(ColorNode const parent, index_t const index)
-	{
-		red.fill(parent.red[index]);
-		green.fill(parent.green[index]);
-		blue.fill(parent.blue[index]);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] constexpr bool isCollapsible() const
-	{
-		return std::all_of(std::begin(red) + 1, std::end(red),
-		                   [r = red.front()](auto c) { return c == r; }) &&
-		       std::all_of(std::begin(green) + 1, std::end(green),
-		                   [g = green.front()](auto c) { return c == g; }) &&
-		       std::all_of(std::begin(blue) + 1, std::end(blue),
-		                   [b = blue.front()](auto c) { return c == b; });
-	}
 };
 }  // namespace ufo::map
 

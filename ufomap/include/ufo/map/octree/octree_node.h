@@ -55,292 +55,37 @@
 
 namespace ufo::map
 {
-
 template <typename... Nodes>
 struct OctreeNode : Nodes... {
-	//
-	// Fill
-	//
-
-	void fill(OctreeNode const& parent, index_t const index)
-	{
-		(Nodes::fill(parent, index), ...);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const { return (Nodes::isCollapsible() && ...); }
 };
 
-template <class Data, bool Reuse, bool Track>
+template <class Data>
 struct OctreeLeafNode : Data {
 	// Indicates whether this node has to be updated (get information from children and/or
 	// update indicators). Useful when propagating information up the tree
 	IndexField modified;
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeLeafNode const& other, index_t index)
-	{
-		if (other.modified[index]) {
-			modified.set();
-		} else {
-			modified.reset();
-		}
-
-		Data::fill(other, index);
-	}
-
-	//
-	// Clear
-	//
-
-	constexpr void clear() {}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
 };
 
-template <class Data>
-struct OctreeLeafNode<Data, true, true> : Data {
-	// Code for this node
-	Code code;
-
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	IndexField modified;
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeLeafNode const& other, index_t index)
-	{
-		if (other.modified[index]) {
-			modified.set();
-		} else {
-			modified.reset();
-		}
-
-		Data::fill(other, index);
-		code = other.code.child(index);
-	}
-
-	//
-	// Clear
-	//
-
-	constexpr void clear() { code = Code(); }
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
-};
-
-template <class Data>
-struct OctreeLeafNode<Data, false, true> {
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	IndexField modified;
-
-	// Indicates whether this node actual is part of the octree
-	bool exists = false;
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeLeafNode const& other, index_t index)
-	{
-		if (other.modified[index]) {
-			modified.set();
-		} else {
-			modified.reset();
-		}
-
-		Data::fill(other, index);
-		exists = true;
-	}
-
-	//
-	// Clear
-	//
-
-	void clear() { exists = false; }
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const { return Data::isCollapsible(); }
-};
-
-struct Leaf {
+template <class LeafNode, class InnerData>
+struct OctreeInnerNode : LeafNode, InnerData {
 	// Indicates whether this is a leaf node (has no children) or not. If true then the
 	// children are not valid and should not be accessed
 	IndexField leaf;
 
-	//
-	// Fill
-	//
-
-	void fill(Leaf const parent, index_t const index)
-	{
-		if (parent.leaf[index]) {
-			leaf.set();
-		} else {
-			leaf.reset();
-		}
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] constexpr bool isCollapsible() const { return leaf.all(); }
-};
-
-template <class LeafNode, class InnerData, bool Lock>
-struct OctreeInnerNode : LeafNode, Leaf, InnerData {
-	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
-	using LeafNodeBlock = std::array<LeafNode, 8>;
-
-	// Pointer to children
-	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
-	};
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeInnerNode const& other, index_t index)
-	{
-		LeafNode::fill(other, index);
-		Leaf::fill(other, index);
-		InnerData::fill(other, index);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
-	{
-		return Leaf::isCollapsible() && LeafNode::isCollapsible() &&
-		       InnerData::isCollapsible();
-	}
-};
-
-template <class LeafNode, class InnerData>
-struct OctreeInnerNode<LeafNode, InnerData, true> : LeafNode, Leaf, InnerData {
-	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
-	using LeafNodeBlock = std::array<LeafNode, 8>;
-
-	// Lock
-	std::atomic_flag lock;
-
-	// Pointer to children
-	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
-	};
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeInnerNode const& other, index_t index)
-	{
-		LeafNode::fill(other, index);
-		Leaf::fill(other, index);
-		InnerData::fill(other, index);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
-	{
-		return Leaf::isCollapsible() && LeafNode::isCollapsible() &&
-		       InnerData::isCollapsible();
-	}
+	// Index to children
+	std::array<index_t, 8> children{NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX,
+	                                NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX};
 };
 
 template <class LeafNode>
-struct OctreeInnerNode<LeafNode, void, false> : LeafNode, Leaf {
-	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
-	using LeafNodeBlock = std::array<LeafNode, 8>;
+struct OctreeInnerNode<LeafNode, void> : LeafNode {
+	// Indicates whether this is a leaf node (has no children) or not. If true then the
+	// children are not valid and should not be accessed
+	IndexField leaf;
 
-	// Pointer to children
-	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
-	};
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeInnerNode const& other, index_t index)
-	{
-		Leaf::fill(other, index);
-		LeafNode::fill(other, index);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
-	{
-		return Leaf::isCollapsible() && LeafNode::isCollapsible();
-	}
-};
-
-template <class LeafNode>
-struct OctreeInnerNode<LeafNode, void, true> : LeafNode, Leaf {
-	using InnerNodeBlock = std::array<OctreeInnerNode, 8>;
-	using LeafNodeBlock = std::array<LeafNode, 8>;
-
-	// Lock
-	std::atomic_flag lock;
-
-	// Pointer to children
-	union {
-		InnerNodeBlock* inner_children = nullptr;
-		LeafNodeBlock* leaf_children;
-	};
-
-	//
-	// Fill
-	//
-
-	void fill(OctreeInnerNode const& other, index_t index)
-	{
-		Leaf::fill(other, index);
-		LeafNode::fill(other, index);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] bool isCollapsible() const
-	{
-		return Leaf::isCollapsible() && LeafNode::isCollapsible();
-	}
+	// Indices to children
+	std::array<index_t, 8> children{NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX,
+	                                NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX};
 };
 }  // namespace ufo::map
 

@@ -207,6 +207,25 @@ class TimeMapBase
 	void initRoot() { derived().root().time[derived().rootIndex()] = 0; }
 
 	//
+	// Fill
+	//
+
+	template <std::size_t N>
+	void fill(TimeNode<N>& node, TimeNode<N> const& parent, index_t index)
+	{
+		node.time.fill(parent.time[index]);
+	}
+
+	//
+	// Clear
+	//
+
+	template <std::size_t N>
+	void clear(TimeNode<N>&)
+	{
+	}
+
+	//
 	// Update node
 	//
 
@@ -224,6 +243,17 @@ class TimeMapBase
 				node.time[index] = mean(children.time);
 				return;
 		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <std::size_t N>
+	[[nodiscard]] bool isCollapsible(TimeNode<N> const& node) const
+	{
+		return std::all_of(std::begin(node.time) + 1, std::end(node.time),
+		                   [t = node.time.front()](auto e) { return e == t; });
 	}
 
 	//

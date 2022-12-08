@@ -64,25 +64,6 @@ struct OccupancyNode {
 	//
 
 	[[nodiscard]] static constexpr std::size_t occupancySize() noexcept { return N; }
-
-	//
-	// Fill
-	//
-
-	void fill(OccupancyNode const parent, index_t const index)
-	{
-		occupancy.fill(parent.occupancy[index]);
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] constexpr bool isCollapsible() const
-	{
-		return std::all_of(std::begin(occupancy) + 1, std::end(occupancy),
-		                   [p = occupancy.front()](auto x) { return x == p; });
-	}
 };
 
 template <std::size_t N>
@@ -91,38 +72,6 @@ struct ContainsOccupancy {
 	IndexField contains_unknown;
 	IndexField contains_free;
 	IndexField contains_occupied;
-
-	//
-	// Fill
-	//
-
-	void fill(ContainsOccupancy const parent, index_t const index)
-	{
-		if (parent.contains_unknown[index]) {
-			contains_unknown.set();
-		} else {
-			contains_unknown.reset();
-		}
-		if (parent.contains_free[index]) {
-			contains_free.set();
-		} else {
-			contains_free.reset();
-		}
-		if (parent.contains_occupied[index]) {
-			contains_occupied.set();
-		} else {
-			contains_occupied.reset();
-		}
-	}
-
-	//
-	// Is collapsible
-	//
-
-	[[nodiscard]] static constexpr bool isCollapsible()
-	{
-		return true;  // Does not matter what this is...
-	}
 };
 }  // namespace ufo::map
 

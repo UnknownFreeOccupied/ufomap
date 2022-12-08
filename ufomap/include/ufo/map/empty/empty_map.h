@@ -98,10 +98,27 @@ class EmptyMap
 	static constexpr void initRoot() noexcept {}
 
 	//
+	// Fill
+	//
+
+	static constexpr void fill(EmptyNode<Num>, EmptyNode<Num>, index_t) noexcept {}
+
+	//
+	// Clear
+	//
+
+	static constexpr void clear(EmptyNode<Num>) {}
+
+	//
 	// Update node
 	//
 
 	static constexpr void updateNode(EmptyNode<Num>, index_t, EmptyNode<Num>) noexcept {}
+
+	[[nodiscard]] static constexpr bool isCollapsible(EmptyNode<Num>) noexcept
+	{
+		return true;
+	}
 
 	//
 	// Input/ouput (read/write)

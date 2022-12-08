@@ -52,9 +52,6 @@ namespace ufo::map
 {
 template <std::size_t N>
 struct EmptyNode {
-	static constexpr void fill(EmptyNode const, index_t const) noexcept {}
-
-	[[nodiscard]] static constexpr bool isCollapsible() noexcept { return true; }
 };
 }  // namespace ufo::map
 

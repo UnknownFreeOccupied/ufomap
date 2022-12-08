@@ -359,6 +359,27 @@ class ColorMapBase
 	}
 
 	//
+	// Fill
+	//
+
+	template <std::size_t N>
+	void fill(ColorNode<N>& node, ColorNode<N> parent, index_t index)
+	{
+		node.red.fill(parent.red[index]);
+		node.green.fill(parent.green[index]);
+		node.blue.fill(parent.blue[index]);
+	}
+
+	//
+	// Clear
+	//
+
+	template <std::size_t N>
+	void clear(ColorNode<N>&)
+	{
+	}
+
+	//
 	// Update node
 	//
 
@@ -388,6 +409,21 @@ class ColorMapBase
 			node.green[index] = green / num;
 			node.blue[index] = blue / num;
 		}
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <std::size_t N>
+	[[nodiscard]] bool isCollapsible(ColorNode<N> node) const
+	{
+		return std::all_of(std::begin(node.red) + 1, std::end(node.red),
+		                   [r = node.red.front()](auto c) { return c == r; }) &&
+		       std::all_of(std::begin(node.green) + 1, std::end(node.green),
+		                   [g = node.green.front()](auto c) { return c == g; }) &&
+		       std::all_of(std::begin(node.blue) + 1, std::end(node.blue),
+		                   [b = node.blue.front()](auto c) { return c == b; });
 	}
 
 	//

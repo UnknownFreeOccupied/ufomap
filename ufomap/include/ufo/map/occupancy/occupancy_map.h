@@ -860,6 +860,39 @@ class OccupancyMapBase
 	}
 
 	//
+	// Fill
+	//
+
+	template <class T, class ParentT>
+	void fill(T& node, ParentT parent, index_t index)
+	{
+		node.occupancy.fill(parent.occupancy[index]);
+
+		if constexpr (std::is_same_v<T, ParentT>) {
+			if (parent.contains_unknown[index]) {
+				node.contains_unknown.set();
+			} else {
+				node.contains_unknown.reset();
+			}
+			if (parent.contains_free[index]) {
+				node.contains_free.set();
+			} else {
+				node.contains_free.reset();
+			}
+			if (parent.contains_occupied[index]) {
+				node.contains_occupied.set();
+			} else {
+				node.contains_occupied.reset();
+			}
+		}
+	}
+
+	template <class T>
+	void clear(T&)
+	{
+	}
+
+	//
 	// Update node
 	//
 
@@ -881,6 +914,17 @@ class OccupancyMapBase
 		node.contains_unknown[index] = containsUnknown(children);
 		node.contains_free[index] = containsFree(children);
 		node.contains_occupied[index] = containsOccupied(children);
+	}
+
+	//
+	// Is collapsible
+	//
+
+	template <std::size_t N>
+	[[nodiscard]] constexpr bool isCollapsible(OccupancyNode<N> node) const
+	{
+		return std::all_of(std::begin(node.occupancy) + 1, std::end(node.occupancy),
+		                   [p = node.occupancy.front()](auto x) { return x == p; });
 	}
 
 	//
