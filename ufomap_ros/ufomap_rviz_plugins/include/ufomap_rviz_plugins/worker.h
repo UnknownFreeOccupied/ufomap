@@ -63,7 +63,7 @@ namespace ufomap_ros::rviz_plugins
 template <ufo::map::mt_t MapType>
 class Worker final : public WorkerBase
 {
-	using Map = ufo::map::UFOMap<MapType, false, ufo::map::UFOLock::NONE, false, true>;
+	using Map = ufo::map::UFOMap<MapType>;
 
  public:
 	Worker(State& state, Filter& filter)

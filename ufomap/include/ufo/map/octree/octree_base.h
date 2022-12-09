@@ -3902,13 +3902,14 @@ class OctreeBase
 		}
 
 		if (1 == depth) {
-			// All are allocated so we can just set all to modified, even if they are leaves
-			for (auto& child : leafChildren(node)) {
-				child.modified.set();
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if (!std::as_const(node).leaf[i]) {
+					leafChild(node, i).modified.set();
+				}
 			}
 		} else {
 			for (index_t i = 0; 8 != i; ++i) {
-				if (!node.leaf[i]) {
+				if (!std::as_const(node).leaf[i]) {
 					setModifiedRecurs(innerNode(node, i), depth - 1, min_depth);
 				}
 			}
@@ -3943,7 +3944,7 @@ class OctreeBase
 
 	void resetModifiedRecurs(InnerNode& node, depth_t depth, depth_t max_depth)
 	{
-		IndexField modified_parents = node.modified & ~node.leaf;
+		IndexField const modified_parents = node.modified & ~node.leaf;
 
 		if (modified_parents.none()) {
 			if (depth <= max_depth) {
@@ -3953,9 +3954,10 @@ class OctreeBase
 		}
 
 		if (1 == depth) {
-			// All are allocated so we can just reset all, even if they are leaves
-			for (auto& child : leafChildren(node)) {
-				child.modified.reset();
+			for (std::size_t i = 0; 8 != i; ++i) {
+				if (modified_parents[i]) {
+					leafChild(node, i).modified.reset();
+				}
 			}
 		} else {
 			for (index_t i = 0; 8 != i; ++i) {
