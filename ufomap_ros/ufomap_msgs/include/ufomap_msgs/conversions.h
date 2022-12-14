@@ -107,6 +107,7 @@ template <class Map, class Predicates,
 decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, Predicates const& predicates,
                                              unsigned int depth = 0,
                                              bool compress = false,
+                                             ufo::map::mt_t map_types = 0,
                                              int compression_acceleration_level = 1,
                                              int compression_level = 0)
 {
@@ -117,8 +118,8 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, Predicates const& p
 	// map.write(data, predicates, depth, compress, compression_acceleration_level,
 	//           compression_level);
 
-	auto data = map.write(predicates, depth, compress, compression_acceleration_level,
-	                      compression_level);
+	auto data = map.write(predicates, depth, compress, map_types,
+	                      compression_acceleration_level, compression_level);
 	decltype(ufomap_msgs::UFOMap::data) ret;
 	ret.resize(data.size());
 	data.read(ret.data(), data.size());
@@ -132,6 +133,7 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, Predicates const& p
 template <class Map>
 decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, unsigned int depth = 0,
                                              bool compress = false,
+                                             ufo::map::mt_t map_types = 0,
                                              int compression_acceleration_level = 1,
                                              int compression_level = 0)
 {
@@ -141,8 +143,8 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, unsigned int depth 
 
 	// map.write(data, depth, compress, compression_acceleration_level, compression_level);
 
-	auto data =
-	    map.write(depth, compress, compression_acceleration_level, compression_level);
+	auto data = map.write(depth, compress, map_types, compression_acceleration_level,
+	                      compression_level);
 	decltype(ufomap_msgs::UFOMap::data) ret;
 	ret.resize(data.size());
 	data.read(ret.data(), data.size());
@@ -155,8 +157,8 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsg(Map const& map, unsigned int depth 
 
 template <class Map>
 decltype(ufomap_msgs::UFOMap::data) ufoToMsgUpdateModified(
-    Map& map, bool compress = false, int compression_acceleration_level = 1,
-    int compression_level = 0)
+    Map& map, bool compress = false, ufo::map::mt_t map_types = 0,
+    int compression_acceleration_level = 1, int compression_level = 0)
 {
 	// std::stringstream data(std::ios_base::in | std::ios_base::out |
 	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
@@ -165,8 +167,8 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsgUpdateModified(
 	// map.writeAndUpdateModified(data, compress, compression_acceleration_level,
 	//                            compression_level);
 
-	auto data = map.writeModifiedAndUpdate(compress, compression_acceleration_level,
-	                                       compression_level);
+	auto data = map.writeModifiedAndUpdate(
+	    compress, map_types, compression_acceleration_level, compression_level);
 	decltype(ufomap_msgs::UFOMap::data) ret;
 	ret.resize(data.size());
 	data.read(ret.data(), data.size());
@@ -179,8 +181,8 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsgUpdateModified(
 
 template <class Map>
 decltype(ufomap_msgs::UFOMap::data) ufoToMsgResetModified(
-    Map& map, bool compress = false, int compression_acceleration_level = 1,
-    int compression_level = 0)
+    Map& map, bool compress = false, ufo::map::mt_t map_types = 0,
+    int compression_acceleration_level = 1, int compression_level = 0)
 {
 	// std::stringstream data(std::ios_base::in | std::ios_base::out |
 	// std::ios_base::binary); data.exceptions(std::stringstream::failbit |
@@ -190,8 +192,8 @@ decltype(ufomap_msgs::UFOMap::data) ufoToMsgResetModified(
 	//                           compression_level);
 
 	// ufomap_msgs::UFOMap msg;
-	auto data = map.writeModifiedAndReset(compress, compression_acceleration_level,
-	                                      compression_level);
+	auto data = map.writeModifiedAndReset(
+	    compress, map_types, compression_acceleration_level, compression_level);
 	decltype(ufomap_msgs::UFOMap::data) ret;
 	ret.resize(data.size());
 	data.read(ret.data(), data.size());

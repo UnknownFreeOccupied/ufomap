@@ -2706,38 +2706,40 @@ class OctreeBase
 	}
 
 	void write(std::filesystem::path const& path, depth_t min_depth = 0,
-	           bool compress = false, int compression_acceleration_level = 1,
-	           int compression_level = 0) const
+	           bool compress = false, mt_t map_types = 0,
+	           int compression_acceleration_level = 1, int compression_level = 0) const
 	{
-		write(path, predicate::Exists(), min_depth, compress, compression_acceleration_level,
-		      compression_level);
+		write(path, predicate::Exists(), min_depth, compress, map_types,
+		      compression_acceleration_level, compression_level);
 	}
 
 	void write(std::ostream& out, depth_t min_depth = 0, bool compress = false,
-	           int compression_acceleration_level = 1, int compression_level = 0) const
+	           mt_t map_types = 0, int compression_acceleration_level = 1,
+	           int compression_level = 0) const
 	{
-		write(out, predicate::Exists(), min_depth, compress, compression_acceleration_level,
-		      compression_level);
+		write(out, predicate::Exists(), min_depth, compress, map_types,
+		      compression_acceleration_level, compression_level);
 	}
 
 	void write(WriteBuffer& out, depth_t min_depth = 0, bool compress = false,
-	           int compression_acceleration_level = 1, int compression_level = 0) const
+	           mt_t map_types = 0, int compression_acceleration_level = 1,
+	           int compression_level = 0) const
 	{
-		write(out, predicate::Exists(), min_depth, compress, compression_acceleration_level,
-		      compression_level);
+		write(out, predicate::Exists(), min_depth, compress, map_types,
+		      compression_acceleration_level, compression_level);
 	}
 
-	Buffer write(depth_t min_depth = 0, bool compress = false,
+	Buffer write(depth_t min_depth = 0, bool compress = false, mt_t map_types = 0,
 	             int compression_acceleration_level = 1, int compression_level = 0) const
 	{
-		return write(predicate::Exists(), min_depth, compress, compression_acceleration_level,
-		             compression_level);
+		return write(predicate::Exists(), min_depth, compress, map_types,
+		             compression_acceleration_level, compression_level);
 	}
 
 	template <class Predicates,
 	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
 	void write(std::filesystem::path const& path, Predicates&& predicates,
-	           depth_t min_depth = 0, bool compress = false,
+	           depth_t min_depth = 0, bool compress = false, mt_t map_types = 0,
 	           int compression_acceleration_level = 1, int compression_level = 0) const
 	{
 		std::ofstream file;
@@ -2745,49 +2747,50 @@ class OctreeBase
 		file.imbue(std::locale());
 		file.open(path, std::ios_base::out | std::ios_base::binary);
 
-		write(file, std::forward<Predicates>(predicates), min_depth, compress,
+		write(file, std::forward<Predicates>(predicates), min_depth, compress, map_types,
 		      compression_acceleration_level, compression_level);
 	}
 
 	template <class Predicates,
 	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
 	void write(std::ostream& out, Predicates&& predicates, depth_t min_depth = 0,
-	           bool compress = false, int compression_acceleration_level = 1,
-	           int compression_level = 0) const
+	           bool compress = false, mt_t map_types = 0,
+	           int compression_acceleration_level = 1, int compression_level = 0) const
 	{
 		auto [tree_structure, nodes] =
 		    data(predicate::Leaf() && predicate::DepthMin(min_depth) &&
 		         std::forward<Predicates>(predicates));
-		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		write(out, tree_structure, nodes, compress, map_types, compression_acceleration_level,
 		      compression_level);
 	}
 
 	template <class Predicates,
 	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
 	void write(WriteBuffer& out, Predicates&& predicates, depth_t min_depth = 0,
-	           bool compress = false, int compression_acceleration_level = 1,
-	           int compression_level = 0) const
+	           bool compress = false, mt_t map_types = 0,
+	           int compression_acceleration_level = 1, int compression_level = 0) const
 	{
 		auto [tree_structure, nodes] =
 		    data(predicate::Leaf() && predicate::DepthMin(min_depth) &&
 		         std::forward<Predicates>(predicates));
-		write(out, tree_structure, nodes, compress, compression_acceleration_level,
+		write(out, tree_structure, nodes, compress, map_types, compression_acceleration_level,
 		      compression_level);
 	}
 
 	template <class Predicates,
 	          typename = std::enable_if_t<!std::is_scalar_v<std::decay_t<Predicates>>>>
 	Buffer write(Predicates&& predicates, depth_t min_depth = 0, bool compress = false,
-	             int compression_acceleration_level = 1, int compression_level = 0) const
+	             mt_t map_types = 0, int compression_acceleration_level = 1,
+	             int compression_level = 0) const
 	{
 		Buffer buffer;
-		write(buffer, predicates, min_depth, compress, compression_acceleration_level,
-		      compression_level);
+		write(buffer, predicates, min_depth, compress, map_types,
+		      compression_acceleration_level, compression_level);
 		return buffer;
 	}
 
 	void writeModifiedAndPropagate(std::filesystem::path const& filename,
-	                               bool compress = false,
+	                               bool compress = false, mt_t map_types = 0,
 	                               int compression_acceleration_level = 1,
 	                               int compression_level = 0)
 	{
@@ -2796,40 +2799,42 @@ class OctreeBase
 		file.imbue(std::locale());
 		file.open(filename, std::ios_base::out | std::ios_base::binary);
 
-		writeModifiedAndPropagate(file, compress, compression_acceleration_level,
+		writeModifiedAndPropagate(file, compress, map_types, compression_acceleration_level,
 		                          compression_level);
 	}
 
 	void writeModifiedAndPropagate(std::ostream& out, bool compress = false,
+	                               mt_t map_types = 0,
 	                               int compression_acceleration_level = 1,
 	                               int compression_level = 0)
 	{
 		modifiedData<true>();
-		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
-		      compression_level);
+		write(out, modified_tree_, modified_nodes_, compress, map_types,
+		      compression_acceleration_level, compression_level);
 	}
 
 	void writeModifiedAndPropagate(WriteBuffer& out, bool compress = false,
+	                               mt_t map_types = 0,
 	                               int compression_acceleration_level = 1,
 	                               int compression_level = 0)
 	{
 		modifiedData<true>();
-		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
-		      compression_level);
+		write(out, modified_tree_, modified_nodes_, compress, map_types,
+		      compression_acceleration_level, compression_level);
 	}
 
-	Buffer writeModifiedAndPropagate(bool compress = false,
+	Buffer writeModifiedAndPropagate(bool compress = false, mt_t map_types = 0,
 	                                 int compression_acceleration_level = 1,
 	                                 int compression_level = 0)
 	{
 		Buffer buffer;
-		writeModifiedAndPropagate(buffer, compress, compression_acceleration_level,
+		writeModifiedAndPropagate(buffer, compress, map_types, compression_acceleration_level,
 		                          compression_level);
 		return buffer;
 	}
 
 	void writeModifiedAndReset(std::filesystem::path const& filename, bool compress = false,
-	                           int compression_acceleration_level = 1,
+	                           mt_t map_types = 0, int compression_acceleration_level = 1,
 	                           int compression_level = 0)
 	{
 		std::ofstream file;
@@ -2837,34 +2842,34 @@ class OctreeBase
 		file.imbue(std::locale());
 		file.open(filename, std::ios_base::out | std::ios_base::binary);
 
-		writeModifiedAndReset(file, compress, compression_acceleration_level,
+		writeModifiedAndReset(file, compress, map_types, compression_acceleration_level,
 		                      compression_level);
 	}
 
-	void writeModifiedAndReset(std::ostream& out, bool compress = false,
+	void writeModifiedAndReset(std::ostream& out, bool compress = false, mt_t map_types = 0,
 	                           int compression_acceleration_level = 1,
 	                           int compression_level = 0)
 	{
 		modifiedData<false>();
-		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
-		      compression_level);
+		write(out, modified_tree_, modified_nodes_, compress, map_types,
+		      compression_acceleration_level, compression_level);
 	}
 
-	void writeModifiedAndReset(WriteBuffer& out, bool compress = false,
+	void writeModifiedAndReset(WriteBuffer& out, bool compress = false, mt_t map_types = 0,
 	                           int compression_acceleration_level = 1,
 	                           int compression_level = 0)
 	{
 		modifiedData<false>();
-		write(out, modified_tree_, modified_nodes_, compress, compression_acceleration_level,
-		      compression_level);
+		write(out, modified_tree_, modified_nodes_, compress, map_types,
+		      compression_acceleration_level, compression_level);
 	}
 
-	Buffer writeModifiedAndReset(bool compress = false,
+	Buffer writeModifiedAndReset(bool compress = false, mt_t map_types = 0,
 	                             int compression_acceleration_level = 1,
 	                             int compression_level = 0)
 	{
 		Buffer buffer;
-		writeModifiedAndReset(buffer, compress, compression_acceleration_level,
+		writeModifiedAndReset(buffer, compress, map_types, compression_acceleration_level,
 		                      compression_level);
 		return buffer;
 	}
@@ -4813,18 +4818,18 @@ class OctreeBase
 	}
 
 	void write(std::ostream& out, std::vector<IndexField> const& tree,
-	           std::vector<LeafNode> const& nodes, bool compress,
+	           std::vector<LeafNode> const& nodes, bool compress, mt_t map_types,
 	           int compression_acceleration_level, int compression_level) const
 	{
 		writeHeader(out, fileOptions(compress));
 		writeTreeStructure(out, tree);
 		writeNumNodes(out, nodes.size());
-		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress,
+		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress, map_types,
 		           compression_acceleration_level, compression_level);
 	}
 
 	void write(WriteBuffer& out, std::vector<IndexField> const& tree,
-	           std::vector<LeafNode> const& nodes, bool compress,
+	           std::vector<LeafNode> const& nodes, bool compress, mt_t map_types,
 	           int compression_acceleration_level, int compression_level) const
 	{
 		std::cout << "Write\n";
@@ -4835,7 +4840,7 @@ class OctreeBase
 		std::cout << "\tTree: " << out.size() << '\n';
 		writeNumNodes(out, nodes.size());
 		std::cout << "\tNum nodes: " << out.size() << '\n';
-		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress,
+		writeNodes(out, std::cbegin(nodes), std::cend(nodes), compress, map_types,
 		           compression_acceleration_level, compression_level);
 		std::cout << "\tData: " << out.size() << '\n';
 	}
@@ -4868,19 +4873,19 @@ class OctreeBase
 
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
-	                int const compression_acceleration_level,
+	                mt_t const map_types, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		derived().writeNodes(out, first, last, compress, compression_acceleration_level,
-		                     compression_level);
+		derived().writeNodes(out, first, last, compress, map_types,
+		                     compression_acceleration_level, compression_level);
 	}
 
 	template <class InputIt>
 	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const compress,
-	                int const compression_acceleration_level,
+	                mt_t const map_types, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		derived().writeNodes(out, first, last, false, compress,
+		derived().writeNodes(out, first, last, compress, map_types,
 		                     compression_acceleration_level, compression_level);
 	}
 

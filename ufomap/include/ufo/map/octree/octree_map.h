@@ -245,10 +245,10 @@ class OctreeMap
 	}
 
 	template <class InputIt>
-	[[nodiscard]] std::size_t serializedSize(InputIt first, InputIt last,
-	                                         bool compress) const
+	[[nodiscard]] std::size_t serializedSize(InputIt first, InputIt last, bool compress,
+	                                         mt_t data) const
 	{
-		return (serializedSize<Bases<OctreeMap>>(first, last, compress) + ...);
+		return (serializedSize<Bases<OctreeMap>>(first, last, compress, data) + ...);
 	}
 
 	template <class OutputIt>
@@ -315,22 +315,22 @@ class OctreeMap
 
 	template <class InputIt>
 	void writeNodes(std::ostream& out, InputIt first, InputIt last, bool const compress,
-	                int const compression_acceleration_level,
+	                mt_t const map_types, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
 		Buffer buf;
-		(writeNodes<Bases<OctreeMap>>(out, buf, first, last, compress,
+		(writeNodes<Bases<OctreeMap>>(out, buf, first, last, compress, map_types,
 		                              compression_acceleration_level, compression_level),
 		 ...);
 	}
 
 	template <class InputIt>
-	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const parallel,
-	                bool const compress, int const compression_acceleration_level,
+	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const compress,
+	                mt_t const map_types, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		out.reserve(out.size() + serializedSize(first, last, compress));
-		(writeNodes<Bases<OctreeMap>>(out, first, last, compress,
+		out.reserve(out.size() + serializedSize(first, last, compress, map_types));
+		(writeNodes<Bases<OctreeMap>>(out, first, last, compress, map_types,
 		                              compression_acceleration_level, compression_level),
 		 ...);
 	}
@@ -341,8 +341,13 @@ class OctreeMap
 	//
 
 	template <class Base, class InputIt>
-	std::size_t serializedSize(InputIt first, InputIt last, bool compress) const
+	std::size_t serializedSize(InputIt first, InputIt last, bool compress,
+	                           mt_t map_types) const
 	{
+		if (mt_t{0} != map_types && mt_t{0} == (Base::mapType() & map_types)) {
+			return 0;
+		}
+
 		if (compress) {
 			return sizeof(MapType) + sizeof(std::uint64_t) + sizeof(std::uint64_t) +
 			       maxSizeCompressed(Base::serializedSize(first, last));
@@ -393,9 +398,14 @@ class OctreeMap
 
 	template <class Base, class InputIt>
 	void writeNodes(std::ostream& out, Buffer& buf, InputIt first, InputIt last,
-	                bool const compress, int const compression_acceleration_level,
+	                bool const compress, mt_t const map_types,
+	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
+		if (mt_t{0} != map_types && mt_t{0} == (Base::mapType() & map_types)) {
+			return;
+		}
+
 		buf.clear();
 		writeNodes(buf, first, last, compress, compression_acceleration_level,
 		           compression_level);
@@ -407,11 +417,15 @@ class OctreeMap
 
 	template <class Base, class InputIt>
 	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const compress,
-	                int const compression_acceleration_level,
+	                mt_t const map_types, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
 		constexpr MapType mt = Base::mapType();
 		if constexpr (MapType::NONE == mt) {
+			return;
+		}
+
+		if (mt_t{0} != map_types && mt_t{0} == (Base::mapType() & map_types)) {
 			return;
 		}
 
