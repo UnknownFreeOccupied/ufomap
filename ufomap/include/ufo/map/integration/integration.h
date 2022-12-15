@@ -122,7 +122,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> cloud,
 			auto const valid = valid_f(cloud[i]);
 			auto const point = trans_f(cloud[i]);
 			auto const code = map.toCode(point, depth);
-			if (0 != i && i_cloud.back().code.code() == code.code()) {
+			if (0 != i && i_cloud.back().code == code) {
 				i_cloud.back().points.emplace_back(point, valid);
 			} else {
 				i_cloud.emplace_back(code, point, valid);
@@ -184,8 +184,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> cloud,
 		std::sort(std::begin(i_cloud), std::end(i_cloud));
 	} else if constexpr (3 == mode) {
 		// CodeUnorderedMap<IntegrationCloudSmall<P>> temp;
-		auto cmp = [](auto const& a, auto const& b) { return a.code() < b.code(); };
-		std::map<Code, IntegrationCloudSmall<P>, decltype(cmp)> temp(cmp);
+		std::map<Code, IntegrationCloudSmall<P>> temp;
 		// std::unordered_map<Code, IntegrationCloudSmall<P>> temp;
 
 		// Get the corresponding code for each point
@@ -217,17 +216,6 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> cloud,
 				}
 			}
 		}
-	} else if constexpr (4 == mode) {
-		std::vector<code_t> codes;
-		codes.reserve(cloud.size());
-
-		for (auto const& point : cloud) {
-			codes.push_back(map.toCode(point, 0).code());
-		}
-
-		auto perm = sortPermutation(std::begin(codes), std::end(codes));
-
-		applyPermutation(std::begin(cloud), std::end(cloud), perm);
 	}
 
 	// i_cloud.clear();

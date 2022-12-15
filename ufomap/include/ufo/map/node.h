@@ -101,22 +101,22 @@ struct Node {
 
 	friend constexpr bool operator<(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() < rhs.code();
+		return lhs.code_ < rhs.code_;
 	}
 
 	friend constexpr bool operator<=(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() <= rhs.code();
+		return lhs.code_ <= rhs.code_;
 	}
 
 	friend constexpr bool operator>(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() > rhs.code();
+		return lhs.code_ > rhs.code_;
 	}
 
 	friend constexpr bool operator>=(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() >= rhs.code();
+		return lhs.code_ >= rhs.code_;
 	}
 
 	/*!
@@ -326,12 +326,18 @@ namespace std
 {
 template <>
 struct hash<ufo::map::Node> {
-	std::size_t operator()(ufo::map::Node node) const { return hash<ufo::map::Code>()(node.code_); }
+	std::size_t operator()(ufo::map::Node node) const
+	{
+		return hash<ufo::map::Code>()(node.code_);
+	}
 };
 
 template <>
 struct hash<ufo::map::NodeBV> {
-	std::size_t operator()(ufo::map::NodeBV node) const { return hash<ufo::map::Code>()(node.code_); }
+	std::size_t operator()(ufo::map::NodeBV node) const
+	{
+		return hash<ufo::map::Code>()(node.code_);
+	}
 };
 }  // namespace std
 

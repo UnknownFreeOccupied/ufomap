@@ -73,32 +73,17 @@ struct IntegrationPointSmall {
 
 	[[nodiscard]] bool valid() const { return point.valid; }
 
-	bool operator==(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() == rhs.code.code();
-	}
+	bool operator==(IntegrationPointSmall const& rhs) const { return code == rhs.code; }
 
 	bool operator!=(IntegrationPointSmall const& rhs) const { return !(*this == rhs); }
 
-	bool operator<(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() < rhs.code.code();
-	}
+	bool operator<(IntegrationPointSmall const& rhs) const { return code < rhs.code; }
 
-	bool operator<=(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() <= rhs.code.code();
-	}
+	bool operator<=(IntegrationPointSmall const& rhs) const { return code <= rhs.code; }
 
-	bool operator>(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() > rhs.code.code();
-	}
+	bool operator>(IntegrationPointSmall const& rhs) const { return code > rhs.code; }
 
-	bool operator>=(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() >= rhs.code.code();
-	}
+	bool operator>=(IntegrationPointSmall const& rhs) const { return code >= rhs.code; }
 };
 
 /*!
@@ -132,29 +117,29 @@ struct IntegrationPoint {
 
 	bool operator==(IntegrationPoint const& rhs) const
 	{
-		return code.code() == rhs.code.code();
+		return code == rhs.code;
 	}
 
 	bool operator!=(IntegrationPoint const& rhs) const { return !(*this == rhs); }
 
 	bool operator<(IntegrationPoint const& rhs) const
 	{
-		return code.code() < rhs.code.code();
+		return code < rhs.code;
 	}
 
 	bool operator<=(IntegrationPoint const& rhs) const
 	{
-		return code.code() <= rhs.code.code();
+		return code <= rhs.code;
 	}
 
 	bool operator>(IntegrationPoint const& rhs) const
 	{
-		return code.code() > rhs.code.code();
+		return code > rhs.code;
 	}
 
 	bool operator>=(IntegrationPoint const& rhs) const
 	{
-		return code.code() >= rhs.code.code();
+		return code >= rhs.code;
 	}
 };
 }  // namespace ufo::map
