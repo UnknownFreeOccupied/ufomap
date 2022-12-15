@@ -66,7 +66,7 @@ class Key
  public:
 	constexpr Key() = default;
 
-	constexpr Key(key_t const x, key_t const y, key_t const z, depth_t const depth)
+	constexpr Key(key_t const x, key_t const y, key_t const z, depth_t const depth = 0)
 	    : x_((x >> depth) << depth),
 	      y_((y >> depth) << depth),
 	      z_((z >> depth) << depth),

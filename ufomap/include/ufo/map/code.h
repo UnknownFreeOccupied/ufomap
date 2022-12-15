@@ -74,11 +74,11 @@ class Code
 	constexpr Code() = default;
 
 	constexpr Code(code_t code, depth_t depth = 0)
-	    : code_((code >> (3 * depth)) << (3 * depth)), depth_(depth)
+	    : code_(((code >> (3 * depth)) << (3 * depth + 5)) | static_cast<code_t>(depth))
 	{
 	}
 
-	Code(Key const& key) : code_(toCode(key)), depth_(key.depth()) {}
+	Code(Key key) : code_((toCode(key) << 5) | static_cast<code_t>(key.depth())) {}
 
 	/*!
 	 * @brief Get the corresponding key to code
@@ -88,39 +88,24 @@ class Code
 	operator Key() const noexcept
 	{
 #if defined(__BMI2__)
-		return Key(_pext_u64(code_, 0x9249249249249249), _pext_u64(code_, 0x2492492492492492),
-		           _pext_u64(code_, 0x4924924924924924), depth_);
+		return Key(_pext_u64(code_, 0x4924924924924920), _pext_u64(code_, 0x9249249249249240),
+		           _pext_u64(code_, 0x2492492492492480), depth());
 #else
-		return Key(toKey(code_, 0), toKey(code_, 1), toKey(code_, 2), depth_);
+		return Key(toKey(0), toKey(1), toKey(2), depth());
 #endif
 	}
 
-	constexpr bool operator==(Code const& rhs) const
-	{
-		return code_ == rhs.code_ && depth_ == rhs.depth_;
-	}
+	constexpr bool operator==(Code rhs) const { return code_ == rhs.code_; }
 
-	constexpr bool operator!=(Code const& rhs) const { return !(*this == rhs); }
+	constexpr bool operator!=(Code rhs) const { return !(*this == rhs); }
 
-	constexpr bool operator<(Code const& rhs) const
-	{
-		return code_ < rhs.code_ || (code_ == rhs.code_ && depth_ > rhs.depth_);
-	}
+	constexpr bool operator<(Code rhs) const { return code_ < rhs.code_; }
 
-	constexpr bool operator<=(Code const& rhs) const
-	{
-		return code_ < rhs.code_ || (code_ == rhs.code_ && depth_ >= rhs.depth_);
-	}
+	constexpr bool operator<=(Code rhs) const { return code_ <= rhs.code_; }
 
-	constexpr bool operator>(Code const& rhs) const
-	{
-		return code_ > rhs.code_ || (code_ == rhs.code_ && depth_ < rhs.depth_);
-	}
+	constexpr bool operator>(Code rhs) const { return code_ > rhs.code_; }
 
-	constexpr bool operator>=(Code const& rhs) const
-	{
-		return code_ > rhs.code_ || (code_ == rhs.code_ && depth_ <= rhs.depth_);
-	}
+	constexpr bool operator>=(Code rhs) const { return code_ >= rhs.code_; }
 
 	/*!
 	 * @brief Return the code at a specified depth
@@ -128,7 +113,7 @@ class Code
 	 * @param depth The depth of the code
 	 * @return Code The code at the specified depth
 	 */
-	constexpr Code toDepth(depth_t depth) const { return Code(code_, depth); }
+	constexpr Code toDepth(depth_t depth) const { return Code(code_ >> 5, depth); }
 
 	/*!
 	 * @brief Converts a key to a code
@@ -136,12 +121,11 @@ class Code
 	 * @param key The key to convert
 	 * @return uint64_t The code corresponding to the key
 	 */
-	static code_t toCode(Key const& key)
+	static code_t toCode(Key key)
 	{
 #if defined(__BMI2__)
-		return _pdep_u64(static_cast<code_t>(key[0]), 0x9249249249249249) |
-		       _pdep_u64(static_cast<code_t>(key[1]), 0x2492492492492492) |
-		       _pdep_u64(static_cast<code_t>(key[2]), 0x4924924924924924);
+		return _pdep_u64(key[0], 0x9249249249249249) | _pdep_u64(key[1], 0x2492492492492492) |
+		       _pdep_u64(key[2], 0x4924924924924924);
 #else
 		return splitBy3(key[0]) | (splitBy3(key[1]) << 1) | (splitBy3(key[2]) << 2);
 #endif
@@ -154,9 +138,9 @@ class Code
 	 * @param index The index of the key component
 	 * @return The key component value
 	 */
-	static key_t toKey(Code const& code, std::size_t index)
+	static key_t toKey(Code code, std::size_t index)
 	{
-		return get3Bits(code.code_ >> index);
+		return get3Bits(code.code_ >> (index + 5));
 	}
 
 	/*!
@@ -165,7 +149,7 @@ class Code
 	 * @param index The index of the key component
 	 * @return The key component value
 	 */
-	key_t toKey(std::size_t index) const { return toKey(*this, index); }
+	key_t toKey(std::size_t index) const { return get3Bits(code_ >> (index + 5)); }
 
 	/*!
 	 * @brief Get the index at a specific depth for this code.
@@ -175,7 +159,7 @@ class Code
 	 */
 	constexpr index_t index(depth_t depth) const
 	{
-		return (code_ >> (code_t(3) * depth)) & code_t(0x7);
+		return (code_ >> (3 * depth + 5)) & code_t(0x7);
 	}
 
 	// TODO: Rename?
@@ -183,9 +167,8 @@ class Code
 
 	constexpr Code parent(depth_t parent_depth) const
 	{
-		assert(parent_depth >= depth_);  // TODO: Fix
-		code_t temp = 3 * parent_depth;
-		return Code((code_ >> temp) << temp, parent_depth);
+		assert(parent_depth >= depth());  // TODO: Fix
+		return Code(code_ >> 5, parent_depth);
 	}
 
 	// TODO: Rename?
@@ -199,15 +182,14 @@ class Code
 	 */
 	constexpr Code child(std::size_t index) const
 	{
-		if (0 == depth_) {
+		depth_t d = depth();
+		if (0 == d) {
 			// FIXME: Throw error?
 			return *this;
 		}
 
-		depth_t child_depth = depth_ - 1;
-		return Code(
-		    code_ + (static_cast<code_t>(index) << static_cast<code_t>(3 * child_depth)),
-		    child_depth);
+		depth_t cd = d - 1;
+		return Code((code_ >> 5) + (static_cast<code_t>(index) << (3 * cd)), cd);
 	}
 
 	/*!
@@ -218,11 +200,9 @@ class Code
 	 */
 	inline Code sibling(std::size_t index) const
 	{
-		code_t sibling_code = (code_ >> static_cast<code_t>(3 * (depth_ + 1)))
-		                      << static_cast<code_t>(3 * (depth_ + 1));
-		return Code(
-		    sibling_code + (static_cast<code_t>(index) << static_cast<code_t>(3 * depth_)),
-		    depth_);
+		depth_t d = depth();
+		code_t sc = (code_ >> (5 + 3 * (d + 1))) << (3 * (d + 1));
+		return Code(sc + (static_cast<code_t>(index) << (3 * d)), d);
 	}
 
 	/*!
@@ -230,26 +210,14 @@ class Code
 	 *
 	 * @return code_t The code
 	 */
-	constexpr code_t code() const noexcept { return code_; }
+	constexpr code_t code() const noexcept { return code_ >> 5; }
 
 	/*!
 	 * @brief Get the depth that this code is specified at
 	 *
 	 * @return depth_t The depth this code is specified at
 	 */
-	constexpr depth_t depth() const noexcept { return depth_; }
-
-	/*!
-	 * @brief
-	 *
-	 */
-	struct Hash {
-		static constexpr code_t hash(Code const& code) { return code.code(); }
-
-		constexpr code_t operator()(Code const& code) const { return hash(code); }
-
-		static constexpr bool equal(Code const& lhs, Code const& rhs) { return lhs == rhs; }
-	};
+	constexpr depth_t depth() const noexcept { return code_ & 0x1F; }
 
  private:
 	static code_t splitBy3(key_t a)
@@ -286,7 +254,9 @@ class Code
 	// The Morton code
 	code_t code_ = 0;
 	// The depth of the Morton code
-	depth_t depth_ = 0;
+	// depth_t depth_ = 0;
+
+	friend class std::hash<Code>;
 };
 }  // namespace ufo::map
 
@@ -294,7 +264,7 @@ namespace std
 {
 template <>
 struct hash<ufo::map::Code> {
-	std::size_t operator()(ufo::map::Code code) const { return code.code(); }
+	std::size_t operator()(ufo::map::Code code) const { return code.code_; }
 };
 }  // namespace std
 

@@ -77,7 +77,6 @@ struct Node {
 	{
 		std::swap(code_, other.code_);
 		std::swap(index_, other.index_);
-		std::swap(code_depth_, other.code_depth_);
 		std::swap(data_depth_, other.data_depth_);
 	}
 
@@ -125,14 +124,14 @@ struct Node {
 	 *
 	 * @return The code for the node.
 	 */
-	[[nodiscard]] constexpr Code code() const noexcept { return Code(code_, code_depth_); }
+	[[nodiscard]] constexpr Code code() const noexcept { return code_; }
 
 	/*!
 	 * @brief Get the depth of the node.
 	 *
 	 * @return The depth of the node.
 	 */
-	[[nodiscard]] constexpr depth_t depth() const noexcept { return code_depth_; }
+	[[nodiscard]] constexpr depth_t depth() const noexcept { return code_.depth(); }
 
 	/*!
 	 * @brief Get the index of the node (i.e., the child index from the parent's
@@ -140,17 +139,11 @@ struct Node {
 	 *
 	 * @return The index of the node.
 	 */
-	[[nodiscard]] constexpr index_t index() const noexcept
-	{
-		return (code_ >> (code_t(3) * depth())) & code_t(0x7);
-	}
+	[[nodiscard]] constexpr index_t index() const noexcept { return code_.index(); }
 
  protected:
 	constexpr Node(std::uint32_t index, Code code, depth_t data_depth) noexcept
-	    : code_(code.code()),
-	      index_(index),
-	      code_depth_(code.depth()),
-	      data_depth_(data_depth)
+	    : code_(code), index_(index), data_depth_(data_depth)
 	{
 	}
 
@@ -173,7 +166,7 @@ struct Node {
 	 */
 	[[nodiscard]] constexpr Code dataCode() const noexcept
 	{
-		return Code(code_, data_depth_);
+		return code_.toDepth(data_depth_);
 	}
 
 	/*!
@@ -181,7 +174,7 @@ struct Node {
 	 */
 	[[nodiscard]] constexpr index_t dataIndex() const noexcept
 	{
-		return (code_ >> (code_t(3) * dataDepth())) & code_t(0x7);
+		return code_.index(data_depth_);
 	}
 
 	/*!
@@ -194,11 +187,9 @@ struct Node {
 
  protected:
 	// The code for the node
-	code_t code_ = 0;
+	Code code_;
 	// The index of the node
 	std::uint32_t index_ = std::numeric_limits<std::uint32_t>::max();
-	// The depth of the code
-	depth_t code_depth_ = 0;
 	// The depth of the data
 	depth_t data_depth_ = 0;
 
@@ -335,12 +326,12 @@ namespace std
 {
 template <>
 struct hash<ufo::map::Node> {
-	std::size_t operator()(ufo::map::Node node) const { return node.code_; }
+	std::size_t operator()(ufo::map::Node node) const { return hash<ufo::map::Code>()(node.code_); }
 };
 
 template <>
 struct hash<ufo::map::NodeBV> {
-	std::size_t operator()(ufo::map::NodeBV node) const { return node.code_; }
+	std::size_t operator()(ufo::map::NodeBV node) const { return hash<ufo::map::Code>()(node.code_); }
 };
 }  // namespace std
 
