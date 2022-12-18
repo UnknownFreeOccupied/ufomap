@@ -2650,52 +2650,54 @@ class OctreeBase
 	|                                                                                     |
 	**************************************************************************************/
 
-	void read(std::filesystem::path const& path, bool propagate = true)
+	void read(std::filesystem::path const& path, mt_t map_types = 0, bool propagate = true)
 	{
 		std::ifstream file;
 		file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		file.imbue(std::locale());
 		file.open(path, std::ios_base::in | std::ios_base::binary);
 
-		read(file, propagate);
+		read(file, map_types, propagate);
 	}
 
-	void read(std::istream& in, bool propagate = true)
+	void read(std::istream& in, mt_t map_types = 0, bool propagate = true)
 	{
-		readData(in, readHeader(in), propagate);
+		readData(in, readHeader(in), map_types, propagate);
 	}
 
-	void read(ReadBuffer& in, bool propagate = true)
+	void read(ReadBuffer& in, mt_t map_types = 0, bool propagate = true)
 	{
 		std::cout << "Read\n";
 		std::cout << "\tEmpty: " << in.readIndex() << '\n';
 		auto header = readHeader(in);
 		std::cout << "\tHeader: " << in.readIndex() << '\n';
-		readData(in, header, propagate);
+		readData(in, header, map_types, propagate);
 	}
 
-	void readData(std::istream& in, FileHeader const& header, bool propagate = true)
+	void readData(std::istream& in, FileHeader const& header, mt_t map_types = 0,
+	              bool propagate = true)
 	{
 		if (size() != header.leaf_size || depthLevels() != header.depth_levels) {
 			clear(header.leaf_size, header.depth_levels);
 		}
 
 		auto nodes = readNodes(in);
-		derived().readNodes(in, std::begin(nodes), std::end(nodes), header.compressed);
+		derived().readNodes(in, std::begin(nodes), std::end(nodes), header.compressed,
+		                    map_types);
 
 		if (propagate) {
 			propagateModified();
 		}
 	}
 
-	void readData(ReadBuffer& in, FileHeader const& header, bool propagate = true)
+	void readData(ReadBuffer& in, FileHeader const& header,mt_t map_types = 0, bool propagate = true)
 	{
 		if (size() != header.leaf_size || depthLevels() != header.depth_levels) {
 			clear(header.leaf_size, header.depth_levels);
 		}
 
 		auto nodes = readNodes(in);
-		derived().readNodes(in, std::begin(nodes), std::end(nodes), false, header.compressed);
+		derived().readNodes(in, std::begin(nodes), std::end(nodes), false, header.compressed, map_types);
 		std::cout << "\tData: " << in.readIndex() << "\n";
 
 		if (propagate) {

@@ -173,8 +173,7 @@ class OctreeMap
 		// 	map.set(node.code(), other.get(node));
 		// }
 
-		// TODO: Make it possible to only write the parts that they share
-		auto buf = other.write();
+		auto buf = other.write(0, false, mapType());
 		Octree::read(buf);
 
 		// std::stringstream io(std::ios_base::in | std::ios_base::out |
@@ -239,7 +238,7 @@ class OctreeMap
 	// Input/output (read/write)
 	//
 
-	[[nodiscard]] static constexpr MapType mapType() noexcept
+	[[nodiscard]] static constexpr mt_t mapType() noexcept
 	{
 		return (Bases<OctreeMap>::mapType() | ...);
 	}
@@ -252,7 +251,8 @@ class OctreeMap
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, OutputIt last, bool const compressed)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last, bool const compressed,
+	               mt_t const map_types)
 	{
 		auto cur_pos = in.tellg();
 		in.seekg(0, std::ios_base::end);
@@ -268,7 +268,8 @@ class OctreeMap
 			in.read(reinterpret_cast<char*>(&mt), sizeof(mt));
 			in.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if ((Bases<OctreeMap>::canReadData(mt) || ...)) {
+			if ((mt_t{0} == map_types || mt_t{0} != (mt & map_types)) &&
+			    (Bases<OctreeMap>::canReadData(mt) || ...)) {
 				(readNodes<Bases<OctreeMap>>(in, buf, compress_buf, first, last, mt, data_size,
 				                             compressed) ||
 				 ...);
@@ -280,8 +281,8 @@ class OctreeMap
 	}
 
 	template <class OutputIt>
-	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last, bool const parallel,
-	               bool const compressed)
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last, bool const compressed,
+	               mt_t const map_types)
 	{
 		// std::vector<std::future<void>> res;
 
@@ -299,9 +300,11 @@ class OctreeMap
 
 			std::uint64_t next_index = in.readIndex() + data_size;
 
-			(readNodes<Bases<OctreeMap>>(in, compress_buf, first, last, mt, data_size,
-			                             compressed) ||
-			 ...);
+			if (mt_t{0} == map_types || mt_t{0} != (mt & map_types)) {
+				(readNodes<Bases<OctreeMap>>(in, compress_buf, first, last, mt, data_size,
+				                             compressed) ||
+				 ...);
+			}
 
 			// Skip forward
 			in.setReadIndex(next_index);
