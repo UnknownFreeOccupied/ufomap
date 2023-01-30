@@ -60,17 +60,16 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <class Data, class InnerData, template <class> class... Bases>
-class OctreeMap
-    : public OctreeBase<OctreeMap<Data, InnerData, Bases...>, Data, InnerData>,
-      public Bases<OctreeMap<Data, InnerData, Bases...>>...
+template <template <class, std::size_t> class... Bases>
+class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
+                  public Bases<OctreeMap<Bases...>, 8>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMap, Data, InnerData>;
+	using Octree = OctreeBase<OctreeMap>;
 
 	//
 	// Friends
@@ -80,7 +79,7 @@ class OctreeMap
 #define FRIEND(N)                                                       \
 	friend std::tuple_element_t<std::min(static_cast<std::size_t>(N + 1), \
 	                                     sizeof...(Bases)),               \
-	                            std::tuple<void, Bases<OctreeMap>...>>;
+	                            std::tuple<void, Bases<OctreeMap, 8>...>>;
 	REPEAT_128(FRIEND, 0)
 
  public:
@@ -88,39 +87,28 @@ class OctreeMap
 	// Constructors
 	//
 
-	OctreeMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16,
-	          bool auto_prune = false)
-	    : Octree(leaf_node_size, depth_levels, auto_prune)
+	OctreeMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16)
+	    : Octree(leaf_node_size, depth_levels)
 	{
 		initRoot();
 	}
 
-	OctreeMap(std::filesystem::path const& file, bool auto_prune = false)
-	    : OctreeMap(0.1, 16, auto_prune)
+	OctreeMap(std::filesystem::path const& file) : OctreeMap(0.1, 16)
 	{
 		Octree::read(file);
 	}
 
-	OctreeMap(std::istream& in, bool auto_prune = false) : OctreeMap(0.1, 16, auto_prune)
-	{
-		Octree::read(in);
-	}
+	OctreeMap(std::istream& in) : OctreeMap(0.1, 16) { Octree::read(in); }
 
-	OctreeMap(ReadBuffer& in, bool auto_prune = false) : OctreeMap(0.1, 16, auto_prune)
-	{
-		Octree::read(in);
-	}
+	OctreeMap(ReadBuffer& in) : OctreeMap(0.1, 16) { Octree::read(in); }
 
-	OctreeMap(OctreeMap const& other) : Octree(other), Bases<OctreeMap>(other)...
-	{
-		readFromOtherMap(other);
-	}
+	OctreeMap(OctreeMap const& other) : Octree(other), Bases<OctreeMap, 8>(other)... {}
 
-	template <class Data2, class InnerData2, template <class> class... Bases2>
-	OctreeMap(OctreeMap<Data2, InnerData2, Bases2...> const& other)
-	    : Octree(other), Bases<OctreeMap>(other)...
+	template <template <class> class... Bases2>
+	OctreeMap(OctreeMap<Bases2...> const& other)
+	    : Octree(other), Bases<OctreeMap, 8>(other)...
 	{
-		readFromOtherMap(other);
+		(Bases<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
 	}
 
 	OctreeMap(OctreeMap&& other) = default;
@@ -128,21 +116,16 @@ class OctreeMap
 	OctreeMap& operator=(OctreeMap const& rhs)
 	{
 		Octree::operator=(rhs);
-		(Bases<OctreeMap>::operator=(rhs), ...);
-
-		readFromOtherMap(rhs);
-
+		(Bases<OctreeMap, 8>::operator=(rhs), ...);
 		return *this;
 	}
 
-	template <class Data2, class InnerData2, template <class> class... Bases2>
-	OctreeMap& operator=(OctreeMap<Data2, InnerData2, Bases2...> const& rhs)
+	template <template <class> class... Bases2>
+	OctreeMap& operator=(OctreeMap<Bases2...> const& rhs)
 	{
 		Octree::operator=(rhs);
-		(Bases<OctreeMap>::operator=(rhs), ...);
-
-		readFromOtherMap(rhs);
-
+		(Bases<OctreeMap, 8>::operator=(rhs), ...);
+		(Bases<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
 		return *this;
 	}
 
@@ -155,35 +138,15 @@ class OctreeMap
 	void swap(OctreeMap& other)  // TODO: Add noexcept thing
 	{
 		Octree::swap(other);
-		(Bases<OctreeMap>::swap(other), ...);
+		(Bases<OctreeMap, 8>::swap(other), ...);
 	}
 
  protected:
 	//
-	// Read from other map
+	// Allocate node block
 	//
 
-	template <class Other>
-	void readFromOtherMap(Other const& other)
-	{
-		initRoot();
-
-		// for (auto node : other.query(predicate::Leaf(), true)) {
-		// 	// TODO: Do something
-		// 	map.set(node.code(), other.get(node));
-		// }
-
-		// TODO: Make it possible to only write the parts that they share
-		auto buf = other.write();
-		Octree::read(buf);
-
-		// std::stringstream io(std::ios_base::in | std::ios_base::out |
-		// std::ios_base::binary); io.exceptions(std::ifstream::failbit |
-		// std::ifstream::badbit); io.imbue(std::locale());
-
-		// other.write(io);
-		// Octree::read(io);
-	}
+	void allocateNodeBlock() { (Bases<OctreeMap, 8>::allocateNodeBlock(), ...); }
 
 	//
 	// Initilize root
@@ -191,68 +154,81 @@ class OctreeMap
 
 	void initRoot()
 	{
+		Octree::allocateNodeBlock();
 		Octree::initRoot();
-		(Bases<OctreeMap>::initRoot(), ...);
+		(Bases<OctreeMap, 8>::allocateNodeBlock(), ...);
+		(Bases<OctreeMap, 8>::initRoot(), ...);
 	}
 
 	//
 	// Fill
 	//
 
-	template <class NodeT, class ParentT>
-	void fill(NodeT& node, ParentT const& parent, index_t const index)
+	void fill(index_t index, Index parent_idx)
 	{
-		(Bases<OctreeMap>::fill(node, parent, index), ...);
+		(Bases<OctreeMap, 8>::fill(index, parent_idx), ...);
 	}
 
 	//
 	// Clear
 	//
 
-	template <class NodeT>
-	void clear(NodeT& node)
-	{
-		(Bases<OctreeMap>::clear(node), ...);
-	}
+	void clear() { (Bases<OctreeMap, 8>::clear(), ...); }
+
+	void clear(index_t index) { (Bases<OctreeMap, 8>::clear(index), ...); }
+
+	//
+	// Shrink to fit
+	//
+
+	void shrinkToFit() { (Bases<OctreeMap, 8>::shrinkToFit(), ...); }
 
 	//
 	// Update node
 	//
 
-	template <class NodeT, class ChildT>
-	void updateNode(NodeT& node, index_t index, ChildT const& children)
+	void updateNode(Index idx, index_t children_index)
 	{
-		(Bases<OctreeMap>::updateNode(node, index, children), ...);
+		(Bases<OctreeMap, 8>::updateNode(idx, children_index), ...);
 	}
 
 	//
-	// Is collapsible
+	// Is prunable
 	//
 
-	template <class NodeT>
-	[[nodiscard]] bool isCollapsible(NodeT const& node) const
+	[[nodiscard]] bool isPrunable(index_t index) const
 	{
-		return (Bases<OctreeMap>::isCollapsible(node) && ...);
+		return (Bases<OctreeMap, 8>::isPrunable(index) && ...);
+	}
+
+	//
+	// Memory node block
+	//
+
+	[[nodiscard]] static constexpr std::size_t memoryNodeBlock() const noexcept
+	{
+		return (Bases<OctreeMap, 8>::memoryNodeBlock() + ...);
 	}
 
 	//
 	// Input/output (read/write)
 	//
 
-	[[nodiscard]] static constexpr MapType mapType() noexcept
+	[[nodiscard]] static constexpr mt_t mapType() noexcept
 	{
-		return (Bases<OctreeMap>::mapType() | ...);
+		return (Bases<OctreeMap, 8>::mapType() | ...);
 	}
 
 	template <class InputIt>
 	[[nodiscard]] std::size_t serializedSize(InputIt first, InputIt last, bool compress,
 	                                         mt_t data) const
 	{
-		return (serializedSize<Bases<OctreeMap>>(first, last, compress, data) + ...);
+		return (serializedSize<Bases<OctreeMap, 8>>(first, last, compress, data) + ...);
 	}
 
 	template <class OutputIt>
-	void readNodes(std::istream& in, OutputIt first, OutputIt last, bool const compressed)
+	void readNodes(std::istream& in, OutputIt first, OutputIt last, bool const compressed,
+	               mt_t const map_types)
 	{
 		auto cur_pos = in.tellg();
 		in.seekg(0, std::ios_base::end);
@@ -268,9 +244,10 @@ class OctreeMap
 			in.read(reinterpret_cast<char*>(&mt), sizeof(mt));
 			in.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
-			if ((Bases<OctreeMap>::canReadData(mt) || ...)) {
-				(readNodes<Bases<OctreeMap>>(in, buf, compress_buf, first, last, mt, data_size,
-				                             compressed) ||
+			if ((mt_t{0} == map_types || mt_t{0} != (mt & map_types)) &&
+			    (Bases<OctreeMap, 8>::canReadData(mt) || ...)) {
+				(readNodes<Bases<OctreeMap, 8>>(in, buf, compress_buf, first, last, mt, data_size,
+				                                compressed) ||
 				 ...);
 			} else {
 				// Skip forward
@@ -280,8 +257,8 @@ class OctreeMap
 	}
 
 	template <class OutputIt>
-	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last, bool const parallel,
-	               bool const compressed)
+	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last, bool const compressed,
+	               mt_t const map_types)
 	{
 		// std::vector<std::future<void>> res;
 
@@ -299,9 +276,11 @@ class OctreeMap
 
 			std::uint64_t next_index = in.readIndex() + data_size;
 
-			(readNodes<Bases<OctreeMap>>(in, compress_buf, first, last, mt, data_size,
-			                             compressed) ||
-			 ...);
+			if (mt_t{0} == map_types || mt_t{0} != (mt & map_types)) {
+				(readNodes<Bases<OctreeMap, 8>>(in, compress_buf, first, last, mt, data_size,
+				                                compressed) ||
+				 ...);
+			}
 
 			// Skip forward
 			in.setReadIndex(next_index);
@@ -319,8 +298,8 @@ class OctreeMap
 	                int const compression_level) const
 	{
 		Buffer buf;
-		(writeNodes<Bases<OctreeMap>>(out, buf, first, last, compress, map_types,
-		                              compression_acceleration_level, compression_level),
+		(writeNodes<Bases<OctreeMap, 8>>(out, buf, first, last, compress, map_types,
+		                                 compression_acceleration_level, compression_level),
 		 ...);
 	}
 
@@ -330,8 +309,8 @@ class OctreeMap
 	                int const compression_level) const
 	{
 		out.reserve(out.size() + serializedSize(first, last, compress, map_types));
-		(writeNodes<Bases<OctreeMap>>(out, first, last, compress, map_types,
-		                              compression_acceleration_level, compression_level),
+		(writeNodes<Bases<OctreeMap, 8>>(out, first, last, compress, map_types,
+		                                 compression_acceleration_level, compression_level),
 		 ...);
 	}
 

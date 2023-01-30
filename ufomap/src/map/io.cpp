@@ -105,6 +105,7 @@ FileHeader readHeader(std::istream& in)
 	in.read(reinterpret_cast<char*>(&header.major), sizeof(header.major));
 	in.read(reinterpret_cast<char*>(&header.minor), sizeof(header.minor));
 	in.read(reinterpret_cast<char*>(&header.patch), sizeof(header.patch));
+	in.read(reinterpret_cast<char*>(&header.little_endian), sizeof(header.little_endian));
 
 	std::uint8_t compressed;
 	in.read(reinterpret_cast<char*>(&compressed), sizeof(compressed));
@@ -126,6 +127,7 @@ FileHeader readHeader(ReadBuffer& in)
 	in.read(&header.major, sizeof(header.major));
 	in.read(&header.minor, sizeof(header.minor));
 	in.read(&header.patch, sizeof(header.patch));
+	in.read(&header.little_endian, sizeof(header.little_endian));
 
 	std::uint8_t compressed;
 	in.read(&compressed, sizeof(compressed));
@@ -133,7 +135,7 @@ FileHeader readHeader(ReadBuffer& in)
 
 	in.read(&header.leaf_size, sizeof(header.leaf_size));
 	in.read(&header.depth_levels, sizeof(header.depth_levels));
-	
+
 	return header;
 }
 
@@ -146,6 +148,8 @@ void writeHeader(std::ostream& out, FileOptions const& options)
 	          sizeof(FileHeader::CURRENT_MINOR));
 	out.write(reinterpret_cast<char const*>(&FileHeader::CURRENT_PATCH),
 	          sizeof(FileHeader::CURRENT_PATCH));
+	out.write(reinterpret_cast<char const*>(&FileHeader::LITTLE_ENDIAN),
+	          sizeof(FileHeader::LITTLE_ENDIAN));
 
 	std::uint8_t const compressed = options.compressed ? std::uint8_t(1) : std::uint8_t(0);
 	double const leaf_size = options.leaf_size;
@@ -164,6 +168,7 @@ void writeHeader(WriteBuffer& out, FileOptions const& options)
 	out.write(&FileHeader::CURRENT_MAJOR, sizeof(FileHeader::CURRENT_MAJOR));
 	out.write(&FileHeader::CURRENT_MINOR, sizeof(FileHeader::CURRENT_MINOR));
 	out.write(&FileHeader::CURRENT_PATCH, sizeof(FileHeader::CURRENT_PATCH));
+	out.write(&FileHeader::LITTLE_ENDIAN, sizeof(FileHeader::LITTLE_ENDIAN));
 
 	std::uint8_t const compressed = options.compressed ? std::uint8_t(1) : std::uint8_t(0);
 	double const leaf_size = options.leaf_size;

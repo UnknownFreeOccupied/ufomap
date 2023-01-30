@@ -39,11 +39,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_INTENSITY_MAP_H
-#define UFO_MAP_INTENSITY_MAP_H
+#ifndef UFO_MAP_LABEL_MAP_H
+#define UFO_MAP_LABEL_MAP_H
 
 // UFO
-#include <ufo/map/intensity/intensity_predicate.h>
+#include <ufo/map/label/label_predicate.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -58,126 +58,58 @@
 namespace ufo::map
 {
 template <class Derived, std::size_t N>
-class IntensityMapBase
+class LabelMapBase
 {
  public:
 	//
-	// Get intensity
+	// Get label
 	//
 
-	[[nodiscard]] constexpr intensity_t intensity(Node node) const
+	[[nodiscard]] constexpr label_t label(Node node) const
 	{
 		auto [index, offset] = derived().indexAndOffset(node);
-		return intensity_[index][offset];
+		return label_[index][offset];
 	}
 
-	[[nodiscard]] intensity_t intensity(Code code) const
+	[[nodiscard]] label_t label(Code code) const
 	{
 		auto [index, offset] = derived().indexAndOffset(code);
-		return intensity_[index][offset];
+		return label_[index][offset];
 	}
 
-	[[nodiscard]] intensity_t intensity(Key key) const
+	[[nodiscard]] label_t label(Key key) const { return label(derived().toCode(key)); }
+
+	[[nodiscard]] label_t label(Point coord, depth_t depth = 0) const
 	{
-		return intensity(derived().toCode(key));
+		return label(derived().toCode(coord, depth));
 	}
 
-	[[nodiscard]] intensity_t intensity(Point coord, depth_t depth = 0) const
+	[[nodiscard]] label_t label(coord_t x, coord_t y, coord_t z, depth_t depth = 0) const
 	{
-		return intensity(derived().toCode(coord, depth));
-	}
-
-	[[nodiscard]] intensity_t intensity(coord_t x, coord_t y, coord_t z,
-	                                    depth_t depth = 0) const
-	{
-		return intensity(derived().toCode(x, y, z, depth));
+		return label(derived().toCode(x, y, z, depth));
 	}
 
 	//
-	// Set intensity
+	// TODO: Add label
 	//
 
-	void setIntensity(Node node, intensity_t intensity, bool propagate = true)
-	{
-		derived().apply(
-		    node,
-		    [&intensity_, intensity](index_t index, index_t offset) {
-			    intensity_[index][offset] = intensity;
-		    },
-		    [&intensity_, intensity](index_t index) { intensity_[index].fill(intensity); },
-		    propagate);
-	}
-
-	void setIntensity(Code code, intensity_t intensity, bool propagate = true)
-	{
-		derived().apply(
-		    code,
-		    [&intensity_, intensity](index_t index, index_t offset) {
-			    intensity_[index][offset] = intensity;
-		    },
-		    [&intensity_, intensity](index_t index) { intensity_[index].fill(intensity); },
-		    propagate);
-	}
-
-	void setIntensity(Key key, intensity_t intensity, bool propagate = true)
-	{
-		setIntensity(derived().toCode(key), intensity, propagate);
-	}
-
-	void setIntensity(Point coord, intensity_t intensity, bool propagate = true,
-	                  depth_t depth = 0)
-	{
-		setIntensity(derived().toCode(coord, depth), intensity, propagate);
-	}
-
-	void setIntensity(coord_t x, coord_t y, coord_t z, intensity_t intensity,
-	                  bool propagate = true, depth_t depth = 0)
-	{
-		setIntensity(derived().toCode(x, y, z, depth), intensity, propagate);
-	}
-
 	//
-	// Propagation criteria
+	// TODO: Remove label
 	//
-
-	[[nodiscard]] constexpr PropagationCriteria intensityPropagationCriteria()
-	    const noexcept
-	{
-		return prop_criteria_;
-	}
-
-	constexpr void setIntensityPropagationCriteria(PropagationCriteria prop_criteria,
-	                                               bool propagate = true) noexcept
-	{
-		if (prop_criteria_ == prop_criteria) {
-			return;
-		}
-
-		prop_criteria_ = prop_criteria;
-
-		// Set all inner nodes to modified
-		// FIXME: Possible to optimize this to only set the ones with children
-		derived().setModified(1);
-
-		if (propagate) {
-			derived().updateModifiedNodes();
-		}
-	}
 
  protected:
 	//
 	// Constructors
 	//
 
-	IntensityMapBase() = default;
+	LabelMapBase() = default;
 
-	IntensityMapBase(IntensityMapBase const& other) = default;
+	LabelMapBase(LabelMapBase const& other) = default;
 
-	IntensityMapBase(IntensityMapBase&& other) = default;
+	LabelMapBase(LabelMapBase&& other) = default;
 
 	template <class Derived2>
-	IntensityMapBase(IntensityMapBase<Derived2, N> const& other)
-	    : intensity_(other.intensity_), prop_criteria_(other.intensityPropagationCriteria())
+	LabelMapBase(LabelMapBase<Derived2, N> const& other) : label_(other.label_)
 	{
 	}
 
@@ -185,15 +117,14 @@ class IntensityMapBase
 	// Assignment operator
 	//
 
-	IntensityMapBase& operator=(IntensityMapBase const& rhs) = default;
+	LabelMapBase& operator=(LabelMapBase const& rhs) = default;
 
-	IntensityMapBase& operator=(IntensityMapBase&& rhs) = default;
+	LabelMapBase& operator=(LabelMapBase&& rhs) = default;
 
 	template <class Derived2>
-	IntensityMapBase& operator=(IntensityMapBase<Derived2, N> const& rhs)
+	LabelMapBase& operator=(LabelMapBase<Derived2, N> const& rhs)
 	{
-		intensity_ = rhs.intensity_;
-		prop_criteria_ = rhs.intensityPropagationCriteria();
+		label_ = rhs.label_;
 		return *this;
 	}
 
@@ -201,7 +132,7 @@ class IntensityMapBase
 	// Swap
 	//
 
-	void swap(IntensityMapBase& other) noexcept
+	void swap(LabelMapBase& other) noexcept
 	{
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
@@ -221,7 +152,7 @@ class IntensityMapBase
 	// Initilize root
 	//
 
-	void initRoot() { intensity_[derived().rootIndex()][derived().rootOffset()] = 0; }
+	void initRoot() { label_[derived().rootIndex()][derived().rootOffset()].clear(); }
 
 	//
 	// Fill
@@ -313,13 +244,10 @@ class IntensityMapBase
 
  protected:
 	// Data
-	std::deque<std::array<intensity_t, N>> intensity_;
-
-	// Propagation criteria
-	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
+	std::deque<LabelSet> label_;
 
 	template <class Derived2, std::size_t N2>
-	friend class IntensityMapBase;
+	friend class LabelMapBase;
 };
 }  // namespace ufo::map
 

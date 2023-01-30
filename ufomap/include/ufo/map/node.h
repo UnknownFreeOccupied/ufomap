@@ -77,8 +77,7 @@ struct Node {
 	{
 		std::swap(code_, other.code_);
 		std::swap(index_, other.index_);
-		std::swap(code_depth_, other.code_depth_);
-		std::swap(data_depth_, other.data_depth_);
+		std::swap(parent_index_, other.parent_index_);
 	}
 
 	/*!
@@ -102,22 +101,22 @@ struct Node {
 
 	friend constexpr bool operator<(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() < rhs.code();
+		return lhs.code_ < rhs.code_;
 	}
 
 	friend constexpr bool operator<=(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() <= rhs.code();
+		return lhs.code_ <= rhs.code_;
 	}
 
 	friend constexpr bool operator>(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() > rhs.code();
+		return lhs.code_ > rhs.code_;
 	}
 
 	friend constexpr bool operator>=(Node lhs, Node rhs) noexcept
 	{
-		return lhs.code() >= rhs.code();
+		return lhs.code_ >= rhs.code_;
 	}
 
 	/*!
@@ -125,32 +124,26 @@ struct Node {
 	 *
 	 * @return The code for the node.
 	 */
-	[[nodiscard]] constexpr Code code() const noexcept { return Code(code_, code_depth_); }
+	[[nodiscard]] constexpr Code code() const noexcept { return code_; }
 
 	/*!
 	 * @brief Get the depth of the node.
 	 *
 	 * @return The depth of the node.
 	 */
-	[[nodiscard]] constexpr depth_t depth() const noexcept { return code_depth_; }
+	[[nodiscard]] constexpr depth_t depth() const noexcept { return code_.depth(); }
 
 	/*!
-	 * @brief Get the index of the node (i.e., the child index from the parent's
+	 * @brief Get the offset of the node (i.e., the child from the parent's
 	 * perspective).
 	 *
-	 * @return The index of the node.
+	 * @return The offset of the node.
 	 */
-	[[nodiscard]] constexpr index_t index() const noexcept
-	{
-		return (code_ >> (code_t(3) * depth())) & code_t(0x7);
-	}
+	[[nodiscard]] constexpr offset_t offset() const noexcept { return code_.offset(); }
 
  protected:
-	constexpr Node(std::uint32_t index, Code code, depth_t data_depth) noexcept
-	    : code_(code.code()),
-	      index_(index),
-	      code_depth_(code.depth()),
-	      data_depth_(data_depth)
+	constexpr Node(index_t index, Code code, index_t parent_index = NULL_INDEX) noexcept
+	    : code_(code), index_(index), parent_index_(parent_index)
 	{
 	}
 
@@ -161,48 +154,15 @@ struct Node {
 	 *
 	 * @return The corresponding data.
 	 */
-	[[nodiscard]] constexpr std::uint32_t data() const noexcept { return index_; }
-
-	/*!
-	 * @return Get the depth of the data.
-	 */
-	[[nodiscard]] constexpr depth_t dataDepth() const noexcept { return data_depth_; }
-
-	/*!
-	 * @return Get the code of the data.
-	 */
-	[[nodiscard]] constexpr Code dataCode() const noexcept
-	{
-		return Code(code_, data_depth_);
-	}
-
-	/*!
-	 * @return The index of the data.
-	 */
-	[[nodiscard]] constexpr index_t dataIndex() const noexcept
-	{
-		return (code_ >> (code_t(3) * dataDepth())) & code_t(0x7);
-	}
-
-	/*!
-	 * @return Whether data points to same node as the code.
-	 */
-	[[nodiscard]] constexpr bool isActualData() const noexcept
-	{
-		return depth() == dataDepth();
-	}
+	[[nodiscard]] constexpr Index index() const noexcept { return {index_, offset()}; }
 
  protected:
 	// The code for the node
-	code_t code_ = 0;
+	Code code_;
 	// The index of the node
-	std::uint32_t index_ = std::numeric_limits<std::uint32_t>::max();
-	// The depth of the code
-	depth_t code_depth_ = 0;
-	// The depth of the data
-	depth_t data_depth_ = 0;
+	index_t index_ = NULL_INDEX;
 
-	template <class Derived, class Data, class InnerData>
+	template <class Derived>
 	friend class OctreeBase;
 
 	friend class std::hash<Node>;
@@ -310,9 +270,9 @@ struct NodeBV : public Node {
 	[[nodiscard]] constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	constexpr NodeBV(std::uint32_t index, Code code, depth_t data_depth,
-	                 geometry::AAEBB aaebb) noexcept
-	    : Node(index, code, data_depth), aaebb_(aaebb)
+	constexpr NodeBV(std::uint32_t index, Code code, geometry::AAEBB aaebb,
+	                 index_t parent_index = NULL_INDEX) noexcept
+	    : Node(index, code, parent_index), aaebb_(aaebb)
 	{
 	}
 
@@ -324,7 +284,7 @@ struct NodeBV : public Node {
 	// The AAEBB for the node
 	geometry::AAEBB aaebb_;
 
-	template <class Derived, class Data, class InnerData>
+	template <class Derived>
 	friend class OctreeBase;
 
 	friend class std::hash<NodeBV>;
@@ -335,12 +295,18 @@ namespace std
 {
 template <>
 struct hash<ufo::map::Node> {
-	std::size_t operator()(ufo::map::Node node) const { return node.code_; }
+	std::size_t operator()(ufo::map::Node node) const
+	{
+		return hash<ufo::map::Code>()(node.code_);
+	}
 };
 
 template <>
 struct hash<ufo::map::NodeBV> {
-	std::size_t operator()(ufo::map::NodeBV node) const { return node.code_; }
+	std::size_t operator()(ufo::map::NodeBV node) const
+	{
+		return hash<ufo::map::Code>()(node.code_);
+	}
 };
 }  // namespace std
 

@@ -44,18 +44,20 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/count/count_node.h>
 #include <ufo/map/count/count_predicate.h>
 
 // STL
+#include <algorithm>
+#include <array>
 #include <cstdint>
+#include <deque>
 #include <iostream>
 #include <type_traits>
 #include <utility>
 
 namespace ufo::map
 {
-template <class Derived>
+template <class Derived, std::size_t N>
 class CountMapBase
 {
  public:
@@ -65,13 +67,14 @@ class CountMapBase
 
 	[[nodiscard]] count_t count(Node node) const
 	{
-		return derived().leafNode(node).count[node.index()];
+		auto [index, offset] = derived().indexAndOffset(node);
+		return count_[index][offset];
 	}
 
 	[[nodiscard]] count_t count(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.count[code.index(depth)];
+		auto [index, offset] = derived().indexAndOffset(code);
+		return count_[index][offset];
 	}
 
 	[[nodiscard]] count_t count(Key key) const { return count(derived().toCode(key)); }
@@ -90,34 +93,40 @@ class CountMapBase
 	// Set count
 	//
 
-	void setCount(Node node, count_t count, bool propagate = true)
+	Node setCount(Node node, count_t count, bool propagate = true)
 	{
-		derived().apply(
-		    node, [count](auto& node, index_t index) { node.count[index] = count; },
-		    [count](auto& node) { node.count.fill(count); }, propagate);
+		return derived().apply(
+		    node,
+		    [&count_, count](index_t index, index_t offset) {
+			    count_[index][offset] = count;
+		    },
+		    [&count_, count](index_t index) { count_[index].fill(count); }, propagate);
 	}
 
-	void setCount(Code code, count_t count, bool propagate = true)
+	Node setCount(Code code, count_t count, bool propagate = true)
 	{
-		derived().apply(
-		    code, [count](auto& node, index_t index) { node.count[index] = count; },
-		    [count](auto& node) { node.count.fill(count); }, propagate);
+		return derived().apply(
+		    code,
+		    [&count_, count](index_t index, index_t offset) {
+			    count_[index][offset] = count;
+		    },
+		    [&count_, count](index_t index) { count_[index].fill(count); }, propagate);
 	}
 
-	void setCount(Key key, count_t count, bool propagate = true)
+	Node setCount(Key key, count_t count, bool propagate = true)
 	{
-		setCount(derived().toCode(key), count, propagate);
+		return setCount(derived().toCode(key), count, propagate);
 	}
 
-	void setCount(Point coord, count_t count, bool propagate = true, depth_t depth = 0)
+	Node setCount(Point coord, count_t count, bool propagate = true, depth_t depth = 0)
 	{
-		setCount(derived().toCode(coord, depth), count, propagate);
+		return setCount(derived().toCode(coord, depth), count, propagate);
 	}
 
-	void setCount(coord_t x, coord_t y, coord_t z, count_t count, bool propagate = true,
+	Node setCount(coord_t x, coord_t y, coord_t z, count_t count, bool propagate = true,
 	              depth_t depth = 0)
 	{
-		setCount(derived().toCode(x, y, z, depth), count, propagate);
+		return setCount(derived().toCode(x, y, z, depth), count, propagate);
 	}
 
 	//
@@ -159,8 +168,8 @@ class CountMapBase
 	CountMapBase(CountMapBase&&) = default;
 
 	template <class Derived2>
-	CountMapBase(CountMapBase<Derived2> const& other)
-	    : prop_criteria_(other.countPropagationCriteria())
+	CountMapBase(CountMapBase<Derived2, N> const& other)
+	    : count_(other.count_), prop_criteria_(other.countPropagationCriteria())
 	{
 	}
 
@@ -173,8 +182,9 @@ class CountMapBase
 	CountMapBase& operator=(CountMapBase&&) = default;
 
 	template <class Derived2>
-	CountMapBase& operator=(CountMapBase<Derived2> const& rhs)
+	CountMapBase& operator=(CountMapBase<Derived2, N> const& rhs)
 	{
+		count_ = rhs.count_;
 		prop_criteria_ = rhs.countPropagationCriteria();
 		return *this;
 	}
@@ -185,6 +195,7 @@ class CountMapBase
 
 	void swap(CountMapBase& other) noexcept
 	{
+		std::swap(count_, other.count_);
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
 
@@ -203,43 +214,38 @@ class CountMapBase
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().count[derived().rootIndex()] = 0; }
+	void initRoot() { count_[derived().rootIndex()][derived().rootOffset()] = 0; }
 
 	//
 	// Fill
 	//
 
-	template <std::size_t N>
-	void fill(CountNode<N>& node, CountNode<N> parent, index_t index)
+	void fill(index_t index, index_t parent_index, index_t parent_offset)
 	{
-		node.count.fill(parent.count[index]);
+		count_[index].fill(count_[parent_index][parent_offset]);
 	}
 
 	//
 	// Clear
 	//
 
-	template <std::size_t N>
-	void clear(CountNode<N>&)
-	{
-	}
+	void clear(index_t index) {}
 
 	//
 	// Update node
 	//
 
-	template <std::size_t N>
-	void updateNode(CountNode<N>& node, index_t index, CountNode<N> const children)
+	void updateNode(index_t index, index_t offset, index_t children_index)
 	{
 		switch (countPropagationCriteria()) {
 			case PropagationCriteria::MIN:
-				node.count[index] = min(children.count);
+				count_[index][offset] = min(count_[children_index]);
 				return;
 			case PropagationCriteria::MAX:
-				node.count[index] = max(children.count);
+				count_[index][offset] = max(count_[children_index]);
 				return;
 			case PropagationCriteria::MEAN:
-				node.count[index] = mean(children.count);
+				count_[index][offset] = mean(count_[children_index]);
 				return;
 		}
 	}
@@ -248,11 +254,10 @@ class CountMapBase
 	// Is collapsible
 	//
 
-	template <std::size_t N>
-	[[nodiscard]] constexpr bool isCollapsible(CountNode<N> node) const
+	[[nodiscard]] constexpr bool isCollapsible(index_t index) const
 	{
-		return std::all_of(std::begin(node.count) + 1, std::end(node.count),
-		                   [a = node.count.front()](auto b) { return a == b; });
+		return std::all_of(std::begin(count_[index]) + 1, std::end(count_[index]),
+		                   [a = count_[index].front()](auto b) { return a == b; });
 	}
 
 	//
@@ -267,35 +272,23 @@ class CountMapBase
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr uint8_t numData() noexcept
-	{
-		using value_type = typename std::iterator_traits<InputIt>::value_type;
-		using node_type = typename value_type::node_type;
-		return node_type::countSize();
-	}
-
-	template <class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
-		return std::iterator_traits<InputIt>::value_type::countSize() *
-		       std::distance(first, last) * sizeof(count_t);
+		return std::distance(first, last) * N * sizeof(count_t);
 	}
 
 	template <class OutputIt>
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
 		for (; first != last; ++first) {
-			if (first->indices.all()) {
-				in.read(first->node->count.data(),
-				        first->node->count.size() *
-				            sizeof(typename decltype(first->node->count)::value_type));
+			if (first->offsets.all()) {
+				in.read(count_[first->index].data(), N * sizeof(count_t));
 			} else {
-				decltype(first->node->count) count;
-				in.read(count.data(),
-				        count.size() * sizeof(typename decltype(count)::value_type));
-				for (index_t i = 0; count.size() != i; ++i) {
-					if (first->indices[i]) {
-						first->node->count[i] = count[i];
+				std::array<count_t, N> count;
+				in.read(count.data(), N * sizeof(count_t));
+				for (index_t i = 0; N != i; ++i) {
+					if (first->offsets[i]) {
+						count_[first->index][i] = count[i];
 					}
 				}
 			}
@@ -307,15 +300,19 @@ class CountMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(
-			    first->count.data(),
-			    first->count.size() * sizeof(typename decltype(first->count)::value_type));
+			out.write(count_[*first].data(), N * sizeof(count_t));
 		}
 	}
 
  protected:
+	// Data
+	std::deque<std::array<count_t, N>> count_;
+
 	// Propagation criteria
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
+
+	template <class Derived2, std::size_t N2>
+	friend class CountMapBase;
 };
 }  // namespace ufo::map
 

@@ -44,11 +44,12 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
-#include <ufo/map/time/time_node.h>
 #include <ufo/map/time/time_predicate.h>
 #include <ufo/map/types.h>
 
 // STL
+#include <algorithm>
+#include <array>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -56,7 +57,7 @@
 
 namespace ufo::map
 {
-template <class Derived>
+template <class Derived, std::size_t N>
 class TimeMapBase
 {
  public:
@@ -64,16 +65,14 @@ class TimeMapBase
 	// Get time
 	//
 
-	[[nodiscard]] constexpr time_t time(Node node) const
+	[[nodiscard]] time_t timeUnsafe(Index index) const
 	{
-		return derived().leafNode(node).time[node.index()];
+		return time_[index.index][index.offset];
 	}
 
-	[[nodiscard]] time_t time(Code code) const
-	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.time[code.index(depth)];
-	}
+	[[nodiscard]] time_t time(Node node) const { return time(derived().index(node)); }
+
+	[[nodiscard]] time_t time(Code code) const { return time(derived().index(code)); }
 
 	[[nodiscard]] time_t time(Key key) const { return time(derived().toCode(key)); }
 
@@ -91,18 +90,40 @@ class TimeMapBase
 	// Set time
 	//
 
+	void setTimeUnsafe(Index index, time_t time)
+	{
+		derived().applyUnsafe(
+		    index, [&time_, time](Index idx) { time_[idx.index][idx.offset] = time; },
+		    [&time_, time](index_t i) { time_[i].fill(time); });
+	}
+
+	void setTimeUnsafe(IndexFam const index, time_t time)
+	{
+		if (derived().allLeaf(index.index)) {
+			for (offset_t i{}; N != i; ++i) {
+				time_[index.index][i] = index.offset[i] ? time : time_[index.index][i];
+			}
+		} else {
+			for (offset_t i{}; N != i; ++i) {
+				if (index.offset[i]) {
+					setTimeUnsafe(Index(index.index, i), time);
+				}
+			}
+		}
+	}
+
 	Node setTime(Node node, time_t time, bool propagate = true)
 	{
 		return derived().apply(
-		    node, [time](auto& node, index_t index) { node.time[index] = time; },
-		    [time](auto& node) { node.time.fill(time); }, propagate);
+		    node, [&time_, time](Index idx) { time_[idx.index][idx.offset] = time; },
+		    [&time_, time](index_t i) { time_[i].fill(time); }, propagate);
 	}
 
 	Node setTime(Code code, time_t time, bool propagate = true)
 	{
 		return derived().apply(
-		    code, [time](auto& node, index_t index) { node.time[index] = time; },
-		    [time](auto& node) { node.time.fill(time); }, propagate);
+		    code, [&time_, time](Index idx) { time_[idx.index][idx.offset] = time; },
+		    [&time_, time](index_t i) { time_[i].fill(time); }, propagate);
 	}
 
 	Node setTime(Key key, time_t time, bool propagate = true)
@@ -130,8 +151,8 @@ class TimeMapBase
 		return prop_criteria_;
 	}
 
-	constexpr void setTimePropagationCriteria(PropagationCriteria prop_criteria,
-	                                          bool propagate = true) noexcept
+	void setTimePropagationCriteria(PropagationCriteria prop_criteria,
+	                                bool propagate = true) noexcept
 	{
 		if (prop_criteria_ == prop_criteria) {
 			return;
@@ -142,6 +163,7 @@ class TimeMapBase
 		// Set all inner nodes to modified
 		// FIXME: Possible to optimize this to only set the ones with children
 		derived().setModified(1);
+		// TODO: derived().setParentsModified();
 
 		if (propagate) {
 			derived().updateModifiedNodes();
@@ -160,10 +182,22 @@ class TimeMapBase
 	TimeMapBase(TimeMapBase&& other) = default;
 
 	template <class Derived2>
-	TimeMapBase(TimeMapBase<Derived2> const& other)
-	    : prop_criteria_(other.timePropagationCriteria())
+	TimeMapBase(TimeMapBase<Derived2, N> const& other)
+	    : time_(other.time_), prop_criteria_(other.prop_criteria_)
 	{
 	}
+
+	template <class Derived2>
+	TimeMapBase(TimeMapBase<Derived2, N>&& other)
+	    : time_(std::move(other.time_)), prop_criteria_(std::move(other.prop_criteria_))
+	{
+	}
+
+	//
+	// Destructor
+	//
+
+	~TimeMapBase() = default;
 
 	//
 	// Assignment operator
@@ -174,9 +208,18 @@ class TimeMapBase
 	TimeMapBase& operator=(TimeMapBase&& rhs) = default;
 
 	template <class Derived2>
-	TimeMapBase& operator=(TimeMapBase<Derived2> const& rhs)
+	TimeMapBase& operator=(TimeMapBase<Derived2, N> const& rhs)
 	{
-		prop_criteria_ = rhs.timePropagationCriteria();
+		time_ = rhs.time_;
+		prop_criteria_ = rhs.prop_criteria_;
+		return *this;
+	}
+
+	template <class Derived2>
+	TimeMapBase& operator=(TimeMapBase<Derived2, N>&& rhs)
+	{
+		time_ = std::move(rhs.time_);
+		prop_criteria_ = std::move(rhs.prop_criteria_);
 		return *this;
 	}
 
@@ -186,6 +229,7 @@ class TimeMapBase
 
 	void swap(TimeMapBase& other) noexcept
 	{
+		std::swap(time_, other.time_);
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
 
@@ -201,59 +245,76 @@ class TimeMapBase
 	}
 
 	//
+	// Allocate node block
+	//
+
+	void allocateNodeBlock() { time_.emplace_back(); }
+
+	//
 	// Initilize root
 	//
 
-	void initRoot() { derived().root().time[derived().rootIndex()] = 0; }
+	void initRoot() { setTimeUnsafe(derived().rootIndex(), 0); }
 
 	//
 	// Fill
 	//
 
-	template <std::size_t N>
-	void fill(TimeNode<N>& node, TimeNode<N> const& parent, index_t index)
+	void fill(index_t index, Index parent_idx)
 	{
-		node.time.fill(parent.time[index]);
+		time_[index].fill(time_[parent_idx.index][parent_idx.offset]);
 	}
 
 	//
 	// Clear
 	//
 
-	template <std::size_t N>
-	void clear(TimeNode<N>&)
-	{
-	}
+	void clear() { time_.clear(); }
+
+	void clear(index_t index) {}
+
+	//
+	// Shrink to fit
+	//
+
+	void shrinkToFit() { time_.shrink_to_fit(); }
 
 	//
 	// Update node
 	//
 
-	template <std::size_t N>
-	void updateNode(TimeNode<N>& node, index_t index, TimeNode<N> const children)
+	void updateNode(Index idx, index_t children_index)
 	{
 		switch (timePropagationCriteria()) {
 			case PropagationCriteria::MIN:
-				node.time[index] = min(children.time);
+				time_[idx.index][idx.offset] = min(time_[children_index]);
 				return;
 			case PropagationCriteria::MAX:
-				node.time[index] = max(children.time);
+				time_[idx.index][idx.offset] = max(time_[children_index]);
 				return;
 			case PropagationCriteria::MEAN:
-				node.time[index] = mean(children.time);
+				time_[idx.index][idx.offset] = mean(time_[children_index]);
 				return;
 		}
 	}
 
 	//
-	// Is collapsible
+	// Is prunable
 	//
 
-	template <std::size_t N>
-	[[nodiscard]] bool isCollapsible(TimeNode<N> const& node) const
+	[[nodiscard]] bool isPrunable(index_t index) const
 	{
-		return std::all_of(std::begin(node.time) + 1, std::end(node.time),
-		                   [t = node.time.front()](auto e) { return e == t; });
+		return std::all_of(std::cbegin(time_[index]) + 1, std::cend(time_[index]),
+		                   [t = time_[index].front()](auto e) { return e == t; });
+	}
+
+	//
+	// Memory node block
+	//
+
+	[[nodiscard]] static constexpr std::size_t memoryNodeBlock() const noexcept
+	{
+		return N * sizeof(time_t);
 	}
 
 	//
@@ -268,18 +329,9 @@ class TimeMapBase
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr std::size_t numData() noexcept
+	constexpr std::size_t serializedSize(InputIt first, InputIt last) const
 	{
-		using value_type = typename std::iterator_traits<InputIt>::value_type;
-		using node_type = typename value_type::node_type;
-		return node_type::timeSize();
-	}
-
-	template <class InputIt>
-	std::size_t serializedSize(InputIt first, InputIt last) const
-	{
-		return std::iterator_traits<InputIt>::value_type::timeSize() *
-		       std::distance(first, last) * sizeof(time_t);
+		return std::distance(first, last) * memoryNodeBlock();
 	}
 
 	template <class OutputIt>
@@ -287,15 +339,13 @@ class TimeMapBase
 	{
 		for (; first != last; ++first) {
 			if (first->indices.all()) {
-				in.read(first->node->time.data(),
-				        first->node->time.size() *
-				            sizeof(typename decltype(first->node->time)::value_type));
+				in.read(time_[first->index].data(), memoryNodeBlock());
 			} else {
-				decltype(first->node->time) time;
-				in.read(time.data(), time.size() * sizeof(typename decltype(time)::value_type));
-				for (index_t i = 0; time.size() != i; ++i) {
+				std::array<time_t, N> time;
+				in.read(time.data(), memoryNodeBlock());
+				for (offset_t i{}; N != i; ++i) {
 					if (first->indices[i]) {
-						first->node->time[i] = time[i];
+						time_[first->index][i] = time[i];
 					}
 				}
 			}
@@ -307,14 +357,19 @@ class TimeMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->time.data(),
-			          first->time.size() * sizeof(typename decltype(first->time)::value_type));
+			out.write(time_[*first].data(), memoryNodeBlock());
 		}
 	}
 
  protected:
+	// Data
+	std::deque<std::array<time_t, N>> time_;
+
 	// Propagation criteria
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
+
+	template <class Derived2, std::size_t N2>
+	friend class TimeMapBase;
 };
 }  // namespace ufo::map
 

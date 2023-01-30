@@ -44,6 +44,7 @@
 
 // STL
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
@@ -151,19 +152,7 @@ struct IndexField {
 
 	[[nodiscard]] constexpr std::size_t count() const noexcept
 	{
-		// TODO: Look at
-		constexpr auto lut = [] {
-			std::array<std::size_t, std::numeric_limits<index_field_t>::max() + 1> temp{};
-			for (std::size_t i = 0; temp.size() != i; ++i) {
-				for (std::size_t j = 0; 8 != j; ++j) {
-					if ((i >> j) & std::size_t(1)) {
-						++temp[i];
-					}
-				}
-			}
-			return temp;
-		}();
-		return lut[field];
+		return std::popcount(field);
 	}
 
 	[[nodiscard]] static constexpr std::size_t size() noexcept { return 8; }

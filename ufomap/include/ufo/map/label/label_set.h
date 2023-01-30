@@ -39,54 +39,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_OCTREE_OCTREE_NODE_H
-#define UFO_MAP_OCTREE_OCTREE_NODE_H
+#ifndef UFO_MAP_LABEL_SET_H
+#define UFO_MAP_LABEL_SET_H
 
 // UFO
-#include <ufo/map/code.h>
-#include <ufo/map/types.h>
 
 // STL
-#include <array>
-#include <atomic>
-#include <cstdint>
-#include <limits>
-#include <type_traits>
+#include <memory>
 
 namespace ufo::map
 {
-template <typename... Nodes>
-struct OctreeNode : Nodes... {
-};
-
-template <class Data>
-struct OctreeLeafNode : Data {
-	// Indicates whether this node has to be updated (get information from children and/or
-	// update indicators). Useful when propagating information up the tree
-	IndexField modified;
-};
-
-template <class LeafNode, class InnerData>
-struct OctreeInnerNode : LeafNode, InnerData {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	IndexField leaf;
-
-	// Index to children
-	std::array<index_t, 8> children{NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX,
-	                                NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX};
-};
-
-template <class LeafNode>
-struct OctreeInnerNode<LeafNode, void> : LeafNode {
-	// Indicates whether this is a leaf node (has no children) or not. If true then the
-	// children are not valid and should not be accessed
-	IndexField leaf;
-
-	// Indices to children
-	std::array<index_t, 8> children{NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX,
-	                                NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX};
+class LabelSet
+{
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_OCTREE_OCTREE_NODE_H
+#endif  // UFO_MAP_LABEL_SET_H

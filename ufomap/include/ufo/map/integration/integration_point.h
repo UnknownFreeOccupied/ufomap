@@ -73,32 +73,17 @@ struct IntegrationPointSmall {
 
 	[[nodiscard]] bool valid() const { return point.valid; }
 
-	bool operator==(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() == rhs.code.code();
-	}
+	bool operator==(IntegrationPointSmall const& rhs) const { return code == rhs.code; }
 
 	bool operator!=(IntegrationPointSmall const& rhs) const { return !(*this == rhs); }
 
-	bool operator<(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() < rhs.code.code();
-	}
+	bool operator<(IntegrationPointSmall const& rhs) const { return code < rhs.code; }
 
-	bool operator<=(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() <= rhs.code.code();
-	}
+	bool operator<=(IntegrationPointSmall const& rhs) const { return code <= rhs.code; }
 
-	bool operator>(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() > rhs.code.code();
-	}
+	bool operator>(IntegrationPointSmall const& rhs) const { return code > rhs.code; }
 
-	bool operator>=(IntegrationPointSmall const& rhs) const
-	{
-		return code.code() >= rhs.code.code();
-	}
+	bool operator>=(IntegrationPointSmall const& rhs) const { return code >= rhs.code; }
 };
 
 /*!
@@ -108,54 +93,27 @@ struct IntegrationPointSmall {
 template <class P>
 struct IntegrationPoint {
 	Code code;
-	std::vector<ValidPoint<P>> points;
+	std::vector<P> points;
 
 	IntegrationPoint() = default;
 
 	IntegrationPoint(Code const code) : code(code) {}
 
-	IntegrationPoint(Code const code, P const& point, bool const valid = true)
-	    : code(code), points(1, ValidPoint<P>(point, valid))
-	{
-	}
+	IntegrationPoint(Code const code, P const& point) : code(code), points(1, point) {}
 
-	IntegrationPoint(Code code, std::initializer_list<ValidPoint<P>> init)
-	    : code(code), points(init)
-	{
-	}
+	IntegrationPoint(Code code, std::initializer_list<P> init) : code(code), points(init) {}
 
-	[[nodiscard]] bool valid() const
-	{
-		return std::any_of(std::cbegin(points), std::cend(points),
-		                   [](auto const& p) { return p.valid; });
-	}
-
-	bool operator==(IntegrationPoint const& rhs) const
-	{
-		return code.code() == rhs.code.code();
-	}
+	bool operator==(IntegrationPoint const& rhs) const { return code == rhs.code; }
 
 	bool operator!=(IntegrationPoint const& rhs) const { return !(*this == rhs); }
 
-	bool operator<(IntegrationPoint const& rhs) const
-	{
-		return code.code() < rhs.code.code();
-	}
+	bool operator<(IntegrationPoint const& rhs) const { return code < rhs.code; }
 
-	bool operator<=(IntegrationPoint const& rhs) const
-	{
-		return code.code() <= rhs.code.code();
-	}
+	bool operator<=(IntegrationPoint const& rhs) const { return code <= rhs.code; }
 
-	bool operator>(IntegrationPoint const& rhs) const
-	{
-		return code.code() > rhs.code.code();
-	}
+	bool operator>(IntegrationPoint const& rhs) const { return code > rhs.code; }
 
-	bool operator>=(IntegrationPoint const& rhs) const
-	{
-		return code.code() >= rhs.code.code();
-	}
+	bool operator>=(IntegrationPoint const& rhs) const { return code >= rhs.code; }
 };
 }  // namespace ufo::map
 

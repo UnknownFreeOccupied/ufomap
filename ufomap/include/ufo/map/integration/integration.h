@@ -46,6 +46,7 @@
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/geometry/minimum_distance.h>
 #include <ufo/map/code.h>
+#include <ufo/map/index_field.h>
 #include <ufo/map/integration/grid.h>
 #include <ufo/map/integration/integration_point.h>
 #include <ufo/map/integration/integration_point_cloud.h>
@@ -62,7 +63,7 @@
 namespace ufo::map
 {
 
-using Misses = std::vector<Code>;
+using Misses = std::vector<std::pair<Code, IndexField>>;
 
 /*!
  * @brief
@@ -122,7 +123,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> cloud,
 			auto const valid = valid_f(cloud[i]);
 			auto const point = trans_f(cloud[i]);
 			auto const code = map.toCode(point, depth);
-			if (0 != i && i_cloud.back().code.code() == code.code()) {
+			if (0 != i && i_cloud.back().code == code) {
 				i_cloud.back().points.emplace_back(point, valid);
 			} else {
 				i_cloud.emplace_back(code, point, valid);
@@ -184,8 +185,7 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> cloud,
 		std::sort(std::begin(i_cloud), std::end(i_cloud));
 	} else if constexpr (3 == mode) {
 		// CodeUnorderedMap<IntegrationCloudSmall<P>> temp;
-		auto cmp = [](auto const& a, auto const& b) { return a.code() < b.code(); };
-		std::map<Code, IntegrationCloudSmall<P>, decltype(cmp)> temp(cmp);
+		std::map<Code, IntegrationCloudSmall<P>> temp;
 		// std::unordered_map<Code, IntegrationCloudSmall<P>> temp;
 
 		// Get the corresponding code for each point
@@ -209,25 +209,18 @@ IntegrationCloud<P> toIntegrationCloud(Map const& map, PointCloudT<P> cloud,
 			std::sort(std::begin(temp_3), std::end(temp_3));
 			Code prev_code;
 			for (auto const& p : temp_3) {
-				if (prev_code == p.code) {
+				if (prev_code == p.code && p.valid()) {
 					i_cloud.back().points.push_back(p.point);
 				} else {
 					prev_code = p.code;
-					i_cloud.emplace_back(p.code, p.point, p.valid());
+					if (p.valid()) {
+						i_cloud.emplace_back(p.code, p.point);
+					} else {
+						i_cloud.emplace_back(p.code);
+					}
 				}
 			}
 		}
-	} else if constexpr (4 == mode) {
-		std::vector<code_t> codes;
-		codes.reserve(cloud.size());
-
-		for (auto const& point : cloud) {
-			codes.push_back(map.toCode(point, 0).code());
-		}
-
-		auto perm = sortPermutation(std::begin(codes), std::end(codes));
-
-		applyPermutation(std::begin(cloud), std::end(cloud), perm);
 	}
 
 	// i_cloud.clear();
@@ -428,34 +421,84 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 	for (auto const& [code, grid] : grids) {
 		auto const c = code.code();
 
-		std::size_t i = 0;
-		for (auto it = std::cbegin(grid); it != std::cend(grid); ++it, i += 64) {
-			if (0 == *it) {
+		static constexpr std::uint64_t m = std::numeric_limits<std::uint64_t>::max();
+		code_t i{};
+		code_t inc = code_t{512} << 3 * depth;
+		for (auto it = std::cbegin(grid); it != std::cend(grid); it += 8) {
+			IndexField field(static_cast<index_field_t>(m == *it) |
+			                 (static_cast<index_field_t>(m == *(it + 1)) << 1) |
+			                 (static_cast<index_field_t>(m == *(it + 2)) << 2) |
+			                 (static_cast<index_field_t>(m == *(it + 3)) << 3) |
+			                 (static_cast<index_field_t>(m == *(it + 4)) << 4) |
+			                 (static_cast<index_field_t>(m == *(it + 5)) << 5) |
+			                 (static_cast<index_field_t>(m == *(it + 6)) << 6) |
+			                 (static_cast<index_field_t>(m == *(it + 7)) << 7));
+			if (field.any()) {
+				misses.emplace_back(Code(c | i, depth + 2), field);
+			}
+			i += inc;
+		}
+
+		inc = code_t{64} << 3 * depth;
+		for (code_t i{}; g : grid) {
+			if (0 == g || m == g) {
+				i += inc;
 				continue;
 			}
 
-			if (std::numeric_limits<std::uint64_t>::max() == *it) {
-				if (0 == i % 512 && std::all_of(it + 1, it + 8, [](std::uint64_t a) {
-					    return std::numeric_limits<std::uint64_t>::max() == a;
-				    })) {
-					misses.emplace_back(c | (i << 3 * depth), depth + 3);
-					it += 7;
-					i += (512 - 64);
-				} else {
-					misses.emplace_back(c | (i << 3 * depth), depth + 2);
-				}
-			} else {
-				// FIXME: Can be improved. Step 8 steps at a time
-				for (std::size_t j = 0; 64 != j; ++j) {
-					if (0 == j % 8 && (*it >> j) & 0xFF == 0xFF) {
-						misses.emplace_back(c | ((i + j) << 3 * depth), depth + 1);
-						j += 7;
-					} else if (*it & (std::uint64_t(1) << j)) {
-						misses.emplace_back(c | ((i + j) << 3 * depth), depth);
-					}
+			IndexField field(static_cast<index_field_t>(0xFF == (g & 0xFF)) |
+			                 (static_cast<index_field_t>(0xFF == ((g >> 8) & 0xFF)) << 1) |
+			                 (static_cast<index_field_t>(0xFF == ((g >> 16) & 0xFF)) << 2) |
+			                 (static_cast<index_field_t>(0xFF == ((g >> 24) & 0xFF)) << 3) |
+			                 (static_cast<index_field_t>(0xFF == ((g >> 32) & 0xFF)) << 4) |
+			                 (static_cast<index_field_t>(0xFF == ((g >> 40) & 0xFF)) << 5) |
+			                 (static_cast<index_field_t>(0xFF == ((g >> 48) & 0xFF)) << 6) |
+			                 (static_cast<index_field_t>(0xFF == ((g >> 56) & 0xFF)) << 7));
+			if (field.any()) {
+				misses.emplace_back(Code(c | i), depth + 1, field);
+			}
+
+			for (code_t j{}; 64 != j; j += 8) {
+				if (!field[j] && 0xFF & (g >> j)) {
+					IndexField f((0x1 & (g >> j)) | (0x2 & (g >> j + 1)) | (0x4 & (g >> j + 2)) |
+					             (0x8 & (g >> j + 3)) | (0x10 & (g >> j + 4)) |
+					             (0x20 & (g >> j + 5)) | (0x40 & (g >> j + 6)) |
+					             (0x80 & (g >> j + 7)));
+					misses.emplace_back(Code(c | (i + (j << 3 * depth)), depth), f);
 				}
 			}
+
+			i += inc;
 		}
+
+		// std::size_t i = 0;
+		// for (auto it = std::cbegin(grid); it != std::cend(grid); ++it, i += 64) {
+		// 	if (0 == *it) {
+		// 		continue;
+		// 	}
+
+		// 	if (std::numeric_limits<std::uint64_t>::max() == *it) {
+		// 		if (0 == i % 512 && std::all_of(it + 1, it + 8, [](std::uint64_t a) {
+		// 			    return std::numeric_limits<std::uint64_t>::max() == a;
+		// 		    })) {
+		// 			misses.emplace_back(c | (i << 3 * depth), depth + 3);
+		// 			it += 7;
+		// 			i += (512 - 64);
+		// 		} else {
+		// 			misses.emplace_back(c | (i << 3 * depth), depth + 2);
+		// 		}
+		// 	} else {
+		// 		// FIXME: Can be improved. Step 8 steps at a time
+		// 		for (std::size_t j{}; 64 != j; ++j) {
+		// 			if (0 == j % 8 && (*it >> j) & 0xFF == 0xFF) {
+		// 				misses.emplace_back(c | ((i + j) << 3 * depth), depth + 1);
+		// 				j += 7;
+		// 			} else if (*it & (std::uint64_t(1) << j)) {
+		// 				misses.emplace_back(c | ((i + j) << 3 * depth), depth);
+		// 			}
+		// 		}
+		// 	}
+		// }
 	}
 
 	return misses;

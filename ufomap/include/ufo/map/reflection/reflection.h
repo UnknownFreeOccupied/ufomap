@@ -79,9 +79,15 @@ struct Reflection {
 
 	friend bool operator!=(Reflection lhs, Reflection rhs) { return !(lhs == rhs); }
 
-	constexpr reflection_t reflectiveness() const
+	[[nodiscard]] constexpr reflection_t reflectiveness() const
 	{
 		return hits / static_cast<double>(hits + misses);
+	}
+
+	constexpr void reset()
+	{
+		hits = 0;
+		misses = 0;
 	}
 };
 }  // namespace ufo::map

@@ -43,7 +43,6 @@
 #define UFO_MAP_COLOR_MAP_H
 
 // UFO
-#include <ufo/map/color/color_node.h>
 #include <ufo/map/color/color_predicate.h>
 #include <ufo/map/io.h>
 #include <ufo/map/node.h>
@@ -51,11 +50,14 @@
 #include <ufo/map/types.h>
 
 // STL
+#include <algorithm>
+#include <array>
+#include <deque>
 #include <iostream>
 
 namespace ufo::map
 {
-template <class Derived>
+template <class Derived, std::size_t N>
 class ColorMapBase
 {
  public:
@@ -65,16 +67,14 @@ class ColorMapBase
 
 	[[nodiscard]] Color color(Node node) const
 	{
-		auto const& data = derived().leafNode(node);
-		auto index = node.index();
-		return Color(data.red[index], data.green[index], data.blue[index]);
+		auto [index, offset] = derived().indexAndOffset(node);
+		return Color(red_[index][offset], green_[index][offset], blue_[index][offset]);
 	}
 
 	[[nodiscard]] Color color(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		auto index = code.index(depth);
-		return Color(node.red[index], node.green[index], node.blue[index]);
+		auto [index, offset] = derived().indexAndOffset(code);
+		return Color(red_[index][offset], green_[index][offset], blue_[index][offset]);
 	}
 
 	[[nodiscard]] Color color(Key key) const { return color(derived().toCode(key)); }
@@ -103,15 +103,15 @@ class ColorMapBase
 	{
 		return derived().apply(
 		    node,
-		    [red, green, blue](auto& node, index_t index) {
-			    node.red[index] = red;
-			    node.green[index] = green;
-			    node.blue[index] = blue;
+		    [&red_, &green_, &blue_, red, green, blue](index_t index, index_t offset) {
+			    red_[index][offset] = red;
+			    green_[index][offset] = green;
+			    blue_[index][offset] = blue;
 		    },
-		    [red, green, blue](auto& node) {
-			    node.red.fill(red);
-			    node.green.fill(green);
-			    node.blue.fill(blue);
+		    [&red_, &green_, &blue_, red, green, blue](index_t index) {
+			    red_[index].fill(red);
+			    green_[index].fill(green);
+			    blue_[index].fill(blue);
 		    },
 		    propagate);
 	}
@@ -126,15 +126,15 @@ class ColorMapBase
 	{
 		return derived().apply(
 		    code,
-		    [red, green, blue](auto& node, index_t index) {
-			    node.red[index] = red;
-			    node.green[index] = green;
-			    node.blue[index] = blue;
+		    [&red_, &green_, &blue_, red, green, blue](index_t index, index_t offset) {
+			    red_[index][offset] = red;
+			    green_[index][offset] = green;
+			    blue_[index][offset] = blue;
 		    },
-		    [red, green, blue](auto& node) {
-			    node.red.fill(red);
-			    node.green.fill(green);
-			    node.blue.fill(blue);
+		    [&red_, &green_, &blue_, red, green, blue](index_t index) {
+			    red_[index].fill(red);
+			    green_[index].fill(green);
+			    blue_[index].fill(blue);
 		    },
 		    propagate);
 	}
@@ -181,18 +181,19 @@ class ColorMapBase
 	{
 		return derived().apply(
 		    node,
-		    [f](auto& node, index_t index) {
-			    auto c = f(Color(node.red[index], node.green[index], node.blue[index]));
-			    node.red[index] = c.red;
-			    node.green[index] = c.green;
-			    node.blue[index] = c.blue;
+		    [&red_, &green_, &blue_, f](index_t index, index_t offset) {
+			    auto c =
+			        f(Color(red_[index][offset], green_[index][offset], blue_[index][offset]));
+			    red_[index][offset] = c.red;
+			    green_[index][offset] = c.green;
+			    blue_[index][offset] = c.blue;
 		    },
-		    [f](auto& node) {
-			    for (index_t i = 0; node.red.size() != i; ++i) {
-				    auto c = f(Color(node.red[i], node.green[i], node.blue[i]));
-				    node.red[i] = c.red;
-				    node.green[i] = c.green;
-				    node.blue[i] = c.blue;
+		    [&red_, &green_, &blue_, f](index_t index) {
+			    for (index_t i = 0; N != i; ++i) {
+				    f(Color(red_[index][i], green_[index][i], blue_[index][i]));
+				    red_[index][i] = c.red;
+				    green_[index][i] = c.green;
+				    blue_[index][i] = c.blue;
 			    }
 		    },
 		    propagate);
@@ -203,18 +204,19 @@ class ColorMapBase
 	{
 		return derived().apply(
 		    code,
-		    [f](auto& node, index_t index) {
-			    auto c = f(Color(node.red[index], node.green[index], node.blue[index]));
-			    node.red[index] = c.red;
-			    node.green[index] = c.green;
-			    node.blue[index] = c.blue;
+		    [&red_, &green_, &blue_, f](index_t index, index_t offset) {
+			    auto c =
+			        f(Color(red_[index][offset], green_[index][offset], blue_[index][offset]));
+			    red_[index][offset] = c.red;
+			    green_[index][offset] = c.green;
+			    blue_[index][offset] = c.blue;
 		    },
-		    [f](auto& node) {
-			    for (index_t i = 0; node.red.size() != i; ++i) {
-				    auto c = f(Color(node.red[i], node.green[i], node.blue[i]));
-				    node.red[i] = c.red;
-				    node.green[i] = c.green;
-				    node.blue[i] = c.blue;
+		    [&red_, &green_, &blue_, f](index_t index) {
+			    for (index_t i = 0; N != i; ++i) {
+				    f(Color(red_[index][i], green_[index][i], blue_[index][i]));
+				    red_[index][i] = c.red;
+				    green_[index][i] = c.green;
+				    blue_[index][i] = c.blue;
 			    }
 		    },
 		    propagate);
@@ -245,16 +247,16 @@ class ColorMapBase
 
 	[[nodiscard]] bool hasColor(Node node) const
 	{
-		auto const& data = derived().leafNode(node);
-		auto index = node.index();
-		return 0 != data.red[index] || 0 != data.green[index] || 0 != data.blue[index];
+		auto [index, offset] = derived().indexAndOffset(node);
+		return 0 != red_[index][offset] || 0 != green_[index][offset] ||
+		       0 != blue_[index][offset];
 	}
 
 	[[nodiscard]] bool hasColor(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		auto index = code.index(depth);
-		return 0 != node.red[index] || 0 != node.green[index] || 0 != node.blue[index];
+		auto [index, offset] = derived().indexAndOffset(code);
+		return 0 != red_[index][offset] || 0 != green_[index][offset] ||
+		       0 != blue_[index][offset];
 	}
 
 	[[nodiscard]] bool hasColor(Key key) const { return hasColor(derived().toCode(key)); }
@@ -311,7 +313,8 @@ class ColorMapBase
 	ColorMapBase(ColorMapBase&&) = default;
 
 	template <class Derived2>
-	ColorMapBase(ColorMapBase<Derived2> const&)
+	ColorMapBase(ColorMapBase<Derived2, N> const& other)
+	    : red_(other.red_), green_(other.green_), blue_(other.blue_)
 	{
 	}
 
@@ -324,8 +327,11 @@ class ColorMapBase
 	ColorMapBase& operator=(ColorMapBase&&) = default;
 
 	template <class Derived2>
-	ColorMapBase& operator=(ColorMapBase<Derived2> const&)
+	ColorMapBase& operator=(ColorMapBase<Derived2, N> const& rhs)
 	{
+		red_ = rhs.red_;
+		green_ = rhs.green_;
+		blue_ = rhs.blue_;
 		return *this;
 	}
 
@@ -333,7 +339,12 @@ class ColorMapBase
 	// Swap
 	//
 
-	void swap(ColorMapBase&) noexcept {}
+	void swap(ColorMapBase& other) noexcept
+	{
+		std::swap(red_, other.red_);
+		std::swap(green_, other.green_);
+		std::swap(blue_, other.blue_);
+	}
 
 	//
 	// Derived
@@ -353,38 +364,45 @@ class ColorMapBase
 	void initRoot()
 	{
 		auto index = derived().rootIndex();
-		derived().root().red[index] = 0;
-		derived().root().green[index] = 0;
-		derived().root().blue[index] = 0;
+		auto offset = derived().rootOffset();
+		red_[index][offset] = 0;
+		green_[index][offset] = 0;
+		blue_[index][offset] = 0;
+	}
+
+	//
+	// Resize
+	//
+
+	void resize(std::size_t count)
+	{
+		red_.resize(count);
+		green_.resize(count);
+		blue_.resize(count);
 	}
 
 	//
 	// Fill
 	//
 
-	template <std::size_t N>
-	void fill(ColorNode<N>& node, ColorNode<N> parent, index_t index)
+	void fill(index_t index, index_t parent_index, index_t parent_offset)
 	{
-		node.red.fill(parent.red[index]);
-		node.green.fill(parent.green[index]);
-		node.blue.fill(parent.blue[index]);
+		red_[index].fill(red_[parent_index][parent_offset]);
+		green_[index].fill(green_[parent_index][parent_offset]);
+		blue_[index].fill(blue_[parent_index][parent_offset]);
 	}
 
 	//
 	// Clear
 	//
 
-	template <std::size_t N>
-	void clear(ColorNode<N>&)
-	{
-	}
+	void clear(index_t index) {}
 
 	//
 	// Update node
 	//
 
-	template <std::size_t N>
-	void updateNode(ColorNode<N>& node, index_t index, ColorNode<N> const children)
+	void updateNode(index_t index, index_t offset, index_t children_index)
 	{
 		double red = 0;
 		double green = 0;
@@ -392,22 +410,23 @@ class ColorMapBase
 
 		std::size_t num = 0;
 		for (std::size_t i = 0; N != i; ++i) {
-			if (0 != children.red[i] || 0 != children.green[i] || 0 != children.blue[i]) {
+			if (0 != red_[children_index][i] || 0 != green_[children_index][i] ||
+			    0 != blue_[children_index][i]) {
 				++num;
-				red += children.red[i];
-				green += children.green[i];
-				blue += children.blue[i];
+				red += red_[children_index][i];
+				green += green_[children_index][i];
+				blue += blue_[children_index][i];
 			}
 		}
 
 		if (0 == num) {
-			node.red[index] = 0;
-			node.green[index] = 0;
-			node.blue[index] = 0;
+			red_[index][offset] = 0;
+			green_[index][offset] = 0;
+			blue_[index][offset] = 0;
 		} else {
-			node.red[index] = red / num;
-			node.green[index] = green / num;
-			node.blue[index] = blue / num;
+			red_[index][offset] = red / num;
+			green_[index][offset] = green / num;
+			blue_[index][offset] = blue / num;
 		}
 	}
 
@@ -415,15 +434,14 @@ class ColorMapBase
 	// Is collapsible
 	//
 
-	template <std::size_t N>
-	[[nodiscard]] bool isCollapsible(ColorNode<N> node) const
+	[[nodiscard]] bool isCollapsible(index_t index) const
 	{
-		return std::all_of(std::begin(node.red) + 1, std::end(node.red),
-		                   [r = node.red.front()](auto c) { return c == r; }) &&
-		       std::all_of(std::begin(node.green) + 1, std::end(node.green),
-		                   [g = node.green.front()](auto c) { return c == g; }) &&
-		       std::all_of(std::begin(node.blue) + 1, std::end(node.blue),
-		                   [b = node.blue.front()](auto c) { return c == b; });
+		return std::all_of(std::begin(red_[index]) + 1, std::end(red_[index]),
+		                   [r = red_[index].front()](auto c) { return c == r; }) &&
+		       std::all_of(std::begin(green_[index]) + 1, std::end(green_[index]),
+		                   [g = green_[index].front()](auto c) { return c == g; }) &&
+		       std::all_of(std::begin(blue_[index]) + 1, std::end(blue_[index]),
+		                   [b = blue_[index].front()](auto c) { return c == b; });
 	}
 
 	//
@@ -438,47 +456,31 @@ class ColorMapBase
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr std::size_t numData() noexcept
-	{
-		using value_type = typename std::iterator_traits<InputIt>::value_type;
-		using node_type = typename value_type::node_type;
-		return node_type::colorSize();
-	}
-
-	template <class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
-		return 3 * std::iterator_traits<InputIt>::value_type::colorSize() *
-		       std::distance(first, last) * sizeof(color_t);
+		return std::distance(first, last) * 3 * N * sizeof(color_t);
 	}
 
 	template <class OutputIt>
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
 		for (; first != last; ++first) {
-			if (first->indices.all()) {
-				in.read(first->node->red.data(),
-				        first->node->red.size() *
-				            sizeof(typename decltype(first->node->red)::value_type));
-				in.read(first->node->green.data(),
-				        first->node->green.size() *
-				            sizeof(typename decltype(first->node->green)::value_type));
-				in.read(first->node->blue.data(),
-				        first->node->blue.size() *
-				            sizeof(typename decltype(first->node->blue)::value_type));
+			if (first->offsets.all()) {
+				in.read(red_[first->index].data(), N * sizeof(color_t));
+				in.read(green_[first->index].data(), N * sizeof(color_t));
+				in.read(blue_[first->index].data(), N * sizeof(color_t));
 			} else {
-				decltype(first->node->red) red;
-				decltype(first->node->green) green;
-				decltype(first->node->blue) blue;
-				in.read(red.data(), red.size() * sizeof(typename decltype(red)::value_type));
-				in.read(green.data(),
-				        green.size() * sizeof(typename decltype(green)::value_type));
-				in.read(blue.data(), blue.size() * sizeof(typename decltype(blue)::value_type));
-				for (index_t i = 0; red.size() != i; ++i) {
-					if (first->indices[i]) {
-						first->node->red[i] = red[i];
-						first->node->green[i] = green[i];
-						first->node->blue[i] = blue[i];
+				std::array<color_t, N> red;
+				std::array<color_t, N> green;
+				std::array<color_t, N> blue;
+				in.read(red.data(), N * sizeof(color_t));
+				in.read(green.data(), N * sizeof(color_t));
+				in.read(blue.data(), N * sizeof(color_t));
+				for (index_t i = 0; N != i; ++i) {
+					if (first->offsets[i]) {
+						red_[first->index][i] = red[i];
+						green_[first->index][i] = green[i];
+						blue_[first->index][i] = blue[i];
 					}
 				}
 			}
@@ -490,15 +492,20 @@ class ColorMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->red.data(),
-			          first->red.size() * sizeof(typename decltype(first->red)::value_type));
-			out.write(
-			    first->green.data(),
-			    first->green.size() * sizeof(typename decltype(first->green)::value_type));
-			out.write(first->blue.data(),
-			          first->blue.size() * sizeof(typename decltype(first->blue)::value_type));
+			out.write(red_[*first].data(), N * sizeof(color_t));
+			out.write(green_[*first].data(), N * sizeof(color_t));
+			out.write(blue_[*first].data(), N * sizeof(color_t));
 		}
 	}
+
+ protected:
+	// Data
+	std::deque<std::array<color_t, N>> red_;
+	std::deque<std::array<color_t, N>> green_;
+	std::deque<std::array<color_t, N>> blue_;
+
+	template <class Derived2, std::size_t N2>
+	friend class ColorMapBase;
 };
 }  // namespace ufo::map
 

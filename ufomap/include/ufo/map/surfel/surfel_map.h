@@ -59,7 +59,7 @@
 
 namespace ufo::map
 {
-template <class Derived>
+template <class Derived, std::size_t N>
 class SurfelMapBase
 {
  public:
@@ -523,7 +523,7 @@ class SurfelMapBase
 	SurfelMapBase(SurfelMapBase&& other) = default;
 
 	template <class Derived2>
-	SurfelMapBase(SurfelMapBase<Derived2> const& other)
+	SurfelMapBase(SurfelMapBase<Derived2, N> const& other)
 	{
 	}
 
@@ -536,7 +536,7 @@ class SurfelMapBase
 	SurfelMapBase& operator=(SurfelMapBase&& rhs) = default;
 
 	template <class Derived2>
-	SurfelMapBase& operator=(SurfelMapBase<Derived2> const& rhs)
+	SurfelMapBase& operator=(SurfelMapBase<Derived2, N> const& rhs)
 	{
 		return *this;
 	}
@@ -545,7 +545,7 @@ class SurfelMapBase
 	// Swap
 	//
 
-	void swap(SurfelMapBase&) noexcept {}
+	void swap(SurfelMapBase& other) noexcept {}
 
 	//
 	// Derived
@@ -763,8 +763,12 @@ class SurfelMapBase
 	}
 
  private:
+	std::deque<std::array<index_t, N>> indices_;
 	std::deque<Surfel> surfel_;
-	std::stack<index_t> free_indices_;
+	std::stack<index_t> free_surfel_;
+
+	template <class Derived2, std::size_t N2>
+	friend class SurfelMapBase;
 };
 }  // namespace ufo::map
 

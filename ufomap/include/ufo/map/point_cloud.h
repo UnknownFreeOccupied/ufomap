@@ -89,19 +89,13 @@ void applyTransform(PointCloudT<P>& cloud, math::Pose6<T> const& transform)
 	applyTransform(std::begin(cloud), std::end(cloud), transform);
 }
 
-template <class ForwardIt>
-void removeNaN(ForwardIt first, ForwardIt last)
-{
-	auto it = std::remove_if(first, last, [](auto const& point) {
-		return std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z);
-	});
-	erase(it, last);
-}
-
 template <class P>
 void removeNaN(PointCloudT<P>& cloud)
 {
-	removeNaN(std::begin(cloud), std::end(cloud));
+	auto it = std::remove_if(std::begin(cloud), std::end(cloud), [](auto const& point) {
+		return std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z);
+	});
+	cloud.erase(it, std::end(cloud));
 }
 }  // namespace ufo::map
 

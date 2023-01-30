@@ -68,7 +68,7 @@ set_target_properties(Map
 	PROPERTIES
 	VERSION ${PROJECT_VERSION}
 	SOVERSION ${PROJECT_VERSION_MAJOR}
-	CXX_STANDARD 17
+	CXX_STANDARD 20
 	CXX_STANDARD_REQUIRED YES
 	CXX_EXTENSIONS NO
 )
@@ -86,7 +86,7 @@ target_link_libraries(Map
 
 target_compile_features(Map
 	PUBLIC
-	cxx_std_17
+	cxx_std_20
 )
 
 target_compile_options(Map

@@ -44,16 +44,18 @@
 
 // UFO
 #include <ufo/map/reflection/reflection.h>
-#include <ufo/map/reflection/reflection_node.h>
 #include <ufo/map/reflection/reflection_predicate.h>
 #include <ufo/map/types.h>
 
 // STL
+#include <algorithm>
+#include <array>
+#include <deque>
 #include <limits>
 
 namespace ufo::map
 {
-template <class Derived>
+template <class Derived, std::size_t N>
 class ReflectionMapBase
 {
  public:
@@ -63,13 +65,14 @@ class ReflectionMapBase
 
 	[[nodiscard]] Reflection reflection(Node node) const
 	{
-		return derived().leafNode(node).reflection[derived().dataIndex(node)];
+		auto [index, offset] = derived().indexAndOffset(node);
+		return reflection_[index][offset];
 	}
 
 	[[nodiscard]] Reflection reflection(Code code) const
 	{
-		auto [node, depth] = derived().leafNodeAndDepth(code);
-		return node.reflection[code.index(depth)];
+		auto [index, offset] = derived().indexAndOffset(code);
+		return reflection_[index][offset];
 	}
 
 	[[nodiscard]] Reflection reflection(Key key) const
@@ -96,8 +99,13 @@ class ReflectionMapBase
 	{
 		derived().apply(
 		    node,
-		    [reflection](auto& node, index_t index) { node.reflection[index] = reflection; },
-		    [reflection](auto& node) { node.reflection.fill(reflection); }, propagate);
+		    [&reflection_, reflection](index_t index, index_t offset) {
+			    reflection_[index][offset] = reflection;
+		    },
+		    [&reflection_, reflection](index_t index) {
+			    reflection_[index].fill(reflection);
+		    },
+		    propagate);
 	}
 
 	void setReflection(Code code, Reflection reflection, bool propagate = true)
@@ -501,8 +509,9 @@ class ReflectionMapBase
 	ReflectionMapBase(ReflectionMapBase&& other) = default;
 
 	template <class Derived2>
-	ReflectionMapBase(ReflectionMapBase<Derived2> const& other)
-	    : prop_criteria_(other.reflectionPropagationCriteria())
+	ReflectionMapBase(ReflectionMapBase<Derived2, N> const& other)
+	    : reflection_(other.reflection_),
+	      prop_criteria_(other.reflectionPropagationCriteria())
 	{
 	}
 
@@ -515,8 +524,9 @@ class ReflectionMapBase
 	ReflectionMapBase& operator=(ReflectionMapBase&& rhs) = default;
 
 	template <class Derived2>
-	ReflectionMapBase& operator=(ReflectionMapBase<Derived2> const& rhs)
+	ReflectionMapBase& operator=(ReflectionMapBase<Derived2, N> const& rhs)
 	{
+		reflection_ = rhs.reflection_;
 		prop_criteria_ = rhs.reflectionPropagationCriteria();
 		return *this;
 	}
@@ -527,6 +537,7 @@ class ReflectionMapBase
 
 	void swap(ReflectionMapBase& other) noexcept
 	{
+		std::swap(reflection_, other.reflection_);
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
 
@@ -545,29 +556,22 @@ class ReflectionMapBase
 	// Initilize root
 	//
 
-	void initRoot()
-	{
-		derived().root().reflection[derived().rootIndex()] = Reflection(0, 0);
-	}
+	void initRoot() { reflection_[derived().rootIndex()][derived().rootOffset()].reset(); }
 
 	//
 	// Fill
 	//
 
-	template <std::size_t N>
-	void fill(ReflectionNode<N>& node, ReflectionNode<N> const& parent, index_t index)
+	void fill(index_t index, index_t parent_index, index_t parent_offset)
 	{
-		node.reflection.fill(parent.reflection[index]);
+		reflection_[index].fill(reflection_[parent_index][parent_offset]);
 	}
 
 	//
 	// Clear
 	//
 
-	template <std::size_t N>
-	void clear(ReflectionNode<N>&)
-	{
-	}
+	void clear(index_t index) {}
 
 	//
 	// Update node
@@ -639,12 +643,11 @@ class ReflectionMapBase
 	// Is collapsible
 	//
 
-	template <std::size_t N>
-	[[nodiscard]] bool isCollapsible(ReflectionNode<N> const& node) const
+	[[nodiscard]] bool isCollapsible(index_t index) const
 	{
 		// TODO: Use floor(log2(X))?
-		return std::all_of(std::begin(node.reflection) + 1, std::end(node.reflection),
-		                   [p = node.reflection.front()](auto e) { return e == p; });
+		return std::all_of(std::begin(reflection_[index]) + 1, std::end(reflection_[index]),
+		                   [p = reflection_[index].front()](auto e) { return e == p; });
 	}
 
 	//
@@ -662,18 +665,9 @@ class ReflectionMapBase
 	}
 
 	template <class InputIt>
-	[[nodiscard]] static constexpr uint8_t numData() noexcept
-	{
-		using value_type = typename std::iterator_traits<InputIt>::value_type;
-		using node_type = typename value_type::node_type;
-		return node_type::reflectionSize();
-	}
-
-	template <class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last) const
 	{
-		return std::iterator_traits<InputIt>::value_type::reflectionSize() *
-		       std::distance(first, last) * sizeof(Reflection);
+		return std::distance(first, last) * N * sizeof(Reflection);
 	}
 
 	template <class OutputIt>
@@ -702,15 +696,18 @@ class ReflectionMapBase
 	{
 		out.reserve(out.size() + serializedSize(first, last));
 		for (; first != last; ++first) {
-			out.write(first->reflection.data(),
-			          first->reflection.size() *
-			              sizeof(typename decltype(first->reflection)::value_type));
+			out.write(reflection_[*first].data(), N * sizeof(Reflection));
 		}
 	}
 
  protected:
+	std::deque<std::array<Reflection, N>> reflection_;
+
 	// Propagation criteria
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
+
+	template <class Derived2, std::size_t N2>
+	friend class ReflectionMapBase;
 };
 }  // namespace ufo::map
 

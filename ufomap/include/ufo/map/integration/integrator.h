@@ -83,89 +83,89 @@ class Integrator
 	void integrateHits(Map& map, IntegrationCloud<P> const& cloud) const
 	{
 		// Get current state
-		auto const occupancy_prob_hit = getOccupancyProbHit();
 		auto const time = getTime();
 
 		logit_t prob;
 		if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
 			prob = map.toOccupancyChangeLogit(
-			    occupancy_prob_hit);  // + map.toOccupancyChangeLogit(occupancy_prob_miss_)
+			    getOccupancyProbHit());  // + map.toOccupancyChangeLogit(getOccupancyProbMiss())
+		}
+
+		std::vector<std::pair<Index, std::uint32_t>> data;
+		data.reserve(cloud.size());
+		for (std::uint32_t i{}; cloud.size() != i; ++i) {
+			if (!cloud[i].points.empty()) {
+				data.emplace_back(map.create(points[i].code), i);
+			}
+		}
+
+		for (auto [idx, _] : data) {
+			map.setModifiedUnsafe(idx);
+		}
+
+		if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
+			for (auto [idx, _] : data) {
+				map.increaseOccupancyLogitUnsafe(idx, prob);
+			}
+		}
+
+		if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+			for (auto [idx, _] : data) {
+				map.setTimeUnsafe(idx, time);
+			}
+		}
+
+		if constexpr (util::is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
+		              std::is_base_of_v<Color, P>) {
+			for (auto [idx, i] : data) {
+				std::uint32_t r{};
+				std::uint32_t g{};
+				std::uint32_t b{};
+				std::uint32_t n{};
+				for (Color c : cloud[i].points) {
+					r += c.red;
+					g += c.green;
+					b += c.blue;
+					n += c.isSet();
+				}
+
+				if (0 != n) {
+					map.updateColorUnsafe(idx, [r = r / n, g = g / n, b = b / n](Color c) {
+						int n = c.isSet();
+						return Color((r + c.red) >> n, (g + c.green) >> n, (b + c.blue) >> n);
+					});
+				}
+			}
+		}
+
+		// TODO: Something with labels
+		if constexpr (util::is_base_of_template_v<LabelMapBase, std::decay_t<Map>> &&
+		              std::is_base_of_v<Label, P>) {
+			for (auto [idx, i] : data) {
+			}
 		}
 
 		// TODO: Something with semantics
+		if constexpr (util::is_base_of_template_v<SemanticMapBase, std::decay_t<Map>> &&
+		              std::is_base_of_v<SemanticPair, P>) {
+			for (auto [idx, i] : data) {
+				// 	// FIXME: Implement correctly
 
-		std::for_each(std::cbegin(cloud), std::cend(cloud), [&](auto const& p) {
-			if (!p.valid()) {
-				// Not a single valid point fell into this node
-				return;
+				// 	std::vector<SemanticPair> semantics(first_point_it, last_point_it);
+
+				// 	// Remove label 0
+				// 	semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
+				// 	                            [](auto sem) { return 0 == sem.label; }),
+				// 	                std::end(semantics));
+
+				// 	// Decrease all
+				// 	map.decreaseSemantic(node, semantic_value_miss_, false);
+
+				// 	// Incrase hits
+				// 	map.increaseSemantics(node, std::cbegin(semantics), std::cend(semantics),
+				// 	                      semantic_value_hit_ + semantic_value_miss_, false);
 			}
-
-			// Retrieve the node
-			auto node = map(p.code);
-
-			// Update occupancy
-			if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
-				node = map.increaseOccupancyLogit(node, prob, false);
-			}
-
-			// Update time step
-			if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-				node = map.setTime(node, time, false);
-			}
-
-			// Update color
-			if constexpr (util::is_base_of_template_v<ColorMapBase, std::decay_t<Map>> &&
-			              std::is_base_of_v<Color, P>) {
-				double red = 0;
-				double green = 0;
-				double blue = 0;
-
-				std::size_t num = 0;
-				for (Color c : p.points) {
-					if (c.isSet()) {
-						++num;
-						red += c.red;
-						green += c.green;
-						blue += c.blue;
-					}
-				}
-
-				if (0 != num) {
-					red /= num;
-					green /= num;
-					blue /= num;
-
-					node = map.updateColor(
-					    node,
-					    [red, green, blue](Color c) {
-						    return c.isSet() ? Color((red + c.red) / 2, (green + c.green) / 2,
-						                             (blue + c.blue) / 2)
-						                     : Color(red, green, blue);
-					    },
-					    false);
-				}
-			}
-
-			// Update semantics
-			// if constexpr (util::is_base_of_template_v<SemanticMap, std::decay_t<Map>> &&
-			//               std::is_base_of_v<SemanticPair, P>) {
-			// 	// FIXME: Implement correctly
-
-			// 	std::vector<SemanticPair> semantics(first_point_it, last_point_it);
-
-			// 	// Remove label 0
-			// 	semantics.erase(std::remove(std::begin(semantics), std::end(semantics),
-			// 	                            [](auto sem) { return 0 == sem.label; }),
-			// 	                std::end(semantics));
-
-			// 	// Decrease all
-			// 	map.decreaseSemantic(node, semantic_value_miss_, false);
-
-			// 	// Incrase hits
-			// 	map.increaseSemantics(node, std::cbegin(semantics), std::cend(semantics),
-			// 	                      semantic_value_hit_ + semantic_value_miss_, false);
-			// }
-		});
+		}
 
 		// FIXME: Increment time step
 		time_ += time_auto_inc_;
@@ -178,20 +178,35 @@ class Integrator
 	template <class Map>
 	void integrateMisses(Map& map, Misses const& misses) const
 	{
+		if constexpr (!util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>> &&
+		              !util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
+			return;
+		}
+
 		auto const time = getTime();
+
+		std::vector<IndexFam> data;
+		data.reserve(misses.size());
+		for (auto [code, children] : misses) {
+			data.emplace_back(map.create(code).index, children);
+		}
+
+		for (auto e : data) {
+			map.setModifiedUnsafe(e);
+		}
 
 		if constexpr (util::is_base_of_template_v<OccupancyMapBase, std::decay_t<Map>>) {
 			auto const prob = map.toOccupancyChangeLogit(getOccupancyProbMiss());
-			for (auto code : misses) {
-				auto node = map.decreaseOccupancyLogit(code, prob, false);
+			for (auto e : data) {
+				map.decreaseOccupancyLogitUnsafe(e, prob);
 
 				if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-					map.setTime(node, time, false);
+					map.setTimeUnsafe(e, time);
 				}
 			}
 		} else if constexpr (util::is_base_of_template_v<TimeMapBase, std::decay_t<Map>>) {
-			for (auto code : misses) {
-				map.setTime(code, time, false);
+			for (auto e : data) {
+				map.setTimeUnsafe(e, time);
 			}
 		}
 	}

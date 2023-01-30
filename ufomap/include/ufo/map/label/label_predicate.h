@@ -39,32 +39,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SURFEL_NODE_H
-#define UFO_MAP_SURFEL_NODE_H
+#ifndef UFO_MAP_LABEL_PREDICATE_H
+#define UFO_MAP_LABEL_PREDICATE_H
 
-// UFO
-#include <ufo/map/surfel/surfel.h>
-#include <ufo/map/types.h>
-
-// STL
-#include <array>
-#include <cstdint>
-#include <memory>
-#include <type_traits>
-
-namespace ufo::map
-{
-template <std::size_t N>
-struct SurfelNode {
-	// Data
-	std::array<std::uint32_t, N> surfel_index;
-
-	//
-	// Size
-	//
-
-	[[nodiscard]] static constexpr std::size_t surfelSize() { return N; }
-};
-}  // namespace ufo::map
-
-#endif  // UFO_MAP_SURFEL_NODE_H
+#endif  // UFO_MAP_LABEL_PREDICATE_H

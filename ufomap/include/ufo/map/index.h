@@ -39,29 +39,66 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_COUNT_NODE_H
-#define UFO_MAP_COUNT_NODE_H
+#ifndef UFO_MAP_INDEX_H
+#define UFO_MAP_INDEX_H
 
 // UFO
 #include <ufo/map/types.h>
 
 // STL
 #include <algorithm>
-#include <array>
 
 namespace ufo::map
 {
-template <std::size_t N>
-struct CountNode {
-	// Data
-	std::array<count_t, N> count;
+struct Index {
+	index_t index{NULL_INDEX};
+	offset_t offset{0};
 
-	//
-	// Size
-	//
+	constexpr Index() noexcept = default;
 
-	[[nodiscard]] static constexpr std::size_t countSize() noexcept { return N; }
+	constexpr Index(index_t index, offset_t offset) noexcept : index(index), offset(offset)
+	{
+	}
+
+	void swap(Index& other) noexcept
+	{
+		std::swap(index, other.index);
+		std::swap(offset, other.offset);
+	}
+};
+
+struct IndexFam {
+	index_t index{NULL_INDEX};
+	IndexField offset;
+
+	constexpr IndexFam() noexcept = default;
+
+	constexpr IndexFam(index_t index, IndexField offset) noexcept
+	    : index(index), offset(offset)
+	{
+	}
+
+	void swap(IndexFam& other) noexcept
+	{
+		std::swap(index, other.index);
+		std::swap(offset, other.offset);
+	}
 };
 }  // namespace ufo::map
 
-#endif  // UFO_MAP_COUNT_NODE_H
+namespace std
+{
+inline void swap(ufo::map::Index& lhs,
+                 ufo::map::Index& rhs) noexcept(noexcept(lhs.swap(rhs)))
+{
+	lhs.swap(rhs);
+}
+
+inline void swap(ufo::map::IndexFam& lhs,
+                 ufo::map::IndexFam& rhs) noexcept(noexcept(lhs.swap(rhs)))
+{
+	lhs.swap(rhs);
+}
+}  // namespace std
+
+#endif  // UFO_MAP_INDEX_H

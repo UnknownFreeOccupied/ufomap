@@ -43,7 +43,6 @@
 #define UFO_MAP_EMPTY_MAP_H
 
 // UFO
-#include <ufo/map/empty/empty_node.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -52,7 +51,7 @@
 
 namespace ufo::map
 {
-template <std::uint64_t Num, class Derived>
+template <std::uint64_t Num, class Derived, std::size_t N>
 class EmptyMap
 {
  protected:
@@ -66,8 +65,8 @@ class EmptyMap
 
 	EmptyMap(EmptyMap&&) = default;
 
-	template <std::uint64_t Num2, class Derived2>
-	EmptyMap(EmptyMap<Num2, Derived2> const&)
+	template <class Derived2>
+	EmptyMap(EmptyMap<Num, Derived2, N> const&)
 	{
 	}
 
@@ -79,8 +78,8 @@ class EmptyMap
 
 	EmptyMap& operator=(EmptyMap&&) = default;
 
-	template <std::uint64_t Num2, class Derived2>
-	EmptyMap& operator=(EmptyMap<Num2, Derived2> const&)
+	template <class Derived2>
+	EmptyMap& operator=(EmptyMap<Num, Derived2, N> const&)
 	{
 		return *this;
 	}
@@ -101,24 +100,21 @@ class EmptyMap
 	// Fill
 	//
 
-	static constexpr void fill(EmptyNode<Num>, EmptyNode<Num>, index_t) noexcept {}
+	static constexpr void fill(index_t, index_t, index_t) noexcept {}
 
 	//
 	// Clear
 	//
 
-	static constexpr void clear(EmptyNode<Num>) {}
+	static constexpr void clear(index_t) {}
 
 	//
 	// Update node
 	//
 
-	static constexpr void updateNode(EmptyNode<Num>, index_t, EmptyNode<Num>) noexcept {}
+	static constexpr void updateNode(index_t, index_t, index_t) noexcept {}
 
-	[[nodiscard]] static constexpr bool isCollapsible(EmptyNode<Num>) noexcept
-	{
-		return true;
-	}
+	[[nodiscard]] static constexpr bool isCollapsible(index_t) noexcept { return true; }
 
 	//
 	// Input/ouput (read/write)
