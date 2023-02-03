@@ -82,7 +82,7 @@ namespace ufo::map
 {
 // Utilizing curiously recurring template pattern (CRTP)
 template <class Derived>
-class OctreeBase
+class Octree
 {
  public:
 	//
@@ -2859,7 +2859,7 @@ class OctreeBase
 
 	// TODO: Add comments
 
-	OctreeBase(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16)
+	Octree(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16)
 
 	{
 		setNodeSizeAndDepthLevels(leaf_node_size, depth_levels);
@@ -2867,7 +2867,7 @@ class OctreeBase
 		init();
 	}
 
-	OctreeBase(OctreeBase const& other)
+	Octree(Octree const& other)
 	    : depth_levels_(other.depth_levels_),
 	      max_value_(other.max_value_),
 	      node_size_(other.node_size_),
@@ -2876,7 +2876,7 @@ class OctreeBase
 		init();
 	}
 
-	OctreeBase(OctreeBase&& other)
+	Octree(Octree&& other)
 	    : depth_levels_(std::move(other.depth_levels_)),
 	      max_value_(std::move(other.max_value_)),
 	      indices_(std::move(other.indices_)),
@@ -2890,7 +2890,7 @@ class OctreeBase
 	}
 
 	template <class Derived2>
-	OctreeBase(OctreeBase<Derived2, Data2, InnerData2> const& other)
+	Octree(Octree<Derived2, Data2, InnerData2> const& other)
 	    : depth_levels_(other.depth_levels_),
 	      max_value_(other.max_value_),
 	      indices_(other.indices_),
@@ -2913,7 +2913,7 @@ class OctreeBase
 	// Destructor
 	//
 
-	~OctreeBase() {}
+	~Octree() {}
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -2923,7 +2923,7 @@ class OctreeBase
 
 	// TODO: Add comments
 
-	OctreeBase& operator=(OctreeBase const& rhs)
+	Octree& operator=(Octree const& rhs)
 	{
 		// TODO: Should this clear?
 		clear(rhs.size(), rhs.depthLevels());
@@ -2935,7 +2935,7 @@ class OctreeBase
 		return *this;
 	}
 
-	OctreeBase& operator=(OctreeBase&& rhs)
+	Octree& operator=(Octree&& rhs)
 	{
 		// TODO: Should this clear?
 		clear(rhs.size(), rhs.depthLevels(), true);
@@ -2952,7 +2952,7 @@ class OctreeBase
 	}
 
 	template <class Derived2>
-	OctreeBase& operator=(OctreeBase<Derived2> const& rhs)
+	Octree& operator=(Octree<Derived2> const& rhs)
 	{
 		// TODO: Should this clear?
 		clear(rhs.size(), rhs.depthLevels());
@@ -2974,7 +2974,7 @@ class OctreeBase
 	|                                                                                     |
 	**************************************************************************************/
 
-	void swap(OctreeBase& other)
+	void swap(Octree& other)
 	{
 		std::swap(depth_levels_, other.depth_levels_);
 		std::swap(max_value_, other.max_value_);
@@ -4085,7 +4085,7 @@ class OctreeBase
 	friend Derived;
 
 	template <class Derived2>
-	friend class OctreeBase;
+	friend class Octree;
 };
 
 }  // namespace ufo::map

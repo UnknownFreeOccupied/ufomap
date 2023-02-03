@@ -58,7 +58,7 @@
 namespace ufo::map
 {
 template <class Derived, std::size_t N>
-class ColorMapBase
+class ColorMap
 {
  public:
 	//
@@ -119,9 +119,8 @@ class ColorMapBase
 	Node setColor(Node node, Color color, bool propagate = true)
 	{
 		return derived().apply(
-		    node,
-		    [&color_, color](Index index) { color_[index.index][index.offset] = color; },
-		    [&color_, color](index_t index) { color_[index].fill(color); }, propagate);
+		    node, [&color_, color](Index node) { color_[node.index][node.offset] = color; },
+		    [&color_, color](index_t node) { color_[node].fill(color); }, propagate);
 	}
 
 	Node setColor(Node node, color_t red, color_t green, color_t blue,
@@ -133,9 +132,8 @@ class ColorMapBase
 	Node setColor(Code code, Color color, bool propagate = true)
 	{
 		return derived().apply(
-		    code,
-		    [&color_, color](Index index) { color_[index.index][index.offset] = color; },
-		    [&color_, color](index_t index) { color_[index].fill(color); }, propagate);
+		    code, [&color_, color](Index node) { color_[node.index][node.offset] = color; },
+		    [&color_, color](index_t node) { color_[node].fill(color); }, propagate);
 	}
 
 	Node setColor(Code code, color_t red, color_t green, color_t blue,
@@ -198,12 +196,12 @@ class ColorMapBase
 	{
 		return derived().apply(
 		    node,
-		    [&color_, f](Index index) {
-			    color_[index.index][index.offset] = f(color_[index.index][index.offset]);
+		    [&color_, f](Index node) {
+			    color_[node.index][node.offset] = f(color_[node.index][node.offset]);
 		    },
-		    [&color_, f](index_t index) {
+		    [&color_, f](index_t node) {
 			    for (offset_t i = 0; N != i; ++i) {
-				    color_[index][i] = f(color_[index][i]);
+				    color_[node][i] = f(color_[node][i]);
 			    }
 		    },
 		    propagate);
@@ -214,12 +212,12 @@ class ColorMapBase
 	{
 		return derived().apply(
 		    code,
-		    [&color_, f](Index index) {
-			    color_[index.index][index.offset] = f(color_[index.index][index.offset]);
+		    [&color_, f](Index node) {
+			    color_[node.index][node.offset] = f(color_[node.index][node.offset]);
 		    },
-		    [&color_, f](index_t index) {
+		    [&color_, f](index_t node) {
 			    for (offset_t i = 0; N != i; ++i) {
-				    color_[index][i] = f(color_[index][i]);
+				    color_[node][i] = f(color_[node][i]);
 			    }
 		    },
 		    propagate);
@@ -314,14 +312,14 @@ class ColorMapBase
 	// Constructors
 	//
 
-	ColorMapBase() = default;
+	ColorMap() = default;
 
-	ColorMapBase(ColorMapBase const&) = default;
+	ColorMap(ColorMap const&) = default;
 
-	ColorMapBase(ColorMapBase&&) = default;
+	ColorMap(ColorMap&&) = default;
 
 	template <class Derived2>
-	ColorMapBase(ColorMapBase<Derived2, N> const& other) : color_(other.color_)
+	ColorMap(ColorMap<Derived2, N> const& other) : color_(other.color_)
 	{
 	}
 
@@ -329,12 +327,12 @@ class ColorMapBase
 	// Assignment operator
 	//
 
-	ColorMapBase& operator=(ColorMapBase const&) = default;
+	ColorMap& operator=(ColorMap const&) = default;
 
-	ColorMapBase& operator=(ColorMapBase&&) = default;
+	ColorMap& operator=(ColorMap&&) = default;
 
 	template <class Derived2>
-	ColorMapBase& operator=(ColorMapBase<Derived2, N> const& rhs)
+	ColorMap& operator=(ColorMap<Derived2, N> const& rhs)
 	{
 		color_ = rhs.color_;
 		return *this;
@@ -344,7 +342,7 @@ class ColorMapBase
 	// Swap
 	//
 
-	void swap(ColorMapBase& other) noexcept { std::swap(color_, other.color_); }
+	void swap(ColorMap& other) noexcept { std::swap(color_, other.color_); }
 
 	//
 	// Derived
@@ -395,20 +393,20 @@ class ColorMapBase
 	// Update node
 	//
 
-	void updateNode(Index index, index_t children_index)
+	void updateNode(Index node, index_t children)
 	{
 		std::uint16_t red{}, green{}, blue{}, num{};
 		for (std::size_t i{}; N != i; ++i) {
-			red += color_[children_index][i].red;
-			green += color_[children_index][i].green;
-			blue += color_[children_index][i].blue;
-			num += color_[children_index][i].isSet();
+			red += color_[children][i].red;
+			green += color_[children][i].green;
+			blue += color_[children][i].blue;
+			num += color_[children][i].isSet();
 		}
 
 		num = num ? num : 1;
-		color_[index.index][index.offset].red = red / num;
-		color_[index.index][index.offset].green = green / num;
-		color_[index.index][index.offset].blue = blue / num;
+		color_[node.index][node.offset].red = red / num;
+		color_[node.index][node.offset].green = green / num;
+		color_[node.index][node.offset].blue = blue / num;
 	}
 
 	//
@@ -445,12 +443,10 @@ class ColorMapBase
 			if (first->offsets.all()) {
 				in.read(color_[first->index].data(), N * sizeof(Color));
 			} else {
-				std::array<Color, N> color;
-				in.read(color.data(), N * sizeof(Color));
+				std::array<Color, N> c;
+				in.read(c.data(), N * sizeof(Color));
 				for (index_t i = 0; N != i; ++i) {
-					if (first->offsets[i]) {
-						color_[first->index][i] = color[i];
-					}
+					color_[first->index][i] = first->offsets[i] ? c[i] : color_[first->index][i];
 				}
 			}
 		}
@@ -469,8 +465,8 @@ class ColorMapBase
 	// Data
 	std::deque<std::array<Color, N>> color_;
 
-	template <class Derived2, std::size_t N2, bool ThreadSafe2>
-	friend class ColorMapBase;
+	template <class Derived2, std::size_t N2>
+	friend class ColorMap;
 };
 }  // namespace ufo::map
 

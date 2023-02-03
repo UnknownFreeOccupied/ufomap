@@ -60,16 +60,16 @@ namespace ufo::map
 #define REPEAT_128(M, N) REPEAT_64(M, N) REPEAT_64(M, N + 64)
 
 // All your base are belong to us
-template <template <class, std::size_t> class... Bases>
-class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
-                  public Bases<OctreeMap<Bases...>, 8>...
+template <template <class, std::size_t> class... Maps>
+class OctreeMap : public Octree<OctreeMap<Maps...>>,
+                  public Maps<OctreeMap<Maps...>, 8>...
 {
  protected:
 	//
 	// Tags
 	//
 
-	using Octree = OctreeBase<OctreeMap>;
+	using Octree = Octree<OctreeMap>;
 
 	//
 	// Friends
@@ -78,8 +78,8 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	friend Octree;
 #define FRIEND(N)                                                       \
 	friend std::tuple_element_t<std::min(static_cast<std::size_t>(N + 1), \
-	                                     sizeof...(Bases)),               \
-	                            std::tuple<void, Bases<OctreeMap, 8>...>>;
+	                                     sizeof...(Maps)),               \
+	                            std::tuple<void, Maps<OctreeMap, 8>...>>;
 	REPEAT_128(FRIEND, 0)
 
  public:
@@ -102,13 +102,13 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 	OctreeMap(ReadBuffer& in) : OctreeMap(0.1, 16) { Octree::read(in); }
 
-	OctreeMap(OctreeMap const& other) : Octree(other), Bases<OctreeMap, 8>(other)... {}
+	OctreeMap(OctreeMap const& other) : Octree(other), Maps<OctreeMap, 8>(other)... {}
 
-	template <template <class> class... Bases2>
-	OctreeMap(OctreeMap<Bases2...> const& other)
-	    : Octree(other), Bases<OctreeMap, 8>(other)...
+	template <template <class> class... Maps2>
+	OctreeMap(OctreeMap<Maps2...> const& other)
+	    : Octree(other), Maps<OctreeMap, 8>(other)...
 	{
-		(Bases<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
+		(Maps<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
 	}
 
 	OctreeMap(OctreeMap&& other) = default;
@@ -116,16 +116,16 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	OctreeMap& operator=(OctreeMap const& rhs)
 	{
 		Octree::operator=(rhs);
-		(Bases<OctreeMap, 8>::operator=(rhs), ...);
+		(Maps<OctreeMap, 8>::operator=(rhs), ...);
 		return *this;
 	}
 
-	template <template <class> class... Bases2>
-	OctreeMap& operator=(OctreeMap<Bases2...> const& rhs)
+	template <template <class> class... Maps2>
+	OctreeMap& operator=(OctreeMap<Maps2...> const& rhs)
 	{
 		Octree::operator=(rhs);
-		(Bases<OctreeMap, 8>::operator=(rhs), ...);
-		(Bases<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
+		(Maps<OctreeMap, 8>::operator=(rhs), ...);
+		(Maps<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
 		return *this;
 	}
 
@@ -138,7 +138,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	void swap(OctreeMap& other)  // TODO: Add noexcept thing
 	{
 		Octree::swap(other);
-		(Bases<OctreeMap, 8>::swap(other), ...);
+		(Maps<OctreeMap, 8>::swap(other), ...);
 	}
 
  protected:
@@ -146,7 +146,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	// Allocate node block
 	//
 
-	void allocateNodeBlock() { (Bases<OctreeMap, 8>::allocateNodeBlock(), ...); }
+	void allocateNodeBlock() { (Maps<OctreeMap, 8>::allocateNodeBlock(), ...); }
 
 	//
 	// Initilize root
@@ -156,8 +156,8 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	{
 		Octree::allocateNodeBlock();
 		Octree::initRoot();
-		(Bases<OctreeMap, 8>::allocateNodeBlock(), ...);
-		(Bases<OctreeMap, 8>::initRoot(), ...);
+		(Maps<OctreeMap, 8>::allocateNodeBlock(), ...);
+		(Maps<OctreeMap, 8>::initRoot(), ...);
 	}
 
 	//
@@ -166,22 +166,22 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 	void fill(index_t index, Index parent_idx)
 	{
-		(Bases<OctreeMap, 8>::fill(index, parent_idx), ...);
+		(Maps<OctreeMap, 8>::fill(index, parent_idx), ...);
 	}
 
 	//
 	// Clear
 	//
 
-	void clear() { (Bases<OctreeMap, 8>::clear(), ...); }
+	void clear() { (Maps<OctreeMap, 8>::clear(), ...); }
 
-	void clear(index_t index) { (Bases<OctreeMap, 8>::clear(index), ...); }
+	void clear(index_t index) { (Maps<OctreeMap, 8>::clear(index), ...); }
 
 	//
 	// Shrink to fit
 	//
 
-	void shrinkToFit() { (Bases<OctreeMap, 8>::shrinkToFit(), ...); }
+	void shrinkToFit() { (Maps<OctreeMap, 8>::shrinkToFit(), ...); }
 
 	//
 	// Update node
@@ -189,7 +189,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 	void updateNode(Index idx, index_t children_index)
 	{
-		(Bases<OctreeMap, 8>::updateNode(idx, children_index), ...);
+		(Maps<OctreeMap, 8>::updateNode(idx, children_index), ...);
 	}
 
 	//
@@ -198,7 +198,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 	[[nodiscard]] bool isPrunable(index_t index) const
 	{
-		return (Bases<OctreeMap, 8>::isPrunable(index) && ...);
+		return (Maps<OctreeMap, 8>::isPrunable(index) && ...);
 	}
 
 	//
@@ -207,7 +207,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 	[[nodiscard]] static constexpr std::size_t memoryNodeBlock() const noexcept
 	{
-		return (Bases<OctreeMap, 8>::memoryNodeBlock() + ...);
+		return (Maps<OctreeMap, 8>::memoryNodeBlock() + ...);
 	}
 
 	//
@@ -216,14 +216,14 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 	[[nodiscard]] static constexpr mt_t mapType() noexcept
 	{
-		return (Bases<OctreeMap, 8>::mapType() | ...);
+		return (Maps<OctreeMap, 8>::mapType() | ...);
 	}
 
 	template <class InputIt>
 	[[nodiscard]] std::size_t serializedSize(InputIt first, InputIt last, bool compress,
 	                                         mt_t data) const
 	{
-		return (serializedSize<Bases<OctreeMap, 8>>(first, last, compress, data) + ...);
+		return (serializedSize<Maps<OctreeMap, 8>>(first, last, compress, data) + ...);
 	}
 
 	template <class OutputIt>
@@ -245,8 +245,8 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 			in.read(reinterpret_cast<char*>(&data_size), sizeof(data_size));
 
 			if ((mt_t{0} == map_types || mt_t{0} != (mt & map_types)) &&
-			    (Bases<OctreeMap, 8>::canReadData(mt) || ...)) {
-				(readNodes<Bases<OctreeMap, 8>>(in, buf, compress_buf, first, last, mt, data_size,
+			    (Maps<OctreeMap, 8>::canReadData(mt) || ...)) {
+				(readNodes<Maps<OctreeMap, 8>>(in, buf, compress_buf, first, last, mt, data_size,
 				                                compressed) ||
 				 ...);
 			} else {
@@ -277,7 +277,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 			std::uint64_t next_index = in.readIndex() + data_size;
 
 			if (mt_t{0} == map_types || mt_t{0} != (mt & map_types)) {
-				(readNodes<Bases<OctreeMap, 8>>(in, compress_buf, first, last, mt, data_size,
+				(readNodes<Maps<OctreeMap, 8>>(in, compress_buf, first, last, mt, data_size,
 				                                compressed) ||
 				 ...);
 			}
@@ -298,7 +298,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	                int const compression_level) const
 	{
 		Buffer buf;
-		(writeNodes<Bases<OctreeMap, 8>>(out, buf, first, last, compress, map_types,
+		(writeNodes<Maps<OctreeMap, 8>>(out, buf, first, last, compress, map_types,
 		                                 compression_acceleration_level, compression_level),
 		 ...);
 	}
@@ -309,7 +309,7 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	                int const compression_level) const
 	{
 		out.reserve(out.size() + serializedSize(first, last, compress, map_types));
-		(writeNodes<Bases<OctreeMap, 8>>(out, first, last, compress, map_types,
+		(writeNodes<Maps<OctreeMap, 8>>(out, first, last, compress, map_types,
 		                                 compression_acceleration_level, compression_level),
 		 ...);
 	}
@@ -319,28 +319,28 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 	// Input/output (read/write)
 	//
 
-	template <class Base, class InputIt>
+	template <class Map, class InputIt>
 	std::size_t serializedSize(InputIt first, InputIt last, bool compress,
 	                           mt_t map_types) const
 	{
-		if (mt_t{0} != map_types && mt_t{0} == (Base::mapType() & map_types)) {
+		if (mt_t{0} != map_types && mt_t{0} == (Map::mapType() & map_types)) {
 			return 0;
 		}
 
 		if (compress) {
 			return sizeof(MapType) + sizeof(std::uint64_t) + sizeof(std::uint64_t) +
-			       maxSizeCompressed(Base::serializedSize(first, last));
+			       maxSizeCompressed(Map::serializedSize(first, last));
 		} else {
-			return sizeof(MapType) + sizeof(std::uint64_t) + Base::serializedSize(first, last);
+			return sizeof(MapType) + sizeof(std::uint64_t) + Map::serializedSize(first, last);
 		}
 	}
 
-	template <class Base, class OutputIt>
+	template <class Map, class OutputIt>
 	bool readNodes(std::istream& in, Buffer& buf, Buffer& compress_buf, OutputIt first,
 	               OutputIt last, MapType const mt, uint64_t const data_size,
 	               bool const compressed)
 	{
-		if (!Base::canReadData(mt)) {
+		if (!Map::canReadData(mt)) {
 			return false;
 		}
 
@@ -351,11 +351,11 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 		return readNodes(buf, compress_buf, first, last, mt, data_size, compressed);
 	}
 
-	template <class Base, class OutputIt>
+	template <class Map, class OutputIt>
 	bool readNodes(ReadBuffer& in, Buffer& compress_buf, OutputIt first, OutputIt last,
 	               MapType const mt, uint64_t const data_size, bool const compressed)
 	{
-		if (!Base::canReadData(mt)) {
+		if (!Map::canReadData(mt)) {
 			return false;
 		}
 
@@ -367,21 +367,21 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 			decompressData(in, compress_buf, uncompressed_size);
 
-			Base::readNodes(compress_buf, first, last);
+			Map::readNodes(compress_buf, first, last);
 		} else {
-			Base::readNodes(in, first, last);
+			Map::readNodes(in, first, last);
 		}
 
 		return true;
 	}
 
-	template <class Base, class InputIt>
+	template <class Map, class InputIt>
 	void writeNodes(std::ostream& out, Buffer& buf, InputIt first, InputIt last,
 	                bool const compress, mt_t const map_types,
 	                int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		if (mt_t{0} != map_types && mt_t{0} == (Base::mapType() & map_types)) {
+		if (mt_t{0} != map_types && mt_t{0} == (Map::mapType() & map_types)) {
 			return;
 		}
 
@@ -394,17 +394,17 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 		}
 	}
 
-	template <class Base, class InputIt>
+	template <class Map, class InputIt>
 	void writeNodes(WriteBuffer& out, InputIt first, InputIt last, bool const compress,
 	                mt_t const map_types, int const compression_acceleration_level,
 	                int const compression_level) const
 	{
-		constexpr MapType mt = Base::mapType();
+		constexpr MapType mt = Map::mapType();
 		if constexpr (MapType::NONE == mt) {
 			return;
 		}
 
-		if (mt_t{0} != map_types && mt_t{0} == (Base::mapType() & map_types)) {
+		if (mt_t{0} != map_types && mt_t{0} == (Map::mapType() & map_types)) {
 			return;
 		}
 
@@ -416,12 +416,12 @@ class OctreeMap : public OctreeBase<OctreeMap<Bases...>>,
 
 		if (compress) {
 			Buffer data;
-			data.reserve(Base::serializedSize(first, last));
-			Base::writeNodes(data, first, last);
+			data.reserve(Map::serializedSize(first, last));
+			Map::writeNodes(data, first, last);
 
 			compressData(data, out, compression_acceleration_level, compression_level);
 		} else {
-			Base::writeNodes(out, first, last);
+			Map::writeNodes(out, first, last);
 		}
 
 		auto cur_index = out.writeIndex();

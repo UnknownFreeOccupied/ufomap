@@ -39,70 +39,36 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_COLOR_H
-#define UFO_MAP_COLOR_H
+#ifndef UFO_MAP_SINGLE_LABEL_MAP_H
+#define UFO_MAP_SINGLE_LABEL_MAP_H
 
 // UFO
+#include <ufo/map/index.h>
 #include <ufo/map/types.h>
 
 // STL
-#include <ostream>
-#include <utility>
+#include <array>
+#include <vector>
 
 namespace ufo::map
 {
-/*!
- * @brief Color
- *
- */
-struct Color {
-	color_t red{};
-	color_t green{};
-	color_t blue{};
-
-	constexpr Color() = default;
-
-	constexpr Color(color_t red, color_t green, color_t blue)
-	    : red(red), green(green), blue(blue)
-	{
-	}
-
-	void swap(Color& other) noexcept
-	{
-		std::swap(red, other.red);
-		std::swap(green, other.green);
-		std::swap(blue, other.blue);
-	}
-
-	[[nodiscard]] constexpr bool isSet() const
-	{
-		return 0 != red || 0 != green || 0 != blue;
-	}
-
-	constexpr void clear() { red = green = blue = 0; }
-};
-
-constexpr bool operator==(Color const lhs, Color const rhs)
+template <class Derived, std::size_t N>
+class SingleLabelMap
 {
-	return lhs.red == rhs.red && lhs.green == rhs.green && lhs.blue == rhs.blue;
-}
+ public:
+ private:
+	void updateNode(Index node, index_t children)
+	{
+		label_t l{};
+		for (auto e : labels_[children]) {
+			l |= e;
+		}
+		labels_[node.index][node.offset] = l;
+	}
 
-constexpr bool operator!=(Color const lhs, Color const rhs) { return !(lhs == rhs); }
+ private:
+	std::vector<std::array<label_t, N>> labels_;
+};
 }  // namespace ufo::map
 
-inline std::ostream& operator<<(std::ostream& out, ufo::map::Color color)
-{
-	return out << "Red: " << +color.red << " Green: " << +color.green
-	           << " Blue: " << +color.blue;
-}
-
-namespace std
-{
-inline void swap(ufo::map::Color& lhs,
-                 ufo::map::Color& rhs) noexcept(noexcept(lhs.swap(rhs)))
-{
-	lhs.swap(rhs);
-}
-}  // namespace std
-
-#endif  // UFO_MAP_COLOR_H
+#endif  // UFO_MAP_SINGLE_LABEL_MAP_H

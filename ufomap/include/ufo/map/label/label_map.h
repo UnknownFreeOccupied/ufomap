@@ -58,7 +58,7 @@
 namespace ufo::map
 {
 template <class Derived, std::size_t N>
-class LabelMapBase
+class LabelMap
 {
  public:
 	//
@@ -102,14 +102,14 @@ class LabelMapBase
 	// Constructors
 	//
 
-	LabelMapBase() = default;
+	LabelMap() = default;
 
-	LabelMapBase(LabelMapBase const& other) = default;
+	LabelMap(LabelMap const& other) = default;
 
-	LabelMapBase(LabelMapBase&& other) = default;
+	LabelMap(LabelMap&& other) = default;
 
 	template <class Derived2>
-	LabelMapBase(LabelMapBase<Derived2, N> const& other) : label_(other.label_)
+	LabelMap(LabelMap<Derived2, N> const& other) : label_(other.label_)
 	{
 	}
 
@@ -117,12 +117,12 @@ class LabelMapBase
 	// Assignment operator
 	//
 
-	LabelMapBase& operator=(LabelMapBase const& rhs) = default;
+	LabelMap& operator=(LabelMap const& rhs) = default;
 
-	LabelMapBase& operator=(LabelMapBase&& rhs) = default;
+	LabelMap& operator=(LabelMap&& rhs) = default;
 
 	template <class Derived2>
-	LabelMapBase& operator=(LabelMapBase<Derived2, N> const& rhs)
+	LabelMap& operator=(LabelMap<Derived2, N> const& rhs)
 	{
 		label_ = rhs.label_;
 		return *this;
@@ -132,7 +132,7 @@ class LabelMapBase
 	// Swap
 	//
 
-	void swap(LabelMapBase& other) noexcept
+	void swap(LabelMap& other) noexcept
 	{
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
@@ -247,7 +247,7 @@ class LabelMapBase
 	std::deque<LabelSet> label_;
 
 	template <class Derived2, std::size_t N2>
-	friend class LabelMapBase;
+	friend class LabelMap;
 };
 }  // namespace ufo::map
 

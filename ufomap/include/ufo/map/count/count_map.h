@@ -58,7 +58,7 @@
 namespace ufo::map
 {
 template <class Derived, std::size_t N>
-class CountMapBase
+class CountMap
 {
  public:
 	//
@@ -161,14 +161,14 @@ class CountMapBase
 	// Constructors
 	//
 
-	CountMapBase() = default;
+	CountMap() = default;
 
-	CountMapBase(CountMapBase const&) = default;
+	CountMap(CountMap const&) = default;
 
-	CountMapBase(CountMapBase&&) = default;
+	CountMap(CountMap&&) = default;
 
 	template <class Derived2>
-	CountMapBase(CountMapBase<Derived2, N> const& other)
+	CountMap(CountMap<Derived2, N> const& other)
 	    : count_(other.count_), prop_criteria_(other.countPropagationCriteria())
 	{
 	}
@@ -177,12 +177,12 @@ class CountMapBase
 	// Assignment operator
 	//
 
-	CountMapBase& operator=(CountMapBase const&) = default;
+	CountMap& operator=(CountMap const&) = default;
 
-	CountMapBase& operator=(CountMapBase&&) = default;
+	CountMap& operator=(CountMap&&) = default;
 
 	template <class Derived2>
-	CountMapBase& operator=(CountMapBase<Derived2, N> const& rhs)
+	CountMap& operator=(CountMap<Derived2, N> const& rhs)
 	{
 		count_ = rhs.count_;
 		prop_criteria_ = rhs.countPropagationCriteria();
@@ -193,7 +193,7 @@ class CountMapBase
 	// Swap
 	//
 
-	void swap(CountMapBase& other) noexcept
+	void swap(CountMap& other) noexcept
 	{
 		std::swap(count_, other.count_);
 		std::swap(prop_criteria_, other.prop_criteria_);
@@ -312,7 +312,7 @@ class CountMapBase
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
 
 	template <class Derived2, std::size_t N2>
-	friend class CountMapBase;
+	friend class CountMap;
 };
 }  // namespace ufo::map
 

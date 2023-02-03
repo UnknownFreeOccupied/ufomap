@@ -72,13 +72,13 @@ namespace ufo::map
 //
 
 template <bool C, mt_t T, template <class> class Map>
-struct cond_map_base {
+struct cond_map {
 	template <class D, std::size_t N>
 	using type = Map<D, N>;
 };
 
 template <mt_t T, template <class> class Map>
-struct cond_map_base<false, T, Map> {
+struct cond_map<false, T, Map> {
 	template <class D, std::size_t N>
 	using type = EmptyMap<T, D, N>;
 };
@@ -91,32 +91,32 @@ template <mt_t MapType>
 class UFOMap
     : public OctreeMap<
           // clang-format off
-          cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMapBase>::template type,
-          cond_map_base<MapType & COLOR,      COLOR,      ColorMapBase>::template type,
-          cond_map_base<MapType & TIME,       TIME,       TimeMapBase>::template type,
-          cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMapBase>::template type,
-          cond_map_base<MapType & COUNT,      COUNT,      CountMapBase>::template type,
-          cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMapBase>::template type,
-          cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMapBase>::template type,
-					cond_map_base<MapType & LABEL,      LABEL,      LabelMapBase>::template type
-          // cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMapBase>::template type,
-          // cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMapBase>::template type,
+          cond_map<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMap>::template type,
+          cond_map<MapType & COLOR,      COLOR,      ColorMap>::template type,
+          cond_map<MapType & TIME,       TIME,       TimeMap>::template type,
+          cond_map<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
+          cond_map<MapType & COUNT,      COUNT,      CountMap>::template type,
+          cond_map<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
+          cond_map<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
+					cond_map<MapType & LABEL,      LABEL,      LabelMap>::template type
+          // cond_map<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
+          // cond_map<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
           // clang-format on
           >
 {
  private:
 	using Base = OctreeMap<
 	    // clang-format off
-			cond_map_base<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMapBase>::template type,
-			cond_map_base<MapType & COLOR,      COLOR,      ColorMapBase>::template type,
-			cond_map_base<MapType & TIME,       TIME,       TimeMapBase>::template type,
-			cond_map_base<MapType & INTENSITY,  INTENSITY,  IntensityMapBase>::template type,
-			cond_map_base<MapType & COUNT,      COUNT,      CountMapBase>::template type,
-			cond_map_base<MapType & REFLECTION, REFLECTION, ReflectionMapBase>::template type,
-			cond_map_base<MapType & SURFEL,     SURFEL,     SurfelMapBase>::template type,
-			cond_map_base<MapType & LABEL,      LABEL,      LabelMapBase>::template type
-			// cond_map_base<MapType & SEMANTIC,   SEMANTIC,   SemanticMapBase>::template type,
-			// cond_map_base<MapType & DISTANCE,   DISTANCE,   DistanceMapBase>::template type,
+			cond_map<MapType & OCCUPANCY,  OCCUPANCY,  OccupancyMap>::template type,
+			cond_map<MapType & COLOR,      COLOR,      ColorMap>::template type,
+			cond_map<MapType & TIME,       TIME,       TimeMap>::template type,
+			cond_map<MapType & INTENSITY,  INTENSITY,  IntensityMap>::template type,
+			cond_map<MapType & COUNT,      COUNT,      CountMap>::template type,
+			cond_map<MapType & REFLECTION, REFLECTION, ReflectionMap>::template type,
+			cond_map<MapType & SURFEL,     SURFEL,     SurfelMap>::template type,
+			cond_map<MapType & LABEL,      LABEL,      LabelMap>::template type
+			// cond_map<MapType & SEMANTIC,   SEMANTIC,   SemanticMap>::template type,
+			// cond_map<MapType & DISTANCE,   DISTANCE,   DistanceMap>::template type,
 	    // clang-format on
 	    >;
 
@@ -178,23 +178,6 @@ class UFOMap
 
 	void swap(UFOMap& other) noexcept(noexcept(Base::swap(other))) { Base::swap(other); }
 };
-
-//
-// Explicitly define common map types
-//
-
-// clang-format off
-using OccupancyMap    = UFOMap<OCCUPANCY>;
-using ColorMap        = UFOMap<COLOR>;
-using TimeMap         = UFOMap<TIME>;
-using IntensityMap    = UFOMap<INTENSITY>;
-using CountMap        = UFOMap<COUNT>;
-using ReflectionMap   = UFOMap<REFLECTION>;
-using SurfelMap       = UFOMap<SURFEL>;
-using LabelMap        = UFOMap<LABEL>;
-// using SemanticMap     = UFOMap<SEMANTIC>;
-// using DistanceMap     = UFOMap<DISTANCE>;
-// clang-format on
 }  // namespace ufo::map
 
 namespace std

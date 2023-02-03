@@ -63,7 +63,7 @@
 namespace ufo::map
 {
 template <class Derived>
-class OccupancyMapBase
+class OccupancyMap
 {
  public:
 	//
@@ -787,14 +787,14 @@ class OccupancyMapBase
 	// Constructors
 	//
 
-	OccupancyMapBase() = default;
+	OccupancyMap() = default;
 
-	OccupancyMapBase(OccupancyMapBase const& other) = default;
+	OccupancyMap(OccupancyMap const& other) = default;
 
-	OccupancyMapBase(OccupancyMapBase&& other) = default;
+	OccupancyMap(OccupancyMap&& other) = default;
 
 	template <class Derived2>
-	OccupancyMapBase(OccupancyMapBase<Derived2> const& other)
+	OccupancyMap(OccupancyMap<Derived2> const& other)
 	    : clamping_thres_min_logit_(other.occupancyClampingThresMinLogit()),
 	      clamping_thres_max_logit_(other.occupancyClampingThresMaxLogit()),
 	      occupied_thres_logit_(other.occupiedThresLogit()),
@@ -806,12 +806,12 @@ class OccupancyMapBase
 	// Assignment operator
 	//
 
-	OccupancyMapBase& operator=(OccupancyMapBase const& rhs) = default;
+	OccupancyMap& operator=(OccupancyMap const& rhs) = default;
 
-	OccupancyMapBase& operator=(OccupancyMapBase&& rhs) = default;
+	OccupancyMap& operator=(OccupancyMap&& rhs) = default;
 
 	template <class Derived2>
-	OccupancyMapBase& operator=(OccupancyMapBase<Derived2> const& rhs)
+	OccupancyMap& operator=(OccupancyMap<Derived2> const& rhs)
 	{
 		clamping_thres_min_logit_ = rhs.occupancyClampingThresMinLogit();
 		clamping_thres_max_logit_ = rhs.occupancyClampingThresMaxLogit();
@@ -824,7 +824,7 @@ class OccupancyMapBase
 	// Swap
 	//
 
-	void swap(OccupancyMapBase& other) noexcept
+	void swap(OccupancyMap& other) noexcept
 	{
 		std::swap(clamping_thres_min_logit_, other.clamping_thres_min_logit_);
 		std::swap(clamping_thres_max_logit_, other.clamping_thres_max_logit_);

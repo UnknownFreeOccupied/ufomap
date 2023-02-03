@@ -58,7 +58,7 @@
 namespace ufo::map
 {
 template <class Derived, std::size_t N>
-class IntensityMapBase
+class IntensityMap
 {
  public:
 	//
@@ -169,14 +169,14 @@ class IntensityMapBase
 	// Constructors
 	//
 
-	IntensityMapBase() = default;
+	IntensityMap() = default;
 
-	IntensityMapBase(IntensityMapBase const& other) = default;
+	IntensityMap(IntensityMap const& other) = default;
 
-	IntensityMapBase(IntensityMapBase&& other) = default;
+	IntensityMap(IntensityMap&& other) = default;
 
 	template <class Derived2>
-	IntensityMapBase(IntensityMapBase<Derived2, N> const& other)
+	IntensityMap(IntensityMap<Derived2, N> const& other)
 	    : intensity_(other.intensity_), prop_criteria_(other.intensityPropagationCriteria())
 	{
 	}
@@ -185,12 +185,12 @@ class IntensityMapBase
 	// Assignment operator
 	//
 
-	IntensityMapBase& operator=(IntensityMapBase const& rhs) = default;
+	IntensityMap& operator=(IntensityMap const& rhs) = default;
 
-	IntensityMapBase& operator=(IntensityMapBase&& rhs) = default;
+	IntensityMap& operator=(IntensityMap&& rhs) = default;
 
 	template <class Derived2>
-	IntensityMapBase& operator=(IntensityMapBase<Derived2, N> const& rhs)
+	IntensityMap& operator=(IntensityMap<Derived2, N> const& rhs)
 	{
 		intensity_ = rhs.intensity_;
 		prop_criteria_ = rhs.intensityPropagationCriteria();
@@ -201,7 +201,7 @@ class IntensityMapBase
 	// Swap
 	//
 
-	void swap(IntensityMapBase& other) noexcept
+	void swap(IntensityMap& other) noexcept
 	{
 		std::swap(prop_criteria_, other.prop_criteria_);
 	}
@@ -319,7 +319,7 @@ class IntensityMapBase
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
 
 	template <class Derived2, std::size_t N2>
-	friend class IntensityMapBase;
+	friend class IntensityMap;
 };
 }  // namespace ufo::map
 

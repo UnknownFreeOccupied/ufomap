@@ -56,7 +56,7 @@
 namespace ufo::map
 {
 template <class Derived, std::size_t N>
-class ReflectionMapBase
+class ReflectionMap
 {
  public:
 	//
@@ -502,14 +502,14 @@ class ReflectionMapBase
 	// Constructors
 	//
 
-	ReflectionMapBase() = default;
+	ReflectionMap() = default;
 
-	ReflectionMapBase(ReflectionMapBase const& other) = default;
+	ReflectionMap(ReflectionMap const& other) = default;
 
-	ReflectionMapBase(ReflectionMapBase&& other) = default;
+	ReflectionMap(ReflectionMap&& other) = default;
 
 	template <class Derived2>
-	ReflectionMapBase(ReflectionMapBase<Derived2, N> const& other)
+	ReflectionMap(ReflectionMap<Derived2, N> const& other)
 	    : reflection_(other.reflection_),
 	      prop_criteria_(other.reflectionPropagationCriteria())
 	{
@@ -519,12 +519,12 @@ class ReflectionMapBase
 	// Assignment operator
 	//
 
-	ReflectionMapBase& operator=(ReflectionMapBase const& rhs) = default;
+	ReflectionMap& operator=(ReflectionMap const& rhs) = default;
 
-	ReflectionMapBase& operator=(ReflectionMapBase&& rhs) = default;
+	ReflectionMap& operator=(ReflectionMap&& rhs) = default;
 
 	template <class Derived2>
-	ReflectionMapBase& operator=(ReflectionMapBase<Derived2, N> const& rhs)
+	ReflectionMap& operator=(ReflectionMap<Derived2, N> const& rhs)
 	{
 		reflection_ = rhs.reflection_;
 		prop_criteria_ = rhs.reflectionPropagationCriteria();
@@ -535,7 +535,7 @@ class ReflectionMapBase
 	// Swap
 	//
 
-	void swap(ReflectionMapBase& other) noexcept
+	void swap(ReflectionMap& other) noexcept
 	{
 		std::swap(reflection_, other.reflection_);
 		std::swap(prop_criteria_, other.prop_criteria_);
@@ -707,7 +707,7 @@ class ReflectionMapBase
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
 
 	template <class Derived2, std::size_t N2>
-	friend class ReflectionMapBase;
+	friend class ReflectionMap;
 };
 }  // namespace ufo::map
 

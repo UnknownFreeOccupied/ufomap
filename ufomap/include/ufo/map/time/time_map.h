@@ -58,7 +58,7 @@
 namespace ufo::map
 {
 template <class Derived, std::size_t N>
-class TimeMapBase
+class TimeMap
 {
  public:
 	//
@@ -175,20 +175,20 @@ class TimeMapBase
 	// Constructors
 	//
 
-	TimeMapBase() = default;
+	TimeMap() = default;
 
-	TimeMapBase(TimeMapBase const& other) = default;
+	TimeMap(TimeMap const& other) = default;
 
-	TimeMapBase(TimeMapBase&& other) = default;
+	TimeMap(TimeMap&& other) = default;
 
 	template <class Derived2>
-	TimeMapBase(TimeMapBase<Derived2, N> const& other)
+	TimeMap(TimeMap<Derived2, N> const& other)
 	    : time_(other.time_), prop_criteria_(other.prop_criteria_)
 	{
 	}
 
 	template <class Derived2>
-	TimeMapBase(TimeMapBase<Derived2, N>&& other)
+	TimeMap(TimeMap<Derived2, N>&& other)
 	    : time_(std::move(other.time_)), prop_criteria_(std::move(other.prop_criteria_))
 	{
 	}
@@ -197,18 +197,18 @@ class TimeMapBase
 	// Destructor
 	//
 
-	~TimeMapBase() = default;
+	~TimeMap() = default;
 
 	//
 	// Assignment operator
 	//
 
-	TimeMapBase& operator=(TimeMapBase const& rhs) = default;
+	TimeMap& operator=(TimeMap const& rhs) = default;
 
-	TimeMapBase& operator=(TimeMapBase&& rhs) = default;
+	TimeMap& operator=(TimeMap&& rhs) = default;
 
 	template <class Derived2>
-	TimeMapBase& operator=(TimeMapBase<Derived2, N> const& rhs)
+	TimeMap& operator=(TimeMap<Derived2, N> const& rhs)
 	{
 		time_ = rhs.time_;
 		prop_criteria_ = rhs.prop_criteria_;
@@ -216,7 +216,7 @@ class TimeMapBase
 	}
 
 	template <class Derived2>
-	TimeMapBase& operator=(TimeMapBase<Derived2, N>&& rhs)
+	TimeMap& operator=(TimeMap<Derived2, N>&& rhs)
 	{
 		time_ = std::move(rhs.time_);
 		prop_criteria_ = std::move(rhs.prop_criteria_);
@@ -227,7 +227,7 @@ class TimeMapBase
 	// Swap
 	//
 
-	void swap(TimeMapBase& other) noexcept
+	void swap(TimeMap& other) noexcept
 	{
 		std::swap(time_, other.time_);
 		std::swap(prop_criteria_, other.prop_criteria_);
@@ -254,7 +254,11 @@ class TimeMapBase
 	// Initilize root
 	//
 
-	void initRoot() { setTimeUnsafe(derived().rootIndex(), 0); }
+	void initRoot()
+	{
+		auto index = derived().rootIndex();
+		time_[index.index][index.offset] = 0;
+	}
 
 	//
 	// Fill
@@ -344,9 +348,7 @@ class TimeMapBase
 				std::array<time_t, N> time;
 				in.read(time.data(), memoryNodeBlock());
 				for (offset_t i{}; N != i; ++i) {
-					if (first->indices[i]) {
-						time_[first->index][i] = time[i];
-					}
+					time_[first->index][i] = first->indices[i] ? time[i] : time_[first->index][i];
 				}
 			}
 		}
@@ -369,7 +371,7 @@ class TimeMapBase
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;
 
 	template <class Derived2, std::size_t N2>
-	friend class TimeMapBase;
+	friend class TimeMap;
 };
 }  // namespace ufo::map
 
