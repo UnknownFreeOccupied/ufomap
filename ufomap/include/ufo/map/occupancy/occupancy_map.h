@@ -845,7 +845,7 @@ class OccupancyMap
 	}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot()
@@ -1136,6 +1136,11 @@ class OccupancyMap
 	}
 
  protected:
+	std::vector<std::array<logit_t, 8>> logit_;
+	std::vector<BitSet<8>> contains_unknown_;
+	std::vector<BitSet<8>> contains_free_;
+	std::vector<BitSet<8>> contains_occupied_;
+
 	double clamping_thres_min_logit_ = math::logit(0.1192);  // Min logit value
 	double clamping_thres_max_logit_ = math::logit(0.971);   // Max logit value
 

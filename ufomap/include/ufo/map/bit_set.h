@@ -48,72 +48,73 @@
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
+#include <type_traits>
 
 namespace ufo::map
 {
-using index_field_t = std::uint8_t;
 
-struct IndexField {
-	index_field_t field = 0;
+template <std::size_t N>
+struct BitSet {
+ private:
+	using T = std::conditional_t<
+	    8 >= N, std::uint8_t,
+	    std::conditional_t<16 >= N, std::uint16_t,
+	                       std::conditional_t<32 >= N, std::uint32_t, std::uint64_t>>>;
+
+ public:
+	T set = 0;
 
 	struct Reference {
-		friend class IndexField;
+		friend class BitSet;
 
 	 public:
 		~Reference() {}
 
 		constexpr Reference& operator=(bool x) noexcept
 		{
-			field_ ^=
-			    static_cast<index_field_t>(-static_cast<index_field_t>(x) ^ field_) & index_;
+			set_ ^= static_cast<T>(-static_cast<T>(x) ^ set_) & index_;
 			return *this;
 		}
 
 		constexpr Reference& operator=(Reference const& x) noexcept { return operator=(!!x); }
 
-		constexpr operator bool() const noexcept
-		{
-			return index_field_t(0) != (field_ & index_);
-		}
+		constexpr operator bool() const noexcept { return T(0) != (set_ & index_); }
 
-		constexpr bool operator~() const noexcept
-		{
-			return index_field_t(0) == (field_ & index_);
-		}
+		constexpr bool operator~() const noexcept { return T(0) == (set_ & index_); }
 
 		constexpr Reference& flip() noexcept
 		{
-			field_ ^= index_;
+			set_ ^= index_;
 			return *this;
 		}
 
 	 private:
-		constexpr Reference(index_field_t& field, std::size_t pos) noexcept
-		    : field_(field), index_(static_cast<index_field_t>(index_field_t(1) << pos))
+		constexpr Reference(T& field, std::size_t pos) noexcept
+		    : set_(field), index_(static_cast<T>(T(1) << pos))
 		{
 		}
 
 	 private:
-		index_field_t& field_;
-		index_field_t index_;
+		T& set_;
+		T index_;
 	};
 
-	constexpr IndexField() noexcept = default;
+	constexpr BitSet() noexcept = default;
 
-	constexpr IndexField(index_field_t val) noexcept : field(val) {}
+	constexpr BitSet(T val) noexcept : field(val) {}
 
 	template <class CharT, class Traits, class Alloc>
-	explicit IndexField(std::basic_string<CharT, Traits, Alloc> const& str,
-	                    typename std::basic_string<CharT, Traits, Alloc>::size_type pos = 0,
-	                    typename std::basic_string<CharT, Traits, Alloc>::size_type n =
-	                        std::basic_string<CharT, Traits, Alloc>::npos,
-	                    CharT zero = CharT('0'), CharT one = CharT('1'))
+	explicit BitSet(std::basic_string<CharT, Traits, Alloc> const& str,
+	                typename std::basic_string<CharT, Traits, Alloc>::size_type pos = 0,
+	                typename std::basic_string<CharT, Traits, Alloc>::size_type n =
+	                    std::basic_string<CharT, Traits, Alloc>::npos,
+	                CharT zero = CharT('0'), CharT one = CharT('1'))
 	{
 		// TODO: Implement
 	}
 
 	template <class CharT>
-	explicit IndexField(
+	explicit BitSet(
 	    CharT const* str,
 	    typename std::basic_string<CharT>::size_type n = std::basic_string<CharT>::npos,
 	    CharT zero = CharT('0'), CharT one = CharT('1'))
@@ -121,13 +122,13 @@ struct IndexField {
 		// TODO: Implement
 	}
 
-	constexpr bool operator==(IndexField rhs) const noexcept { return field == rhs.field; }
+	constexpr bool operator==(BitSet rhs) const noexcept { return field == rhs.field; }
 
-	constexpr bool operator!=(IndexField rhs) const noexcept { return !(*this == rhs); }
+	constexpr bool operator!=(BitSet rhs) const noexcept { return !(*this == rhs); }
 
 	[[nodiscard]] constexpr bool operator[](std::size_t pos) const
 	{
-		return (field >> pos) & index_field_t(1);
+		return (field >> pos) & T(1);
 	}
 
 	[[nodiscard]] Reference operator[](std::size_t pos) { return Reference(field, pos); }
@@ -143,12 +144,12 @@ struct IndexField {
 
 	[[nodiscard]] constexpr bool all() const noexcept
 	{
-		return std::numeric_limits<index_field_t>::max() == field;
+		return std::numeric_limits<T>::max() == field;
 	}
 
-	[[nodiscard]] constexpr bool any() const noexcept { return index_field_t(0) != field; }
+	[[nodiscard]] constexpr bool any() const noexcept { return T(0) != field; }
 
-	[[nodiscard]] constexpr bool none() const noexcept { return index_field_t(0) == field; }
+	[[nodiscard]] constexpr bool none() const noexcept { return T(0) == field; }
 
 	[[nodiscard]] constexpr std::size_t count() const noexcept
 	{
@@ -157,96 +158,92 @@ struct IndexField {
 
 	[[nodiscard]] static constexpr std::size_t size() noexcept { return 8; }
 
-	constexpr IndexField& operator&=(IndexField const other) noexcept
+	constexpr BitSet& operator&=(BitSet const other) noexcept
 	{
 		field &= other.field;
 		return *this;
 	}
 
-	constexpr IndexField& operator|=(IndexField const& other) noexcept
+	constexpr BitSet& operator|=(BitSet const& other) noexcept
 	{
 		field |= other.field;
 		return *this;
 	}
 
-	constexpr IndexField& operator^=(IndexField const& other) noexcept
+	constexpr BitSet& operator^=(BitSet const& other) noexcept
 	{
 		field ^= other.field;
 		return *this;
 	}
 
-	constexpr IndexField operator~() const noexcept
-	{
-		return IndexField(static_cast<index_field_t>(~field));
-	}
+	constexpr BitSet operator~() const noexcept { return BitSet(static_cast<T>(~field)); }
 
-	constexpr IndexField& set() noexcept
+	constexpr BitSet& set() noexcept
 	{
-		field = std::numeric_limits<index_field_t>::max();
+		field = std::numeric_limits<T>::max();
 		return *this;
 	}
 
-	constexpr IndexField& set(std::size_t pos, bool value = true)
+	constexpr BitSet& set(std::size_t pos, bool value = true)
 	{
 		if (size() <= pos) {
 			std::out_of_range("position (which is " + std::to_string(pos) +
 			                  ") >= size (which is " + std::to_string(size()) + ")");
 		}
-		field ^= static_cast<index_field_t>((-static_cast<index_field_t>(value) ^ field) &
-		                                    (index_field_t(1) << pos));
+		field ^= static_cast<T>((-static_cast<T>(value) ^ field) & (T(1) << pos));
 		return *this;
 	}
 
-	constexpr IndexField& reset() noexcept
+	constexpr BitSet& reset() noexcept
 	{
 		field = 0;
 		return *this;
 	}
 
-	constexpr IndexField& reset(std::size_t pos) { return set(pos, false); }
+	constexpr BitSet& reset(std::size_t pos) { return set(pos, false); }
 
-	constexpr IndexField& flip() noexcept
+	constexpr BitSet& flip() noexcept
 	{
-		field = static_cast<index_field_t>(~field);
+		field = static_cast<T>(~field);
 		return *this;
 	}
 
-	constexpr IndexField& flip(std::size_t pos)
+	constexpr BitSet& flip(std::size_t pos)
 	{
 		if (size() <= pos) {
 			std::out_of_range("position (which is " + std::to_string(pos) +
 			                  ") >= size (which is " + std::to_string(size()) + ")");
 		}
-		field ^= static_cast<index_field_t>(index_field_t(1) << pos);
+		field ^= static_cast<T>(T(1) << pos);
 		return *this;
 	}
 };
 
-constexpr IndexField operator&(IndexField lhs, IndexField rhs) noexcept
+constexpr BitSet operator&(BitSet lhs, BitSet rhs) noexcept
 {
-	return IndexField(lhs.field & rhs.field);
+	return BitSet(lhs.field & rhs.field);
 }
 
-constexpr IndexField operator|(IndexField lhs, IndexField rhs) noexcept
+constexpr BitSet operator|(BitSet lhs, BitSet rhs) noexcept
 {
-	return IndexField(lhs.field | rhs.field);
+	return BitSet(lhs.field | rhs.field);
 }
 
-constexpr IndexField operator^(IndexField lhs, IndexField rhs) noexcept
+constexpr BitSet operator^(BitSet lhs, BitSet rhs) noexcept
 {
-	return IndexField(lhs.field ^ rhs.field);
+	return BitSet(lhs.field ^ rhs.field);
 }
 
 template <class CharT, class Traits>
 std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os,
-                                              IndexField x)
+                                              BitSet x)
 {
 	return os << +x.field;
 }
 
 template <class CharT, class Traits>
 std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>& is,
-                                              IndexField& x)
+                                              BitSet& x)
 {
 	// TODO: Implement
 	return is;
@@ -256,8 +253,8 @@ std::basic_istream<CharT, Traits>& operator>>(std::basic_istream<CharT, Traits>&
 namespace std
 {
 template <>
-struct hash<ufo::map::IndexField> {
-	std::size_t operator()(ufo::map::IndexField x) const { return x.field; }
+struct hash<ufo::map::BitSet> {
+	std::size_t operator()(ufo::map::BitSet x) const { return x.field; }
 };
 }  // namespace std
 

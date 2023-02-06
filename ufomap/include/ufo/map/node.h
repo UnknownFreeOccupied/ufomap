@@ -46,6 +46,7 @@
 #include <ufo/geometry/aaebb.h>
 #include <ufo/geometry/point.h>
 #include <ufo/map/code.h>
+#include <ufo/map/index.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -65,19 +66,10 @@ struct Node {
 
 	constexpr Node() = default;
 
-	constexpr Node(Node const&) = default;
-
-	constexpr Node(Node&&) = default;
-
-	constexpr Node& operator=(Node const&) = default;
-
-	constexpr Node& operator=(Node&&) = default;
-
 	void swap(Node& other) noexcept
 	{
 		std::swap(code_, other.code_);
 		std::swap(index_, other.index_);
-		std::swap(parent_index_, other.parent_index_);
 	}
 
 	/*!
@@ -142,10 +134,7 @@ struct Node {
 	[[nodiscard]] constexpr offset_t offset() const noexcept { return code_.offset(); }
 
  protected:
-	constexpr Node(index_t index, Code code, index_t parent_index = NULL_INDEX) noexcept
-	    : code_(code), index_(index), parent_index_(parent_index)
-	{
-	}
+	constexpr Node(index_t index, Code code) noexcept : code_(code), index_(index) {}
 
 	/*!
 	 * @brief Get the corresponding index.
@@ -154,7 +143,9 @@ struct Node {
 	 *
 	 * @return The corresponding data.
 	 */
-	[[nodiscard]] constexpr Index index() const noexcept { return {index_, offset()}; }
+	[[nodiscard]] constexpr Index node() const noexcept { return {index(), offset()}; }
+
+	[[nodiscard]] constexpr index_t index() const noexcept { return index_; }
 
  protected:
 	// The code for the node
@@ -175,14 +166,6 @@ struct NodeBV : public Node {
 	//
 
 	constexpr NodeBV() = default;
-
-	constexpr NodeBV(NodeBV const&) = default;
-
-	constexpr NodeBV(NodeBV&&) = default;
-
-	constexpr NodeBV& operator=(NodeBV const&) = default;
-
-	constexpr NodeBV& operator=(NodeBV&&) = default;
 
 	void swap(NodeBV& other)
 	{
@@ -270,9 +253,8 @@ struct NodeBV : public Node {
 	[[nodiscard]] constexpr float z() const noexcept { return aaebb_.center.z; }
 
  protected:
-	constexpr NodeBV(std::uint32_t index, Code code, geometry::AAEBB aaebb,
-	                 index_t parent_index = NULL_INDEX) noexcept
-	    : Node(index, code, parent_index), aaebb_(aaebb)
+	constexpr NodeBV(index_t index, Code code, geometry::AAEBB aaebb) noexcept
+	    : Node(index, code), aaebb_(aaebb)
 	{
 	}
 

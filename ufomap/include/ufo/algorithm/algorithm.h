@@ -52,7 +52,7 @@
 
 namespace ufo
 {
-using Permuation = std::vector<std::size_t>;
+using Permutation = std::vector<std::size_t>;
 
 /*!
  * Retrieve the permutation to sort the elements in the range [first, last) in
@@ -61,13 +61,13 @@ using Permuation = std::vector<std::size_t>;
  * @param first,last The range of elements to sort.
  * @return The permutation.
  */
-template <class RandomIt>
-Permuation sortPermutation(RandomIt first, RandomIt last)
+[[nodiscard]] Permutation sortPermutation(std::random_access_iterator auto first,
+                                         std::random_access_iterator auto last)
 {
-	Permuation p(std::distance(first, last));
-	std::iota(std::begin(p), std::end(p), 0);
+	Permutation p(std::distance(first, last));
+	std::iota(std::begin(p), std::end(p), std::size_t{});
 	std::sort(std::begin(p), std::end(p), [first](std::size_t i, std::size_t j) {
-		return *std::next(first, i) < *std::next(first, j);
+		return *(first + i) < *(first + j);
 	});
 	return p;
 }
@@ -81,15 +81,31 @@ Permuation sortPermutation(RandomIt first, RandomIt last)
  * than (i.e., is ordered before) the second.
  * @return The permutation.
  */
-template <class RandomIt, class Compare>
-Permuation sortPermutation(RandomIt first, RandomIt last, Compare comp)
+template <class Compare>
+[[nodiscard]] Permutation sortPermutation(std::random_access_iterator auto first,
+                                         std::random_access_iterator auto last,
+                                         Compare comp)
 {
-	Permuation p(std::distance(first, last));
-	std::iota(std::begin(p), std::end(p), 0);
+	Permutation p(std::distance(first, last));
+	std::iota(std::begin(p), std::end(p), std::size_t{});
 	std::sort(std::begin(p), std::end(p), [first, comp](std::size_t i, std::size_t j) {
-		return comp(*std::next(first, i), *std::next(first, j));
+		return comp(*(first + i), *(first + j));
 	});
 	return p;
+}
+
+// TODO: Add comment
+template <class Container>
+[[nodiscard]] Permutation sortPermutation(Container const& c)
+{
+	return sortPermutation(std::cbegin(c), std::cend(c));
+}
+
+// TODO: Add comment
+template <class Container, class Compare>
+[[nodiscard]] Permutation sortPermutation(Container const& c, Compare comp)
+{
+	return sortPermutation(std::cbegin(c), std::cend(c), comp);
 }
 
 /*!
@@ -103,24 +119,31 @@ Permuation sortPermutation(RandomIt first, RandomIt last, Compare comp)
  * @param first,last The range of elements to permutate.
  * @param perm The permutation.
  */
-template <class RandomIt>
-void applyPermutation(RandomIt first, RandomIt last, Permuation const& perm)
+void applyPermutation(std::random_access_iterator auto first,
+                      std::random_access_iterator auto last, Permuation const& perm)
 {
 	auto const size = perm.size();
 
 	assert(std::distance(first, last) == size);
 
 	std::vector<bool> done(size, false);
-	for (std::size_t i = 0; i != size; ++i) {
-		if (done[i]) {
+	for (std::size_t i{}; i != size; ++i) {
+		if (std::as_const(done)[i]) {
 			continue;
 		}
 
-		for (std::size_t prev_j = i, j = perm[i]; i != j; prev_j = j, j = perm[j]) {
-			std::iter_swap(std::next(first, prev_j), std::next(first, j));
+		for (std::size_t prev_j{i}, j{perm[i]}; i != j; prev_j = j, j = perm[j]) {
+			std::iter_swap(first + prev_j, first + j);
 			done[j] = true;
 		}
 	}
+}
+
+// TODO: Add comment
+template <class Container>
+void applyPermutation(Container& c, Permuation const& perm)
+{
+	applyPermutation(std::begin(c), std::end(c), perm);
 }
 
 //

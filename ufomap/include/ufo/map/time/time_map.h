@@ -49,7 +49,6 @@
 
 // STL
 #include <algorithm>
-#include <array>
 #include <functional>
 #include <iostream>
 #include <limits>
@@ -95,21 +94,6 @@ class TimeMap
 		derived().applyUnsafe(
 		    index, [&time_, time](Index idx) { time_[idx.index][idx.offset] = time; },
 		    [&time_, time](index_t i) { time_[i].fill(time); });
-	}
-
-	void setTimeUnsafe(IndexFam const index, time_t time)
-	{
-		if (derived().allLeaf(index.index)) {
-			for (offset_t i{}; N != i; ++i) {
-				time_[index.index][i] = index.offset[i] ? time : time_[index.index][i];
-			}
-		} else {
-			for (offset_t i{}; N != i; ++i) {
-				if (index.offset[i]) {
-					setTimeUnsafe(Index(index.index, i), time);
-				}
-			}
-		}
 	}
 
 	Node setTime(Node node, time_t time, bool propagate = true)
@@ -251,7 +235,7 @@ class TimeMap
 	void allocateNodeBlock() { time_.emplace_back(); }
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot()
@@ -365,7 +349,7 @@ class TimeMap
 
  protected:
 	// Data
-	std::deque<std::array<time_t, N>> time_;
+	Container<time_t, N> time_;
 
 	// Propagation criteria
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;

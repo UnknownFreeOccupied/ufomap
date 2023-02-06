@@ -43,14 +43,16 @@
 #define UFO_MAP_TYPES_H
 
 // STL
+#include <array>
 #include <cstdint>
 #include <limits>
+#include <vector>
 
 namespace ufo::map
 {
-enum class UFOLock { NONE, DEPTH, NODE };
 enum class OccupancyState { UNKNOWN, FREE, OCCUPIED };
-enum class PropagationCriteria { MIN, MAX, MEAN, FIRST };
+enum class PropagationCriteria { MIN, MAX, MEAN, FIRST, NONE };
+enum class Device { CPU, GPU };
 
 using coord_t = float;
 using node_size_t = double;
@@ -58,7 +60,7 @@ using index_t = std::uint32_t;
 using offset_t = std::uint_fast8_t;
 using depth_t = std::uint8_t;
 using key_t = std::uint_fast32_t;
-using code_t = std::uint_fast64_t;
+using code_t = std::uint64_t;
 using occupancy_t = float;
 using logit_t = std::uint8_t;
 using time_t = float;
@@ -70,6 +72,12 @@ using count_t = std::uint32_t;
 using reflection_t = double;
 using distance_t = float;
 using surfel_scalar_t = float;
+
+template <class T, std::size_t N>
+using DataBlock = std::array<T, N>;
+
+template <class T>
+using Container = std::vector<T>;
 
 //
 // Null index
@@ -89,12 +97,14 @@ enum MapType : mt_t {
 	TIME       = mt_t(1) << 1,
 	COLOR      = mt_t(1) << 2,
 	LABEL      = mt_t(1) << 3,
-	SEMANTIC   = mt_t(1) << 4,
-	SURFEL     = mt_t(1) << 5,
-	DISTANCE   = mt_t(1) << 6,
-	INTENSITY  = mt_t(1) << 7,
-	COUNT      = mt_t(1) << 8,
-	REFLECTION = mt_t(1) << 9,
+	LABELS     = mt_t(1) << 4,
+	SEMANTIC   = mt_t(1) << 5,
+	SEMANTICS  = mt_t(1) << 6,
+	SURFEL     = mt_t(1) << 7,
+	DISTANCE   = mt_t(1) << 8,
+	INTENSITY  = mt_t(1) << 9,
+	COUNT      = mt_t(1) << 10,
+	REFLECTION = mt_t(1) << 11,
 	// clang-format on
 };
 }  // namespace ufo::map

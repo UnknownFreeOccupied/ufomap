@@ -556,7 +556,7 @@ class SurfelMap
 	constexpr Derived const& derived() const { return *static_cast<Derived const*>(this); }
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot()
@@ -709,7 +709,7 @@ class SurfelMap
 	template <class OutputIt>
 	void readNodes(ReadBuffer& in, OutputIt first, OutputIt last)
 	{
-		IndexField indices;
+		BitSet indices;
 		for (; first != last; ++first) {
 			in.read(&indices, sizeof(indices));
 			if (first->indices.all()) {
@@ -748,7 +748,7 @@ class SurfelMap
 	void writeNodes(WriteBuffer& out, InputIt first, InputIt last) const
 	{
 		out.reserve(out.size() + serializedSize(first, last));
-		IndexField indices;
+		BitSet indices;
 		for (; first != last; ++first) {
 			for (index_t index{}; auto x : first->surfel_index) {
 				indices[index] = NULL_INDEX != x;

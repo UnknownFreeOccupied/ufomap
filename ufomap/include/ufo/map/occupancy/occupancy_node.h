@@ -69,9 +69,9 @@ struct OccupancyNode {
 template <std::size_t N>
 struct ContainsOccupancy {
 	// Indicators
-	IndexField contains_unknown;
-	IndexField contains_free;
-	IndexField contains_occupied;
+	BitSet contains_unknown;
+	BitSet contains_free;
+	BitSet contains_occupied;
 };
 }  // namespace ufo::map
 

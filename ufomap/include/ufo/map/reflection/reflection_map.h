@@ -553,7 +553,7 @@ class ReflectionMap
 	}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot() { reflection_[derived().rootIndex()][derived().rootOffset()].reset(); }

@@ -50,10 +50,10 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <deque>
 #include <iostream>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace ufo::map
 {
@@ -211,7 +211,7 @@ class CountMap
 	}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot() { count_[derived().rootIndex()][derived().rootOffset()] = 0; }
@@ -306,7 +306,7 @@ class CountMap
 
  protected:
 	// Data
-	std::deque<std::array<count_t, N>> count_;
+	std::vector<std::array<count_t, N>> count_;
 
 	// Propagation criteria
 	PropagationCriteria prop_criteria_ = PropagationCriteria::MAX;

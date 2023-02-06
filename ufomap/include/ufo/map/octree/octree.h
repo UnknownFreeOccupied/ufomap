@@ -44,9 +44,9 @@
 
 // UFO
 #include <ufo/algorithm/algorithm.h>
+#include <ufo/map/bit_set.h>
 #include <ufo/map/code.h>
 #include <ufo/map/index.h>
-#include <ufo/map/index_field.h>
 #include <ufo/map/io.h>
 #include <ufo/map/key.h>
 #include <ufo/map/node.h>
@@ -66,7 +66,6 @@
 #include <array>
 #include <atomic>
 #include <cmath>
-#include <deque>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -107,6 +106,26 @@ class Octree
 	**************************************************************************************/
 
 	//
+	// Order for Compute
+	//
+
+	void orderForCompute()
+	{
+		auto perm = sortPermutation(parent_code_);
+
+		// TODO: Implement
+
+		derived().applyPermutation(perm);
+
+		applyPermutation(parent_code_, perm);
+		applyPermutation(modified_, perm);
+
+		resize(numNodes());
+		free_children_.clear();
+		free_children_ = {};
+	}
+
+	//
 	// Clear
 	//
 
@@ -124,15 +143,15 @@ class Octree
 	 */
 	void clear(node_size_t leaf_size, depth_t depth_levels, bool prune = true)
 	{
-		indices_.clear();
-		free_indices_.clear();
-		codes_.clear();
+		children_.clear();
+		free_children_.clear();
+		parent_code_.clear();
 		modified_.clear();
 		derived().clear();
 		if (prune) {
-			indices_.shrink_to_fit();
-			// FIXME: free_indices_.shrink_to_fit();
-			codes_.shrink_to_fit();
+			children_.shrink_to_fit();
+			// FIXME: free_children_.shrink_to_fit();
+			parent_code_.shrink_to_fit();
 			modified_.shrink_to_fit();
 			derived().shrinkToFit();
 		}
@@ -158,8 +177,8 @@ class Octree
 	 */
 	[[nodiscard]] static constexpr depth_t minDepthLevels() noexcept
 	{
-		// TODO: Change to correct
-		return 3;
+		// FIXME: Change to correct
+		return 1;
 	}
 
 	/*!
@@ -169,8 +188,8 @@ class Octree
 	 */
 	[[nodiscard]] static constexpr depth_t maxDepthLevels() noexcept
 	{
-		// TODO: Change to correct
-		return 22;
+		// FIXME: Change to correct
+		return 20;
 	}
 
 	//
@@ -185,7 +204,8 @@ class Octree
 	 */
 	[[nodiscard]] constexpr node_size_t size(depth_t depth = 0) const
 	{
-		return node_size_[depth];
+		return node_size_.at(depth);
+		// return node_size_[depth];
 	}
 
 	//
@@ -193,15 +213,16 @@ class Octree
 	//
 
 	/*!
-	 * @brief The volume of the octree.
+	 * @brief The volume of a node at a specific depth.
 	 *
-	 * @note Same as `size(rootDepth()) * size(rootDepth()) * size(rootDepth())`.
+	 * @note Same as `size(depth) * size(depth) * size(depth)`.
 	 *
-	 * @return The volume of the octree.
+	 * @param depth The depth.
+	 * @return The volume of a node at the depth.
 	 */
-	[[nodiscard]] constexpr node_size_t volume() const
+	[[nodiscard]] constexpr node_size_t volume(depth_t depth = 0) const
 	{
-		auto const s = size(rootDepth());
+		auto const s = size(depth);
 		return s * s * s;
 	}
 
@@ -223,7 +244,7 @@ class Octree
 	 */
 	[[nodiscard]] geometry::AAEBB boundingVolume() const
 	{
-		return geometry::AAEBB(center(), size(rootDepth() - 1));
+		return geometry::AAEBB(center(), size(rootDepth()) / 2);
 	}
 
 	//
@@ -249,7 +270,7 @@ class Octree
 	 */
 	[[nodiscard]] constexpr bool isWithin(coord_t x, coord_t y, coord_t z) const
 	{
-		auto const max = size(rootDepth() - 1);
+		auto const max = size(rootDepth()) / 2;
 		auto const min = -max;
 		return min <= x && min <= y && min <= z && max >= x && max >= y && max >= z;
 	}
@@ -266,6 +287,20 @@ class Octree
 
 	/*!
 	 * @brief Check if a node is a pure leaf node (i.e., can never have children).
+	 *
+	 * @param node The node to check.
+	 * @return Whether the node is a pure leaf node.
+	 */
+	[[nodiscard]] static constexpr bool isPureLeaf(Index node)
+	{
+		// Should be 1 because it is the parent code of the node
+		return 1 == parent_code_[node.index].depth();
+	}
+
+	/*!
+	 * @brief Check if a node is a pure leaf node (i.e., can never have children).
+	 *
+	 * @note Only have to check if the depth of the node is 0.
 	 *
 	 * @param node The node to check.
 	 * @return Whether the node is a pure leaf node.
@@ -344,7 +379,21 @@ class Octree
 	 * @param node The node to check.
 	 * @return Whether the node is a leaf node.
 	 */
-	[[nodiscard]] constexpr bool isLeaf(Node node) const { return isLeaf(index(node)); }
+	[[nodiscard]] constexpr bool isLeaf(Index node) const
+	{
+		return NULL_INDEX == children_[node.index][node.offset];
+	}
+
+	/*!
+	 * @brief Check if a node is a leaf node (i.e., has no children).
+	 *
+	 * @param node The node to check.
+	 * @return Whether the node is a leaf node.
+	 */
+	[[nodiscard]] constexpr bool isLeaf(Node node) const
+	{
+		return isLeafUnsafe(index(node));
+	}
 
 	/*!
 	 * @brief Check if a node corresponding to a code is a leaf node (i.e., has no
@@ -353,7 +402,7 @@ class Octree
 	 * @param code The code of the node to check.
 	 * @return Whether the node is a leaf node.
 	 */
-	[[nodiscard]] bool isLeaf(Code code) const { return isLeaf(index(code)); }
+	[[nodiscard]] bool isLeaf(Code code) const { return isLeafUnsafe(index(code)); }
 
 	/*!
 	 * @brief Check if a node corresponding to a key is a leaf node (i.e., has no children).
@@ -392,6 +441,14 @@ class Octree
 	//
 	// Parent
 	//
+
+	/*!
+	 * @brief Check if a node is a parent (i.e., has children).
+	 *
+	 * @param node The node to check.
+	 * @return Whether the node is a parent.
+	 */
+	[[nodiscard]] constexpr bool isParent(Index node) const { return !isLeaf(node); }
 
 	/*!
 	 * @brief Check if a node is a parent (i.e., has children).
@@ -446,30 +503,50 @@ class Octree
 		return !isLeaf(x, y, z, depth);
 	}
 
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Exist                                        |
+	|                                                                                     |
+	**************************************************************************************/
+
 	//
 	// Exists
 	//
 
+	/*!
+	 * @brief Check if a node at the index exists.
+	 *
+	 * @param node The index to check.
+	 * @return Whether a node at the index exists.
+	 */
+	[[nodiscard]] constexpr bool exists(Index node) const
+	{
+		return children.size() > node.index &&
+		       rootDepth() >= parent_code_[node.index].depth();
+	}
+
 	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(Node node) const
 	{
-		auto [index, _] = indexAndOffset(node);
-		return codes_[index] == node.code().parent();
+		return parent_code_[index(node).index] == node.code().parent();
 	}
 
+	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(Code code) const
 	{
-		auto [index, _] = indexAndOffset(code);
-		return codes_[index] == node.code().parent();
+		return parent_code_[index(node).index] == node.code().parent();
 	}
 
+	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(Key key) const { return exists(toCode(key)); }
 
+	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(Point coord, depth_t depth = 0) const
 	{
 		return exists(toCode(coord, depth));
 	}
 
+	// TODO: Add comment
 	[[nodiscard]] constexpr bool exists(coord_t x, coord_t y, coord_t z,
 	                                    depth_t depth = 0) const
 	{
@@ -486,6 +563,11 @@ class Octree
 	// Modified
 	//
 
+	[[nodiscard]] constexpr bool isModifiedUnsafe(Index node) const
+	{
+		return modified_[node.index][node.offset];
+	}
+
 	/*!
 	 * @brief Check if the octree is in a modified state (i.e., at least one node has been
 	 * modified).
@@ -494,7 +576,7 @@ class Octree
 	 */
 	[[nodiscard]] constexpr bool isModified() const
 	{
-		return modified_[rootIndex()][rootOffset()];
+		return isModifiedUnsafe(rootIndex());
 	}
 
 	/*!
@@ -506,7 +588,7 @@ class Octree
 	 */
 	[[nodiscard]] constexpr bool isModified(Node node) const
 	{
-		return isModified(index(node));
+		return isModifiedUnsafe(index(node));
 	}
 
 	/*!
@@ -518,7 +600,7 @@ class Octree
 	 */
 	[[nodiscard]] constexpr bool isModified(Code code) const
 	{
-		return isModified(index(code));
+		return isModifiedUnsafe(index(code));
 	}
 
 	/*!
@@ -564,139 +646,111 @@ class Octree
 	// Set modified
 	//
 
-	/*!
-	 * @brief Set all nodes down to and including 'min_depth' to modified state.
-	 *
-	 * @param min_depth The minimum depth to set nodes to the modified state.
-	 */
-	void setModified(depth_t min_depth = 0)
+	void setModifiedUnsafe(Index node)
 	{
-		if (rootDepth() >= min_depth) {
-			setModified(rootIndex(), rootOffset(), rootDepth(), min_depth);
+		modified_[node.index][node.offset] = true;
+		if (isParentUnsafe(node)) {
+			setModifiedUnsafeRecurs(children(node));
 		}
 	}
 
 	/*!
-	 * @brief Set a node and all its children down to and including 'min_depth' to the
-	 * modified state. This will also set the parents of the node to the modified state.
+	 * @brief Set all nodes to modified state.
+	 */
+	void setModified() { setModified(rootCode()); }
+
+	/*!
+	 * @brief Set a node and all its children to the modified state. This will also set the
+	 * parents of the node to the modified state.
 	 *
 	 * @param node The node.
-	 * @param min_depth The minimum depth to set nodes to the modified state.
 	 */
-	void setModified(Node node, depth_t min_depth = 0)
-	{
-		if (rootDepth() < min_depth) {
-			return;
-		}
-
-		if (node.depth() < min_depth) {
-			setParentsModified(node.code().toDepth(min_depth - 1));
-		} else {
-			auto index = create(node);
-			if (noneModified(index.index)) {
-				setParentsModified(node.code());
-			}
-			setModified(index, node.depth(), min_depth);
-		}
-	}
+	void setModified(Node node) { setModifiedUnsafe(create(node)); }
 
 	/*!
-	 * @brief Set a node, corresponding to a code, and all its children down to and
-	 * including 'min_depth' to the modified state. This will also set the parents of the
-	 * node to the modified state.
+	 * @brief Set a node, corresponding to a code, and all its children to the modified
+	 * state. This will also set the parents of the node to the modified state.
 	 *
 	 * @param code The code of the node.
-	 * @param min_depth The minimum depth to set nodes to the modified state.
 	 */
-	void setModified(Code code, depth_t min_depth = 0)
-	{
-		if (rootDepth() < min_depth) {
-			return;
-		}
-
-		if (code.depth() < min_depth) {
-			setParentsModified(code.toDepth(min_depth - 1));
-		} else {
-			Index index = create(code);
-			if (noneModified(index.index)) {
-				setParentsModified(code);
-			}
-			setModified(index, code.depth(), min_depth);
-		}
-	}
+	void setModified(Code code) { setModifiedUnsafe(create(code)); }
 
 	/*!
-	 * @brief Set a node, corresponding to a key, and all its children down to and including
-	 * 'min_depth' to the modified state. This will also set the parents of the node to the
-	 * modified state.
+	 * @brief Set a node, corresponding to a key, and all its children to the modified
+	 * state. This will also set the parents of the node to the modified state.
 	 *
 	 * @param key The key of the node.
-	 * @param min_depth The minimum depth to set nodes to the modified state.
 	 */
-	void setModified(Key key, depth_t min_depth = 0)
-	{
-		setModified(toCode(key), min_depth);
-	}
+	void setModified(Key key) { setModified(toCode(key)); }
 
 	/*!
 	 * @brief Set a node, corresponding to a coordinate and a specified depth, and all its
-	 * children down to and including 'min_depth' to the modified state. This will also set
-	 * the parents of the node to the modified state.
+	 * children to the modified state. This will also set the parents of the node to the
+	 * modified state.
 	 *
 	 * @param coord The coordinate of the node.
-	 * @param min_depth The minimum depth to set nodes to the modified state.
 	 * @param depth The depth of the node.
 	 */
-	void setModified(Point coord, depth_t min_depth = 0, depth_t depth = 0)
-	{
-		setModified(toCode(coord, depth), min_depth);
-	}
+	void setModified(Point coord, depth_t depth = 0) { setModified(toCode(coord, depth)); }
 
 	/*!
 	 * @brief Set a node, corresponding to a coordinate and a specified depth, and all its
-	 * children down to and including 'min_depth' to the modified state. This will also set
+	 * children to the modified state. This will also set
 	 * the parents of the node to the modified state.
 	 *
 	 * @param x,y,z The coordinate of the node.
-	 * @param min_depth The minimum depth to set nodes to the modified state.
 	 * @param depth The depth of the node.
 	 */
-	void setModified(coord_t x, coord_t y, coord_t z, depth_t min_depth = 0,
-	                 depth_t depth = 0)
+	void setModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0)
 	{
-		setModified(toCode(x, y, z, depth), min_depth);
+		setModified(toCode(x, y, z, depth));
 	}
 
-	//
-	// Set parents modified
-	//
-
-	void setParentsModified(depth_t min_depth = 0)
+	void setChildrenModified()
 	{
 		// TODO: Implement
+		// TODO: Change above so children are not set to modified
 	}
 
 	//
 	// Reset modified
 	//
 
+	void resetModifiedUnsafe(Index node)
+	{
+		if (isModifiedUnsafe(node) && isParentUnsafe(node)) {
+			resetModifiedUnsafeRecurs(children(node));
+			modified_[node.index][node.offset] = false;
+		}
+	}
+
 	/*!
-	 * @brief Reset all nodes up to and including 'max_depth' from modified state.
+	 * @brief Reset all nodes from the modified state.
+	 *
+	 * @note Only use this if you know what you are doing or if you do *not* plan to query
+	 * for information in the octree. This function does not propagate information up the
+	 * tree, hence queries will not function as expected. If you want to make queries then
+	 * you should use 'propagateModified' instead.
+	 */
+	void resetModified() { resetModified(rootCode()); }
+
+	/*!
+	 * @brief Reset a node and its children from the modified state.
 	 *
 	 * @note Only use this if you know what you are doing or if you do *not* plan to query
 	 * for information in the octree. This function does not propagate information up the
 	 * tree, hence queries will not function as expected. If you want to make queries then
 	 * you should use 'propagateModified' instead.
 	 *
-	 * @param max_depth The maximum depth to reset nodes from the modified state.
+	 * @param node The node.
 	 */
-	void resetModified(depth_t max_depth = maxDepthLevels())
+	void resetModified(Node node)
 	{
-		resetModified(rootIndex(), rootOffset(), rootDepth(), max_depth);
+		// TODO: Implement
 	}
 
 	/*!
-	 * @brief Reset a node and its children up to and including 'max_depth' from modified
+	 * @brief Reset a node, corresponding to a code, and its children from the modified
 	 * state.
 	 *
 	 * @note Only use this if you know what you are doing or if you do *not* plan to query
@@ -704,34 +758,16 @@ class Octree
 	 * tree, hence queries will not function as expected. If you want to make queries then
 	 * you should use 'propagateModified' instead.
 	 *
-	 * @param node The node.
-	 * @param max_depth The maximum depth to reset nodes from the modified state.
-	 */
-	void resetModified(Node node, depth_t max_depth = maxDepthLevels())
-	{
-		resetModified(create(node), node.depth(), max_depth);
-	}
-
-	/*!
-	 * @brief Reset a node, corresponding to a code, and its children up to and including
-	 * 'max_depth' from modified state.
-	 *
-	 * @note Only use this if you know what you are doing or if you do *not* plan to query
-	 * for information in the octree. This function does not propagate information up the
-	 * tree, hence queries will not function as expected. If you want to make queries then
-	 * you should use 'propagateModified' instead.
-	 *
 	 * @param code The code of the node.
-	 * @param max_depth The maximum depth to reset nodes from the modified state.
 	 */
-	void resetModified(Code code, depth_t max_depth = maxDepthLevels())
+	void resetModified(Code code)
 	{
-		resetModified(create(code), code.depth(), max_depth);
+		// TODO: Implement
 	}
 
 	/*!
-	 * @brief Reset a node, corresponding to a key, and its children up to and including
-	 * 'max_depth' from modified state.
+	 * @brief Reset a node, corresponding to a key, and its children from the modified
+	 * state.
 	 *
 	 * @note Only use this if you know what you are doing or if you do *not* plan to query
 	 * for information in the octree. This function does not propagate information up the
@@ -739,16 +775,12 @@ class Octree
 	 * you should use 'propagateModified' instead.
 	 *
 	 * @param key The key of the node.
-	 * @param max_depth The maximum depth to reset nodes from the modified state.
 	 */
-	void resetModified(Key key, depth_t max_depth = maxDepthLevels())
-	{
-		resetModified(toCode(key), max_depth);
-	}
+	void resetModified(Key Key) { resetModified(toCode(key)); }
 
 	/*!
 	 * @brief Reset a node, corresponding to a coordinate and a specified depth, and its
-	 * children up to and including 'max_depth' from modified state.
+	 * children from the modified state.
 	 *
 	 * @note Only use this if you know what you are doing or if you do *not* plan to query
 	 * for information in the octree. This function does not propagate information up the
@@ -756,17 +788,16 @@ class Octree
 	 * you should use 'propagateModified' instead.
 	 *
 	 * @param coord The coordinate of the node.
-	 * @param max_depth The maximum depth to reset nodes from the modified state.
 	 * @param depth The depth of the node.
 	 */
-	void resetModified(Point coord, depth_t max_depth = maxDepthLevels(), depth_t depth = 0)
+	void resetModified(Point coord depth_t depth = 0)
 	{
-		resetModified(toCode(coord, depth), max_depth);
+		resetModified(toCode(coord, depth));
 	}
 
 	/*!
 	 * @brief Reset a node, corresponding to a coordinate and a specified depth, and its
-	 * children up to and including 'max_depth' from modified state.
+	 * children from the modified state.
 	 *
 	 * @note Only use this if you know what you are doing or if you do *not* plan to query
 	 * for information in the octree. This function does not propagate information up the
@@ -774,100 +805,124 @@ class Octree
 	 * you should use 'propagateModified' instead.
 	 *
 	 * @param x,y,z The coordinate of the node.
-	 * @param max_depth The maximum depth to reset nodes from the modified state.
 	 * @param depth The depth of the node.
 	 */
-	void resetModified(coord_t x, coord_t y, coord_t z,
-	                   depth_t max_depth = maxDepthLevels(), depth_t depth = 0)
+	void resetModified(coord_t x, coord_t y, coord_t z, depth_t depth = 0)
 	{
-		resetModified(toCode(x, y, z, depth), max_depth);
+		resetModified(toCode(x, y, z, depth));
 	}
 
 	//
 	// Propagate
 	//
 
-	/*!
-	 * @brief Propagate modified information up the octree to and including 'max_depth'.
-	 *
-	 * @param keep_modified Whether propagated node's modified state should be reset.
-	 * @param max_depth The maximum depth to propagate information.
-	 */
-	void propagateModified(bool keep_modified = false, depth_t max_depth = maxDepthLevels())
+	void propagateModifiedUnsafe(Index node, bool keep_modified = false, bool prune = false)
 	{
-		propagateModified(rootIndex(), rootOffset(), rootDepth(), keep_modified, max_depth);
+		if (!isModifiedUnsafe(node)) {
+			return;
+		}
+
+		if (isParent(node)) {
+			if (keep_modified) {
+				if (prune) {
+					propagateModifiedUnsafeRecurs<true, true>(children(index));
+				} else {
+					propagateModifiedUnsafeRecurs<true, false>(children(index));
+				}
+			} else {
+				if (prune) {
+					propagateModifiedUnsafeRecurs<false, true>(children(index));
+				} else {
+					propagateModifiedUnsafeRecurs<false, false>(children(index));
+				}
+			}
+			if (prune) {
+				updateNode<true>(index);
+			} else {
+				updateNode<false>(index);
+			}
+		}
+
+		modified_[node.index][node.offset] = keep_modified;
 	}
 
 	/*!
-	 * @brief Propagate a node's children modified information up to and including
-	 * 'max_depth'.
+	 * @brief Propagate modified information up the octree.
+	 *
+	 * @param keep_modified Whether propagated node's modified state should be reset.
+	 * @param prune Whether the tree should be pruned also.
+	 */
+	void propagateModified(bool keep_modified = false, bool prune = false)
+	{
+		propagateModifiedUnsafe(rootIndex(), keep_modified, prune);
+	}
+
+	/*!
+	 * @brief Propagate a node's children modified information up the octree.
 	 *
 	 * @param node The node.
 	 * @param keep_modified Whether propagated node's modified state should be reset.
-	 * @param max_depth The maximum depth to propagate information.
+	 * @param prune Whether the tree should be pruned also.
 	 */
-	void propagateModified(Node node, bool keep_modified = false,
-	                       depth_t max_depth = maxDepthLevels())
+	void propagateModified(Node node, bool keep_modified = false, bool prune = false)
 	{
-		propagateModified(index(node), node.depth(), keep_modified, max_depth);
+		propagateModifiedUnsafe(index(node), keep_modified, prune);
 	}
 
 	/*!
 	 * @brief Propagate a node's, corresponding to a code, children modified information up
-	 * to and including 'max_depth'.
+	 * the octree.
 	 *
 	 * @param code The code of the node.
 	 * @param keep_modified Whether propagated node's modified state should be reset.
-	 * @param max_depth The maximum depth to propagate information.
+	 * @param prune Whether the tree should be pruned also.
 	 */
-	void propagateModified(Code code, bool keep_modified = false,
-	                       depth_t max_depth = maxDepthLevels())
+	void propagateModified(Code code, bool keep_modified = false, bool prune = false)
 	{
-		propagateModified(index(code), code.depth(), keep_modified, max_depth);
+		propagateModifiedUnsafe(index(code), keep_modified, prune);
 	}
 
 	/*!
 	 * @brief Propagate a node's, corresponding to a key, children modified information up
-	 * to and including 'max_depth'.
+	 * the octree.
 	 *
 	 * @param key The key of the node.
 	 * @param keep_modified Whether propagated node's modified state should be reset.
-	 * @param max_depth The maximum depth to propagate information.
+	 * @param prune Whether the tree should be pruned also.
 	 */
-	void propagateModified(Key key, bool keep_modified = false,
-	                       depth_t max_depth = maxDepthLevels())
+	void propagateModified(Key key, bool keep_modified = false, bool prune = false)
 	{
-		propagateModified(toCode(key), keep_modified, max_depth);
+		propagateModified(toCode(key), keep_modified, prune);
 	}
 
 	/*!
 	 * @brief Propagate a node's, corresponding to a coordinate and a specified depth,
-	 * children modified information up to and including 'max_depth'.
+	 * children modified information up the octree.
 	 *
 	 * @param coord The coordinate of the node.
 	 * @param keep_modified Whether propagated node's modified state should be reset.
-	 * @param max_depth The maximum depth to propagate information.
+	 * @param prune Whether the tree should be pruned also.
 	 * @param depth The depth of the node.
 	 */
-	void propagateModified(Point coord, bool keep_modified = false,
-	                       depth_t max_depth = maxDepthLevels(), depth_t depth = 0)
+	void propagateModified(Point coord, bool keep_modified = false, bool prune = false,
+	                       depth_t depth = 0)
 	{
-		propagateModified(toCode(coord, depth), depth, keep_modified, max_depth);
+		propagateModified(toCode(coord, depth), keep_modified, prune);
 	}
 
 	/*!
 	 * @brief Propagate a node's, corresponding to a coordinate and a specified depth,
-	 * children modified information up to and including 'max_depth'.
+	 * children modified information up the octree.
 	 *
 	 * @param x,y,z The coordinate of the node.
 	 * @param keep_modified Whether propagated node's modified state should be reset.
-	 * @param max_depth The maximum depth to propagate information.
+	 * @param prune Whether the tree should be pruned also.
 	 * @param depth The depth of the node.
 	 */
 	void propagateModified(coord_t x, coord_t y, coord_t z, bool keep_modified = false,
-	                       depth_t max_depth = maxDepthLevels(), depth_t depth = 0)
+	                       bool prune = false, depth_t depth = 0)
 	{
-		propagateModified(toCode(x, y, z, depth), keep_modified, max_depth);
+		propagateModified(toCode(x, y, z, depth), keep_modified, prune);
 	}
 
 	/**************************************************************************************
@@ -879,6 +934,9 @@ class Octree
 	//
 	// Is
 	//
+
+	// TODO: Add comment
+	[[nodiscard]] bool isRoot(Index node) const { return rootIndex() == node; }
 
 	/*!
 	 * @brief Check if a node is the root node.
@@ -935,39 +993,38 @@ class Octree
 	//
 
 	/*!
+	 * @brief Get the root node index.
+	 *
+	 * @return The root node index.
+	 */
+	[[nodiscard]] constexpr Index rootIndex() const noexcept { return Index(0, 0); }
+
+	/*!
 	 * @brief Get the root node.
 	 *
 	 * @return The root node.
 	 */
-	[[nodiscard]] constexpr Node rootNode() const { return Node(rootIndex(), rootCode()); }
+	[[nodiscard]] constexpr Node rootNode() const noexcept
+	{
+		return Node(rootIndex(), rootCode());
+	}
 
 	/*!
 	 * @brief Get the root node with bounding volume.
 	 *
 	 * @return The root node with bounding volume.
 	 */
-	[[nodiscard]] constexpr NodeBV rootNodeBV() const
+	[[nodiscard]] constexpr NodeBV rootNodeBV() const noexcept
 	{
 		return NodeBV(rootNode(), rootBoundingVolume());
 	}
-
-	//
-	// Code
-	//
 
 	/*!
 	 * @brief Get the code for the root node.
 	 *
 	 * @return The root node code.
 	 */
-	[[nodiscard]] constexpr Code rootCode() const
-	{
-		return Code(rootIndex() << 3 * rootDepth(), rootDepth());
-	}
-
-	//
-	// Depth
-	//
+	[[nodiscard]] constexpr Code rootCode() const noexcept { return Code(0, rootDepth()); }
 
 	/*!
 	 * @brief Get the depth of the root node.
@@ -1046,15 +1103,15 @@ class Octree
 	 * @param node The node.
 	 * @return The center of the node.
 	 */
-	template <class NodeType>
-	[[nodiscard]] Point center(NodeType const& node) const
-	{
-		if constexpr (std::is_same_v<NodeBV, NodeType>) {
-			return node.center();
-		} else {
-			return toCoord(node.code());
-		}
-	}
+	[[nodiscard]] Point center(Node node) const { return toCoord(node.code()); }
+
+	/*!
+	 * @brief The center of a node.
+	 *
+	 * @param node The node.
+	 * @return The center of the node.
+	 */
+	[[nodiscard]] Point center(NodeBV const& node) const { return node.center(); }
 
 	//
 	// Bounding volume
@@ -1066,20 +1123,31 @@ class Octree
 	 * @param node The node
 	 * @return Bounding volume for the node.
 	 */
-	template <class NodeType>
-	[[nodiscard]] geometry::AAEBB boundingVolume(NodeType const& node) const
+	[[nodiscard]] geometry::AAEBB boundingVolume(Node node) const
 	{
-		if constexpr (std::is_same_v<NodeBV, NodeType>) {
-			return node.boundingVolume();
+		return geometry::AAEBB(center(node), size(node) / 2);
+	}
 
-		} else {
-			return geometry::AAEBB(center(node), size(node) / 2);
-		}
+	/*!
+	 * @brief Bounding volume for a node.
+	 *
+	 * @param node The node
+	 * @return Bounding volume for the node.
+	 */
+	[[nodiscard]] geometry::AAEBB boundingVolume(NodeBV const& node) const
+	{
+		return node.boundingVolume();
 	}
 
 	//
 	// At
 	//
+
+	[[nodiscard]] std::optional<Node> at(Index node) const
+	{
+		return children_.size() > node.index ? std::optional<Node>(operator()(node))
+		                                     : std::nullopt;
+	}
 
 	/*!
 	 * @brief Get the node corresponding to a code with bounds checking.
@@ -1164,11 +1232,15 @@ class Octree
 	// Function call operator
 	//
 
+	[[nodiscard]] Node operator()(Index index) const
+	{
+		return Node(index.index, parent_code_[index.index].child(index.offset));
+	}
+
 	// TODO: Add comment
 	[[nodiscard]] Node operator()(Node node) const
 	{
-		auto [index, _] = indexAndOffset(node);
-		return Node(index, node.code());
+		return Node(index(node).index, node.code());
 	}
 
 	/*!
@@ -1184,11 +1256,7 @@ class Octree
 	 * @param code The code.
 	 * @return The node.
 	 */
-	[[nodiscard]] Node operator()(Code code) const
-	{
-		auto [index, _] = indexAndOffset(code);
-		return Node(index, code);
-	}
+	[[nodiscard]] Node operator()(Code code) const { return Node(index(code).index, code); }
 
 	/*!
 	 * @brief Get the node corresponding to a key.
@@ -1281,8 +1349,24 @@ class Octree
 	 * @param sibling_index The index of the sibling.
 	 * @return The sibling.
 	 */
-	template <class Node>
-	[[nodiscard]] Node siblingChecked(Node const& node, index_t sibling_index) const
+	[[nodiscard]] Node siblingChecked(Node node, index_t sibling_index) const
+	{
+		if (!isRoot(node)) {
+			throw std::out_of_range("Node has no siblings");
+		} else if (7 < sibling_index) {
+			throw std::out_of_range("sibling_index out of range");
+		}
+		return sibling(node, sibling_index);
+	}
+
+	/*!
+	 * @brief Get the sibling of a node with bounds checking.
+	 *
+	 * @param node The node.
+	 * @param sibling_index The index of the sibling.
+	 * @return The sibling.
+	 */
+	[[nodiscard]] NodeBV siblingChecked(NodeBV node, index_t sibling_index) const
 	{
 		if (!isRoot(node)) {
 			throw std::out_of_range("Node has no siblings");
@@ -1332,15 +1416,33 @@ class Octree
 	 * @param child_index The index of the child.
 	 * @return The child.
 	 */
-	template <class Node>
-	[[nodiscard]] Node childChecked(Node const& node, index_t child_index) const
+	[[nodiscard]] Node childChecked(Node node, index_t child_index) const
 	{
-		if (!isParent(node)) {
+		if (isLeaf(node)) {
 			throw std::out_of_range("Node has no children");
 		} else if (7 < child_index) {
 			throw std::out_of_range("child_index out of range");
+		} else {
+			return child(node, child_index);
 		}
-		return child(node, child_index);
+	}
+
+	/*!
+	 * @brief Get a child of a node with bounds checking.
+	 *
+	 * @param node The node.
+	 * @param child_index The index of the child.
+	 * @return The child.
+	 */
+	[[nodiscard]] NodeBV childChecked(NodeBV const& node, index_t child_index) const
+	{
+		if (isLeaf(node)) {
+			throw std::out_of_range("Node has no children");
+		} else if (7 < child_index) {
+			throw std::out_of_range("child_index out of range");
+		} else {
+			return child(node, child_index);
+		}
 	}
 
 	//
@@ -1377,8 +1479,21 @@ class Octree
 	 * @param node The node.
 	 * @return The parent.
 	 */
-	template <class Node>
-	[[nodiscard]] Node parentChecked(Node const& node) const
+	[[nodiscard]] Node parentChecked(Node node) const
+	{
+		if (rootDepth() <= node.depth()) {
+			throw std::out_of_range("Node has no parent");
+		}
+		return parent(node);
+	}
+
+	/*!
+	 * @brief Get the parent of a node with bounds checking.
+	 *
+	 * @param node The node.
+	 * @return The parent.
+	 */
+	[[nodiscard]] NodeBV parentChecked(NodeBV const& node) const
 	{
 		if (rootDepth() <= node.depth()) {
 			throw std::out_of_range("Node has no parent");
@@ -1400,6 +1515,14 @@ class Octree
 	{
 		return NodeBV(node, boundingVolume(node));
 	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Index                                        |
+	|                                                                                     |
+	**************************************************************************************/
+
+	// TODO: Implement
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -2576,7 +2699,8 @@ class Octree
 	|                                                                                     |
 	**************************************************************************************/
 
-	void read(std::filesystem::path const& path, mt_t map_types = 0, bool propagate = true)
+	void read(std::filesystem::path const& path, mt_t map_types = MapType::NONE,
+	          bool propagate = true)
 	{
 		std::ifstream file;
 		file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -2809,7 +2933,7 @@ class Octree
 	 */
 	[[nodiscard]] std::size_t numNodes() const
 	{
-		return 8 * (indices_.size() - free_indices_.size());
+		return 8 * (children_.size() - free_children_.size());
 	}
 
 	/*!
@@ -2821,7 +2945,7 @@ class Octree
 	 */
 	[[nodiscard]] static constexpr std::size_t memoryNode() const
 	{
-		return derived().memoryNodeBlock() / 8;
+		return derived().memoryNodeBlock() / std::size_t{8};
 	}
 
 	/*!
@@ -2836,7 +2960,7 @@ class Octree
 	/*!
 	 * @return Number of allocated nodes.
 	 */
-	[[nodiscard]] std::size_t numNodesAllocated() const { return 8 * indices_.size(); }
+	[[nodiscard]] std::size_t numNodesAllocated() const { return 8 * children_.size(); }
 
 	/*!
 	 * @brief Lower bound memory usage for all allocated nodes.
@@ -2859,7 +2983,7 @@ class Octree
 
 	// TODO: Add comments
 
-	Octree(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16)
+	Octree(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 17)
 
 	{
 		setNodeSizeAndDepthLevels(leaf_node_size, depth_levels);
@@ -2879,9 +3003,9 @@ class Octree
 	Octree(Octree&& other)
 	    : depth_levels_(std::move(other.depth_levels_)),
 	      max_value_(std::move(other.max_value_)),
-	      indices_(std::move(other.indices_)),
-	      free_indices_(std::move(other.free_indices_)),
-	      codes_(std::move(other.codes_)),
+	      children_(std::move(other.children_)),
+	      free_children_(std::move(other.free_children_)),
+	      parent_code_(std::move(other.parent_code_)),
 	      modified_(std::move(other.modified_)),
 	      node_size_(std::move(other.node_size_)),
 	      node_size_factor_(std::move(other.node_size_factor_))
@@ -2893,9 +3017,9 @@ class Octree
 	Octree(Octree<Derived2, Data2, InnerData2> const& other)
 	    : depth_levels_(other.depth_levels_),
 	      max_value_(other.max_value_),
-	      indices_(other.indices_),
-	      free_indices_(other.free_indices_),
-	      codes_(other.codes_),
+	      children_(other.children_),
+	      free_children_(other.free_children_),
+	      parent_code_(other.parent_code_),
 	      modified_(other.modified_),
 	      node_size_(other.node_size_),
 	      node_size_factor_(other.node_size_factor_)
@@ -2942,9 +3066,9 @@ class Octree
 
 		depth_levels_ = std::move(rhs.depth_levels_);
 		max_value_ = std::move(rhs.max_value_);
-		indices_ = std::move(rhs.indices_);
-		free_indices_ = std::move(rhs.free_indices_);
-		codes_ = std::move(rhs.codes_);
+		children_ = std::move(rhs.children_);
+		free_children_ = std::move(rhs.free_children_);
+		parent_code_ = std::move(rhs.parent_code_);
 		modified_ = std::move(rhs.modified_);
 		node_size_ = std::move(rhs.node_size_);
 		node_size_factor_ = std::move(rhs.node_size_factor_);
@@ -2959,9 +3083,9 @@ class Octree
 
 		depth_levels_ = rhs.depth_levels_;
 		max_value_ = rhs.max_value_;
-		indices_ = rhs.indices_;
-		free_indices_ = rhs.free_indices_;
-		codes_ = rhs.codes_;
+		children_ = rhs.children_;
+		free_children_ = rhs.free_children_;
+		parent_code_ = rhs.parent_code_;
 		modified_ = rhs.modified_;
 		node_size_ = rhs.node_size_;
 		node_size_factor_ = rhs.node_size_factor_;
@@ -2978,9 +3102,9 @@ class Octree
 	{
 		std::swap(depth_levels_, other.depth_levels_);
 		std::swap(max_value_, other.max_value_);
-		std::swap(indices_, rhs.indices_);
-		std::swap(free_indices_, rhs.free_indices_);
-		std::swap(codes_, rhs.codes_);
+		std::swap(children_, rhs.children_);
+		std::swap(free_children_, rhs.free_children_);
+		std::swap(parent_code_, rhs.parent_code_);
 		std::swap(modified_, rhs.modified_);
 		std::swap(node_size_, other.node_size_);
 		std::swap(node_size_factor_, other.node_size_factor_);
@@ -3042,26 +3166,17 @@ class Octree
 	 */
 	void initRoot()
 	{
-		modified_[rootIndex().index].reset();
-		codes_[rootIndex().index] = rootCode().parent();  // TODO: Not really correct...
+		auto node = rootIndex();
+		modified_[node.index].reset();
+		parent_code_[node.index] = rootCode().parent();  // TODO: Not really correct...
 	}
-
-	/*!
-	 * @brief Get the root node index.
-	 *
-	 * @return The root node index.
-	 */
-	[[nodiscard]] constexpr index_t rootIndex() const noexcept { return {0, 0}; }
 
 	/*!
 	 * @brief Get the root node's index field.
 	 *
 	 * @return The root node's index field.
 	 */
-	[[nodiscard]] constexpr IndexField rootIndexField() const noexcept
-	{
-		return IndexField(1);
-	}
+	[[nodiscard]] constexpr BitSet rootBitSet() const noexcept { return BitSet(1); }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -3069,21 +3184,22 @@ class Octree
 	|                                                                                     |
 	**************************************************************************************/
 
-	void fill(index_t index, Index parent_index)
+	void fill(Index node, index_t children)
 	{
-		codes_[index] = codes_[parent_index.index].child(parent_index.offset);
-		if (isModified(parent_index)) {
-			modified_[index].set();
+		parent_code_[children] = parent_code_[node.index].child(node.offset);
+		if (isModified(node)) {
+			modified_[children].set();
 		} else {
-			modified_[index].reset();
+			modified_[children].reset();
 		}
-		derived().fill(index, parent_index);
+		derived().fill(node, children);
 	}
 
-	void clear(index_t index)
+	void clear(index_t nodes)
 	{
+		parent_code_[nodes] = Code(0, -1);  // TODO: What should this be?
 		// TODO: Implement
-		derived().clear(index);
+		derived().clear(nodes);
 	}
 
 	/**************************************************************************************
@@ -3231,9 +3347,8 @@ class Octree
 	**************************************************************************************/
 
 	// TODO: Add comment
-
-	template <class NodeType, class UnaryFunction>
-	void traverseRecurs(NodeType const& node, UnaryFunction f) const
+	template <class NodeType>
+	void traverseRecurs(NodeType const& node, std::invocable<NodeType> auto f) const
 	{
 		if (f(node) || isLeaf(node)) {
 			return;
@@ -3247,8 +3362,10 @@ class Octree
 		}
 	}
 
-	template <class Geometry, class UnaryFunction>
-	void traverseNearestRecurs(NodeBV const& node, Geometry const& g, UnaryFunction f) const
+	// TODO: Add comment
+	template <class Geometry>
+	void traverseNearestRecurs(NodeBV const& node, Geometry const& g,
+	                           std::invocable<NodeBV> auto f) const
 	{
 		// TODO: Implement
 	}
@@ -3287,7 +3404,7 @@ class Octree
 	[[nodiscard]] constexpr std::optional<key_t> toKeyChecked(coord_t coord,
 	                                                          depth_t depth = 0) const
 	{
-		auto min = -size(rootDepth() - 1);
+		auto min = -size(rootDepth()) / 2;
 		auto max = -min;
 		return min <= coord && max >= coord ? std::optional<key_t>(toKey(coord, depth))
 		                                    : std::nullopt;
@@ -3328,18 +3445,20 @@ class Octree
 	// Correct
 	//
 
+	// TODO: Add comment
 	[[nodiscard]] bool isCorrect(Node node) const
 	{
-		return codes_[node.data()] == node.code().parent();
+		return parent_code_[node.index()] == node.code().parent();
 	}
 
 	//
 	// Valid
 	//
 
+	// TODO: Add comment
 	[[nodiscard]] bool isValid(Node node) const
 	{
-		Code rel_code = codes_[node.data()];
+		Code rel_code = parent_code_[node.index()];
 		Code code = node.code();
 
 		depth_t rel_depth = rel_code.depth();
@@ -3352,51 +3471,54 @@ class Octree
 	// Create
 	//
 
+	// TODO: Add comment
 	Index create(Node node)
 	{
-		if (!isCorrect(node)) {
+		if (isCorrect(node)) {
+			setModified(node);
+			return {node.index(), node.offset()};
+		} else {
 			return create(node.code());
 		}
-
-		Index idx = node.index();
-		if (noneModified(idx)) {
-			setParentsModified(node.code());
-		}
-		return idx;
 	}
 
+	// TODO: Add comment
 	Index create(Code code)
 	{
-		Index idx = rootIndex();
-		for (depth_t d = rootDepth(), min_d = code.depth() + 1; min_d < d;) {
-			createChildren(idx);
-			setModified(idx);
-			idx = child(idx, code.offset(--d));
+		Index node = rootIndex();
+		for (depth_t d{rootDepth()}, min_d{code.depth() + 1}; min_d < d;) {
+			createChildren(node);
+			modified_[node.index][node.offset] = true;
+			node = child(node, code.offset(--d));
 		}
-		return idx;
+		modified_[node.index][node.offset] = true;
+		return node;
 	}
 
 	//
 	// Get node
 	//
 
+	// TODO: Add comment
 	[[nodiscard]] Index toIndex(Node node) const
 	{
 		if (!isValid(node)) {
 			return toIndex(node.code());
-		} else if (isCorrect(node) || isLeaf(node)) {
+		} else if (isCorrect(node) || isLeaf(Index{node.index(), node.offset()})) {
 			return {node.index(), node.offset()};
 		} else {
 			// TODO: Correct?
-			return toIndex(node.code(), node.index(), codes_[node.index()].depth());
+			return toIndex(node.code(), node.index(), parent_code_[node.index()].depth());
 		}
 	}
 
+	// TODO: Add comment
 	[[nodiscard]] Index toIndex(Code code) const
 	{
 		return toIndex(code, rootIndex(), rootDepth());
 	}
 
+	// TODO: Add comment
 	[[nodiscard]] Index toIndex(Code code, index_t index, depth_t depth) const
 	{
 		offset_t offset = code.index(depth);
@@ -3415,15 +3537,14 @@ class Octree
 	// Get children
 	//
 
-	[[nodiscard]] index_t child(Index index) const
+	// TODO: Add comment
+	[[nodiscard]] index_t children(Index node) const
 	{
-		return indices_[index.index][index.offset];
+		return children_[node.index][node.offset];
 	}
 
-	[[nodiscard]] Index child(Index index, offset_t offset) const
-	{
-		return {child(index), offset};
-	}
+	// TODO: Add comment
+	[[nodiscard]] Index child(Index node, offset_t c) const { return {children(node), c}; }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -3431,19 +3552,18 @@ class Octree
 	|                                                                                     |
 	**************************************************************************************/
 
-	// TODO: Add comments
-
 	//
 	// Child center
 	//
 
+	// TODO: Add comment
 	[[nodiscard]] static constexpr Point childCenter(Point parent_center,
 	                                                 node_size_t child_half_size,
-	                                                 index_t child_index)
+	                                                 offset_t child)
 	{
-		parent_center[0] += child_index & index_t(1) ? child_half_size : -child_half_size;
-		parent_center[1] += child_index & index_t(2) ? child_half_size : -child_half_size;
-		parent_center[2] += child_index & index_t(4) ? child_half_size : -child_half_size;
+		parent_center[0] += child & offset_t(1) ? child_half_size : -child_half_size;
+		parent_center[1] += child & offset_t(2) ? child_half_size : -child_half_size;
+		parent_center[2] += child & offset_t(4) ? child_half_size : -child_half_size;
 		return parent_center;
 	}
 
@@ -3451,20 +3571,16 @@ class Octree
 	// Sibling center
 	//
 
+	// TODO: Add comment
 	[[nodiscard]] static constexpr Point siblingCenter(Point center, node_size_t half_size,
-	                                                   index_t index, index_t sibling_index)
+	                                                   offset_t index,
+	                                                   offset_t sibling_index)
 	{
-		index_t const temp = index ^ sibling_index;
+		offset_t const temp = index ^ sibling_index;
 		node_size_t const size = 2 * half_size;
-		if (temp & index_t(1)) {
-			center[0] += sibling_index & index_t(1) ? size : -size;
-		}
-		if (temp & index_t(2)) {
-			center[1] += sibling_index & index_t(2) ? size : -size;
-		}
-		if (temp & index_t(4)) {
-			center[2] += sibling_index & index_t(4) ? size : -size;
-		}
+		center[0] += temp & offset_t(1) ? (sibling_index & offset_t(1) ? size : -size) : 0;
+		center[1] += temp & offset_t(2) ? (sibling_index & offset_t(2) ? size : -size) : 0;
+		center[2] += temp & offset_t(4) ? (sibling_index & offset_t(4) ? size : -size) : 0;
 		return center;
 	}
 
@@ -3472,13 +3588,14 @@ class Octree
 	// Parent center
 	//
 
+	// TODO: Add comment
 	[[nodiscard]] static constexpr Point parentCenter(Point child_center,
 	                                                  node_size_t child_half_size,
-	                                                  index_t child_index)
+	                                                  offset_t child_index)
 	{
-		child_center[0] -= child_index & index_t(1) ? child_half_size : -child_half_size;
-		child_center[1] -= child_index & index_t(2) ? child_half_size : -child_half_size;
-		child_center[2] -= child_index & index_t(4) ? child_half_size : -child_half_size;
+		child_center[0] -= child_index & offset_t(1) ? child_half_size : -child_half_size;
+		child_center[1] -= child_index & offset_t(2) ? child_half_size : -child_half_size;
+		child_center[2] -= child_index & offset_t(4) ? child_half_size : -child_half_size;
 		return child_center;
 	}
 
@@ -3488,7 +3605,32 @@ class Octree
 	|                                                                                     |
 	**************************************************************************************/
 
-	// TODO: Implement
+	// TODO: Add comment
+	[[nodiscard]] bool allLeaf(index_t pos) const
+	{
+		return all_of(children_[pos], [](auto e) { return NULL_INDEX == e; });
+	}
+
+	// TODO: Add comment
+	[[nodiscard]] bool anyLeaf(index_t pos) const
+	{
+		return any_of(children_[pos], [](auto e) { return NULL_INDEX == e; });
+	}
+
+	// TODO: Add comment
+	[[nodiscard]] bool noneLeaf(index_t pos) const
+	{
+		return none_of(children_[pos], [](auto e) { return NULL_INDEX == e; });
+	}
+
+	// TODO: Add comment
+	[[nodiscard]] bool allParent(index_t pos) const { return noneLeaf(pos); }
+
+	// TODO: Add comment
+	[[nodiscard]] bool anyParent(index_t pos) const { return !allLeaf(pos); }
+
+	// TODO: Add comment
+	[[nodiscard]] bool noneParent(index_t pos) const { return allLeaf(pos); }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -3498,34 +3640,41 @@ class Octree
 
 	// TODO: Implement
 
+	// TODO: Add comment
+	[[nodiscard]] bool allModified(index_t pos) const { return modified_[pos].all(); }
+
+	// TODO: Add comment
+	[[nodiscard]] bool anyModified(index_t pos) const { return modified_[pos].any(); }
+
+	// TODO: Add comment
+	[[nodiscard]] bool noneModified(index_t pos) const { return modified_[pos].none(); }
+
 	//
 	// Set modified
 	//
 
-	void setModified(Index idx) { modified_[idx.index][idx.offset] = true; }
-
-	void setModified(index_t index) { modified_[index].set(); }
-
-	void setModified(Index idx, depth_t depth, depth_t min_depth)
+	// TODO: Add comment
+	void setModifiedUnsafeRecurs(index_t nodes)
 	{
-		modified_[idx.index][idx.offset] = min_depth <= depth;
+		modified_[nodes].set();
 
-		if (min_depth < depth && !isLeaf(idx)) {
-			setModifiedRecurs(idx, depth - 1, min_depth);
-		}
-	}
+		// // FIXME: Make iterative
+		// for (offset_t i = 0; 8 != i; ++i) {
+		// 	Index node{nodes, i};
+		// 	if (isParentUnsafe(node)) {
+		// 		setModifiedUnsafeRecurs(children(node));
+		// 	}
+		// }
 
-	void setModifiedRecurs(Index idx, depth_t depth, depth_t min_depth)
-	{
-		index_t children_index = children(idx);
-		modified_[children_index].set();
-
-		if (min_depth < depth && !allLeaf(children_index)) {
-			for (offset_t i = 0; 8 != i; ++i) {
-				Index child_idx{children_index, i};
-				if (!isLeaf(child_idx)) {
-					setModifiedRecurs(child_idx, depth - 1, min_depth);
-				}
+		std::array<Index, MaxDepthLevels()> node;
+		node[0].index = nodes;
+		node[0].offset = 0;
+		for (int depth{}; 0 <= depth;) {
+			auto n = node[depth];
+			depth -= 7 < ++node[depth].offset;
+			if (isParent(n)) {
+				node[++depth] = child(n, 0);
+				modified_[node[depth]].set();
 			}
 		}
 	}
@@ -3534,33 +3683,31 @@ class Octree
 	// Reset modified
 	//
 
-	void resetModified(Index idx) { modified_[idx.index][idx.offset] = false; }
-
-	void resetModified(index_t index) { modified_[index].reset(); }
-
-	void resetModified(Index index, depth_t depth, depth_t max_depth)
+	// TODO: Add comment
+	void resetModifiedUnsafeRecurs(index_t nodes)
 	{
-		if (!isModified(index)) {
-			return;
-		}
+		// // FIXME: Make iterative
+		// for (offset_t i = 0; 8 != i; ++i) {
+		// 	Index node{nodes, i};
+		// 	if (isModified(node) && isModified(node)) {
+		// 		resetModifiedUnsafeRecurs(children(node));
+		// 	}
+		// }
 
-		if (!isLeaf(index)) {
-			resetModifiedRecurs(child(index), depth - 1, max_depth);
-		}
+		// modified_[nodes].reset();
 
-		modified_[index][offset] = max_depth < depth || anyModified(child(index));
-	}
-
-	void resetModifiedRecurs(index_t index, depth_t depth, depth_t max_depth)
-	{
-		for (offset_t i = 0; 8 != i; ++i) {
-			if (isModified(index, i) && !isLeaf(index, i)) {
-				resetModifiedRecurs(child(index, i), depth - 1, max_depth);
+		std::array<Index, MaxDepthLevels()> node;
+		node[0].index = nodes;
+		node[0].offset = 0;
+		for (int depth{}; 0 <= depth;) {
+			auto n = node[depth];
+			depth -= 7 < ++node[depth].offset;
+			if (isModified(n) && isParent(n)) {
+				node[++depth] = child(n, 0);
 			}
-		}
-
-		if (max_depth >= depth) {
-			modified_[index].reset();
+			if (7 == n.offset) {
+				modified_[n.index].reset();
+			}
 		}
 	}
 
@@ -3568,16 +3715,18 @@ class Octree
 	// Set parents modified
 	//
 
+	// TODO: Add comment
 	void setParentsModified(Code code)
 	{
 		setParentsModified(rootIndex(), rootDepth(), code);
 	}
 
-	void setParentsModified(Index idx, depth_t d, Code c)
+	// TODO: Add comment
+	void setParentsModified(Index node, depth_t d, Code c)
 	{
-		for (depth_t min_d = c.depth() + 1; min_d < d && !isLeaf(idx);) {
-			setModified(idx);
-			idx = child(idx, code.offset(--d))
+		for (depth_t min_d = c.depth() + 1; min_d < d && isParent(node);) {
+			modified_[node.index][node.offset] = true;
+			node = child(node, c.offset(--d));
 		}
 	}
 
@@ -3587,47 +3736,54 @@ class Octree
 	|                                                                                     |
 	**************************************************************************************/
 
-	// TODO: Add comments
-
-	void updateNode(Index index)
+	// TODO: Add comment
+	template <bool Prune>
+	void updateNode(Index node)
 	{
-		derived().updateNode(index, child(index));
-		prune(index);  // TODO: Should this be here?
+		derived().updateNode(node, children(node));
+		if constexpr (Prune) {
+			prune(node);  // TODO: Should this be here?
+		}
 	}
 
-	void propagateModified(Index index, bool keep_modified)
+	// TODO: Add comment
+	template <bool KeepModified, bool Prune>
+	void propagateModifiedUnsafeRecurs(index_t nodes)
 	{
-		if (!isModified(index)) {
-			return;
-		}
+		// // FIXME: Make iterative
+		// for (offset_t i = 0; 8 != i; ++i) {
+		// 	Index node{nodes, i};
+		// 	if (isModified(node) && isParent(node)) {
+		// 		propagateModifiedUnsafeRecurs<KeepModified>(children(node));
+		// 		updateNode<Prune>(node);
+		// 	}
+		// }
 
-		if (!isLeaf(index)) {
-			if (keep_modified) {
-				propagateModifiedRecurs<true>(child(index));
+		// if constexpr (!KeepModified) {
+		// 	modified_[nodes].reset();
+		// }
+
+		std::array<Index, MaxDepthLevels()> node;
+		node[0].index = nodes;
+		node[0].offset = 0;
+		for (int depth{}; 0 <= depth;) {
+			auto n = node[depth];
+			if (8 > n.offset) {
+				++node[depth].offset;
+				if (isModified(n) && isParent(n)) {
+					node[++depth] = child(n, 0);
+				}
 			} else {
-				propagateModifiedRecurs<false>(child(index));
-			}
-			updateNode(index);
-		}
-
-		modified_[index][offset] = keep_modified;
-	}
-
-	template <bool KeepModified>
-	void propagateModifiedRecurs(index_t index)
-	{
-		for (offset_t i = 0; 8 != i; ++i) {
-			if (!isModified(index, i)) {
-				continue;
-			}
-
-			if (!isLeaf(index, i)) {
-				propagateModifiedRecurs<KeepModified>(child(index, i));
-				updateNode(index, i);
-			}
-
-			if constexpr (!KeepModified) {
-				modified_[index].reset();
+				for (offset_t i{}; 8 != i; ++i) {
+					Index x{n.index, i};
+					if (isModified(x) && isParent(x)) {
+						updateNode<Prune>(x);
+					}
+				}
+				if constexpr (!KeepModified) {
+					modified_[n.index].reset();
+				}
+				--depth;
 			}
 		}
 	}
@@ -3638,17 +3794,14 @@ class Octree
 	|                                                                                     |
 	**************************************************************************************/
 
-	// TODO: Add comments
-
-	[[nodiscard]] bool isPrunable(Index index)
+	// TODO: Add comment
+	[[nodiscard]] bool isPrunable(Index node)
 	{
-		return isLeaf(index) || derived().isPrunable(child(index));
+		return isLeafUnsafe(node) || derived().isPrunable(children(node));
 	}
 
-	bool prune(Index index)
-	{
-		return isPrunable(index) ? deleteChildren(index), true : false;
-	}
+	// TODO: Add comment
+	bool prune(Index node) { return isPrunable(node) ? deleteChildren(node), true : false; }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -3660,82 +3813,69 @@ class Octree
 	// Create
 	//
 
+	// TODO: Add comment
 	index_t allocateNodeBlock()
 	{
-		index_t index = indices_.size();
-		indices_.emplace_back();
-		codes_.emplace_back();
+		children_.push_back({NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX, NULL_INDEX,
+		                     NULL_INDEX, NULL_INDEX, NULL_INDEX});
+		//  FIXME: Could init them here already if node is passed into function
+		parent_code_.emplace_back();
 		modified_.emplace_back();
 		derived().allocateNodeBlock();
-		return index;
+		return children_.size() - 1;
 	}
 
-	void allocateChildren(Index idx)
+	// TODO: Add comment
+	void allocateChildren(Index node)
 	{
-		if (!isLeaf(idx)) {
-			return;
-		}
-
-		if (free_indices_.empty()) {
-			indices_[idx.index][idx.offset] = allocateNodeBlock();
-			indices_.back().fill(NULL_INDEX);
+		if (free_children_.empty()) {
+			children_[node.index][node.offset] = allocateNodeBlock();
 		} else {
-			indices_[idx.index][idx.offset] = free_indices_.top();
-			free_indices_.pop();
+			children_[node.index][node.offset] = free_children_.top();
+			free_children_.pop();
 		}
-
-		fill(child(idx), idx);
 	}
 
-	void createChildren(index_t index) { createChildren(index, ~IndexField()); }
-
-	void createChildren(index_t index, IndexField const offsets)
+	// TODO: Add comment
+	void createChildren(Index node)
 	{
-		for (offset_t i = 0; 8 != i; ++i) {
-			if (offsets[i]) {
-				allocateChildren(Index{index, i});
-			}
+		if (isLeaf(node)) {
+			allocateChildren(node);
+			fill(node, children(node));
 		}
 	}
-
-	void createChildren(Index index) { allocateChildren(index); }
 
 	//
 	// Delete
 	//
 
-	void deallocateChildren(Index index)
+	// TODO: Add comment
+	void deallocateChildren(Index node)
 	{
-		index_t i = child(index);
-		free_indices_.push(i);
-		codes_[i] = Code();  // TODO: What should this be?
-		indices_[index.index][index.offset] = NULL_INDEX;
+		auto c = children(node);
+		free_children_.push(c);
+		children_[node.index][node.offset] = NULL_INDEX;
 	}
 
-	void deleteChildren(index_t index) { deleteChildren(index, ~IndexField()); }
+	// TODO: Add comment
+	void deleteChildren(Index node)
+	{
+		if (isParent(node)) {
+			deleteChildrenImpl(node);
+		}
+	}
 
-	void deleteChildren(index_t index, IndexField const offsets)
+	// TODO: Add comment
+	void deleteChildrenImpl(Index node)
 	{
 		for (offset_t i = 0; 8 != i; ++i) {
-			if (!isLeaf(index, i) && offsets[i]) {
-				index_t child_index = child(index, i);
-				deleteChildren(child_index);
-				clear(child_index);
-				deallocateChildren(index, i);
+			auto c = child(node, i);
+			if (isParent(c)) {
+				deleteChildrenImpl(c);
 			}
+			clear(c);
 		}
-	}
-
-	void deleteChildren(Index index)
-	{
-		if (isLeaf(index)) {
-			return;
-		}
-
-		index_t child_index = child(index);
-		deleteChildren(child_index);
-		clear(child_index);
-		deallocateChildren(index);
+		deallocateChildren(node);
 	}
 
 	/**************************************************************************************
@@ -3743,23 +3883,6 @@ class Octree
 	|                                         I/O                                         |
 	|                                                                                     |
 	**************************************************************************************/
-
-	struct IndexAndOffsets {
-		index_t index;
-		IndexField offsets;
-
-		IndexAndOffsets() = default;
-
-		IndexAndOffsets(index_t index, IndexField offsets) : index(index), offsets(offsets) {}
-
-		IndexAndOffsets(IndexAndOffsets const&) = default;
-
-		IndexAndOffsets(IndexAndOffsets&&) = default;
-
-		IndexAndOffsets& operator=(IndexAndOffsets const&) = default;
-
-		IndexAndOffsets& operator=(IndexAndOffsets&&) = default;
-	};
 
 	[[nodiscard]] FileOptions fileOptions(bool const compress) const
 	{
@@ -3770,33 +3893,33 @@ class Octree
 		return options;
 	}
 
-	[[nodiscard]] std::vector<IndexAndOffsets> readNodes(std::istream& in)
+	[[nodiscard]] std::vector<IndexFam> readNodes(std::istream& in)
 	{
 		auto tree = readTreeStructure(in);
 		auto num_nodes = readNum(in);
 		return retrieveNodes(tree, num_nodes);
 	}
 
-	[[nodiscard]] std::vector<IndexAndOffsets> readNodes(ReadBuffer& in)
+	[[nodiscard]] std::vector<IndexFam> readNodes(ReadBuffer& in)
 	{
 		auto tree = readTreeStructure(in);
 		auto num_nodes = readNum(in);
 		return retrieveNodes(tree, num_nodes);
 	}
 
-	[[nodiscard]] std::unique_ptr<IndexField[]> readTreeStructure(std::istream& in)
+	[[nodiscard]] std::unique_ptr<BitSet[]> readTreeStructure(std::istream& in)
 	{
 		std::uint64_t num = readNum(in);
-		auto tree = std::make_unique<IndexField[]>(num);
+		auto tree = std::make_unique<BitSet[]>(num);
 		in.read(reinterpret_cast<char*>(tree.get()),
 		        num * sizeof(typename decltype(tree)::element_type));
 		return tree;
 	}
 
-	[[nodiscard]] std::unique_ptr<IndexField[]> readTreeStructure(ReadBuffer& in)
+	[[nodiscard]] std::unique_ptr<BitSet[]> readTreeStructure(ReadBuffer& in)
 	{
 		std::uint64_t num = readNum(in);
-		auto tree = std::make_unique<IndexField[]>(num);
+		auto tree = std::make_unique<BitSet[]>(num);
 		in.read(tree.get(), num * sizeof(typename decltype(tree)::element_type));
 		return tree;
 	}
@@ -3815,29 +3938,31 @@ class Octree
 		return num;
 	}
 
-	[[nodiscard]] std::vector<IndexAndOffsets> retrieveNodes(
-	    std::unique_ptr<IndexField[]> const& tree, std::uint64_t num_nodes)
+	[[nodiscard]] std::vector<IndexFam> retrieveNodes(std::unique_ptr<BitSet[]> const& tree,
+	                                                  std::uint64_t num_nodes)
 	{
-		std::vector<IndexAndOffsets> nodes;
+		std::vector<IndexFam> nodes;
 		nodes.reserve(num_nodes);
 		retrieveNodesRecurs(rootIndex(), tree.get(), nodes);
 		return nodes;
 	}
 
-	void retriveNodesRecurs(index_t index, IndexField const*& tree,
-	                        std::vector<IndexAndOffsets>& nodes)
+	void retriveNodesRecurs(index_t index, BitSet const*& tree,
+	                        std::vector<IndexFam>& nodes)
 	{
-		IndexField const valid_return = *tree++;
-		IndexField const valid_inner = *tree++;
+		// FIXME: Write iterative
+
+		BitSet const valid_return = *tree++;
+		BitSet const valid_inner = *tree++;
 
 		if (valid_return.any()) {
 			nodes.emplace_back(index, valid_return);
 		}
 
 		if (valid_inner.any()) {
-			createChildren(index, valid_inner);
 			for (offset_t i = 0; 8 != i; ++i) {
 				if (valid_inner[i]) {
+					createChildren(Index(index, i));
 					retriveNodesRecurs(child(index, i), tree, nodes);
 				}
 			}
@@ -3847,10 +3972,10 @@ class Octree
 	}
 
 	template <class Predicates>
-	[[nodiscard]] std::pair<std::vector<IndexField>, std::vector<index_t>> data(
+	[[nodiscard]] std::pair<std::vector<BitSet>, std::vector<index_t>> data(
 	    Predicates const& predicates) const
 	{
-		std::vector<IndexField> tree;
+		std::vector<BitSet> tree;
 		std::vector<index_t> indices;
 
 		std::conditional_t<predicate::contains_spatial_predicate_v<Predicates>, NodeBV, Node>
@@ -3883,10 +4008,12 @@ class Octree
 
 	template <class Predicates, class NodeType>
 	void dataRecurs(NodeType const& node, Predicates const& predicates,
-	                std::vector<IndexField>& tree, std::vector<index_t>& indices) const
+	                std::vector<BitSet>& tree, std::vector<index_t>& indices) const
 	{
-		IndexField valid_return;
-		IndexField valid_inner;
+		// FIXME: Write iterative
+
+		BitSet valid_return;
+		BitSet valid_inner;
 		for (offset_t i = 0; 8 != i; ++i) {
 			auto s = sibling(node, i);
 
@@ -3925,9 +4052,9 @@ class Octree
 	}
 
 	template <bool Propagate>
-	[[nodiscard]] std::pair<std::vector<IndexField>, std::vector<index_t>> modifiedData()
+	[[nodiscard]] std::pair<std::vector<BitSet>, std::vector<index_t>> modifiedData()
 	{
-		std::vector<IndexField> modified_tree;
+		std::vector<BitSet> modified_tree;
 		std::vector<index_t> modified_indices;
 
 		modified_tree.reserve(modified_tree_size_);
@@ -3946,11 +4073,13 @@ class Octree
 	}
 
 	template <bool Propagate>
-	void modifiedDataRecurs(index_t index, std::vector<IndexField>& modified_tree,
+	void modifiedDataRecurs(index_t index, std::vector<BitSet>& modified_tree,
 	                        std::vector<index_t>& modified_indices)
 	{
-		IndexField const valid_return = leaves(index) & modified_[index];
-		IndexField const valid_inner = ~leaves(index) & modified_[index];
+		// FIXME: Write iterative
+
+		BitSet const valid_return = leaves(index) & modified_[index];
+		BitSet const valid_inner = ~leaves(index) & modified_[index];
 
 		modified_tree.push_back(valid_return);
 		modified_tree.push_back(valid_inner);
@@ -3983,7 +4112,7 @@ class Octree
 		}
 	}
 
-	void write(std::ostream& out, std::vector<IndexField> const& tree,
+	void write(std::ostream& out, std::vector<BitSet> const& tree,
 	           std::vector<index_t> const& nodes, bool compress, mt_t map_types,
 	           int compression_acceleration_level, int compression_level) const
 	{
@@ -3994,7 +4123,7 @@ class Octree
 		           compression_acceleration_level, compression_level);
 	}
 
-	void write(WriteBuffer& out, std::vector<IndexField> const& tree,
+	void write(WriteBuffer& out, std::vector<BitSet> const& tree,
 	           std::vector<index_t> const& nodes, bool compress, mt_t map_types,
 	           int compression_acceleration_level, int compression_level) const
 	{
@@ -4005,7 +4134,7 @@ class Octree
 		           compression_acceleration_level, compression_level);
 	}
 
-	void writeTreeStructure(std::ostream& out, std::vector<IndexField> const& tree) const
+	void writeTreeStructure(std::ostream& out, std::vector<BitSet> const& tree) const
 	{
 		std::uint64_t num = tree.size();
 		out.write(reinterpret_cast<char const*>(&num), sizeof(num));
@@ -4013,7 +4142,7 @@ class Octree
 		          num * sizeof(typename std::decay_t<decltype(tree)>::value_type));
 	}
 
-	void writeTreeStructure(WriteBuffer& out, std::vector<IndexField> const& tree) const
+	void writeTreeStructure(WriteBuffer& out, std::vector<BitSet> const& tree) const
 	{
 		std::uint64_t num = tree.size();
 		out.write(&num, sizeof(num));
@@ -4056,15 +4185,15 @@ class Octree
 	key_t max_value_;
 
 	// Node indices
-	std::deque<std::array<index_t, 8>> indices_;
+	std::vector<std::array<index_t, 8>> children_;
 	// Free node indices
-	std::stack<index_t> free_indices_;
+	std::stack<index_t> free_children_;
 
 	// Parent code for the nodes
-	std::deque<Code> codes_;
+	std::vector<Code> parent_code_;
 
 	// Indicates wheter a node has been modified
-	std::deque<IndexField> modified_;
+	std::vector<BitSet> modified_;
 
 	// Stores the node size at a given depth, where the depth is the index
 	std::array<node_size_t, maxDepthLevels()> node_size_;

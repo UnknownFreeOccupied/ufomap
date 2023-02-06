@@ -60,7 +60,7 @@ class IteratorWrapper
 	}
 
 	constexpr IteratorWrapper(Iterator&& first, Iterator&& last)
-	    : first_(std::move(first)), last_(std::move(last))
+	    : first_(std::forward<Iterator>(first)), last_(std::forward<Iterator>(last))
 	{
 	}
 

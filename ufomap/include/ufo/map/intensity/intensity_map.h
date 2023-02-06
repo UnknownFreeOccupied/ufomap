@@ -218,7 +218,7 @@ class IntensityMap
 	}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot() { intensity_[derived().rootIndex()][derived().rootOffset()] = 0; }

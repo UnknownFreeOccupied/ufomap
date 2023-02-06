@@ -43,7 +43,7 @@
 #define UFO_MAP_H
 
 // UFO
-#include <ufo/map/octree/octree_base.h>
+#include <ufo/map/octree/octree.h>
 
 // STL
 #include <future>
@@ -61,24 +61,17 @@ namespace ufo::map
 
 // All your base are belong to us
 template <template <class, std::size_t> class... Maps>
-class OctreeMap : public Octree<OctreeMap<Maps...>>,
-                  public Maps<OctreeMap<Maps...>, 8>...
+class OctreeMap : public Octree<OctreeMap<Maps...>>, public Maps<OctreeMap<Maps...>, 8>...
 {
  protected:
-	//
-	// Tags
-	//
-
-	using Octree = Octree<OctreeMap>;
-
 	//
 	// Friends
 	//
 
-	friend Octree;
+	friend Octree<OctreeMap>;
 #define FRIEND(N)                                                       \
 	friend std::tuple_element_t<std::min(static_cast<std::size_t>(N + 1), \
-	                                     sizeof...(Maps)),               \
+	                                     sizeof...(Maps)),                \
 	                            std::tuple<void, Maps<OctreeMap, 8>...>>;
 	REPEAT_128(FRIEND, 0)
 
@@ -87,35 +80,38 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 	// Constructors
 	//
 
-	OctreeMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 16)
-	    : Octree(leaf_node_size, depth_levels)
+	OctreeMap(node_size_t leaf_node_size = 0.1, depth_t depth_levels = 17)
+	    : Octree<OctreeMap>(leaf_node_size, depth_levels)
 	{
 		initRoot();
 	}
 
-	OctreeMap(std::filesystem::path const& file) : OctreeMap(0.1, 16)
+	OctreeMap(std::filesystem::path const& file) : OctreeMap(0.1, 17)
 	{
-		Octree::read(file);
+		Octree<OctreeMap>::read(file);
 	}
 
-	OctreeMap(std::istream& in) : OctreeMap(0.1, 16) { Octree::read(in); }
+	OctreeMap(std::istream& in) : OctreeMap(0.1, 17) { Octree<OctreeMap>::read(in); }
 
-	OctreeMap(ReadBuffer& in) : OctreeMap(0.1, 16) { Octree::read(in); }
+	OctreeMap(ReadBuffer& in) : OctreeMap(0.1, 17) { Octree<OctreeMap>::read(in); }
 
-	OctreeMap(OctreeMap const& other) : Octree(other), Maps<OctreeMap, 8>(other)... {}
+	OctreeMap(OctreeMap const& other)
+	    : Octree<OctreeMap>(other), Maps<OctreeMap, 8>(other)...
+	{
+	}
 
 	template <template <class> class... Maps2>
 	OctreeMap(OctreeMap<Maps2...> const& other)
-	    : Octree(other), Maps<OctreeMap, 8>(other)...
+	    : Octree<OctreeMap>(other), Maps<OctreeMap, 8>(other)...
 	{
-		(Maps<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
+		(Maps<OctreeMap, 8>::resize(Octree<OctreeMap>::size()), ...);  // TODO: Implement
 	}
 
 	OctreeMap(OctreeMap&& other) = default;
 
 	OctreeMap& operator=(OctreeMap const& rhs)
 	{
-		Octree::operator=(rhs);
+		Octree<OctreeMap>::operator=(rhs);
 		(Maps<OctreeMap, 8>::operator=(rhs), ...);
 		return *this;
 	}
@@ -123,9 +119,9 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 	template <template <class> class... Maps2>
 	OctreeMap& operator=(OctreeMap<Maps2...> const& rhs)
 	{
-		Octree::operator=(rhs);
+		Octree<OctreeMap>::operator=(rhs);
 		(Maps<OctreeMap, 8>::operator=(rhs), ...);
-		(Maps<OctreeMap, 8>::resize(Octree::size()), ...);  // TODO: Implement
+		(Maps<OctreeMap, 8>::resize(Octree<OctreeMap>::size()), ...);  // TODO: Implement
 		return *this;
 	}
 
@@ -137,7 +133,7 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 
 	void swap(OctreeMap& other)  // TODO: Add noexcept thing
 	{
-		Octree::swap(other);
+		Octree<OctreeMap>::swap(other);
 		(Maps<OctreeMap, 8>::swap(other), ...);
 	}
 
@@ -149,13 +145,13 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 	void allocateNodeBlock() { (Maps<OctreeMap, 8>::allocateNodeBlock(), ...); }
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot()
 	{
-		Octree::allocateNodeBlock();
-		Octree::initRoot();
+		Octree<OctreeMap>::allocateNodeBlock();
+		Octree<OctreeMap>::initRoot();
 		(Maps<OctreeMap, 8>::allocateNodeBlock(), ...);
 		(Maps<OctreeMap, 8>::initRoot(), ...);
 	}
@@ -164,9 +160,9 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 	// Fill
 	//
 
-	void fill(index_t index, Index parent_idx)
+	void fill(Index node, index_t children)
 	{
-		(Maps<OctreeMap, 8>::fill(index, parent_idx), ...);
+		(Maps<OctreeMap, 8>::fill(node, children), ...);
 	}
 
 	//
@@ -175,7 +171,7 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 
 	void clear() { (Maps<OctreeMap, 8>::clear(), ...); }
 
-	void clear(index_t index) { (Maps<OctreeMap, 8>::clear(index), ...); }
+	void clear(index_t nodes) { (Maps<OctreeMap, 8>::clear(nodes), ...); }
 
 	//
 	// Shrink to fit
@@ -247,7 +243,7 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 			if ((mt_t{0} == map_types || mt_t{0} != (mt & map_types)) &&
 			    (Maps<OctreeMap, 8>::canReadData(mt) || ...)) {
 				(readNodes<Maps<OctreeMap, 8>>(in, buf, compress_buf, first, last, mt, data_size,
-				                                compressed) ||
+				                               compressed) ||
 				 ...);
 			} else {
 				// Skip forward
@@ -278,7 +274,7 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 
 			if (mt_t{0} == map_types || mt_t{0} != (mt & map_types)) {
 				(readNodes<Maps<OctreeMap, 8>>(in, compress_buf, first, last, mt, data_size,
-				                                compressed) ||
+				                               compressed) ||
 				 ...);
 			}
 
@@ -299,7 +295,7 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 	{
 		Buffer buf;
 		(writeNodes<Maps<OctreeMap, 8>>(out, buf, first, last, compress, map_types,
-		                                 compression_acceleration_level, compression_level),
+		                                compression_acceleration_level, compression_level),
 		 ...);
 	}
 
@@ -310,7 +306,7 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>,
 	{
 		out.reserve(out.size() + serializedSize(first, last, compress, map_types));
 		(writeNodes<Maps<OctreeMap, 8>>(out, first, last, compress, map_types,
-		                                 compression_acceleration_level, compression_level),
+		                                compression_acceleration_level, compression_level),
 		 ...);
 	}
 

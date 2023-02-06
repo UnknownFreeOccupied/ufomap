@@ -1352,7 +1352,7 @@ class SemanticMap : public SemanticMapping
 	}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot() { semanticNode(derived().root()).clear(); }

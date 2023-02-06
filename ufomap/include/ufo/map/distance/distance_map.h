@@ -207,7 +207,7 @@ class DistanceMap
 	}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	// FIXME: What should this be?
@@ -218,7 +218,7 @@ class DistanceMap
 	//
 
 	template <std::size_t N, class InputIt>
-	void updateNode(DistanceNode<N>& node, IndexField const indices, InputIt first,
+	void updateNode(DistanceNode<N>& node, BitSet const indices, InputIt first,
 	                InputIt last)
 	{
 		auto const prop = distancePropagationCriteria();

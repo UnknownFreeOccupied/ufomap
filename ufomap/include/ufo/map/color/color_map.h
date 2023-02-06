@@ -52,8 +52,8 @@
 // STL
 #include <algorithm>
 #include <array>
-#include <deque>
 #include <iostream>
+#include <vector>
 
 namespace ufo::map
 {
@@ -102,16 +102,6 @@ class ColorMap
 	}
 
 	void setColorUnsafe(Index index, color_t red, color_t green, color_t blue)
-	{
-		setColorUnsafe(index, Color(red, green, blue));
-	}
-
-	void setColorUnsafe(IndexFam index, Color color)
-	{
-		// TODO: Implement
-	}
-
-	void setColorUnsafe(IndexFam index, color_t red, color_t green, color_t blue)
 	{
 		setColorUnsafe(index, Color(red, green, blue));
 	}
@@ -181,12 +171,6 @@ class ColorMap
 
 	template <class UnaryFunction>
 	void updateColorUnsafe(Index index, UnaryFunction f)
-	{
-		// TODO: Implement
-	}
-
-	template <class UnaryFunction>
-	void updateColorUnsafe(IndexFam index, UnaryFunction f)
 	{
 		// TODO: Implement
 	}
@@ -279,8 +263,6 @@ class ColorMap
 
 	void clearColorUnsafe(Index index) { setColor(index, Color()); }
 
-	void clearColorUnsafe(IndexFam index) { setColor(index, Color()); }
-
 	void clearColor(Node node, bool propagate = true)
 	{
 		setColor(node, Color(), propagate);
@@ -362,7 +344,7 @@ class ColorMap
 	void allocateNodeBlock() { color_.emplace_back(); }
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot()
@@ -463,7 +445,7 @@ class ColorMap
 
  protected:
 	// Data
-	std::deque<std::array<Color, N>> color_;
+	std::vector<std::array<Color, N>> color_;
 
 	template <class Derived2, std::size_t N2>
 	friend class ColorMap;

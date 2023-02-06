@@ -43,6 +43,7 @@
 #define UFO_MAP_INDEX_H
 
 // UFO
+#include <ufo/map/bit_set.h>
 #include <ufo/map/types.h>
 
 // STL
@@ -66,36 +67,12 @@ struct Index {
 		std::swap(offset, other.offset);
 	}
 };
-
-struct IndexFam {
-	index_t index{NULL_INDEX};
-	IndexField offset;
-
-	constexpr IndexFam() noexcept = default;
-
-	constexpr IndexFam(index_t index, IndexField offset) noexcept
-	    : index(index), offset(offset)
-	{
-	}
-
-	void swap(IndexFam& other) noexcept
-	{
-		std::swap(index, other.index);
-		std::swap(offset, other.offset);
-	}
-};
 }  // namespace ufo::map
 
 namespace std
 {
 inline void swap(ufo::map::Index& lhs,
                  ufo::map::Index& rhs) noexcept(noexcept(lhs.swap(rhs)))
-{
-	lhs.swap(rhs);
-}
-
-inline void swap(ufo::map::IndexFam& lhs,
-                 ufo::map::IndexFam& rhs) noexcept(noexcept(lhs.swap(rhs)))
 {
 	lhs.swap(rhs);
 }

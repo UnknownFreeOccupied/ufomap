@@ -46,7 +46,7 @@
 #include <ufo/algorithm/algorithm.h>
 #include <ufo/geometry/minimum_distance.h>
 #include <ufo/map/code.h>
-#include <ufo/map/index_field.h>
+#include <ufo/map/bit_set.h>
 #include <ufo/map/integration/grid.h>
 #include <ufo/map/integration/integration_point.h>
 #include <ufo/map/integration/integration_point_cloud.h>
@@ -63,7 +63,7 @@
 namespace ufo::map
 {
 
-using Misses = std::vector<std::pair<Code, IndexField>>;
+using Misses = std::vector<std::pair<Code, BitSet>>;
 
 /*!
  * @brief
@@ -425,7 +425,7 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 		code_t i{};
 		code_t inc = code_t{512} << 3 * depth;
 		for (auto it = std::cbegin(grid); it != std::cend(grid); it += 8) {
-			IndexField field(static_cast<index_field_t>(m == *it) |
+			BitSet field(static_cast<index_field_t>(m == *it) |
 			                 (static_cast<index_field_t>(m == *(it + 1)) << 1) |
 			                 (static_cast<index_field_t>(m == *(it + 2)) << 2) |
 			                 (static_cast<index_field_t>(m == *(it + 3)) << 3) |
@@ -446,7 +446,7 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 				continue;
 			}
 
-			IndexField field(static_cast<index_field_t>(0xFF == (g & 0xFF)) |
+			BitSet field(static_cast<index_field_t>(0xFF == (g & 0xFF)) |
 			                 (static_cast<index_field_t>(0xFF == ((g >> 8) & 0xFF)) << 1) |
 			                 (static_cast<index_field_t>(0xFF == ((g >> 16) & 0xFF)) << 2) |
 			                 (static_cast<index_field_t>(0xFF == ((g >> 24) & 0xFF)) << 3) |
@@ -460,7 +460,7 @@ Misses getMissesDiscreteFast(Map const& map, IntegrationCloud<P> const& cloud,
 
 			for (code_t j{}; 64 != j; j += 8) {
 				if (!field[j] && 0xFF & (g >> j)) {
-					IndexField f((0x1 & (g >> j)) | (0x2 & (g >> j + 1)) | (0x4 & (g >> j + 2)) |
+					BitSet f((0x1 & (g >> j)) | (0x2 & (g >> j + 1)) | (0x4 & (g >> j + 2)) |
 					             (0x8 & (g >> j + 3)) | (0x10 & (g >> j + 4)) |
 					             (0x20 & (g >> j + 5)) | (0x40 & (g >> j + 6)) |
 					             (0x80 & (g >> j + 7)));

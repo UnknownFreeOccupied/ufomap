@@ -149,7 +149,7 @@ class LabelMap
 	}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	void initRoot() { label_[derived().rootIndex()][derived().rootOffset()].clear(); }

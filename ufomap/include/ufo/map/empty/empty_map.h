@@ -91,7 +91,7 @@ class EmptyMap
 	void swap(EmptyMap&) noexcept {}
 
 	//
-	// Initilize root
+	// Initialize root
 	//
 
 	static constexpr void initRoot() noexcept {}
