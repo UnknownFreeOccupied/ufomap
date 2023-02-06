@@ -68,17 +68,18 @@ namespace ufo::map
  */
 class Code
 {
-	// TODO: Save depth in the most/least (depending on how to order) significant 5 bits
-	// TODO: Save depth by just checking first set bit position
  public:
 	constexpr Code() = default;
 
 	constexpr Code(code_t code, depth_t depth = 0)
-	    : code_(((code >> (3 * depth)) << (3 * depth + 5)) | static_cast<code_t>(depth))
+	    : code_(((code >> (3 * depth)) << (3 * depth + 5)) |
+	            (0b11111 - static_cast<code_t>(depth)))
 	{
 	}
 
-	Code(Key key) : code_((toCode(key) << 5) | static_cast<code_t>(key.depth())) {}
+	Code(Key key) : code_((toCode(key) << 5) | (0b11111 - static_cast<code_t>(key.depth())))
+	{
+	}
 
 	/*!
 	 * @brief Get the corresponding key to code
@@ -159,7 +160,7 @@ class Code
 	 */
 	constexpr offset_t offset(depth_t depth) const
 	{
-		return (code_ >> (3 * depth + 5)) & code_t(0x7);
+		return (code_ >> (3 * depth + 5)) & code_t(0b111);
 	}
 
 	// TODO: Rename?
@@ -217,7 +218,7 @@ class Code
 	 *
 	 * @return depth_t The depth this code is specified at
 	 */
-	constexpr depth_t depth() const noexcept { return code_ & 0x1F; }
+	constexpr depth_t depth() const noexcept { return 0b11111 - (code_ & 0b11111); }
 
  private:
 	static code_t splitBy3(key_t a)
@@ -258,6 +259,8 @@ class Code
 
 	friend class std::hash<Code>;
 };
+
+static constexpr Code INVALID_CODE(std::numeric_limits<code_t>::max(), 0);
 }  // namespace ufo::map
 
 namespace std

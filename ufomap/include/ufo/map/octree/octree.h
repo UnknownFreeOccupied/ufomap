@@ -121,8 +121,7 @@ class Octree
 		applyPermutation(modified_, perm);
 
 		resize(numNodes());
-		free_children_.clear();
-		free_children_ = {};
+		free_children_ = {};  // FIXME: Implement better?
 	}
 
 	//
@@ -144,7 +143,7 @@ class Octree
 	void clear(node_size_t leaf_size, depth_t depth_levels, bool prune = true)
 	{
 		children_.clear();
-		free_children_.clear();
+		free_children_ = {};  // FIXME: Implement better?
 		parent_code_.clear();
 		modified_.clear();
 		derived().clear();
@@ -3197,7 +3196,7 @@ class Octree
 
 	void clear(index_t nodes)
 	{
-		parent_code_[nodes] = Code(0, -1);  // TODO: What should this be?
+		parent_code_[nodes] = INVALID_CODE;
 		// TODO: Implement
 		derived().clear(nodes);
 	}

@@ -43,6 +43,7 @@
 #define UFO_MAP_H
 
 // UFO
+#include <ufo/algorithm/algorithm.h>
 #include <ufo/map/octree/octree.h>
 
 // STL
@@ -143,6 +144,15 @@ class OctreeMap : public Octree<OctreeMap<Maps...>>, public Maps<OctreeMap<Maps.
 	//
 
 	void allocateNodeBlock() { (Maps<OctreeMap, 8>::allocateNodeBlock(), ...); }
+
+	//
+	// Apply Permutation
+	//
+
+	void applyPermutation(Permutation const& perm)
+	{
+		(Maps<OctreeMap, 8>::applyPermutation(perm), ...);
+	}
 
 	//
 	// Initialize root
