@@ -71,15 +71,14 @@ class Code
  public:
 	constexpr Code() = default;
 
+	// TODO: Set most significant none used bits to 0
 	constexpr Code(code_t code, depth_t depth = 0)
-	    : code_(((code >> (3 * depth)) << (3 * depth + 5)) |
-	            (0b11111 - static_cast<code_t>(depth)))
+	    : code_(code >> 3 * depth << 3 * depth + 5 | static_cast<code_t>(~depth & 0b11111))
 	{
 	}
 
-	Code(Key key) : code_((toCode(key) << 5) | (0b11111 - static_cast<code_t>(key.depth())))
-	{
-	}
+	// TODO: Set most significant none used bits to 0
+	Code(Key key) : code_(toCode(key) << 5 | static_cast<code_t>(~key.depth() & 0b11111)) {}
 
 	/*!
 	 * @brief Get the corresponding key to code
@@ -160,7 +159,7 @@ class Code
 	 */
 	constexpr offset_t offset(depth_t depth) const
 	{
-		return (code_ >> (3 * depth + 5)) & code_t(0b111);
+		return (code_ >> (3 * depth + 5)) & 0b111;
 	}
 
 	// TODO: Rename?
@@ -218,7 +217,7 @@ class Code
 	 *
 	 * @return depth_t The depth this code is specified at
 	 */
-	constexpr depth_t depth() const noexcept { return 0b11111 - (code_ & 0b11111); }
+	constexpr depth_t depth() const noexcept { return ~code_ & 0b11111; }
 
  private:
 	static code_t splitBy3(key_t a)
@@ -254,8 +253,6 @@ class Code
  private:
 	// The Morton code
 	code_t code_ = 0;
-	// The depth of the Morton code
-	// depth_t depth_ = 0;
 
 	friend class std::hash<Code>;
 };
