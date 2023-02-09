@@ -177,7 +177,7 @@ class Octree
 	[[nodiscard]] static constexpr depth_t minDepthLevels() noexcept
 	{
 		// FIXME: Change to correct
-		return 1;
+		return 2;
 	}
 
 	/*!
@@ -188,7 +188,7 @@ class Octree
 	[[nodiscard]] static constexpr depth_t maxDepthLevels() noexcept
 	{
 		// FIXME: Change to correct
-		return 20;
+		return 21;
 	}
 
 	//
@@ -271,7 +271,7 @@ class Octree
 	{
 		auto const max = size(rootDepth()) / 2;
 		auto const min = -max;
-		return min <= x && min <= y && min <= z && max >= x && max >= y && max >= z;
+		return min <= x && min <= y && min <= z && max > x && max > y && max > z;
 	}
 
 	/**************************************************************************************
