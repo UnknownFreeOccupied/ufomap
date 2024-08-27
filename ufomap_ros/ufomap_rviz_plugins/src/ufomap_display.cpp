@@ -76,16 +76,14 @@ void UFOMapDisplay::onInitialize()
 	queue_size_property_->setMin(1);
 
 	info_property_ = new rviz::Property("Information", QVariant(), "", this);
-	resolution_property_ = new rviz::StringProperty(
-	    "Resolution", "", "Resolution of the occupancy map", info_property_, nullptr, this);
-	num_leaf_nodes_property_ =
-	    new rviz::StringProperty("# Leaf Nodes", "", "Number of leaf nodes in the octree",
-	                             info_property_, nullptr, this);
-	num_inner_nodes_property_ =
-	    new rviz::StringProperty("# Inner Nodes", "", "Number of inner nodes in the octree",
-	                             info_property_, nullptr, this);
-	size_property_ = new rviz::StringProperty("Size", "", "Size of the octree",
-	                                          info_property_, nullptr, this);
+
+  resolution_property_ = new rviz::StringProperty( "Resolution", "", "Resolution of the occupancy map", info_property_);
+  num_leaf_nodes_property_ = new rviz::StringProperty("# Leaf Nodes", "", "Number of leaf nodes in the octree", info_property_);
+  num_inner_nodes_property_ = new rviz::StringProperty("# Inner Nodes", "", "Number of inner nodes in the octree", info_property_);
+  size_property_ = new rviz::StringProperty("Size", "", "Size of the octree", info_property_); 
+
+
+
 
 	render_category_property_ = new rviz::Property("Voxel Rendering", QVariant(), "", this);
 	for (VoxelType const& type : {OCCUPIED, FREE, UNKNOWN}) {
