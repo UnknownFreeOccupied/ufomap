@@ -34,6 +34,7 @@ set_target_properties(Map PROPERTIES
 set_property(TARGET Map PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(Map INTERFACE 
+	UFO::Cloud
 	# UFO::Compression
 	UFO::Compute
 	UFO::Container
