@@ -21,19 +21,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(UFO_DEV_MODE "Set up development helper settings" ON)
 
-add_library(ufomap INTERFACE)
-add_library(UFO::Map ALIAS ufomap)
+add_library(Map INTERFACE)
+add_library(UFO::Map ALIAS Map)
 
-set_target_properties(ufomap PROPERTIES
+set_target_properties(Map PROPERTIES
 	VERSION ${PROJECT_VERSION}
 	SOVERSION ${PROJECT_VERSION_MAJOR}
 	CXX_STANDARD 17
 	CXX_EXTENSIONS OFF
 )
 
-set_property(TARGET ufomap PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET Map PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-target_link_libraries(ufomap INTERFACE 
+target_link_libraries(Map INTERFACE 
 	# UFO::Compression
 	UFO::Compute
 	UFO::Container
@@ -47,16 +47,16 @@ target_link_libraries(ufomap INTERFACE
 	UFO::Vision
 )
 
-target_compile_options(ufomap INTERFACE
+target_compile_options(Map INTERFACE
 	-fPIC
 )
 
-target_include_directories(ufomap INTERFACE
+target_include_directories(Map INTERFACE
 	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include>
 )
 
-target_compile_features(ufomap INTERFACE cxx_std_17)
+target_compile_features(Map INTERFACE cxx_std_17)
 
 
 find_package(OpenCV REQUIRED)
@@ -94,7 +94,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 # target_link_libraries(ufomap_render 
 # 	PRIVATE 
-# 		ufomap 
+# 		Map 
 # 		${OpenCV_LIBS} 
 # 		# ${PCL_LIBRARIES}
 # 		# gcov
@@ -137,7 +137,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 # target_link_libraries(ufomap_render2d 
 # 	PRIVATE 
-# 		ufomap 
+# 		Map 
 # 		${OpenCV_LIBS} 
 # 		# gcov
 # )
@@ -179,7 +179,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 # target_link_libraries(ufomap_render4d 
 # 	PRIVATE 
-# 		ufomap 
+# 		Map 
 # 		${OpenCV_LIBS} 
 # 		# gcov
 # )
@@ -203,7 +203,7 @@ if(UFO_TESTING)
   add_subdirectory(tests)
 endif()
 
-install(TARGETS ufomap
+install(TARGETS Map
 	EXPORT ufomapTargets
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

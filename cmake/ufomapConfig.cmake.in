@@ -1,17 +1,7 @@
 @PACKAGE_INIT@
 
 include("${CMAKE_CURRENT_LIST_DIR}/ufomapTargets.cmake")
-check_required_components("ufomap")
 
-target_link_libraries(UFO::Map INTERFACE 
-	UFO::Compression
-	UFO::Compute
-	UFO::Container
-	UFO::Core
-	UFO::Geometry
-	UFO::Math
-	UFO::Morton
-	UFO::PCL
-	UFO::Time
-	UFO::Utility
-)
+add_subdirectory(1stparty)
+
+check_required_components("ufomap")
