@@ -41,7 +41,7 @@ target_link_libraries(Map INTERFACE
 	UFO::Geometry
 	UFO::Math
 	UFO::Morton
-	UFO::PCL
+	UFO::Cloud
 	UFO::Time
 	UFO::Utility
 	UFO::Vision
