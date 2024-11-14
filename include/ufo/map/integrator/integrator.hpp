@@ -43,6 +43,7 @@
 #define UFO_MAP_INTEGRATOR_INTEGRATOR_HPP
 
 // UFO
+#include <ufo/cloud/point_cloud.hpp>
 #include <ufo/container/tree/code.hpp>
 #include <ufo/container/tree/index.hpp>
 #include <ufo/map/color/map.hpp>
@@ -52,7 +53,6 @@
 #include <ufo/map/integrator/detail/grid_map.hpp>
 #include <ufo/map/occupancy/map.hpp>
 #include <ufo/math/math.hpp>
-#include <ufo/pcl/point_cloud.hpp>
 #include <ufo/utility/execution.hpp>
 #include <ufo/utility/index_iterator.hpp>
 #include <ufo/utility/spinlock.hpp>
