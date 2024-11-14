@@ -1,6 +1,16 @@
 @PACKAGE_INIT@
 
-add_subdirectory(1stparty)
+include(CMakeFindDependencyMacro)
+find_dependency(ufocloud)
+find_dependency(ufocompute)
+find_dependency(ufocontainer)
+find_dependency(ufocore)
+find_dependency(ufogeometry)
+find_dependency(ufomath)
+find_dependency(ufomorton)
+find_dependency(ufotime)
+find_dependency(ufoutility)
+find_dependency(ufovision)
 
 include("${CMAKE_CURRENT_LIST_DIR}/ufomapTargets.cmake")
 
