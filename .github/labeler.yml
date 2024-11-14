@@ -1,0 +1,75 @@
+algorithm:
+- include/ufo/algorithm/**/*
+
+container:
+- include/ufo/container/**/*
+
+geometry:
+- include/ufo/geometry/**/*
+
+map:
+- include/ufo/map/**/*
+
+math:
+- include/ufo/math/**/*
+
+util:
+- include/ufo/util/**/*
+
+color:
+- include/ufo/map/color/**/*
+
+count:
+- include/ufo/map/count/**/*
+
+distance:
+- include/ufo/map/distance/**/*
+
+empty:
+- include/ufo/map/empty/**/*
+
+integration:
+- include/ufo/map/integration/**/*
+
+intensity:
+- include/ufo/map/intensity/**/*
+
+label:
+- include/ufo/map/label/**/*
+
+labels:
+- include/ufo/map/labels/**/*
+
+occupancy:
+- include/ufo/map/occupancy/**/*
+
+octree:
+- include/ufo/map/octree/**/*
+
+points:
+- include/ufo/map/points/**/*
+
+points_color:
+- include/ufo/map/points_color/**/*
+
+predicate:
+- include/ufo/map/predicate/**/*
+- '**/*predicate*.hpp'
+
+ray_caster:
+- include/ufo/map/ray_caster/**/*
+
+reflection:
+- include/ufo/map/reflection/**/*
+
+semantic:
+- include/ufo/map/semantic/**/*
+
+semantics:
+- include/ufo/map/semantics/**/*
+
+surfel:
+- include/ufo/map/surfel/**/*
+
+time:
+- include/ufo/map/time/**/*

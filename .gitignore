@@ -30,3 +30,34 @@
 *.exe
 *.out
 *.app
+
+# VS Code
+.vscode/*
+
+# CLion
+.idea/*
+
+# Tests
+ufomap_tests/*
+
+# Build folder
+build/*
+
+# Install folder
+install/*
+
+# Cache folder
+.cache/*
+
+# Data folder
+data/*
+
+# resources folder
+resources/*
+
+# coverage report
+coverage_report/*
+.coverage/
+
+# Ply files
+*.ply
