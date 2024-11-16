@@ -1,0 +1,17 @@
+@PACKAGE_INIT@
+
+# Depends on Cloud, Compression, Compute, Container, Core, Geometry, Math, Morton, Time, Utility, and Vision components
+# FIXME: This is a bit hacky
+include("${CMAKE_CURRENT_LIST_DIR}/Cloud-config.cmake")
+# include("${CMAKE_CURRENT_LIST_DIR}/Compression-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Compute-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Container-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Core-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Geometry-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Math-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Morton-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Time-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Utility-config.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Vision-config.cmake")
+
+include("${CMAKE_CURRENT_LIST_DIR}/Map-targets.cmake")
