@@ -113,8 +113,22 @@ struct Integrator {
 	void insertPoints(ExecutionPolicy&& policy, Map& map,
 	                  PointCloud<Dim, T, Rest...> const& cloud, bool propagate = true) const
 	{
-		auto nodes = propagate ? map.create(policy, get<0>(cloud))
-		                       : map.modifiedSet(policy, get<0>(cloud));
+		std::vector<TreeIndex> nodes;
+		if (0 == hit_depth) {
+			nodes = propagate ? map.create(policy, get<0>(cloud))
+			                  : map.modifiedSet(policy, get<0>(cloud));
+		} else {
+			std::vector<TreeCode<Dim>> codes;
+
+			// TODO: Fix policy
+
+			codes.resize(cloud.size());
+			std::transform(
+			    UFO_TBB_PAR get<0>(cloud).begin(), get<0>(cloud).end(), codes.begin(),
+			    [this, &map](auto const& p) { return map.code(TreeCoord(p, hit_depth)); });
+
+			nodes = propagate ? map.create(policy, codes) : map.modifiedSet(policy, codes);
+		}
 
 		logit_t occupancy_hit_logit;
 		if constexpr (Map::mapType(MapType::OCCUPANCY)) {
