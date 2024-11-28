@@ -162,14 +162,18 @@ class MapTree
 		assert(Base::valid(c));
 
 		auto node_f = [this](Index node) {
-			if (0 < Base::depth(node) &&
-			    0 == Base::treeBlock(node.pos).modifiedSet(node.offset)) {
+			// NOTE the order of the checks in the if-statement is important,
+			// modifiedSet needs to be first so that pure leaf nodes also get set modified
+			if (0 == Base::treeBlock(node.pos).modifiedSet(node.offset) &&
+			    0 < Base::depth(node)) {
 				modifiedBlockAdd(node.pos);
 			}
 		};
 
 		auto block_f = [this](pos_t block) {
-			if (0 < Base::depth(block) && 0 == Base::treeBlock(block).modifiedFill()) {
+			// NOTE the order of the checks in the if-statement is important,
+			// modifiedSet needs to be first so that pure leaf nodes also get set modified
+			if (0 == Base::treeBlock(block).modifiedFill() && 0 < Base::depth(block)) {
 				modifiedBlockAdd(block);
 			}
 		};
@@ -593,7 +597,7 @@ class MapTree
 
 		if constexpr (execution::is_seq_v<ExecutionPolicy>) {
 			for (std::size_t i = 1; modified_block_.size() > i; ++i) {
-				for (pos_t block : modified_block_[i]) {
+				for (pos_t block : modified_block_[i].template iter<pos_t>()) {
 					fun(block);
 				}
 			}
