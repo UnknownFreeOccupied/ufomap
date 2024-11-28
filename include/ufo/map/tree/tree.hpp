@@ -357,21 +357,21 @@ class MapTree
 	{
 		if constexpr (execution::is_seq_v<ExecutionPolicy>) {
 			for (auto& mb : modified_block_) {
-				for (pos_t block : mb) {
+				for (pos_t block : mb.template iter<pos_t>()) {
 					Base::treeBlock(block).modifiedClear();
 				}
 				mb.clear();
 			}
 		} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
 			for (auto& mb : modified_block_) {
-				std::for_each(UFO_TBB_PAR mb.begin(), mb.end(),
+				std::for_each(UFO_TBB_PAR mb.template begin<pos_t>(), mb.template end<pos_t>(),
 				              [this](pos_t block) { Base::treeBlock(block).modifiedClear(); });
 				mb.clear();
 			}
 		} else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
 			for (auto& mb : modified_block_) {
 #pragma omp parallel for
-				for (pos_t block : mb) {
+				for (pos_t block : mb.template iter<pos_t>()) {
 					Base::treeBlock(block).modifiedClear();
 				}
 				mb.clear();
