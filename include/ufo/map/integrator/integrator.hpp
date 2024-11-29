@@ -301,6 +301,7 @@ struct Integrator {
 				// TODO: Implement
 			} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
 				std::for_each(UFO_TBB_PAR hits.begin(), hits.end(), [&](auto hit) {
+					// TODO: Fix, wrong use of thread_local
 					thread_local auto  grid_key  = origin_grid_key;
 					thread_local auto* miss_grid = &origin_miss_grid;
 					thread_local auto* hit_grid  = &origin_hit_grid;
@@ -381,6 +382,7 @@ struct Integrator {
 					// TODO: Implement this better
 					auto h_it = free_hits ? grids.end()->second.second.begin() : hit_grid.begin();
 
+					// TODO: Fix, wrong use of thread_local
 					thread_local decltype(misses) local_misses;
 					local_misses.reserve(1'000'000);
 
@@ -477,6 +479,7 @@ struct Integrator {
 				// TODO: Implement
 			} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
 				std::for_each(UFO_TBB_PAR hits.begin(), hits.end(), [&](auto hit) {
+					// TODO: Fix, wrong use of thread_local
 					thread_local auto  grid_key  = origin_grid_key;
 					thread_local auto* miss_grid = &origin_miss_grid;
 					thread_local auto* hit_grid  = &origin_hit_grid;
@@ -554,6 +557,7 @@ struct Integrator {
 					auto h_it =
 					    free_hits ? count_grids.end()->second.second.begin() : hit_grid.begin();
 
+					// TODO: Fix, wrong use of thread_local
 					thread_local decltype(misses) local_misses;
 					thread_local decltype(count)  local_count;
 					local_misses.reserve(1'000'000);
