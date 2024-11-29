@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -39,32 +39,66 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TYPE
-#define UFO_MAP_TYPE
+#ifndef UFO_MAP_COST_PREDICATE_COST_INTERVAL_HPP
+#define UFO_MAP_COST_PREDICATE_COST_INTERVAL_HPP
 
-// STL
-#include <cstdint>
+// UFO
+#include <ufo/container/tree/index.hpp>
+#include <ufo/container/tree/predicate/filter.hpp>
+#include <ufo/map/cost/predicate/cost.hpp>
 
-namespace ufo
+namespace ufo::pred
 {
-enum class MapType : std::uint64_t {
-	NONE         = std::uint64_t(0),
-	ALL          = ~std::uint64_t(0),
-	OCCUPANCY    = std::uint64_t(1) << 0,
-	COLOR        = std::uint64_t(1) << 1,
-	TIME         = std::uint64_t(1) << 2,
-	COUNT        = std::uint64_t(1) << 3,
-	REFLECTION   = std::uint64_t(1) << 4,
-	INTENSITY    = std::uint64_t(1) << 5,
-	SURFEL       = std::uint64_t(1) << 6,
-	VOID         = std::uint64_t(1) << 7,
-	DISTANCE     = std::uint64_t(1) << 8,
-	LABEL        = std::uint64_t(1) << 9,
-	SEMANTIC     = std::uint64_t(1) << 10,
-	LABEL_SET    = std::uint64_t(1) << 11,
-	SEMANTIC_SET = std::uint64_t(1) << 12,
-	COST         = std::uint64_t(1) << 13,
-};
-}  // namespace ufo
+template <bool Negated = false>
+struct CostInterval {
+	using cost_t = float;
 
-#endif  // UFO_MAP_TYPE
+	constexpr CostInterval(cost_t min, cost_t max) : min(min), max(max) {}
+
+	CostMin min;
+	CostMax max;
+};
+
+template <bool Negated>
+CostInterval<!Negated> operator!(CostInterval<Negated> p)
+{
+	return {p.min, p.max};
+}
+
+template <bool Negated>
+struct Filter<CostInterval<Negated>> {
+	using Pred = CostInterval<Negated>;
+
+	template <class Tree>
+	static constexpr void init(Pred& p, Tree const& t)
+	{
+	}
+
+	template <class Tree>
+	[[nodiscard]] static constexpr bool returnable(Pred const& p, Tree const& t,
+	                                               TreeIndex const& n)
+	{
+		if constexpr (Negated) {
+			return !Filter<CostGE>::returnable(p.min, t, n) ||
+			       !Filter<CostLE>::returnable(p.max, t, n);
+		} else {
+			return Filter<CostGE>::returnable(p.min, t, n) &&
+			       Filter<CostLE>::returnable(p.max, t, n);
+		}
+	}
+
+	template <class Tree>
+	[[nodiscard]] static constexpr bool traversable(Pred const& p, Tree const& t,
+	                                                TreeIndex const& n)
+	{
+		if constexpr (Negated) {
+			return true;
+		} else {
+			return Filter<CostGE>::traversable(p.min, t, n) &&
+			       Filter<CostLE>::traversable(p.max, t, n);
+		}
+	}
+};
+}  // namespace ufo::pred
+
+#endif  // UFO_MAP_COST_PREDICATE_COST_INTERVAL_HPP

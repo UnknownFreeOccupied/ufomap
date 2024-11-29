@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -39,32 +39,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TYPE
-#define UFO_MAP_TYPE
-
-// STL
-#include <cstdint>
+#ifndef UFO_MAP_COST_PROPAGATION_CRITERIA_HPP
+#define UFO_MAP_COST_PROPAGATION_CRITERIA_HPP
 
 namespace ufo
 {
-enum class MapType : std::uint64_t {
-	NONE         = std::uint64_t(0),
-	ALL          = ~std::uint64_t(0),
-	OCCUPANCY    = std::uint64_t(1) << 0,
-	COLOR        = std::uint64_t(1) << 1,
-	TIME         = std::uint64_t(1) << 2,
-	COUNT        = std::uint64_t(1) << 3,
-	REFLECTION   = std::uint64_t(1) << 4,
-	INTENSITY    = std::uint64_t(1) << 5,
-	SURFEL       = std::uint64_t(1) << 6,
-	VOID         = std::uint64_t(1) << 7,
-	DISTANCE     = std::uint64_t(1) << 8,
-	LABEL        = std::uint64_t(1) << 9,
-	SEMANTIC     = std::uint64_t(1) << 10,
-	LABEL_SET    = std::uint64_t(1) << 11,
-	SEMANTIC_SET = std::uint64_t(1) << 12,
-	COST         = std::uint64_t(1) << 13,
-};
-}  // namespace ufo
+enum class CostPropagationCriteria { MIN, MAX, MEAN, NONE };
+}
 
-#endif  // UFO_MAP_TYPE
+#endif  // UFO_MAP_COST_PROPAGATION_CRITERIA_HPP
