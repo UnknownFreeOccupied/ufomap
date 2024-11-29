@@ -162,7 +162,7 @@ class MapTree
 		assert(Base::valid(c));
 
 		auto node_f = [this](Index node) {
-			// NOTE the order of the checks in the if-statement is important,
+			// NOTE: the order of the checks in the if-statement is important,
 			// modifiedSet needs to be first so that pure leaf nodes also get set modified
 			if (0 == Base::treeBlock(node.pos).modifiedSet(node.offset) &&
 			    0 < Base::depth(node)) {
@@ -171,7 +171,7 @@ class MapTree
 		};
 
 		auto block_f = [this](pos_t block) {
-			// NOTE the order of the checks in the if-statement is important,
+			// NOTE: the order of the checks in the if-statement is important,
 			// modifiedSet needs to be first so that pure leaf nodes also get set modified
 			if (0 == Base::treeBlock(block).modifiedFill() && 0 < Base::depth(block)) {
 				modifiedBlockAdd(block);
