@@ -43,7 +43,6 @@
 #define UFO_MAP_OCCUPANCY_PREDICATE_OCCUPANCY_STATE_HPP
 
 // UFO
-#include <ufo/container/tree/index.hpp>
 #include <ufo/container/tree/predicate/filter.hpp>
 #include <ufo/map/occupancy/propagation_criteria.hpp>
 #include <ufo/map/occupancy/state.hpp>
@@ -73,32 +72,32 @@ struct Filter<OccupancyState<State, Negated>> {
 	{
 	}
 
-	template <class Tree>
+	template <class Tree, class Node>
 	[[nodiscard]] static constexpr bool returnable(Pred const& p, Tree const& t,
-	                                               TreeIndex n)
+	                                               Node const& n)
 	{
 		if constexpr (Negated) {
 			if constexpr (ufo::OccupancyState::UNKNOWN == State) {
-				return !t.occupancyUnknown(n);
+				return !t.occupancyUnknown(n.index);
 			} else if constexpr (ufo::OccupancyState::FREE == State) {
-				return !t.occupancyFree(n);
+				return !t.occupancyFree(n.index);
 			} else if constexpr (ufo::OccupancyState::OCCUPIED == State) {
-				return !t.occupancyOccupied(n);
+				return !t.occupancyOccupied(n.index);
 			}
 		} else {
 			if constexpr (ufo::OccupancyState::UNKNOWN == State) {
-				return t.occupancyUnknown(n);
+				return t.occupancyUnknown(n.index);
 			} else if constexpr (ufo::OccupancyState::FREE == State) {
-				return t.occupancyFree(n);
+				return t.occupancyFree(n.index);
 			} else if constexpr (ufo::OccupancyState::OCCUPIED == State) {
-				return t.occupancyOccupied(n);
+				return t.occupancyOccupied(n.index);
 			}
 		}
 	}
 
-	template <class Tree>
+	template <class Tree, class Node>
 	[[nodiscard]] static constexpr bool traversable(Pred const& p, Tree const& t,
-	                                                TreeIndex n)
+	                                                Node const& n)
 	{
 		if (OccupancyPropagationCriteria::NONE == t.occupancyPropagationCriteria()) {
 			return true;
@@ -106,19 +105,19 @@ struct Filter<OccupancyState<State, Negated>> {
 
 		if constexpr (Negated) {
 			if constexpr (ufo::OccupancyState::UNKNOWN == State) {
-				return t.containsFree(n) || t.containsOccupied(n);
+				return t.containsFree(n.index) || t.containsOccupied(n.index);
 			} else if constexpr (ufo::OccupancyState::FREE == State) {
-				return t.containsUnknown(n) || t.containsOccupied(n);
+				return t.containsUnknown(n.index) || t.containsOccupied(n.index);
 			} else if constexpr (ufo::OccupancyState::OCCUPIED == State) {
-				return t.containsUnknown(n) || t.containsFree(n);
+				return t.containsUnknown(n.index) || t.containsFree(n.index);
 			}
 		} else {
 			if constexpr (ufo::OccupancyState::UNKNOWN == State) {
-				return t.containsUnknown(n);
+				return t.containsUnknown(n.index);
 			} else if constexpr (ufo::OccupancyState::FREE == State) {
-				return t.containsFree(n);
+				return t.containsFree(n.index);
 			} else if constexpr (ufo::OccupancyState::OCCUPIED == State) {
-				return t.containsOccupied(n);
+				return t.containsOccupied(n.index);
 			}
 		}
 	}
