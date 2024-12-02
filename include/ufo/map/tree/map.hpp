@@ -95,8 +95,6 @@ class Map
 	friend Base;
 	// Second base friends ;)
 	friend typename Base::Base;
-	// Third base friends ;D
-	friend typename Base::Base::Base;
 
 #define UFO_TREE_MAP_FRIEND(F)                                          \
 	friend std::tuple_element_t<std::min(static_cast<std::size_t>(F + 1), \

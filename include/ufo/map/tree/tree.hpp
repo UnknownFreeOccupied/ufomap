@@ -84,8 +84,6 @@ class MapTree
 
 	// First base friends :)
 	friend Base;
-	// Second base friends ;)
-	friend typename Base::Base;
 
 	static constexpr auto const BF = Base::branchingFactor();
 
