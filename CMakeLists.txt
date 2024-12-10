@@ -1,3 +1,7 @@
+option(UFO_MAP_DOCS     "Generate documentation" OFF)
+option(UFO_MAP_TESTING  "Unit testing"           OFF)
+option(UFO_MAP_COVERAGE "Test Coverage"          OFF)
+
 add_library(Map INTERFACE)
 add_library(UFO::Map ALIAS Map)
 
@@ -24,11 +28,11 @@ target_include_directories(Map
 		$<INSTALL_INTERFACE:include>
 )
 
-if(UFO_TESTING)
+if(UFO_TESTING OR UFO_MAP_TESTING)
   add_subdirectory(tests)
 endif()
 
-if(UFO_DOCS)
+if(UFO_DOCS OR UFO_MAP_DOCS)
 	add_subdirectory(docs)
 endif()
 
