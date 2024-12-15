@@ -6,12 +6,13 @@ add_library(Map INTERFACE)
 add_library(UFO::Map ALIAS Map)
 
 target_link_libraries(Map
-	INTERFACE 
+	INTERFACE
 		UFO::Cloud
 		# UFO::Compression
 		UFO::Compute
 		UFO::Container
 		UFO::Core
+		UFO::Execution
 		UFO::Geometry
 		UFO::Math
 		UFO::Morton
