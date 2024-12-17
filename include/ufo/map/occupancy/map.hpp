@@ -76,6 +76,8 @@ class OccupancyMap
 	static constexpr auto const BF  = Tree::branchingFactor();
 	static constexpr auto const Dim = Tree::dimensions();
 
+	using Block = OccupancyBlock<BF>;
+
  public:
 	/**************************************************************************************
 	|                                                                                     |
@@ -99,7 +101,7 @@ class OccupancyMap
 	using pos_t    = typename Tree::pos_t;
 
 	// Occupancy
-	using logit_t     = typename OccupancyBlock<BF>::logit_t;
+	using logit_t     = typename Block::logit_t;
 	using occupancy_t = float;
 
  private:
@@ -146,6 +148,22 @@ class OccupancyMap
 	[[nodiscard]] occupancy_t occupancy(NodeType node) const
 	{
 		return occupancy(occupancyLogit(node));
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                         GPU                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	[[nodiscard]] WGPUBuffer gpuOccupancyBuffer() const
+	{
+		return derived().template gpuBuffer<Block>();
+	}
+
+	[[nodiscard]] std::size_t gpuOccupancyBufferSize() const
+	{
+		return derived().template gpuBufferSize<Block>();
 	}
 
 	/**************************************************************************************
