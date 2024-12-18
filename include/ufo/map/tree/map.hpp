@@ -44,13 +44,13 @@
 
 // UFO
 #include <ufo/container/tree/predicate.hpp>
+#include <ufo/execution/execution.hpp>
 #include <ufo/map/tree/block.hpp>
 #include <ufo/map/tree/map_block.hpp>
 #include <ufo/map/tree/map_utility.hpp>
 #include <ufo/map/tree/tree.hpp>
 #include <ufo/map/type.hpp>
 #include <ufo/utility/enum.hpp>
-#include <ufo/execution/execution.hpp>
 #include <ufo/utility/io/buffer.hpp>
 #include <ufo/utility/macros.hpp>
 
@@ -253,24 +253,24 @@ class Map
 	|                                                                                     |
 	**************************************************************************************/
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(std::filesystem::path const& file, Pred const& pred = pred::True{},
 	                 mt_t map_types = to_underlying(MapType::ALL)) const
 	{
 		saveDotFile(Base::node(), file, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(std::ostream& out, Pred const& pred = pred::True{},
 	                 mt_t map_types = to_underlying(MapType::ALL)) const
 	{
 		saveDotFile(Base::node(), out, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Index node, std::filesystem::path const& file,
 	                 Pred const& pred      = pred::True{},
 	                 mt_t        map_types = to_underlying(MapType::ALL)) const
@@ -278,16 +278,16 @@ class Map
 		saveDotFile(Base::node(node), file, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Index node, std::ostream& out, Pred const& pred = pred::True{},
 	                 mt_t map_types = to_underlying(MapType::ALL)) const
 	{
 		saveDotFile(Base::node(node), out, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Node node, std::filesystem::path const& file,
 	                 Pred const& pred      = pred::True{},
 	                 mt_t        map_types = to_underlying(MapType::ALL)) const
@@ -297,8 +297,8 @@ class Map
 		saveDotFile(node, f, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Node node, std::ostream& out, Pred pred = pred::True{},
 	                 mt_t map_types = to_underlying(MapType::ALL)) const
 	{
@@ -353,8 +353,8 @@ class Map
 		out << "}";
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Code node, std::filesystem::path const& file,
 	                 Pred const& pred      = pred::True{},
 	                 mt_t        map_types = to_underlying(MapType::ALL)) const
@@ -362,16 +362,16 @@ class Map
 		saveDotFile(Base::node(node), file, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Code node, std::ostream& out, Pred const& pred = pred::True{},
 	                 mt_t map_types = to_underlying(MapType::ALL)) const
 	{
 		saveDotFile(Base::node(node), out, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Key node, std::filesystem::path const& file,
 	                 Pred const& pred      = pred::True{},
 	                 mt_t        map_types = to_underlying(MapType::ALL)) const
@@ -379,16 +379,16 @@ class Map
 		saveDotFile(Base::node(node), file, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Key node, std::ostream& out, Pred const& pred = pred::True{},
 	                 mt_t map_types = to_underlying(MapType::ALL)) const
 	{
 		saveDotFile(Base::node(node), out, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Coord node, std::filesystem::path const& file,
 	                 Pred const& pred      = pred::True{},
 	                 mt_t        map_types = to_underlying(MapType::ALL)) const
@@ -396,8 +396,8 @@ class Map
 		saveDotFile(Base::node(node), file, pred, map_types);
 	}
 
-	template <class Pred                                               = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred                                         = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void saveDotFile(Coord node, std::ostream& out, Pred const& pred = pred::True{},
 	                 mt_t map_types = to_underlying(MapType::ALL)) const
 	{
@@ -796,7 +796,7 @@ class Map
 		Map::onDotFileInfo((out << "<br/>"), node);
 	}
 
-	template <class Pred, std::enable_if_t<pred::is_pred_v<Pred, Map, Node>, bool> = true>
+	template <class Pred, std::enable_if_t<pred::is_pred_v<Pred, Map>, bool> = true>
 	void dotFileInfoRecurs(std::ostream& out, Node node, std::string const& id,
 	                       Pred const& pred, mt_t map_types,
 	                       std::string const& parent_shape) const
