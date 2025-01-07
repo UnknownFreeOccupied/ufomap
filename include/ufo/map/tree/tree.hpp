@@ -202,6 +202,7 @@ class MapTree
 	template <class InputIt>
 	std::vector<Index> modifiedSet(InputIt first, InputIt last)
 	{
+		// TODO: Implement
 		return modifiedSet(execution::seq, first, last);
 	}
 
@@ -220,31 +221,63 @@ class MapTree
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
 	std::vector<Index> modifiedSet(ExecutionPolicy&& policy, RandomIt first, RandomIt last)
 	{
-		using value_type = std::decay_t<typename std::iterator_traits<RandomIt>::value_type>;
+		std::vector<Index> nodes = Base::create(policy, first, last);
 
-		if constexpr (std::is_same_v<Index, value_type>) {
-			return std::vector<Index>(first, last);
-		} else {
-			std::vector<Index> nodes = Base::create(policy, first, last);
+		// Add root node once
+		auto root = Base::index();
+		if (0 == Base::treeBlock(root.pos).modifiedSet(root.offset)) {
+			auto depth                                    = Base::depth();
+			auto p                                        = modified_block_[depth].create();
+			modified_block_[depth].template get<pos_t>(p) = root.pos;
+		}
 
-			// Add root node once
-			auto root = Base::index();
-			if (0 == Base::treeBlock(root.pos).modifiedSet(root.offset)) {
-				auto depth                                    = Base::depth();
-				auto p                                        = modified_block_[depth].create();
-				modified_block_[depth].template get<pos_t>(p) = root.pos;
-			}
+		if constexpr (execution::is_stl_v<ExecutionPolicy>) {
+			// TODO: Implement
 
-			if constexpr (execution::is_seq_v<ExecutionPolicy>) {
-				// TODO: Implement
-			} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
-				auto node_f = [this](Index node) {
-					auto depth = Base::depth(node);
+			auto node_f = [this](Index node) {
+				auto depth = Base::depth(node);
+
+				auto idx = std::uint64_t(1) << node.offset;
+				auto old = Base::treeBlock(node.pos).modifiedSet(node.offset);
+
+				if (0 == depth || 0 != (old & idx)) {
+					return;
+				}
+
+				if (0 == old) {
+					pos_t p = modified_block_[depth].createThreadSafe();
+					modified_block_[depth].template get<pos_t>(p) = node.pos;
+				}
+			};
+
+			// TODO: Implement
+			// auto block_f = [this, &pos](pos_t block) {
+			// 	if (0 == Base::treeBlock(block).modifiedFill() && 0 < Base::depth(block)) {
+			// 		modifiedBlockAdd(block);
+			// 	}
+			// };
+
+			auto fun = [this, root_depth = Base::depth(), node_f /* , block_f */](Index node) {
+				auto depth = Base::depth(node);
+
+				if (0 == depth) {
+					auto idx = std::uint64_t(1) << node.offset;
+					auto old = Base::treeBlock(node.pos).modifiedSet(node.offset);
+					if (old & idx) {
+						return;
+					}
+				} else if (!modified(node)) {
+					Base::recursParentFirst(node, node_f /* , block_f */);
+				} else {
+					return;
+				}
+
+				for (++depth; root_depth > depth; ++depth) {
+					node = Base::parent(node);
 
 					auto idx = std::uint64_t(1) << node.offset;
 					auto old = Base::treeBlock(node.pos).modifiedSet(node.offset);
-
-					if (0 == depth || 0 != (old & idx)) {
+					if (0 != (old & idx)) {
 						return;
 					}
 
@@ -252,53 +285,32 @@ class MapTree
 						pos_t p = modified_block_[depth].createThreadSafe();
 						modified_block_[depth].template get<pos_t>(p) = node.pos;
 					}
-				};
+				}
+			};
 
-				// TODO: Implement
-				// auto block_f = [this, &pos](pos_t block) {
-				// 	if (0 == Base::treeBlock(block).modifiedFill() && 0 < Base::depth(block)) {
-				// 		modifiedBlockAdd(block);
-				// 	}
-				// };
-
-				auto const root_depth = Base::depth();
-				std::for_each(std::execution::par, nodes.begin(), nodes.end(),
-				              [this, root_depth, node_f /* , block_f */](Index node) {
-					              auto depth = Base::depth(node);
-
-					              if (0 == depth) {
-						              auto idx = std::uint64_t(1) << node.offset;
-						              auto old = Base::treeBlock(node.pos).modifiedSet(node.offset);
-						              if (old & idx) {
-							              return;
-						              }
-					              } else if (!modified(node)) {
-						              Base::recursParentFirst(node, node_f /* , block_f */);
-					              } else {
-						              return;
-					              }
-
-					              for (++depth; root_depth > depth; ++depth) {
-						              node = Base::parent(node);
-
-						              auto idx = std::uint64_t(1) << node.offset;
-						              auto old = Base::treeBlock(node.pos).modifiedSet(node.offset);
-						              if (0 != (old & idx)) {
-							              return;
-						              }
-
-						              if (0 == old) {
-							              pos_t p = modified_block_[depth].createThreadSafe();
-							              modified_block_[depth].template get<pos_t>(p) = node.pos;
-						              }
-					              }
-				              });
-			} else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
-				// TODO: Implement
-			}
-
-			return nodes;
+			std::for_each(execution::toSTL(policy), nodes.begin(), nodes.end(), fun);
 		}
+#if defined(UFO_PAR_GCD)
+		else if constexpr (execution::is_gcd_v<ExecutionPolicy>) {
+			// TODO: Implement
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "Not implemented for the execution policy");
+		}
+#endif
+#if defined(UFO_PAR_TBB)
+		else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
+			// TODO: Implement
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "Not implemented for the execution policy");
+		}
+#endif
+		else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
+			// TODO: Implement
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "Not implemented for the execution policy");
+		}
+
+		return nodes;
 	}
 
 	/*!
@@ -345,7 +357,11 @@ class MapTree
 	/*!
 	 * @brief Reset every node from the modified state.
 	 */
-	void modifiedReset() { modifiedReset(execution::seq); }
+	void modifiedReset()
+	{
+		// TODO: Implement
+		modifiedReset(execution::seq);
+	}
 
 	/*!
 	 * @brief Reset every node from the modified state.
@@ -357,44 +373,38 @@ class MapTree
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
 	void modifiedReset(ExecutionPolicy&& policy)
 	{
-		if constexpr (execution::is_seq_v<ExecutionPolicy> ||
-		              execution::is_unseq_v<ExecutionPolicy>) {
+		if constexpr (execution::is_stl_v<ExecutionPolicy>) {
 			for (auto& mb : modified_block_) {
-				for (pos_t block : mb.template iter<pos_t>()) {
-					Base::treeBlock(block).modifiedClear();
-				}
-				mb.clear();
-			}
-		} else if constexpr (execution::is_par_v<ExecutionPolicy>) {
-			for (auto& mb : modified_block_) {
-				std::for_each(UFO_PAR_STL_PAR mb.template begin<pos_t>(),
-				              mb.template end<pos_t>(),
-				              [this](pos_t block) { Base::treeBlock(block).modifiedClear(); });
-				mb.clear();
-			}
-		} else if constexpr (execution::is_par_unseq_v<ExecutionPolicy>) {
-			for (auto& mb : modified_block_) {
-				std::for_each(UFO_PAR_STL_PAR_UNSEQ mb.template begin<pos_t>(),
+				std::for_each(execution::toSTL(policy), mb.template begin<pos_t>(),
 				              mb.template end<pos_t>(),
 				              [this](pos_t block) { Base::treeBlock(block).modifiedClear(); });
 				mb.clear();
 			}
 		}
 #if defined(UFO_PAR_GCD)
-		else if constexpr (execution::is_gcd_v<ExecutionPolicy> ||
-		                   execution::is_gcd_unseq_v<ExecutionPolicy>) {
+		else if constexpr (execution::is_gcd_v<ExecutionPolicy>) {
+			// TODO: Implement
+			// for (auto& mb : modified_block_) {
+			// 	dispatch_apply(mb.size(), dispatch_get_global_queue(0, 0), ^(std::size_t row) {
+			// 		for (std::size_t col{}; col < cols; ++col) {
+			// 			rays(row, col) = fun(row, col);
+			// 		}
+			// 	});
+			// }
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "Not implemented for the execution policy");
+		}
+#endif
+#if defined(UFO_PAR_TBB)
+		else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
 			// TODO: Implement
 			static_assert(dependent_false_v<ExecutionPolicy>,
 			              "Not implemented for the execution policy");
 		}
 #endif
-		else if constexpr (execution::is_tbb_v<ExecutionPolicy> ||
-		                   execution::is_tbb_unseq_v<ExecutionPolicy>) {
+		else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
 			// TODO: Implement
-			static_assert(dependent_false_v<ExecutionPolicy>,
-			              "Not implemented for the execution policy");
-		} else if constexpr (execution::is_omp_v<ExecutionPolicy> ||
-		                     execution::is_omp_unseq_v<ExecutionPolicy>) {
+
 			for (auto& mb : modified_block_) {
 #pragma omp parallel for
 				for (pos_t block : mb.template iter<pos_t>()) {
@@ -402,6 +412,9 @@ class MapTree
 				}
 				mb.clear();
 			}
+
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "Not implemented for the execution policy");
 		} else {
 			static_assert(dependent_false_v<ExecutionPolicy>,
 			              "Not implemented for the execution policy");
@@ -595,6 +608,7 @@ class MapTree
 	void propagateModified(mt_t map_types      = to_underlying(MapType::ALL),
 	                       bool reset_modified = true, bool prune = false)
 	{
+		// TODO: Implement
 		propagateModified(execution::seq, map_types, reset_modified, prune);
 	}
 
@@ -618,33 +632,10 @@ class MapTree
 			}
 		};
 
-		if constexpr (execution::is_seq_v<ExecutionPolicy> ||
-		              execution::is_unseq_v<ExecutionPolicy>) {
+		if constexpr (execution::is_stl_v<ExecutionPolicy>) {
 			for (std::size_t i = 1; modified_block_.size() > i; ++i) {
-				for (pos_t block : modified_block_[i].template iter<pos_t>()) {
-					fun(block);
-				}
-			}
-
-			if (reset_modified) {
-				for (auto& mb : modified_block_) {
-					mb.clear();
-				}
-			}
-		} else if constexpr (execution::is_par_v<ExecutionPolicy>) {
-			for (std::size_t i = 1; modified_block_.size() > i; ++i) {
-				std::for_each(UFO_PAR_STL_PAR modified_block_[i].template begin<pos_t>(),
-				              modified_block_[i].template end<pos_t>(), fun);
-			}
-
-			if (reset_modified) {
-				for (auto& mb : modified_block_) {
-					mb.clear();
-				}
-			}
-		} else if constexpr (execution::is_par_unseq_v<ExecutionPolicy>) {
-			for (std::size_t i = 1; modified_block_.size() > i; ++i) {
-				std::for_each(UFO_PAR_STL_PAR_UNSEQ modified_block_[i].template begin<pos_t>(),
+				std::for_each(execution::toSTL(policy),
+				              modified_block_[i].template begin<pos_t>(),
 				              modified_block_[i].template end<pos_t>(), fun);
 			}
 
@@ -655,25 +646,42 @@ class MapTree
 			}
 		}
 #if defined(UFO_PAR_GCD)
-		else if constexpr (execution::is_gcd_v<ExecutionPolicy> ||
-		                   execution::is_gcd_unseq_v<ExecutionPolicy>) {
+		else if constexpr (execution::is_gcd_v<ExecutionPolicy>) {
 			// TODO: Implement
 			static_assert(dependent_false_v<ExecutionPolicy>,
 			              "Not implemented for the execution policy");
 		}
 #endif
-		else if constexpr (execution::is_tbb_v<ExecutionPolicy> ||
-		                   execution::is_tbb_unseq_v<ExecutionPolicy>) {
+#if defined(UFO_PAR_TBB)
+		else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
 			// TODO: Implement
 			static_assert(dependent_false_v<ExecutionPolicy>,
 			              "Not implemented for the execution policy");
-		} else if constexpr (execution::is_omp_v<ExecutionPolicy> ||
-		                     execution::is_omp_unseq_v<ExecutionPolicy>) {
+		}
+#endif
+		else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
 			for (auto& mb : modified_block_) {
+				if constexpr (execution::is_seq_v<ExecutionPolicy>) {
+					for (pos_t block : mb.template iter<pos_t>()) {
+						fun(block);
+					}
+				} else if constexpr (execution::is_unseq_v<ExecutionPolicy>) {
+#pragma omp simd
+					for (pos_t block : mb.template iter<pos_t>()) {
+						fun(block);
+					}
+				} else if constexpr (execution::is_par_v<ExecutionPolicy>) {
 #pragma omp parallel for
-				for (pos_t block : mb.template iter<pos_t>()) {
-					fun(block);
+					for (pos_t block : mb.template iter<pos_t>()) {
+						fun(block);
+					}
+				} else if constexpr (execution::is_par_unseq_v<ExecutionPolicy>) {
+#pragma omp parallel for simd
+					for (pos_t block : mb.template iter<pos_t>()) {
+						fun(block);
+					}
 				}
+
 				if (reset_modified) {
 					mb.clear();
 				}
