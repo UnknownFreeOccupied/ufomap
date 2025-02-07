@@ -100,8 +100,8 @@ struct InnerCheck<ColorMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct InnerCheck<THEN<ColorMap<Negated>, PredPost>> {
-	using Pred = THEN<ColorMap<Negated>, PredPost>;
+struct InnerCheck<Then<ColorMap<Negated>, PredPost>> {
+	using Pred = Then<ColorMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
@@ -143,8 +143,8 @@ struct ValueCheck<ColorMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct ValueCheck<THEN<ColorMap<Negated>, PredPost>> {
-	using Pred = THEN<ColorMap<Negated>, PredPost>;
+struct ValueCheck<Then<ColorMap<Negated>, PredPost>> {
+	using Pred = Then<ColorMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)

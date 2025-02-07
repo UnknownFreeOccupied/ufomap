@@ -64,6 +64,7 @@ enum class MapType : std::uint64_t {
 	LABEL_SET    = std::uint64_t(1) << 11,
 	SEMANTIC_SET = std::uint64_t(1) << 12,
 	COST         = std::uint64_t(1) << 13,
+	INTEGRATION  = std::uint64_t(1) << 14,
 };
 }  // namespace ufo
 

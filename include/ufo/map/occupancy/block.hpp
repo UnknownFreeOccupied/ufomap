@@ -42,6 +42,7 @@
 #define UFO_MAP_OCCUPANCY_BLOCK_HPP
 
 // UFO
+#include <ufo/math/math.hpp>
 #include <ufo/utility/create_array.hpp>
 
 // STL
@@ -53,26 +54,76 @@
 namespace ufo
 {
 struct OccupancyElement {
-	using logit_t = std::int8_t;
+	using logit_t = std::int32_t;
 
-	logit_t      logit{};
-	// TODO: Use a single std::uint8_t and shift instead of using bit-field
-	std::uint8_t unknown  : 1;
-	std::uint8_t free     : 1;
-	std::uint8_t occupied : 1;
+	// 3 bits for unknown, free, occupied, 1 bit for sign, 1 bit because we want half, -1
+	// because positive and negative should be the same
+	static constexpr logit_t const MAX_VALUE = ipow(logit_t(2), 32 - 5) - 1;
+
+	std::uint32_t value_and_indicators{};
 
 	OccupancyElement() noexcept                        = default;
 	OccupancyElement(OccupancyElement const&) noexcept = default;
 
 	OccupancyElement(logit_t logit, bool unknown, bool free, bool occupied) noexcept
-	    : logit(logit)
-	    , unknown(static_cast<std::uint8_t>(unknown))
-	    , free(static_cast<std::uint8_t>(free))
-	    , occupied(static_cast<std::uint8_t>(occupied))
+	    : value_and_indicators((static_cast<std::uint32_t>(logit + MAX_VALUE) << 3) |
+	                           (static_cast<std::uint32_t>(unknown) << 2) |
+	                           (static_cast<std::uint32_t>(free) << 1) |
+	                           (static_cast<std::uint32_t>(occupied) << 1))
+	{
+	}
+
+	OccupancyElement(std::uint32_t value, std::uint32_t indicators) noexcept
+	    : value_and_indicators(value | indicators)
 	{
 	}
 
 	OccupancyElement& operator=(OccupancyElement const&) noexcept = default;
+
+	[[nodiscard]] logit_t logit() const noexcept
+	{
+		return static_cast<logit_t>(value_and_indicators >> 3) - MAX_VALUE;
+	}
+
+	void logit(logit_t v) noexcept
+	{
+		value_and_indicators =
+		    (static_cast<std::uint32_t>(v + MAX_VALUE) << 3) | indicators();
+	}
+
+	[[nodiscard]] bool unknown() const noexcept { return (value_and_indicators >> 2) & 1u; }
+
+	void unknown(bool v) noexcept
+	{
+		value_and_indicators =
+		    (value_and_indicators & ~(std::uint32_t(1) << 2)) | (std::uint32_t(v) << 2);
+	}
+
+	[[nodiscard]] bool free() const noexcept { return (value_and_indicators >> 1) & 1u; }
+
+	void free(bool v) noexcept
+	{
+		value_and_indicators =
+		    (value_and_indicators & ~(std::uint32_t(1) << 1)) | (std::uint32_t(v) << 1);
+	}
+
+	[[nodiscard]] bool occupied() const noexcept
+	{
+		return (value_and_indicators >> 0) & 1u;
+	}
+
+	void occupied(bool v) noexcept
+	{
+		value_and_indicators =
+		    (value_and_indicators & ~(std::uint32_t(1) << 0)) | (std::uint32_t(v) << 0);
+	}
+
+	[[nodiscard]] std::uint32_t value() const noexcept { return value_and_indicators >> 3; }
+
+	[[nodiscard]] std::uint32_t indicators() const noexcept
+	{
+		return value_and_indicators & 0b111;
+	}
 };
 
 template <std::size_t BF>

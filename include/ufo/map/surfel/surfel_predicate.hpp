@@ -132,8 +132,8 @@ struct ValueCheck<SurfelMap> {
 };
 
 template <class PredPost>
-struct ValueCheck<THEN<SurfelMap, PredPost>> {
-	using Pred = THEN<SurfelMap, PredPost>;
+struct ValueCheck<Then<SurfelMap, PredPost>> {
+	using Pred = Then<SurfelMap, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
@@ -247,8 +247,8 @@ struct InnerCheck<SurfelMap> {
 };
 
 template <class PredPost>
-struct InnerCheck<THEN<SurfelMap, PredPost>> {
-	using Pred = THEN<SurfelMap, PredPost>;
+struct InnerCheck<Then<SurfelMap, PredPost>> {
+	using Pred = Then<SurfelMap, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)

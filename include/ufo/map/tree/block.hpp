@@ -58,18 +58,19 @@ struct MapBlock : public TreeBlock<Dim, BF, WithCenter> {
 	using Code     = typename Base::Code;
 	using Point    = typename Base::Point;
 	using length_t = typename Base::length_t;
+	using Length   = typename Base::Length;
 
 	constexpr MapBlock()                = default;
 	constexpr MapBlock(MapBlock const&) = default;
 
 	constexpr MapBlock(TreeIndex::pos_t parent_block, Code code, Point center,
-	                   length_t half_length)
+	                   Length half_length)
 	    : Base(parent_block, code, center, half_length)
 	{
 	}
 
 	constexpr MapBlock(TreeIndex::pos_t parent_block, MapBlock const& parent,
-	                   std::size_t offset, length_t half_length)
+	                   std::size_t offset, Length half_length)
 	    : Base(parent_block, static_cast<Base const&>(parent), offset, half_length)
 	{
 		if (parent.modified(offset)) {
@@ -87,7 +88,7 @@ struct MapBlock : public TreeBlock<Dim, BF, WithCenter> {
 	}
 
 	constexpr void fill(TreeIndex::pos_t parent_block, MapBlock const& parent,
-	                    std::size_t offset, length_t half_length)
+	                    std::size_t offset, Length half_length)
 	{
 		Base::fill(parent_block, static_cast<Base const&>(parent), offset, half_length);
 		if (parent.modified(offset)) {

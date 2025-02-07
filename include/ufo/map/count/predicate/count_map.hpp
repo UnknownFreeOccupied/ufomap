@@ -101,8 +101,8 @@ struct InnerCheck<CountMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct InnerCheck<THEN<CountMap<Negated>, PredPost>> {
-	using Pred = THEN<CountMap<Negated>, PredPost>;
+struct InnerCheck<Then<CountMap<Negated>, PredPost>> {
+	using Pred = Then<CountMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
@@ -144,8 +144,8 @@ struct ValueCheck<CountMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct ValueCheck<THEN<CountMap<Negated>, PredPost>> {
-	using Pred = THEN<CountMap<Negated>, PredPost>;
+struct ValueCheck<Then<CountMap<Negated>, PredPost>> {
+	using Pred = Then<CountMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)

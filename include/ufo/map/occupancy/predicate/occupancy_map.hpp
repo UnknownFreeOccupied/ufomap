@@ -100,8 +100,8 @@ struct InnerCheck<OccupancyMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct InnerCheck<THEN<OccupancyMap<Negated>, PredPost>> {
-	using Pred = THEN<OccupancyMap<Negated>, PredPost>;
+struct InnerCheck<Then<OccupancyMap<Negated>, PredPost>> {
+	using Pred = Then<OccupancyMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
@@ -143,8 +143,8 @@ struct ValueCheck<OccupancyMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct ValueCheck<THEN<OccupancyMap<Negated>, PredPost>> {
-	using Pred = THEN<OccupancyMap<Negated>, PredPost>;
+struct ValueCheck<Then<OccupancyMap<Negated>, PredPost>> {
+	using Pred = Then<OccupancyMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)

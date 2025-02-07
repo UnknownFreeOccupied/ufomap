@@ -107,7 +107,7 @@ class OccupancyMap
  private:
 	static constexpr occupancy_t MaxOccupancy = 1.0;
 	static constexpr occupancy_t MinOccupancy = 0.0;
-	static constexpr logit_t     MaxLogit     = std::numeric_limits<logit_t>::max();
+	static constexpr logit_t     MaxLogit     = Block::MAX_VALUE;
 	static constexpr logit_t     MinLogit     = -MaxLogit;
 
  public:
@@ -131,7 +131,7 @@ class OccupancyMap
 	[[nodiscard]] logit_t occupancyLogit(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return occupancyBlock(n.pos)[n.offset].logit;
+		return occupancyBlock(n.pos)[n.offset].logit();
 	}
 
 	[[nodiscard]] occupancy_t occupancy(logit_t logit) const
@@ -236,7 +236,7 @@ class OccupancyMap
 		    node,
 		    [this, change](Index node) {
 			    return static_cast<logit_t>(UFO_CLAMP(
-			        static_cast<int>(occupancyBlock(node.pos)[node.offset].logit) + change,
+			        static_cast<int>(occupancyBlock(node.pos)[node.offset].logit()) + change,
 			        static_cast<int>(MinLogit), static_cast<int>(MaxLogit)));
 		    },
 		    propagate);
@@ -252,12 +252,9 @@ class OccupancyMap
 
 			assert(MinLogit <= value && MaxLogit >= value);
 
-			auto& occ = occupancyBlock(node.pos)[node.offset];
-
-			occ.unknown  = occupancyUnknownLogit(value);
-			occ.free     = occupancyFreeLogit(value);
-			occ.occupied = occupancyOccupiedLogit(value);
-			occ.logit    = value;
+			occupancyBlock(node.pos)[node.offset] =
+			    OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
+			                     occupancyOccupiedLogit(value));
 		};
 
 		auto block_f = [this, node_f](pos_t pos) {
@@ -619,10 +616,8 @@ class OccupancyMap
 		auto& block = occupancyBlock(0);
 
 		logit_t value{};
-		block[0].logit    = value;
-		block[0].unknown  = occupancyUnknownLogit(value);
-		block[0].free     = occupancyFreeLogit(value);
-		block[0].occupied = occupancyOccupiedLogit(value);
+		block[0] = OccupancyElement(value, occupancyUnknownLogit(value),
+		                            occupancyFreeLogit(value), occupancyOccupiedLogit(value));
 	}
 
 	void onInitChildren(Index node, pos_t children)
@@ -633,58 +628,45 @@ class OccupancyMap
 	void onPruneChildren(Index node, pos_t children)
 	{
 		// Ensure that the indicators of `node` are correct
-		auto& v    = occupancyBlock(node.pos)[node.offset];
-		v.unknown  = occupancyUnknownLogit(v.logit);
-		v.free     = occupancyFreeLogit(v.logit);
-		v.occupied = occupancyOccupiedLogit(v.logit);
+		auto&   v     = occupancyBlock(node.pos)[node.offset];
+		logit_t value = v.logit();
+		v = OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
+		                     occupancyOccupiedLogit(value));
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
 	{
 		auto const& children_block = occupancyBlock(children);
 
-		std::uint8_t unknown  = 0;
-		std::uint8_t free     = 0;
-		std::uint8_t occupied = 0;
-		for (auto child : children_block.data) {
-			unknown += child.unknown;
-			free += child.free;
-			occupied += child.occupied;
-		}
-
-		auto& occ = occupancyBlock(node.pos)[node.offset];
-
-		occ.unknown  = static_cast<bool>(unknown);
-		occ.free     = static_cast<bool>(free);
-		occ.occupied = static_cast<bool>(occupied);
-
-		logit_t value;
+		std::uint32_t indicators{};
+		std::uint32_t value{};
 		switch (prop_criteria_) {
 			case OccupancyPropagationCriteria::MAX:
-				value = MinLogit;
-				for (std::size_t i{}; BF > i; ++i) {
-					value = UFO_MAX(value, children_block[i].logit);
+				for (auto child : children_block.data) {
+					indicators |= child.indicators();
+					value = UFO_MAX(value, child.value());
 				}
 				break;
 			case OccupancyPropagationCriteria::MIN:
-				value = MaxLogit;
-				for (std::size_t i{}; BF > i; ++i) {
-					value = UFO_MIN(value, children_block[i].logit);
+				value = std::numeric_limits<std::uint32_t>::max();
+				for (auto child : children_block.data) {
+					indicators |= child.indicators();
+					value = UFO_MIN(value, child.value());
 				}
 				break;
 			case OccupancyPropagationCriteria::MEAN: {
-				int v = 0;
-				for (std::size_t i{}; BF > i; ++i) {
-					v += static_cast<int>(children_block[i].logit);
+				for (auto child : children_block.data) {
+					indicators |= child.indicators();
+					value += child.value();
 				}
-				value = static_cast<logit_t>(v / static_cast<int>(BF));
+				value /= BF;
 				break;
 			}
 			case OccupancyPropagationCriteria::ONLY_INDICATORS: return;
 			case OccupancyPropagationCriteria::NONE: return;
 		}
 
-		occ.logit = value;
+		occupancyBlock(node.pos)[node.offset] = OccupancyElement(value, indicators);
 	}
 
 	//
@@ -697,7 +679,9 @@ class OccupancyMap
 		using std::end;
 		return std::all_of(
 		    begin(occupancyBlock(block).data) + 1, end(occupancyBlock(block).data),
-		    [v = occupancyBlock(block)[0].logit](auto const& e) { return v == e.logit; });
+		    [v = occupancyBlock(block)[0].value_and_indicators](auto const& e) {
+			    return v == e.value_and_indicators;
+		    });
 	}
 
 	//
@@ -772,13 +756,13 @@ class OccupancyMap
 			if (offset.all()) {
 				std::array<logit_t, BF> logit;
 				for (offset_t i{}; BF > i; ++i) {
-					logit[i] = occ[i].logit;
+					logit[i] = occ[i].logit();
 				}
 				out.write(logit);
 			} else {
 				for (offset_t i{}; BF > i; ++i) {
 					if (offset[i]) {
-						out.write(occ[i].logit);
+						out.write(occ[i].logit());
 					}
 				}
 			}

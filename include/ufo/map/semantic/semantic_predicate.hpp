@@ -69,8 +69,8 @@ struct ValueCheck<SemanticMap> {
 };
 
 template <class PredPost>
-struct ValueCheck<THEN<SemanticMap, PredPost>> {
-	using Pred = THEN<SemanticMap, PredPost>;
+struct ValueCheck<Then<SemanticMap, PredPost>> {
+	using Pred = Then<SemanticMap, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
@@ -95,8 +95,8 @@ struct InnerCheck<SemanticMap> {
 };
 
 template <class PredPost>
-struct InnerCheck<THEN<SemanticMap, PredPost>> {
-	using Pred = THEN<SemanticMap, PredPost>;
+struct InnerCheck<Then<SemanticMap, PredPost>> {
+	using Pred = Then<SemanticMap, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)

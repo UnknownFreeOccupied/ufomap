@@ -101,8 +101,8 @@ struct InnerCheck<ReflectionMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct InnerCheck<THEN<ReflectionMap<Negated>, PredPost>> {
-	using Pred = THEN<ReflectionMap<Negated>, PredPost>;
+struct InnerCheck<Then<ReflectionMap<Negated>, PredPost>> {
+	using Pred = Then<ReflectionMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
@@ -144,8 +144,8 @@ struct ValueCheck<ReflectionMap<Negated>> {
 };
 
 template <bool Negated, class PredPost>
-struct ValueCheck<THEN<ReflectionMap<Negated>, PredPost>> {
-	using Pred = THEN<ReflectionMap<Negated>, PredPost>;
+struct ValueCheck<Then<ReflectionMap<Negated>, PredPost>> {
+	using Pred = Then<ReflectionMap<Negated>, PredPost>;
 
 	template <class Map, class Node>
 	static constexpr bool apply(Pred const& p, Map const& m, Node const& n)
