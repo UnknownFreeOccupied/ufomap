@@ -69,12 +69,12 @@ struct OccupancyElement {
 	    : value_and_indicators((static_cast<std::uint32_t>(logit + MAX_VALUE) << 3) |
 	                           (static_cast<std::uint32_t>(unknown) << 2) |
 	                           (static_cast<std::uint32_t>(free) << 1) |
-	                           (static_cast<std::uint32_t>(occupied) << 1))
+	                           (static_cast<std::uint32_t>(occupied) << 0))
 	{
 	}
 
 	OccupancyElement(std::uint32_t value, std::uint32_t indicators) noexcept
-	    : value_and_indicators(value | indicators)
+	    : value_and_indicators(value << 3 | indicators)
 	{
 	}
 
