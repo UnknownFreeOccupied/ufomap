@@ -107,7 +107,7 @@ class OccupancyMap
  private:
 	static constexpr occupancy_t MaxOccupancy = 1.0;
 	static constexpr occupancy_t MinOccupancy = 0.0;
-	static constexpr logit_t     MaxLogit     = Block::MAX_VALUE;
+	static constexpr logit_t     MaxLogit     = OccupancyElement::MAX_VALUE;
 	static constexpr logit_t     MinLogit     = -MaxLogit;
 
  public:
@@ -357,7 +357,7 @@ class OccupancyMap
 	[[nodiscard]] bool containsUnknown(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].unknown);
+		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].unknown());
 	}
 
 	template <class NodeType,
@@ -365,7 +365,7 @@ class OccupancyMap
 	[[nodiscard]] bool containsFree(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].free);
+		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].free());
 	}
 
 	template <class NodeType,
@@ -373,7 +373,7 @@ class OccupancyMap
 	[[nodiscard]] bool containsOccupied(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].occupied);
+		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].occupied());
 	}
 
 	//
