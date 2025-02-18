@@ -46,6 +46,7 @@
 #include <ufo/cloud/point_cloud.hpp>
 #include <ufo/container/tree/code.hpp>
 #include <ufo/container/tree/index.hpp>
+#include <ufo/execution/execution.hpp>
 #include <ufo/map/color/map.hpp>
 #include <ufo/map/distance/map.hpp>
 #include <ufo/map/integrator/detail/bool_grid.hpp>
@@ -53,7 +54,6 @@
 #include <ufo/map/integrator/detail/grid_map.hpp>
 #include <ufo/map/occupancy/map.hpp>
 #include <ufo/math/math.hpp>
-#include <ufo/execution/execution.hpp>
 #include <ufo/utility/index_iterator.hpp>
 #include <ufo/utility/spinlock.hpp>
 
@@ -68,7 +68,7 @@ enum class DownSamplingMethod { NONE, FIRST, CENTER };
 
 struct Integrator {
 	using occupancy_t = float;
-	using logit_t     = std::int8_t;
+	using logit_t     = OccupancyElement::logit_t;
 	using depth_t     = unsigned;
 	using time_t      = float;
 
@@ -120,12 +120,37 @@ struct Integrator {
 		} else {
 			std::vector<TreeCode<Dim>> codes;
 
-			// TODO: Fix policy
-
 			codes.resize(cloud.size());
-			std::transform(
-			    UFO_TBB_PAR get<0>(cloud).begin(), get<0>(cloud).end(), codes.begin(),
-			    [this, &map](auto const& p) { return map.code(TreeCoord(p, hit_depth)); });
+
+			// TODO: Fix policy
+			if constexpr (execution::is_stl_v<ExecutionPolicy>) {
+				std::transform(execution::toSTL(policy), get<0>(cloud).begin(),
+				               get<0>(cloud).end(), codes.begin(), [this, &map](auto const& p) {
+					               return map.code(TreeCoord(p, hit_depth));
+				               });
+			}
+#if defined(UFO_PAR_GCD)
+			else if constexpr (execution::is_gcd_v<ExecutionPolicy>) {
+				// TODO: Implement
+				static_assert(dependent_false_v<ExecutionPolicy>,
+				              "insertPoints not implemented for the execution policy gcd");
+			}
+#endif
+#if defined(UFO_PAR_TBB)
+			else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
+				// TODO: Implement
+				static_assert(dependent_false_v<ExecutionPolicy>,
+				              "insertPoints not implemented for the execution policy tbb");
+			}
+#endif
+			else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
+				// TODO: Implement
+				static_assert(dependent_false_v<ExecutionPolicy>,
+				              "insertPoints not implemented for the execution policy omp");
+			} else {
+				static_assert(dependent_false_v<ExecutionPolicy>,
+				              "insertPoints not implemented for the execution policy other");
+			}
 
 			nodes = propagate ? map.create(policy, codes) : map.modifiedSet(policy, codes);
 		}
@@ -134,6 +159,8 @@ struct Integrator {
 		if constexpr (Map::mapType(MapType::OCCUPANCY)) {
 			// TODO: What function should be used here?
 			occupancy_hit_logit = map.occupancyLogit(occupancy_hit);
+			// std::cout <<"occupancy_hit_logit of " <<occupancy_hit << ": " <<
+			// +occupancy_hit_logit << std::endl;
 		}
 
 		auto insert_f = [&](TreeIndex const& node, std::size_t cloud_index) {
@@ -152,11 +179,13 @@ struct Integrator {
 			}
 		};
 
+		// TODO: Fix policy
 		if constexpr (execution::is_seq_v<ExecutionPolicy>) {
 			for (std::size_t i{}; nodes.size() > i; ++i) {
 				insert_f(nodes[i], i);
 			}
-		} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
+		} else if constexpr (execution::is_stl_v<ExecutionPolicy>) {
+			// TODO: Implement
 			auto fun = [&](std::size_t cloud_index) {
 				auto node = nodes[cloud_index];
 
@@ -167,8 +196,41 @@ struct Integrator {
 			};
 
 			IndexIterator<std::size_t> it(0, nodes.size());
-			std::for_each(UFO_TBB_PAR it.begin(), it.end(), fun);
-		} else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
+
+			std::for_each(execution::toSTL(policy), it.begin(), it.end(), fun);
+		}
+#if defined(UFO_PAR_GCD)
+		else if constexpr (execution::is_gcd_v<ExecutionPolicy>) {
+			// TODO: Implement
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "insertPoints not implemented for the execution policy");
+		}
+#endif
+#if defined(UFO_PAR_TBB)
+		else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
+			// TODO: Implement
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "insertPoints not implemented for the execution policy");
+			// auto fun = [&](std::size_t cloud_index) {
+			// 	auto node = nodes[cloud_index];
+
+			// 	// This chick wants to rule the block (node.pos being the block)
+			// 	std::lock_guard lock(chickens[node.pos % chickens.size()]);
+
+			// 	insert_f(node, cloud_index);
+			// };
+
+			// IndexIterator<std::size_t> it(0, nodes.size());
+
+			// oneapi::tbb::parallel_for(
+			//     std::size_t(0), size,
+			//     [&t, first, d_first](std::size_t i) { d_first[i] = t * first[i]; });
+
+			// // std::for_each(execution::toSTL(policy), it.begin(), it.end(), fun);
+		}
+#endif
+		else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
+// TODO: Implement
 #pragma omp parallel for
 			for (std::size_t i = 0; nodes.size() > i; ++i) {
 				auto node = nodes[i];
@@ -179,7 +241,8 @@ struct Integrator {
 				insert_f(nodes[i], i);
 			}
 		} else {
-			// TODO: Error
+			static_assert(dependent_false_v<ExecutionPolicy>,
+			              "insertPoints not implemented for the execution policy");
 		}
 
 		// TODO: Implement
@@ -228,7 +291,7 @@ struct Integrator {
 			logit_t occupancy_miss_logit = map.occupancyLogit(occupancy_miss);
 
 			// TODO: Need to add the chickens to the below
-			std::for_each(UFO_TBB_PAR nodes.begin(), nodes.end(),
+			std::for_each(execution::toSTL(policy), nodes.begin(), nodes.end(),
 			              [&map, occupancy_miss_logit, propagate](auto const& node) {
 				              map.occupancyUpdateLogit(node, occupancy_miss_logit, propagate);
 
@@ -249,7 +312,7 @@ struct Integrator {
 
 			// TODO: Need to add the chickens to the below
 			IndexIterator<std::size_t> it(0, nodes.size());
-			std::for_each(UFO_TBB_PAR it.begin(), it.end(), [&](std::size_t pos) {
+			std::for_each(execution::toSTL(policy), it.begin(), it.end(), [&](std::size_t pos) {
 				auto node = nodes[pos];
 				auto c    = count[pos];
 				map.occupancyUpdateLogit(node, c * occupancy_miss_logit, propagate);
@@ -284,9 +347,9 @@ struct Integrator {
 	{
 		std::vector<TreeCode<Dim>> misses;
 
-		float const grid_size    = map.length(miss_depth);
-		auto const  k_origin     = map.key(TreeCoord<Dim, T>(sensor_origin, miss_depth));
-		auto const  voxel_border = map.center(k_origin) - sensor_origin;
+		auto const grid_size    = map.length(miss_depth);
+		auto const k_origin     = map.key(TreeCoord<Dim, T>(sensor_origin, miss_depth));
+		auto const voxel_border = map.center(k_origin) - sensor_origin;
 
 		if constexpr (2 == Dim) {
 			// TODO: Implemment
@@ -300,7 +363,7 @@ struct Integrator {
 			if constexpr (execution::is_seq_v<ExecutionPolicy>) {
 				// TODO: Implement
 			} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
-				std::for_each(UFO_TBB_PAR hits.begin(), hits.end(), [&](auto hit) {
+				std::for_each(execution::toSTL(policy), hits.begin(), hits.end(), [&](auto hit) {
 					// TODO: Fix, wrong use of thread_local
 					thread_local auto  grid_key  = origin_grid_key;
 					thread_local auto* miss_grid = &origin_miss_grid;
@@ -374,7 +437,7 @@ struct Integrator {
 
 				Spinlock mutex;
 
-				std::for_each(UFO_TBB_PAR grids.begin(), grids.end(), [&](auto& x) {
+				std::for_each(execution::toSTL(policy), grids.begin(), grids.end(), [&](auto& x) {
 					auto c                      = x.first;
 					auto& [miss_grid, hit_grid] = x.second;
 
@@ -478,7 +541,7 @@ struct Integrator {
 			if constexpr (execution::is_seq_v<ExecutionPolicy>) {
 				// TODO: Implement
 			} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
-				std::for_each(UFO_TBB_PAR hits.begin(), hits.end(), [&](auto hit) {
+				std::for_each(execution::toSTL(policy), hits.begin(), hits.end(), [&](auto hit) {
 					// TODO: Fix, wrong use of thread_local
 					thread_local auto  grid_key  = origin_grid_key;
 					thread_local auto* miss_grid = &origin_miss_grid;
@@ -548,46 +611,49 @@ struct Integrator {
 
 				Spinlock mutex;
 
-				std::for_each(UFO_TBB_PAR count_grids.begin(), count_grids.end(), [&](auto& x) {
-					auto c                      = x.first;
-					auto& [miss_grid, hit_grid] = x.second;
+				std::for_each(
+				    execution::toSTL(policy), count_grids.begin(), count_grids.end(),
+				    [&](auto& x) {
+					    auto c                      = x.first;
+					    auto& [miss_grid, hit_grid] = x.second;
 
-					auto m_it = miss_grid.begin();
-					// TODO: Implement this better
-					auto h_it =
-					    free_hits ? count_grids.end()->second.second.begin() : hit_grid.begin();
+					    auto m_it = miss_grid.begin();
+					    // TODO: Implement this better
+					    auto h_it =
+					        free_hits ? count_grids.end()->second.second.begin() : hit_grid.begin();
 
-					// TODO: Fix, wrong use of thread_local
-					thread_local decltype(misses) local_misses;
-					thread_local decltype(count)  local_count;
-					local_misses.reserve(1'000'000);
-					local_count.reserve(1'000'000);
+					    // TODO: Fix, wrong use of thread_local
+					    thread_local decltype(misses) local_misses;
+					    thread_local decltype(count)  local_count;
+					    local_misses.reserve(1'000'000);
+					    local_count.reserve(1'000'000);
 
-					for (std::uint64_t i{}; miss_grid.end() > m_it; m_it += 64, ++h_it, i += 64) {
-						std::uint64_t hit = *h_it;
-						for (std::uint64_t j{}; 64 > j; ++j) {
-							int v = m_it[j];
-							if (0 == v || (hit & (std::uint64_t(1) << j))) {
-								continue;
-							}
+					    for (std::uint64_t i{}; miss_grid.end() > m_it;
+					         m_it += 64, ++h_it, i += 64) {
+						    std::uint64_t hit = *h_it;
+						    for (std::uint64_t j{}; 64 > j; ++j) {
+							    int v = m_it[j];
+							    if (0 == v || (hit & (std::uint64_t(1) << j))) {
+								    continue;
+							    }
 
-							local_misses.emplace_back(miss_grid.code(c, i + j, miss_depth, 0));
-							local_count.emplace_back(v);
-						}
-					}
+							    local_misses.emplace_back(miss_grid.code(c, i + j, miss_depth, 0));
+							    local_count.emplace_back(v);
+						    }
+					    }
 
-					{
-						std::lock_guard lock(mutex);
-						misses.insert(misses.end(), local_misses.begin(), local_misses.end());
-						count.insert(count.end(), local_count.begin(), local_count.end());
-					}
+					    {
+						    std::lock_guard lock(mutex);
+						    misses.insert(misses.end(), local_misses.begin(), local_misses.end());
+						    count.insert(count.end(), local_count.begin(), local_count.end());
+					    }
 
-					local_misses.clear();
-					local_count.clear();
+					    local_misses.clear();
+					    local_count.clear();
 
-					miss_grid.clear();
-					hit_grid.clear();
-				});
+					    miss_grid.clear();
+					    hit_grid.clear();
+				    });
 
 				// std::cout << count_grids.size() << std::endl;
 

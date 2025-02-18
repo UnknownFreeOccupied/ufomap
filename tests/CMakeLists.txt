@@ -24,7 +24,9 @@ endif()
 # # set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE ON)
 
 add_executable(ufomap_tests
-	map_test.cpp
+	# map_test.cpp
+	integration_test.cpp
+	occupancy_map_test.cpp
 )
 
 target_link_libraries(ufomap_tests PRIVATE UFO::Map Catch2::Catch2WithMain)
