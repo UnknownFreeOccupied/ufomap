@@ -50,6 +50,7 @@ namespace ufo
 using mu_t = std::uint64_t;
 
 enum MapUtility : mu_t {
+	NONE                = mu_t(0),
 	WITH_CENTER         = mu_t(1) << 0,
 	ACCELERATED_COMPUTE = mu_t(1) << 1,
 	SNAPSHOT            = mu_t(1) << 2,
