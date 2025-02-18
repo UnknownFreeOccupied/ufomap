@@ -43,21 +43,25 @@
 #define UFO_MAP_UFOMAP_HPP
 
 // UFO
+#include <ufo/map/color/map.hpp>
+#include <ufo/map/integrator/integrator.hpp>
+#include <ufo/map/occupancy/map.hpp>
 #include <ufo/map/tree/map.hpp>
+#include <ufo/map/tree/map_utility.hpp>
 
 namespace ufo
 {
 template <template <class, class> class... Maps>
-using Map1D = Map<1, 0, Maps...>;
+using Map1D = Map<1, MapUtility::NONE, Maps...>;
 
 template <template <class, class> class... Maps>
-using Map2D = Map<2, 0, Maps...>;
+using Map2D = Map<2, MapUtility::NONE, Maps...>;
 
 template <template <class, class> class... Maps>
-using Map3D = Map<3, 0, Maps...>;
+using Map3D = Map<3, MapUtility::NONE, Maps...>;
 
 template <template <class, class> class... Maps>
-using Map4D = Map<4, 0, Maps...>;
+using Map4D = Map<4, MapUtility::NONE, Maps...>;
 
 template <mu_t Utility, template <class, class> class... Maps>
 using MapExtra1D = Map<1, Utility, Maps...>;
