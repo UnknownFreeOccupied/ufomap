@@ -43,6 +43,7 @@
 #define UFO_TREE_TREE_HPP
 
 // UFO
+#include <fstream>
 #include <ufo/container/tree/container.hpp>
 #include <ufo/container/tree/tree.hpp>
 #include <ufo/execution/execution.hpp>
@@ -750,6 +751,24 @@ class MapTree
 	|                                         I/O                                         |
 	|                                                                                     |
 	**************************************************************************************/
+
+	// TODO: Maybe move these somewhere else
+	// [[nodiscard]] std::ifstream openFileIn(std::filesystem::path const& file) const
+	// {
+	// 	std::ifstream ifs;
+	// 	ifs.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+	// 	ifs.imbue(std::locale());
+	// 	ifs.open(file, std::ios::in | std::ios::binary);
+
+	// 	return ifs;
+	// }
+
+	void openFileOut(std::filesystem::path const& file, std::ofstream& ofs) const
+	{
+		ofs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+		ofs.imbue(std::locale());
+		ofs.open(file, std::ios::out | std::ios::binary);
+	}
 
 	// [[nodiscard]] static bool isMap(std::filesystem::path const& file)
 	// {

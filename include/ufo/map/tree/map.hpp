@@ -330,7 +330,9 @@ class Map
 			return;
 		}
 
-		std::string id = node.code().toString() + '.' + std::to_string(node.code().depth());
+		std::string id = std::to_string(node.code[2]) + std::to_string(node.code[1]) +
+		                 std::to_string(node.code[0]) + '.' +
+		                 std::to_string(node.code.depth());
 		out << id << " [";
 
 		if (valid_inner) {
@@ -340,8 +342,8 @@ class Map
 		out << "label=<";
 		if (valid_return) {
 			// We need to write this node regardless, otherwise we would have disconnected nodes
-			Base::onDotFileInfo(out, node.index());
-			(onDotFileInfo<Maps<Map, Base>>(out, node.index(), map_types), ...);
+			Base::onDotFileInfo(out, node.index);
+			(onDotFileInfo<Maps<Map, Base>>(out, node.index, map_types), ...);
 		} else {
 			out << ' ';
 		}
@@ -818,7 +820,8 @@ class Map
 			}
 
 			std::string child_id =
-			    child.code().toString() + '.' + std::to_string(child.code().depth());
+			    std::to_string(child.code[2]) + std::to_string(child.code[1]) +
+			    std::to_string(child.code[0]) + '.' + std::to_string(child.code.depth());
 			out << child_id << " [";
 
 			if (valid_inner) {
@@ -829,8 +832,8 @@ class Map
 			if (valid_return) {
 				// We need to write this node regardless, otherwise we would have disconnected
 				// nodes
-				Base::onDotFileInfo(out, child.index());
-				(onDotFileInfo<Maps<Map, Base>>(out, child.index(), map_types), ...);
+				Base::onDotFileInfo(out, child.index);
+				(onDotFileInfo<Maps<Map, Base>>(out, child.index, map_types), ...);
 			} else {
 				out << ' ';
 			}
