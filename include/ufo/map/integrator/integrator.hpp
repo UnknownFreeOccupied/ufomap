@@ -46,6 +46,7 @@
 #include <ufo/cloud/point_cloud.hpp>
 #include <ufo/container/tree/code.hpp>
 #include <ufo/container/tree/index.hpp>
+#include <ufo/core/label.hpp>
 #include <ufo/execution/execution.hpp>
 #include <ufo/map/color/map.hpp>
 #include <ufo/map/distance/map.hpp>
@@ -171,6 +172,10 @@ struct Integrator {
 			if constexpr (Map::mapType(MapType::COLOR) /* TODO: && is_color_v<PointCloud> */) {
 				// map.colorUpdate(node, get<Color>(cloud)[cloud_index], 0.5f, propagate);
 				map.colorSet(node, get<Color>(cloud)[cloud_index], propagate);
+			}
+
+			if constexpr (Map::mapType(MapType::LABEL_SET)) {
+				map.labelsUpdate(node, get<Label>(cloud)[cloud_index], propagate);
 			}
 
 			if constexpr (Map::mapType(MapType::DISTANCE)) {
