@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -39,39 +39,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TREE_TYPE_TRAITS_HPP
-#define UFO_MAP_TREE_TYPE_TRAITS_HPP
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_HPP
 
-// STL
-#include <string_view>
-#include <type_traits>
+// UFO
+#include <ufo/map/integrator/detail/inverse/predicate/inverse.hpp>
 
-namespace ufo
-{
-template <template <class, class> class Base, class Derived>
-struct map_contains {
-	template <class D, class T>
-	static constexpr std::true_type  test(Base<D, T> const*);
-	static constexpr std::false_type test(...);
-	static constexpr bool value = decltype(test(std::declval<Derived*>()))::value;
-};
-
-template <template <class, class> class Base, class Derived>
-inline constexpr bool map_contains_v = map_contains<Base, Derived>::value;
-
-template <template <class, class> class Base, class Derived>
-struct map_type {
-	template <class D, class T>
-	static constexpr std::string_view test(Base<D, T> const*)
-	{
-		return Base<D, T>::mapType();
-	}
-	static constexpr std::string_view test(...) { return ""; }
-	static constexpr std::string_view value = test(std::declval<Derived*>());
-};
-
-template <template <class, class> class Base, class Derived>
-static constexpr std::string_view map_type_v = map_type<Base, Derived>::value;
-}  // namespace ufo
-
-#endif  // UFO_MAP_TREE_TYPE_TRAITS_HPP
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_HPP

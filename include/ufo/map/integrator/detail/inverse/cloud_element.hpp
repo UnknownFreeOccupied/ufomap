@@ -38,51 +38,33 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef UFO_MAP_COLOR_BLOCK_HPP
-#define UFO_MAP_COLOR_BLOCK_HPP
+
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_CLOUD_ELEMENT_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_CLOUD_ELEMENT_HPP
 
 // UFO
-#include <ufo/utility/create_array.hpp>
-#include <ufo/vision/color.hpp>
+#include <ufo/math/vec.hpp>
 
 // STL
-#include <array>
-#include <cassert>
-#include <cstddef>
+#include <cstdint>
+#include <vector>
 
-namespace ufo
+namespace ufo::detail
 {
-template <std::size_t BF>
-struct ColorBlock {
-	std::array<Color, BF> data;
+template <std::size_t Dim>
+struct InverseCloudElement {
+	Vec<Dim, float> direction;
+	float           distance;
 
-	constexpr ColorBlock() = default;
+	InverseCloudElement() = default;
 
-	constexpr ColorBlock(Color const& parent) : data(createArray<BF>(parent)) {}
-
-	constexpr void fill(Color const& parent) { data = createArray<BF>(parent); }
-
-	[[nodiscard]] constexpr Color& operator[](std::size_t pos)
+	InverseCloudElement(Vec<Dim, float> const& start, Vec<Dim, float> const& end)
 	{
-		assert(BF > pos);
-		return data[pos];
+		direction = end - start;
+		distance  = norm(direction);
+		direction /= distance;
 	}
-
-	[[nodiscard]] constexpr Color const& operator[](std::size_t pos) const
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	friend constexpr bool operator==(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return lhs.data == rhs.data;
-	}
-
-	friend constexpr bool operator!=(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return !(lhs == rhs);
-	};
 };
-}  // namespace ufo
-#endif  // UFO_MAP_COLOR_BLOCK_HPP
+}  // namespace ufo::detail
+
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_CLOUD_ELEMENT_HPP

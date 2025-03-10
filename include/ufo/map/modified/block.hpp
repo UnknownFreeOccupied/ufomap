@@ -39,93 +39,91 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TREE_BLOCK_HPP
-#define UFO_MAP_TREE_BLOCK_HPP
+#ifndef UFO_MAP_MODIFIED_BLOCK_HPP
+#define UFO_MAP_MODIFIED_BLOCK_HPP
 
 // UFO
-#include <ufo/container/tree/block.hpp>
-#include <ufo/container/tree/code.hpp>
+#include <ufo/utility/bit_set.hpp>
 
 // STL
 #include <atomic>
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
 
 namespace ufo
 {
-template <std::size_t Dim, std::size_t BF, bool WithCenter = false>
-struct MapBlock : public TreeBlock<Dim, BF, WithCenter> {
-	using Base     = TreeBlock<Dim, BF, WithCenter>;
-	using Code     = typename Base::Code;
-	using Point    = typename Base::Point;
-	using length_t = typename Base::length_t;
-	using Length   = typename Base::Length;
+template <std::size_t BF>
+struct ModifiedBlock {
+	using value_type = std::conditional_t<8 >= BF, std::uint8_t, std::uint16_t>;
 
-	constexpr MapBlock()                = default;
-	constexpr MapBlock(MapBlock const&) = default;
+	static constexpr value_type const ALL_SET = ~(static_cast<value_type>(-1) << BF);
 
-	constexpr MapBlock(TreeIndex::pos_t parent_block, Code code, Point center,
-	                   Length half_length)
-	    : Base(parent_block, code, center, half_length)
+	std::atomic<value_type> modified;
+
+	constexpr ModifiedBlock() = default;
+
+	constexpr ModifiedBlock(bool value) : modified(-static_cast<value_type>(value)) {}
+
+	constexpr ModifiedBlock& operator=(ModifiedBlock const& rhs)
 	{
-	}
-
-	constexpr MapBlock(TreeIndex::pos_t parent_block, MapBlock const& parent,
-	                   std::size_t offset, Length half_length)
-	    : Base(parent_block, static_cast<Base const&>(parent), offset, half_length)
-	{
-		if (parent.modified(offset)) {
-			modifiedFill();
-		} else {
-			modifiedClear();
-		}
-	}
-
-	MapBlock& operator=(MapBlock const& rhs)
-	{
-		static_cast<Base&>(*this) = static_cast<Base const&>(rhs);
-		modified_                 = rhs.modified_.load();
+		modified = rhs.modified.load();
 		return *this;
 	}
 
-	constexpr void fill(TreeIndex::pos_t parent_block, MapBlock const& parent,
-	                    std::size_t offset, Length half_length)
+	constexpr ModifiedBlock& operator=(bool value)
 	{
-		Base::fill(parent_block, static_cast<Base const&>(parent), offset, half_length);
-		if (parent.modified(offset)) {
-			modifiedFill();
-		} else {
-			modifiedClear();
-		}
+		modified = -static_cast<value_type>(value);
+		return *this;
 	}
 
-	[[nodiscard]] bool modified(std::size_t pos) const
+	constexpr ModifiedBlock& operator=(BitSet<BF> value)
 	{
-		assert(BF > pos);
-		return modified_ & (std::uint64_t(1) << pos);
+		modified = value.data();
+		return *this;
 	}
 
-	std::uint64_t modifiedSet(std::size_t pos)
-	{
-		assert(BF > pos);
-		return modified_.fetch_or(std::uint64_t(1) << pos);
-	}
+	[[nodiscard]] constexpr bool any() const { return value_type(0) != modified; }
 
-	std::uint64_t modifiedFill()
-	{
-		return modified_.exchange(~((~std::uint64_t(0)) << BF));
-	}
+	[[nodiscard]] constexpr bool all() const { return ALL_SET == modified; }
 
-	std::uint64_t modifiedReset(std::size_t pos)
+	[[nodiscard]] constexpr bool none() const { return value_type(0) == modified; }
+
+	[[nodiscard]] constexpr bool operator[](std::size_t pos) const
 	{
 		assert(BF > pos);
-		return modified_.fetch_or(std::uint64_t(1) << pos);
+		return (modified >> pos) & value_type(1);
 	}
 
-	void modifiedClear() { modified_.store(std::uint64_t(0)); }
+	constexpr void set(std::size_t pos)
+	{
+		assert(BF > pos);
+		modified |= value_type(1) << pos;
+	}
 
- private:
-	std::atomic_uint64_t modified_ = std::uint64_t(0);
+	constexpr void set(std::size_t pos, bool value)
+	{
+		assert(BF > pos);
+		modified ^=
+		    (-static_cast<value_type>(value) ^ modified.load()) & (value_type(1) << pos);
+	}
+
+	constexpr void reset(std::size_t pos)
+	{
+		assert(BF > pos);
+		modified &= ~(value_type(1) << pos);
+	}
+
+	friend constexpr bool operator==(ModifiedBlock const& lhs, ModifiedBlock const& rhs)
+	{
+		return lhs.modified == rhs.modified;
+	}
+
+	friend constexpr bool operator!=(ModifiedBlock const& lhs, ModifiedBlock const& rhs)
+	{
+		return !(lhs == rhs);
+	};
 };
 }  // namespace ufo
 
-#endif  // UFO_MAP_TREE_BLOCK_HPP
+#endif  // UFO_MAP_MODIFIED_BLOCK_HPP

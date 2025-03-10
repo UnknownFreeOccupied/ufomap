@@ -45,11 +45,11 @@
 // UFO
 #include <ufo/container/tree/container.hpp>
 #include <ufo/container/tree/tree.hpp>
+#include <ufo/map/block.hpp>
 #include <ufo/map/occupancy/block.hpp>
 #include <ufo/map/occupancy/predicate.hpp>
 #include <ufo/map/occupancy/propagation_criteria.hpp>
 #include <ufo/map/occupancy/state.hpp>
-#include <ufo/map/tree/map_block.hpp>
 #include <ufo/map/type.hpp>
 #include <ufo/math/transform3.hpp>
 #include <ufo/utility/bit_set.hpp>
@@ -87,7 +87,6 @@ class OccupancyMap
 
 	static constexpr MapType const Type = MapType::OCCUPANCY;
 
-	// Container
 	using Index    = typename Tree::Index;
 	using Node     = typename Tree::Node;
 	using Code     = typename Tree::Code;
@@ -100,15 +99,12 @@ class OccupancyMap
 	using length_t = typename Tree::length_t;
 	using pos_t    = typename Tree::pos_t;
 
-	// Occupancy
 	using logit_t     = typename Block::logit_t;
 	using occupancy_t = float;
 
  private:
 	static constexpr occupancy_t MaxOccupancy = 1.0;
 	static constexpr occupancy_t MinOccupancy = 0.0;
-	static constexpr logit_t     MaxLogit     = OccupancyElement::MAX_VALUE;
-	static constexpr logit_t     MinLogit     = -MaxLogit;
 
  public:
 	/**************************************************************************************
@@ -123,7 +119,21 @@ class OccupancyMap
 
 		occupancy_t c = occupancyClampingThresLogit();
 		occupancy_t l = logit(probability, -c, c);
-		return std::round(l / c * static_cast<occupancy_t>(MaxLogit));
+		return std::round(l / c * static_cast<occupancy_t>(occupancyMaxLogit()));
+	}
+
+	[[nodiscard]] occupancy_t occupancy(logit_t logit) const
+	{
+		assert(occupancyMinLogit() <= logit && occupancyMaxLogit() >= logit);
+
+		occupancy_t max   = static_cast<occupancy_t>(occupancyMaxLogit());
+		occupancy_t value = static_cast<occupancy_t>(logit);
+		return probability(occupancyClampingThresLogit() * (value / max));
+	}
+
+	[[nodiscard]] logit_t occupancyLogit() const
+	{
+		return occupancyLogit(derived().index());
 	}
 
 	template <class NodeType,
@@ -134,14 +144,7 @@ class OccupancyMap
 		return occupancyBlock(n.pos)[n.offset].logit();
 	}
 
-	[[nodiscard]] occupancy_t occupancy(logit_t logit) const
-	{
-		assert(MinLogit <= logit && MaxLogit >= logit);
-
-		occupancy_t max   = static_cast<occupancy_t>(MaxLogit);
-		occupancy_t value = static_cast<occupancy_t>(logit);
-		return probability(occupancyClampingThresLogit() * (value / max));
-	}
+	[[nodiscard]] occupancy_t occupancy() const { return occupancy(derived().index()); }
 
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
@@ -187,7 +190,7 @@ class OccupancyMap
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
 	void occupancySetLogit(NodeType node, logit_t value, bool propagate = true)
 	{
-		assert(MinLogit <= value && MaxLogit >= value);
+		assert(occupancyMinLogit() <= value && occupancyMaxLogit() >= value);
 
 		OccupancyElement elem(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
 		                      occupancyOccupiedLogit(value));
@@ -195,26 +198,14 @@ class OccupancyMap
 		auto node_f = [this, elem](Index node) {
 			occupancyBlock(node.pos)[node.offset] = elem;
 		};
+
 		auto block_f = [this, elem](pos_t pos) { occupancyBlock(pos).fill(elem); };
 
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursParentFirst(node, node_f, block_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			if (propagate) {
-				auto propagate_f = [this](Index node, pos_t children) {
-					onPropagateChildren(node, children);
-				};
+		auto update_f = [this](Index node, pos_t children) {
+			onPropagateChildren(node, children);
+		};
 
-				derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-				                       propagate);
-			} else {
-				derived().recursParentFirst(derived().code(node), node_f, block_f);
-			}
-		}
+		derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
 	}
 
 	template <class NodeType,
@@ -226,22 +217,6 @@ class OccupancyMap
 		occupancySetLogit(node, occupancyLogit(value), propagate);
 	}
 
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void occupancyUpdateLogit(NodeType node, int change, bool propagate = true)
-	{
-		assert(MaxLogit - MinLogit >= std::abs(change));
-
-		occupancyUpdateLogit(
-		    node,
-		    [this, change](Index node) {
-			    return static_cast<logit_t>(UFO_CLAMP(
-			        static_cast<int>(occupancyBlock(node.pos)[node.offset].logit()) + change,
-			        static_cast<int>(MinLogit), static_cast<int>(MaxLogit)));
-		    },
-		    propagate);
-	}
-
 	template <class NodeType, class UnaryOp,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool>        = true,
 	          std::enable_if_t<std::is_invocable_r_v<logit_t, UnaryOp, Index>, bool> = true>
@@ -250,7 +225,7 @@ class OccupancyMap
 		auto node_f = [this, unary_op](Index node) {
 			logit_t value = unary_op(node);
 
-			assert(MinLogit <= value && MaxLogit >= value);
+			assert(occupancyMinLogit() <= value && occupancyMaxLogit() >= value);
 
 			occupancyBlock(node.pos)[node.offset] =
 			    OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
@@ -263,27 +238,28 @@ class OccupancyMap
 			}
 		};
 
-		auto propagate_f = [this](Index node, pos_t children) {
+		auto update_f = [this](Index node, pos_t children) {
 			onPropagateChildren(node, children);
 		};
 
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursLeaves(node, node_f, block_f, propagate_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-			                       propagate);
-		}
+		derived().recursLeaves(node, node_f, block_f, update_f, propagate);
 	}
 
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void occupancyUpdate(NodeType node, occupancy_t change, bool propagate = true)
+	void occupancyUpdateLogit(NodeType node, int change, bool propagate = true)
 	{
-		occupancyUpdateLogit(node, occupancyLogit(change), propagate);
+		assert(occupancyMaxLogit() - occupancyMinLogit() >= std::abs(change));
+
+		occupancyUpdateLogit(
+		    node,
+		    [this, change](Index node) {
+			    return static_cast<logit_t>(UFO_CLAMP(
+			        static_cast<int>(occupancyBlock(node.pos)[node.offset].logit()) + change,
+			        static_cast<int>(occupancyMinLogit()),
+			        static_cast<int>(occupancyMaxLogit())));
+		    },
+		    propagate);
 	}
 
 	template <
@@ -295,6 +271,13 @@ class OccupancyMap
 		occupancyUpdateLogit(
 		    node, [this, unary_op](Index node) { return occupancyLogit(unary_op(node)); },
 		    propagate);
+	}
+
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	void occupancyUpdate(NodeType node, occupancy_t change, bool propagate = true)
+	{
+		occupancyUpdateLogit(node, occupancyLogit(change), propagate);
 	}
 
 	/**************************************************************************************
@@ -401,7 +384,7 @@ class OccupancyMap
 
 	[[nodiscard]] constexpr logit_t occupancyMaxLogit() const noexcept
 	{
-		return std::numeric_limits<logit_t>::max();
+		return OccupancyElement::MAX_VALUE;
 	}
 
 	[[nodiscard]] constexpr logit_t occupancyMinLogit() const noexcept
@@ -607,7 +590,7 @@ class OccupancyMap
 
 	/**************************************************************************************
 	|                                                                                     |
-	|                              Functions Derived expect                               |
+	|                              Functions Derived expects                              |
 	|                                                                                     |
 	**************************************************************************************/
 
@@ -623,15 +606,6 @@ class OccupancyMap
 	void onInitChildren(Index node, pos_t children)
 	{
 		occupancyBlock(children).fill(occupancyBlock(node.pos)[node.offset]);
-	}
-
-	void onPruneChildren(Index node, pos_t children)
-	{
-		// Ensure that the indicators of `node` are correct
-		auto&   v     = occupancyBlock(node.pos)[node.offset];
-		logit_t value = v.logit();
-		v = OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
-		                     occupancyOccupiedLogit(value));
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
@@ -669,11 +643,7 @@ class OccupancyMap
 		occupancyBlock(node.pos)[node.offset] = OccupancyElement(value, indicators);
 	}
 
-	//
-	// Is prunable
-	//
-
-	[[nodiscard]] bool prunable(pos_t block) const
+	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
 		using std::begin;
 		using std::end;
@@ -682,6 +652,70 @@ class OccupancyMap
 		    [v = occupancyBlock(block)[0].value_and_indicators](auto const& e) {
 			    return v == e.value_and_indicators;
 		    });
+	}
+
+	void onPruneChildren(Index node, pos_t /* children */)
+	{
+		// Ensure that the indicators of `node` are correct
+		auto&   v     = occupancyBlock(node.pos)[node.offset];
+		logit_t value = v.logit();
+		v = OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
+		                     occupancyOccupiedLogit(value));
+	}
+
+	[[nodiscard]] std::size_t onSerializedSize(
+	    std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
+	    std::size_t num_nodes) const
+	{
+		return num_nodes * sizeof(OccupancyElement);
+	}
+
+	void onRead(ReadBuffer& in, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
+	{
+		for (auto [block, offset] : nodes) {
+			auto& ob = occupancyBlock(block);
+
+			if (offset.all()) {
+				in.read(ob.data);
+				for (std::size_t i{}; BF > i; ++i) {
+					auto l = ob[i].logit();
+					ob[i]  = OccupancyElement(l, occupancyUnknownLogit(l), occupancyFreeLogit(l),
+					                          occupancyOccupiedLogit(l));
+				}
+			} else {
+				for (std::size_t i{}; BF > i; ++i) {
+					if (offset[i]) {
+						in.read(ob[i]);
+						auto l = ob[i].logit();
+						ob[i]  = OccupancyElement(l, occupancyUnknownLogit(l), occupancyFreeLogit(l),
+						                          occupancyOccupiedLogit(l));
+					}
+				}
+			}
+		}
+	}
+
+	void onWrite(WriteBuffer&                                     out,
+	             std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes) const
+	{
+		for (auto [block, offset] : nodes) {
+			auto const& occ = occupancyBlock(block);
+
+			if (offset.all()) {
+				out.write(occ.data);
+			} else {
+				for (std::size_t i{}; BF > i; ++i) {
+					if (offset[i]) {
+						out.write(occ[i]);
+					}
+				}
+			}
+		}
+	}
+
+	void onDotFile(std::ostream& out, Index node) const
+	{
+		out << "Occupancy: " << occupancy(node);
 	}
 
 	//
@@ -701,81 +735,6 @@ class OccupancyMap
 	[[nodiscard]] constexpr bool occupancyOccupiedLogit(logit_t logit) const noexcept
 	{
 		return occupiedThresLogit() < logit;
-	}
-
-	//
-	// Input/output (read/write)
-	//
-
-	[[nodiscard]] static constexpr std::size_t serializedSizeNode() noexcept
-	{
-		return sizeof(logit_t);
-	}
-
-	[[nodiscard]] constexpr std::size_t serializedSize(
-	    std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
-	    std::size_t num_nodes) const
-	{
-		return num_nodes * serializedSizeNode();
-	}
-
-	void onRead(ReadBuffer& in, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
-	{
-		for (auto [block, offset] : nodes) {
-			auto& occ = occupancyBlock(block);
-
-			if (offset.all()) {
-				std::array<logit_t, BF> logit;
-				in.read(logit);
-				for (offset_t i{}; BF > i; ++i) {
-					auto u = occupancyUnknownLogit(logit[i]);
-					auto f = occupancyFreeLogit(logit[i]);
-					auto o = occupancyOccupiedLogit(logit[i]);
-					occ[i] = OccupancyElement(logit[i], u, f, o);
-				}
-			} else {
-				for (offset_t i{}; BF > i; ++i) {
-					if (offset[i]) {
-						logit_t value;
-						in.read(value);
-						auto u = occupancyUnknownLogit(value);
-						auto f = occupancyFreeLogit(value);
-						auto o = occupancyOccupiedLogit(value);
-						occ[i] = OccupancyElement(value, u, f, o);
-					}
-				}
-			}
-		}
-	}
-
-	void onWrite(WriteBuffer& out, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
-	{
-		for (auto [block, offset] : nodes) {
-			auto const& occ = occupancyBlock(block);
-
-			if (offset.all()) {
-				std::array<logit_t, BF> logit;
-				for (offset_t i{}; BF > i; ++i) {
-					logit[i] = occ[i].logit();
-				}
-				out.write(logit);
-			} else {
-				for (offset_t i{}; BF > i; ++i) {
-					if (offset[i]) {
-						out.write(occ[i].logit());
-					}
-				}
-			}
-		}
-	}
-
-	//
-	// Dot file info
-	//
-
-	void onDotFileInfo(std::ostream& out, Index node) const
-	{
-		out << "Occupancy: " << occupancy(node);
 	}
 
 	//

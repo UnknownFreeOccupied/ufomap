@@ -42,30 +42,103 @@
 #ifndef UFO_MAP_TYPE
 #define UFO_MAP_TYPE
 
+// UFO
+#include <ufo/utility/enum.hpp>
+
 // STL
 #include <cstdint>
+#include <limits>
+#include <ostream>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace ufo
 {
 enum class MapType : std::uint64_t {
 	NONE         = std::uint64_t(0),
 	ALL          = ~std::uint64_t(0),
-	OCCUPANCY    = std::uint64_t(1) << 0,
-	COLOR        = std::uint64_t(1) << 1,
-	TIME         = std::uint64_t(1) << 2,
-	COUNT        = std::uint64_t(1) << 3,
-	REFLECTION   = std::uint64_t(1) << 4,
-	INTENSITY    = std::uint64_t(1) << 5,
-	SURFEL       = std::uint64_t(1) << 6,
-	VOID         = std::uint64_t(1) << 7,
-	DISTANCE     = std::uint64_t(1) << 8,
-	LABEL        = std::uint64_t(1) << 9,
-	SEMANTIC     = std::uint64_t(1) << 10,
-	LABEL_SET    = std::uint64_t(1) << 11,
-	SEMANTIC_SET = std::uint64_t(1) << 12,
-	COST         = std::uint64_t(1) << 13,
-	INTEGRATION  = std::uint64_t(1) << 14,
+	MODIFIED     = std::uint64_t(1) << 0,
+	OCCUPANCY    = std::uint64_t(1) << 1,
+	COLOR        = std::uint64_t(1) << 2,
+	TIME         = std::uint64_t(1) << 3,
+	COUNT        = std::uint64_t(1) << 4,
+	REFLECTION   = std::uint64_t(1) << 5,
+	INTENSITY    = std::uint64_t(1) << 6,
+	SURFEL       = std::uint64_t(1) << 7,
+	VOID_REGION  = std::uint64_t(1) << 8,
+	DISTANCE     = std::uint64_t(1) << 9,
+	LABEL        = std::uint64_t(1) << 10,
+	SEMANTIC     = std::uint64_t(1) << 11,
+	LABEL_SET    = std::uint64_t(1) << 12,
+	SEMANTIC_SET = std::uint64_t(1) << 13,
+	COST         = std::uint64_t(1) << 14,
 };
+
+[[nodiscard]] constexpr MapType operator|(MapType a, MapType b) noexcept
+{
+	return MapType(to_underlying(a) | to_underlying(b));
+}
+
+[[nodiscard]] constexpr MapType operator&(MapType a, MapType b) noexcept
+{
+	return MapType(to_underlying(a) & to_underlying(b));
+}
+
+[[nodiscard]] constexpr std::string_view to_string(MapType mt)
+{
+	switch (mt) {
+		case MapType::ALL: return std::string_view{"all"};
+		case MapType::NONE: return std::string_view{"none"};
+		case MapType::MODIFIED: return std::string_view{"modified"};
+		case MapType::OCCUPANCY: return std::string_view{"occupancy"};
+		case MapType::COLOR: return std::string_view{"color"};
+		case MapType::TIME: return std::string_view{"time"};
+		case MapType::COUNT: return std::string_view{"count"};
+		case MapType::REFLECTION: return std::string_view{"reflection"};
+		case MapType::INTENSITY: return std::string_view{"intensity"};
+		case MapType::SURFEL: return std::string_view{"surfel"};
+		case MapType::VOID_REGION: return std::string_view{"void_region"};
+		case MapType::DISTANCE: return std::string_view{"distance"};
+		case MapType::LABEL: return std::string_view{"label"};
+		case MapType::SEMANTIC: return std::string_view{"semantic"};
+		case MapType::LABEL_SET: return std::string_view{"label_set"};
+		case MapType::SEMANTIC_SET: return std::string_view{"semantic_set"};
+		case MapType::COST: return std::string_view{"cost"};
+		default: return std::string_view{"unknown"};
+	}
+}
+
+[[nodiscard]] inline std::vector<std::string> mapTypes(MapType mt)
+{
+	constexpr std::size_t const max_num_map_types =
+	    std::numeric_limits<std::uint64_t>::digits;
+
+	std::vector<std::string> res;
+	for (std::size_t i{}; max_num_map_types > i; ++i) {
+		auto name = to_string(mt & static_cast<MapType>(std::uint64_t(1) << i));
+		if (std::string_view{"none"} != name && std::string_view{"unknown"} != name) {
+			res.emplace_back(name);
+		}
+	}
+	return res;
+}
+
+inline std::ostream& operator<<(std::ostream& os, MapType mt)
+{
+	constexpr std::size_t const max_num_map_types =
+	    std::numeric_limits<std::uint64_t>::digits;
+
+	std::string c;
+	for (std::size_t i{}; max_num_map_types > i; ++i) {
+		auto name = to_string(mt & static_cast<MapType>(std::uint64_t(1) << i));
+		if (std::string_view{"none"} != name && std::string_view{"unknown"} != name) {
+			os << c << name;
+			c = ", ";
+		}
+	}
+	return os;
+}
 }  // namespace ufo
 
 #endif  // UFO_MAP_TYPE

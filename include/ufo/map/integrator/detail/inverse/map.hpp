@@ -39,16 +39,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_COST_MAP_HPP
-#define UFO_MAP_COST_MAP_HPP
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MAP_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MAP_HPP
 
 // UFO
 #include <ufo/container/tree/container.hpp>
 #include <ufo/container/tree/tree.hpp>
-#include <ufo/map/cost/block.hpp>
-#include <ufo/map/cost/predicate.hpp>
-#include <ufo/map/cost/propagation_criteria.hpp>
-#include <ufo/map/map/map_block.hpp>
+#include <ufo/map/block.hpp>
+#include <ufo/map/integrator/detail/inverse/block.hpp>
+#include <ufo/map/integrator/detail/inverse/predicate.hpp>
 #include <ufo/map/type.hpp>
 #include <ufo/math/transform3.hpp>
 #include <ufo/utility/bit_set.hpp>
@@ -58,19 +57,22 @@
 
 // STL
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <string_view>
 #include <type_traits>
+#include <vector>
 
-namespace ufo
+namespace ufo::detail
 {
 template <class Derived, class Tree>
-class CostMap
+class InverseMap
 {
  private:
 	template <class Derived2, class Tree2>
-	friend class CostMap;
+	friend class InverseMap;
 
 	static constexpr auto const BF  = Tree::branchingFactor();
 	static constexpr auto const Dim = Tree::dimensions();
@@ -82,7 +84,7 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	static constexpr MapType const Type = MapType::COST;
+	static constexpr MapType const Type = MapType::NONE;
 
 	// Container
 	using Index    = typename Tree::Index;
@@ -97,9 +99,6 @@ class CostMap
 	using length_t = typename Tree::length_t;
 	using pos_t    = typename Tree::pos_t;
 
-	// Cost
-	using cost_t = typename CostBlock<BF>::cost_t;
-
  public:
 	/**************************************************************************************
 	|                                                                                     |
@@ -107,12 +106,58 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
+	// NOTE: It is bad practice to return reference since it can destory tree structure.
+	// This is a special map type only intended to be used in the integrator
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] cost_t cost(NodeType node) const
+	[[nodiscard]] float& inverseDistance(NodeType node)
 	{
 		Index n = derived().index(node);
-		return costBlock(n.pos)[n.offset].cost;
+		return inverseBlock(n.pos)[n.offset].distance;
+	}
+
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	[[nodiscard]] float inverseDistance(NodeType node) const
+	{
+		Index n = derived().index(node);
+		return inverseBlock(n.pos)[n.offset].distance;
+	}
+
+	// NOTE: It is bad practice to return reference since it can destory tree structure.
+	// This is a special map type only intended to be used in the integrator
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	[[nodiscard]] std::vector<unsigned>& inverseIndices(NodeType node)
+	{
+		Index n = derived().index(node);
+		return inverseBlock(n.pos)[n.offset].indices;
+	}
+
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	[[nodiscard]] std::vector<unsigned> const& inverseIndices(NodeType node) const
+	{
+		Index n = derived().index(node);
+		return inverseBlock(n.pos)[n.offset].indices;
+	}
+
+	// NOTE: It is bad practice to return reference since it can destory tree structure.
+	// This is a special map type only intended to be used in the integrator
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	[[nodiscard]] std::uint32_t& inverseIndex(NodeType node)
+	{
+		Index n = derived().index(node);
+		return inverseBlock(n.pos)[n.offset].index;
+	}
+
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	[[nodiscard]] std::uint32_t inverseIndex(NodeType node) const
+	{
+		Index n = derived().index(node);
+		return inverseBlock(n.pos)[n.offset].index;
 	}
 
 	/**************************************************************************************
@@ -121,118 +166,7 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	/**
-	 * @brief
-	 *
-	 * @note If `NodeType` is `Index`, only propagates up to `node` and it does not set
-	 * modified if propagation is `false`.
-	 *
-	 * @tparam NodeType Should be of type `Node`, `Code`, `Key`, or `Coord`
-	 * @param node
-	 * @param value
-	 * @param propagate
-	 */
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void costSet(NodeType node, cost_t value, bool propagate = true)
-	{
-		CostElement elem(value);
-
-		auto node_f  = [this, elem](Index node) { costBlock(node.pos)[node.offset] = elem; };
-		auto block_f = [this, elem](pos_t pos) { costBlock(pos).fill(elem); };
-
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursParentFirst(node, node_f, block_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			if (propagate) {
-				auto propagate_f = [this](Index node, pos_t children) {
-					onPropagateChildren(node, children);
-				};
-
-				derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-				                       propagate);
-			} else {
-				derived().recursParentFirst(derived().code(node), node_f, block_f);
-			}
-		}
-	}
-
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void costUpdate(NodeType node, cost_t change, bool propagate = true)
-	{
-		costUpdate(
-		    node,
-		    [this, change](Index node) {
-			    return CostBlock(node.pos)[node.offset].cost + change;
-		    },
-		    propagate);
-	}
-
-	template <class NodeType, class UnaryOp,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool>       = true,
-	          std::enable_if_t<std::is_invocable_r_v<cost_t, UnaryOp, Index>, bool> = true>
-	void costUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
-	{
-		auto node_f = [this, unary_op](Index node) {
-			cost_t value = unary_op(node);
-
-			auto& cb = CostBlock(node.pos)[node.offset];
-			cb.cost  = value;
-		};
-
-		auto block_f = [this, node_f](pos_t pos) {
-			for (std::size_t i{}; BF > i; ++i) {
-				node_f(Index(pos, i));
-			}
-		};
-
-		auto propagate_f = [this](Index node, pos_t children) {
-			onPropagateChildren(node, children);
-		};
-
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursLeaves(node, node_f, block_f, propagate_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-			                       propagate);
-		}
-	}
-
-	//
-	// Propagation criteria
-	//
-
-	[[nodiscard]] constexpr CostPropagationCriteria costPropagationCriteria() const noexcept
-	{
-		return prop_criteria_;
-	}
-
-	void costSetPropagationCriteria(CostPropagationCriteria prop_criteria,
-	                                bool                    propagate = true)
-	{
-		if (CostPropagationCriteria() == prop_criteria) {
-			return;
-		}
-
-		prop_criteria_ = prop_criteria;
-
-		// Set all inner nodes to modified
-		// FIXME: Possible to optimize this to only set the ones with children
-		derived().setModified();
-
-		if (propagate) {
-			derived().propagateModified();
-		}
-	}
+	// TODO: Implement
 
  protected:
 	/**************************************************************************************
@@ -241,20 +175,19 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	CostMap() { onInitRoot(); }
+	InverseMap() { onInitRoot(); }
 
-	CostMap(CostMap const& other) = default;
+	InverseMap(InverseMap const& other) = default;
 
-	CostMap(CostMap&& other) = default;
+	InverseMap(InverseMap&& other) = default;
 
 	template <class Derived2, class Tree2>
-	CostMap(CostMap<Derived2, Tree2> const& other) : prop_criteria_(other.prop_criteria_)
+	InverseMap(InverseMap<Derived2, Tree2> const& /* other */)
 	{
 	}
 
 	template <class Derived2, class Tree2>
-	CostMap(CostMap<Derived2, Tree2>&& other)
-	    : prop_criteria_(std::move(other.prop_criteria_))
+	InverseMap(InverseMap<Derived2, Tree2>&& /* other */)
 	{
 	}
 
@@ -264,7 +197,7 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	~CostMap() = default;
+	~InverseMap() = default;
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -272,29 +205,21 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	CostMap& operator=(CostMap const& rhs) = default;
+	InverseMap& operator=(InverseMap const& rhs) = default;
 
-	CostMap& operator=(CostMap&& rhs) = default;
+	InverseMap& operator=(InverseMap&& rhs) = default;
 
 	template <class Derived2, class Tree2>
-	CostMap& operator=(CostMap<Derived2, Tree2> const& rhs)
+	InverseMap& operator=(InverseMap<Derived2, Tree2> const& /* rhs */)
 	{
-		prop_criteria_ = rhs.prop_criteria_;
 		return *this;
 	}
 
 	template <class Derived2, class Tree2>
-	CostMap& operator=(CostMap<Derived2, Tree2>&& rhs)
+	InverseMap& operator=(InverseMap<Derived2, Tree2>&& /* rhs */)
 	{
-		prop_criteria_ = std::move(rhs.prop_criteria_);
 		return *this;
 	}
-
-	//
-	// Swap
-	//
-
-	void swap(CostMap& other) noexcept { std::swap(prop_criteria_, other.prop_criteria_); }
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -315,165 +240,120 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	[[nodiscard]] CostBlock<BF>& costBlock(pos_t pos)
+	[[nodiscard]] InverseBlock<BF>& inverseBlock(pos_t pos)
 	{
-		return derived().template data<CostBlock<BF>>(pos);
+		return derived().template data<InverseBlock<BF>>(pos);
 	}
 
-	[[nodiscard]] CostBlock<BF> const& costBlock(pos_t pos) const
+	[[nodiscard]] InverseBlock<BF> const& inverseBlock(pos_t pos) const
 	{
-		return derived().template data<CostBlock<BF>>(pos);
+		return derived().template data<InverseBlock<BF>>(pos);
 	}
 
 	/**************************************************************************************
 	|                                                                                     |
-	|                              Functions Derived expect                               |
+	|                              Functions Derived expects                              |
 	|                                                                                     |
 	**************************************************************************************/
 
 	void onInitRoot()
 	{
-		auto& block = costBlock(0);
-
-		cost_t value{};
-		block[0].cost = value;
+		auto& block       = inverseBlock(0);
+		block[0].distance = std::numeric_limits<float>::max();
+		block[0].indices.clear();
 	}
 
 	void onInitChildren(Index node, pos_t children)
 	{
-		costBlock(children).fill(costBlock(node.pos)[node.offset]);
-	}
-
-	void onPruneChildren(Index node, pos_t children)
-	{
-		auto& v = costBlock(node.pos)[node.offset];
+		inverseBlock(children).fill(inverseBlock(node.pos)[node.offset]);
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
 	{
-		auto const& children_block = costBlock(children);
+		auto const& children_block = inverseBlock(children);
 
-		auto& cb = costBlock(node.pos)[node.offset];
+		auto& v = inverseBlock(node.pos)[node.offset];
 
-		cost_t value;
-		switch (prop_criteria_) {
-			case CostPropagationCriteria::MAX:
-				value = std::numeric_limits<cost_t>::lowest();
-				for (std::size_t i{}; BF > i; ++i) {
-					value = UFO_MAX(value, children_block[i].cost);
-				}
-				break;
-			case CostPropagationCriteria::MIN:
-				value = std::numeric_limits<cost_t>::max();
-				for (std::size_t i{}; BF > i; ++i) {
-					value = UFO_MIN(value, children_block[i].cost);
-				}
-				break;
-			case CostPropagationCriteria::MEAN: {
-				cost_t v = 0;
-				for (std::size_t i{}; BF > i; ++i) {
-					v += static_cast<int>(children_block[i].cost);
-				}
-				value = static_cast<cost_t>(v / static_cast<int>(BF));
-				break;
-			}
-			case CostPropagationCriteria::NONE: return;
+		v.indices.clear();
+
+		v.distance = std::numeric_limits<float>::max();
+		for (std::size_t i{}; BF > i; ++i) {
+			v.distance = UFO_MIN(v.distance, children_block[i].distance);
 		}
 
-		cb.cost = value;
+		if (10 < derived().depth(node)) {
+			return;
+		}
+
+		for (std::size_t i{}; BF > i; ++i) {
+			if (v.indices.empty()) {
+				v.indices = children_block[i].indices;
+			} else if (!children_block[i].indices.empty()) {
+				auto s = v.indices.size();
+				v.indices.insert(v.indices.end(), children_block[i].indices.begin(),
+				                 children_block[i].indices.end());
+				auto it = v.indices.begin() + s;
+				std::inplace_merge(v.indices.begin(), it, v.indices.end());
+			}
+		}
+
+		auto last = std::unique(v.indices.begin(), v.indices.end());
+		v.indices.erase(last, v.indices.end());
+		v.indices.shrink_to_fit();
 	}
 
-	//
-	// Is prunable
-	//
-
-	[[nodiscard]] bool prunable(pos_t block) const
+	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
 		using std::begin;
 		using std::end;
-		return std::all_of(
-		    begin(costBlock(block).data) + 1, end(costBlock(block).data),
-		    [v = costBlock(block)[0].cost](auto const& e) { return v == e.cost; });
+		return std::all_of(begin(inverseBlock(block).data) + 1, end(inverseBlock(block).data),
+		                   [v = inverseBlock(block)[0]](auto const& e) {
+			                   return v.indices.empty() && e.indices.empty();
+		                   });
 	}
 
-	//
-	// Input/output (read/write)
-	//
+	void onPruneChildren(Index node, pos_t /* children */)
+	{
+		auto& v    = inverseBlock(node.pos)[node.offset];
+		v.distance = std::numeric_limits<float>::max();
+		v.indices.clear();
+	}
 
 	[[nodiscard]] static constexpr std::size_t serializedSizeNode() noexcept
 	{
-		return sizeof(cost_t);
+		// TODO: Implement
+		// return sizeof(cost_t);
+		return 0;
 	}
 
-	[[nodiscard]] constexpr std::size_t serializedSize(
+	[[nodiscard]] constexpr std::size_t onSerializedSize(
 	    std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
-	    std::size_t num_nodes) const
+	    std::size_t /* num_nodes */) const
 	{
-		return num_nodes * serializedSizeNode();
+		// return num_nodes * serializedSizeNode();
+		return 0;
 	}
 
-	void onRead(ReadBuffer& in, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
+	void onRead(ReadBuffer& /* in */,
+	            std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */)
 	{
-		for (auto [block, offset] : nodes) {
-			auto& cb = costBlock(block);
-
-			if (offset.all()) {
-				std::array<cost_t, BF> cost;
-				in.read(cost);
-				for (offset_t i{}; BF > i; ++i) {
-					cb[i] = CostElement(cost[i]);
-				}
-			} else {
-				for (offset_t i{}; BF > i; ++i) {
-					if (offset[i]) {
-						cost_t value;
-						in.read(value);
-						cb[i] = CostElement(value);
-					}
-				}
-			}
-		}
 	}
 
-	void onWrite(WriteBuffer& out, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
+	void onWrite(WriteBuffer& /* out */,
+	             std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */)
 	{
-		for (auto [block, offset] : nodes) {
-			auto const& cb = CostBlock(block);
-
-			if (offset.all()) {
-				std::array<cost_t, BF> cost;
-				for (offset_t i{}; BF > i; ++i) {
-					cost[i] = cb[i].cost;
-				}
-				out.write(cost);
-			} else {
-				for (offset_t i{}; BF > i; ++i) {
-					if (offset[i]) {
-						out.write(cb[i].cost);
-					}
-				}
-			}
-		}
 	}
 
-	//
-	// Dot file info
-	//
-
-	void onDotFileInfo(std::ostream& out, Index node) const
-	{
-		out << "Cost: " << cost(node);
-	}
-
- private:
-	// Propagation criteria
-	CostPropagationCriteria prop_criteria_ = CostPropagationCriteria::MAX;
+	void onDotFile(std::ostream& /* out */, Index /* node */) const {}
 };
+}  // namespace ufo::detail
 
+namespace ufo
+{
 template <std::size_t Dim, std::size_t BF>
-struct map_block<CostMap, Dim, BF> {
-	using type = CostBlock<BF>;
+struct map_block<detail::InverseMap, Dim, BF> {
+	using type = detail::InverseBlock<BF>;
 };
 }  // namespace ufo
 
-#endif  // UFO_MAP_COST_MAP_HPP
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MAP_HPP

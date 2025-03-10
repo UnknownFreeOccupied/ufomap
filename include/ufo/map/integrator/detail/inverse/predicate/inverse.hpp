@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -38,51 +38,79 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef UFO_MAP_COLOR_BLOCK_HPP
-#define UFO_MAP_COLOR_BLOCK_HPP
+
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_INVERSE_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_INVERSE_HPP
 
 // UFO
-#include <ufo/utility/create_array.hpp>
-#include <ufo/vision/color.hpp>
+#include <ufo/container/tree/index.hpp>
+#include <ufo/container/tree/predicate/filter.hpp>
+#include <ufo/container/tree/predicate/predicate_compare.hpp>
 
 // STL
-#include <array>
+#include <algorithm>
 #include <cassert>
-#include <cstddef>
+#include <limits>
+#include <vector>
 
-namespace ufo
+namespace ufo::pred::detail
 {
-template <std::size_t BF>
-struct ColorBlock {
-	std::array<Color, BF> data;
+struct Inverse {
+	std::vector<float> distances;
 
-	constexpr ColorBlock() = default;
+	Inverse(std::vector<float> const& distances) : distances(distances) {}
 
-	constexpr ColorBlock(Color const& parent) : data(createArray<BF>(parent)) {}
-
-	constexpr void fill(Color const& parent) { data = createArray<BF>(parent); }
-
-	[[nodiscard]] constexpr Color& operator[](std::size_t pos)
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	[[nodiscard]] constexpr Color const& operator[](std::size_t pos) const
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	friend constexpr bool operator==(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return lhs.data == rhs.data;
-	}
-
-	friend constexpr bool operator!=(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return !(lhs == rhs);
-	};
+ protected:
+	template <class T>
+	friend class Filter;
 };
-}  // namespace ufo
-#endif  // UFO_MAP_COLOR_BLOCK_HPP
+}  // namespace ufo::pred::detail
+
+namespace ufo::pred
+{
+template <>
+struct Filter<detail::Inverse> {
+	using Pred = detail::Inverse;
+
+	template <class Tree>
+	static constexpr void init(Pred& p, Tree const& t)
+	{
+	}
+
+	template <class Tree>
+	[[nodiscard]] static constexpr bool returnable(Pred const& p, Tree const& t,
+	                                               typename Tree::Node const& n)
+	{
+		float distance = t.integrationDistance(n);
+
+		if (std::numeric_limits<float>::max() <= distance) {
+			return false;
+		}
+
+		auto const& indices = t.integrationIndices(n);
+		return std::any_of(indices.begin(), indices.end(),
+		                   [&p, distance](unsigned i) { return distance <= p.distances[i]; });
+	}
+
+	template <class Tree>
+	[[nodiscard]] static constexpr bool traversable(Pred const& p, Tree const& t,
+	                                                typename Tree::Node const& n)
+	{
+		float distance = t.integrationDistance(n);
+
+		if (std::numeric_limits<float>::max() <= distance) {
+			return false;
+		}
+
+		if (10 < t.depth(n)) {
+			return true;
+		}
+
+		auto const& indices = t.integrationIndices(n);
+		return std::any_of(indices.begin(), indices.end(),
+		                   [&p, distance](unsigned i) { return distance <= p.distances[i]; });
+	}
+};
+}  // namespace ufo::pred
+
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_INVERSE_HPP

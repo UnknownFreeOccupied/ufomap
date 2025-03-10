@@ -46,7 +46,7 @@
 #include <ufo/container/tree/container.hpp>
 #include <ufo/container/tree/tree.hpp>
 #include <ufo/geometry/distance.hpp>
-#include <ufo/geometry/shape/line_segment.hpp>
+#include <ufo/geometry/line_segment.hpp>
 #include <ufo/map/distance/block.hpp>
 #include <ufo/map/distance/info.hpp>
 #include <ufo/map/distance/interpolate.hpp>

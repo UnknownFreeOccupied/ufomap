@@ -62,107 +62,35 @@ class CountGrid
 	using depth_t = typename Code::depth_t;
 
  private:
-	static constexpr std::size_t NumIndices = ipow(std::size_t(2), Dim* Depth);
+	static constexpr std::size_t const NumIndices = ipow(std::size_t(2), Dim* Depth);
 
-	static constexpr code_t Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
+	using value_t                           = unsigned;
+	static constexpr value_t const MissBits = (~value_t(0u)) >> 1u;
+	static constexpr value_t const HitBit   = ~MissBits;
 
-	using DataType = std::array<int, NumIndices>;
-
- public:
-	using value_type             = typename DataType::value_type;
-	using reference              = typename DataType::reference;
-	using const_reference        = typename DataType::const_reference;
-	using iterator               = typename DataType::iterator;
-	using const_iterator         = typename DataType::const_iterator;
-	using reverse_iterator       = typename DataType::reverse_iterator;
-	using const_reverse_iterator = typename DataType::const_reverse_iterator;
+	using Container =
+	    std::array<std::conditional_t<Atomic, std::atomic<value_t>, value_t>, NumIndices>;
 
  public:
-	iterator begin() { return grid_.begin(); }
-
-	const_iterator begin() const { return grid_.begin(); }
-
-	const_iterator cbegin() const { return grid_.cbegin(); }
-
-	iterator end() { return grid_.end(); }
-
-	const_iterator end() const { return grid_.end(); }
-
-	const_iterator cend() const { return grid_.cend(); }
-
-	reference operator[](std::size_t pos) { return grid_[pos]; }
-
-	const_reference operator[](std::size_t pos) const { return grid_[pos]; }
-
-	reference operator[](Code const code) { return operator[](pos(code)); }
-
-	const_reference operator[](Code const code) const { return operator[](pos(code)); }
-
-	int inc(std::size_t pos) { return grid_[pos]++; }
-
-	int inc(Code const& code) { return inc(pos(code)); }
-
-	int dec(std::size_t pos) { return grid_[pos]--; }
-
-	int dec(Code const& code) { return dec(pos(code)); }
-
-	void clear() { grid_.fill(int(0)); }
-
-	[[nodiscard]] static constexpr std::size_t size() noexcept { return NumIndices; }
-
-	[[nodiscard]] static constexpr std::size_t pos(Code const& code) noexcept
-	{
-		return (code.code() >> Dim * code.depth()) & Mask;
-	}
-
-	[[nodiscard]] static constexpr Code code(std::size_t pos, depth_t depth)
-	{
-		return Code(pos << Dim * depth, depth);
-	}
-
-	[[nodiscard]] static constexpr Code code(code_t prefix, std::size_t pos, depth_t depth,
-	                                         depth_t depth_offset)
-	{
-		return Code(prefix | (pos << Dim * depth), depth + depth_offset);
-	}
-
-	[[nodiscard]] static constexpr depth_t depth() noexcept { return Depth; }
-
- private:
-	DataType grid_{};
-};
-
-template <std::size_t Dim, unsigned Depth>
-class CountGrid<Dim, Depth, true>
-{
- public:
-	using Code    = TreeCode<Dim>;
-	using code_t  = typename Code::code_t;
-	using depth_t = typename Code::depth_t;
-
- private:
-	static constexpr std::size_t NumIndices = ipow(std::size_t(2), Dim* Depth);
-
-	static constexpr code_t Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
-
-	using DataType = std::array<std::atomic_int, NumIndices>;
-
- public:
-	using value_type             = typename DataType::value_type;
-	using reference              = typename DataType::reference;
-	using const_reference        = typename DataType::const_reference;
-	using iterator               = typename DataType::iterator;
-	using const_iterator         = typename DataType::const_iterator;
-	using reverse_iterator       = typename DataType::reverse_iterator;
-	using const_reverse_iterator = typename DataType::const_reverse_iterator;
+	using value_type             = typename Container::value_type;
+	using reference              = typename Container::reference;
+	using const_reference        = typename Container::const_reference;
+	using iterator               = typename Container::iterator;
+	using const_iterator         = typename Container::const_iterator;
+	using reverse_iterator       = typename Container::reverse_iterator;
+	using const_reverse_iterator = typename Container::const_reverse_iterator;
 
  public:
 	CountGrid() = default;
 
 	CountGrid(CountGrid const& other)
 	{
-		for (std::size_t i{}; grid_.size() > i; ++i) {
-			grid_[i] = other.grid_[i].load();
+		if constexpr (Atomic) {
+			for (std::size_t i{}; grid_.size() > i; ++i) {
+				grid_[i] = other.grid_[i].load();
+			}
+		} else {
+			grid_ = other.grid_;
 		}
 	}
 
@@ -170,8 +98,12 @@ class CountGrid<Dim, Depth, true>
 
 	CountGrid& operator=(CountGrid const& rhs)
 	{
-		for (std::size_t i{}; grid_.size() > i; ++i) {
-			grid_[i] = rhs.grid_[i].load();
+		if constexpr (Atomic) {
+			for (std::size_t i{}; grid_.size() > i; ++i) {
+				grid_[i] = rhs.grid_[i].load();
+			}
+		} else {
+			grid_ = rhs.grid_;
 		}
 		return *this;
 	}
@@ -198,18 +130,70 @@ class CountGrid<Dim, Depth, true>
 
 	const_reference operator[](Code const code) const { return operator[](pos(code)); }
 
-	int inc(std::size_t pos) { return grid_[pos]++; }
+	[[nodiscard]] bool hit(std::size_t pos) const
+	{
+		value_t v;
+		if constexpr (Atomic) {
+			v = grid_[pos].load();
+		}
+		return HitBit == (v & HitBit);
+	}
 
-	int inc(Code const& code) { return inc(pos(code)); }
+	[[nodiscard]] bool hit(Code const& code) const { return hit(pos(code)); }
 
-	int dec(std::size_t pos) { return grid_[pos]--; }
+	bool markHit(std::size_t pos)
+	{
+		value_t p;
+		if constexpr (Atomic) {
+			p = grid_[pos].fetch_or(HitBit);
+		} else {
+			p = grid_[pos];
+			grid_[pos] |= HitBit;
+		}
+		return HitBit == (p & HitBit);
+	}
 
-	int dec(Code const& code) { return dec(pos(code)); }
+	bool markHit(Code const& code) { return markHit(pos(code)); }
+
+	[[nodiscard]] std::size_t misses(std::size_t pos) const
+	{
+		value_t v;
+		if constexpr (Atomic) {
+			v = grid_[pos].load();
+		}
+		return v & MissBits;
+	}
+
+	[[nodiscard]] std::size_t misses(Code const& code) const { return misses(pos(code)); }
+
+	void addMiss(std::size_t pos) { grid_[pos]++; }
+
+	void addMiss(Code const& code) { addMiss(pos(code)); }
+
+	[[nodiscard]] bool hitOrNoMisses(std::size_t pos) const
+	{
+		value_t v;
+		if constexpr (Atomic) {
+			v = grid_[pos].load();
+		} else {
+			v = grid_[pos];
+		}
+		return value_t{} == v || HitBit <= v;
+	}
+
+	[[nodiscard]] bool hitOrNoMisses(Code const& code) const
+	{
+		return hitOrNoMisses(pos(code));
+	}
 
 	void clear()
 	{
-		for (auto& x : grid_) {
-			x = 0;
+		if constexpr (Atomic) {
+			for (auto& x : grid_) {
+				x = 0u;
+			}
+		} else {
+			grid_.fill(0u);
 		}
 	}
 
@@ -217,24 +201,19 @@ class CountGrid<Dim, Depth, true>
 
 	[[nodiscard]] static constexpr std::size_t pos(Code const& code) noexcept
 	{
-		return (code.code() >> Dim * code.depth()) & Mask;
+		return code.lowestOffsets(Depth);
 	}
 
-	[[nodiscard]] static constexpr Code code(std::size_t pos, depth_t depth)
+	[[nodiscard]] static constexpr Code code(Code code, std::size_t pos)
 	{
-		return Code(pos << Dim * depth, depth);
-	}
-
-	[[nodiscard]] static constexpr Code code(code_t prefix, std::size_t pos, depth_t depth,
-	                                         depth_t depth_offset)
-	{
-		return Code(prefix | (pos << Dim * depth), depth + depth_offset);
+		code.append(pos, Depth);
+		return code;
 	}
 
 	[[nodiscard]] static constexpr depth_t depth() noexcept { return Depth; }
 
  private:
-	DataType grid_{};
+	Container grid_{};
 };
 }  // namespace ufo
 

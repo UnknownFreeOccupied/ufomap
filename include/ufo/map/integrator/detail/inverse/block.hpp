@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -38,51 +38,54 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef UFO_MAP_COLOR_BLOCK_HPP
-#define UFO_MAP_COLOR_BLOCK_HPP
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_BLOCK_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_BLOCK_HPP
 
 // UFO
 #include <ufo/utility/create_array.hpp>
-#include <ufo/vision/color.hpp>
 
 // STL
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <vector>
 
-namespace ufo
+namespace ufo::detail
 {
-template <std::size_t BF>
-struct ColorBlock {
-	std::array<Color, BF> data;
+struct InverseElement {
+	float                 distance = std::numeric_limits<float>::max();
+	std::vector<unsigned> indices;
+	std::uint32_t         index;
 
-	constexpr ColorBlock() = default;
+	InverseElement() noexcept                      = default;
+	InverseElement(InverseElement const&) noexcept = default;
 
-	constexpr ColorBlock(Color const& parent) : data(createArray<BF>(parent)) {}
-
-	constexpr void fill(Color const& parent) { data = createArray<BF>(parent); }
-
-	[[nodiscard]] constexpr Color& operator[](std::size_t pos)
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	[[nodiscard]] constexpr Color const& operator[](std::size_t pos) const
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	friend constexpr bool operator==(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return lhs.data == rhs.data;
-	}
-
-	friend constexpr bool operator!=(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return !(lhs == rhs);
-	};
+	InverseElement& operator=(InverseElement const&) noexcept = default;
 };
-}  // namespace ufo
-#endif  // UFO_MAP_COLOR_BLOCK_HPP
+
+template <std::size_t BF>
+struct InverseBlock {
+	std::array<InverseElement, BF> data;
+
+	constexpr InverseBlock() = default;
+
+	constexpr InverseBlock(InverseElement const& parent) : data(createArray<BF>(parent)) {}
+
+	constexpr void fill(InverseElement const& parent) { data.fill(parent); }
+
+	[[nodiscard]] constexpr InverseElement& operator[](std::size_t pos)
+	{
+		assert(BF > pos);
+		return data[pos];
+	}
+
+	[[nodiscard]] constexpr InverseElement const& operator[](std::size_t pos) const
+	{
+		assert(BF > pos);
+		return data[pos];
+	}
+};
+}  // namespace ufo::detail
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_BLOCK_HPP

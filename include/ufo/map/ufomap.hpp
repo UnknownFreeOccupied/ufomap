@@ -45,34 +45,36 @@
 // UFO
 #include <ufo/map/color/map.hpp>
 #include <ufo/map/integrator/integrator.hpp>
+#include <ufo/map/map_full.hpp>
+#include <ufo/map/modified/map.hpp>
 #include <ufo/map/occupancy/map.hpp>
-#include <ufo/map/tree/map.hpp>
-#include <ufo/map/tree/map_utility.hpp>
+#include <ufo/map/utility.hpp>
+#include <ufo/map/void_region/map.hpp>
 
 namespace ufo
 {
 template <template <class, class> class... Maps>
-using Map1D = Map<1, MapUtility::NONE, Maps...>;
+using Map1D = Map<1, ModifiedMap, Maps...>;
 
 template <template <class, class> class... Maps>
-using Map2D = Map<2, MapUtility::NONE, Maps...>;
+using Map2D = Map<2, ModifiedMap, Maps...>;
 
 template <template <class, class> class... Maps>
-using Map3D = Map<3, MapUtility::NONE, Maps...>;
+using Map3D = Map<3, ModifiedMap, Maps...>;
 
 template <template <class, class> class... Maps>
-using Map4D = Map<4, MapUtility::NONE, Maps...>;
+using Map4D = Map<4, ModifiedMap, Maps...>;
 
-template <mu_t Utility, template <class, class> class... Maps>
-using MapExtra1D = Map<1, Utility, Maps...>;
+template <MapUtility Utility, template <class, class> class... Maps>
+using MapFull1D = MapFull<1, Utility, ModifiedMap, Maps...>;
 
-template <mu_t Utility, template <class, class> class... Maps>
-using MapExtra2D = Map<2, Utility, Maps...>;
+template <MapUtility Utility, template <class, class> class... Maps>
+using MapFull2D = MapFull<2, Utility, ModifiedMap, Maps...>;
 
-template <mu_t Utility, template <class, class> class... Maps>
-using MapExtra3D = Map<3, Utility, Maps...>;
+template <MapUtility Utility, template <class, class> class... Maps>
+using MapFull3D = MapFull<3, Utility, ModifiedMap, Maps...>;
 
-template <mu_t Utility, template <class, class> class... Maps>
-using MapExtra4D = Map<4, Utility, Maps...>;
+template <MapUtility Utility, template <class, class> class... Maps>
+using MapFull4D = MapFull<4, Utility, ModifiedMap, Maps...>;
 }  // namespace ufo
 #endif  // UFO_MAP_UFOMAP_HPP

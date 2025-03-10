@@ -39,12 +39,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEEN_EMPTY_PROPAGATION_CRITERIA_HPP
-#define UFO_MAP_SEEN_EMPTY_PROPAGATION_CRITERIA_HPP
-
-namespace ufo
-{
-enum class SeenEmptyPropagationCriteria { ALL, ANY, SOME, NONE };
-}
-
-#endif  // UFO_MAP_SEEN_EMPTY_PROPAGATION_CRITERIA_HPP
+ #ifndef UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_3D_HPP
+ #define UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_3D_HPP
+ 
+ // UFO
+ #include <ufo/cloud/point_cloud.hpp>
+ #include <ufo/execution/algorithm.hpp>
+ #include <ufo/execution/execution.hpp>
+ #include <ufo/map/integrator/detail/simple_integrator.hpp>
+ #include <ufo/map/integrator/integrator.hpp>
+ #include <ufo/map/occupancy/block.hpp>
+ #include <ufo/utility/index_iterator.hpp>
+ #include <ufo/utility/spinlock.hpp>
+ 
+ // STL
+ #include <algorithm>
+ #include <cstddef>
+ #include <iterator>
+ #include <type_traits>
+ 
+ namespace ufo
+ {
+ template <>
+ class SimpleIntegrator<3> : public Integrator<3>
+ {
+ };
+ }  // namespace ufo
+ 
+ #endif  // UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_3D_HPP

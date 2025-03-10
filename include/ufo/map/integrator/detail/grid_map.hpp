@@ -53,14 +53,22 @@
 
 namespace ufo::detail
 {
-template <class GridMiss, class GridHit, std::size_t NumBuckets = 100,
-          std::size_t NumBlocksPerBucket = 128>
+template <class Grid, std::size_t NumBuckets = 100, std::size_t NumBlocksPerBucket = 128>
 class GridMap
 {
  public:
-	using Code            = typename GridMiss::Code;
-	using key_type        = typename Code::code_t;
-	using mapped_type     = std::pair<GridMiss, GridHit>;
+	using Code = typename Grid::Code;
+
+	struct key_type : Code {
+		constexpr key_type() = default;
+
+		explicit constexpr key_type(Code const& code)
+		    : Code(code.toDepth(Grid::depth() + code.depth()))
+		{
+		}
+	};
+
+	using mapped_type     = Grid;
 	using value_type      = std::pair<key_type, mapped_type>;
 	using size_type       = std::size_t;
 	using difference_type = std::ptrdiff_t;
@@ -118,8 +126,6 @@ class GridMap
 
 	mapped_type& at(Code const& code) { return at(key(code)); }
 
-	mapped_type const& at(Code const& code) const { return at(key(code)); }
-
 	mapped_type& at(key_type const& key)
 	{
 		auto first = begin();
@@ -131,6 +137,8 @@ class GridMap
 
 		throw std::out_of_range("GridMap::at: key not found");
 	}
+
+	mapped_type const& at(Code const& code) const { return at(key(code)); }
 
 	mapped_type const& at(key_type const& key) const
 	{
@@ -182,7 +190,7 @@ class GridMap
 
 	[[nodiscard]] constexpr inline key_type key(Code const& code) const
 	{
-		return code.toDepth(GridMiss::depth() + code.depth()).code();
+		return key_type(code);
 	}
 
 	void clear()

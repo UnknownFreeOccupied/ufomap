@@ -38,51 +38,37 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef UFO_MAP_COLOR_BLOCK_HPP
-#define UFO_MAP_COLOR_BLOCK_HPP
 
-// UFO
-#include <ufo/utility/create_array.hpp>
-#include <ufo/vision/color.hpp>
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MISSES_INFO_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MISSES_INFO_HPP
 
 // STL
-#include <array>
-#include <cassert>
-#include <cstddef>
+#include <cstdint>
 
-namespace ufo
+namespace ufo::detail
 {
-template <std::size_t BF>
-struct ColorBlock {
-	std::array<Color, BF> data;
+struct InverseMissesInfo {
+	std::uint32_t index{};
+	std::uint32_t data{};
 
-	constexpr ColorBlock() = default;
+	constexpr InverseMissesInfo() = default;
 
-	constexpr ColorBlock(Color const& parent) : data(createArray<BF>(parent)) {}
-
-	constexpr void fill(Color const& parent) { data = createArray<BF>(parent); }
-
-	[[nodiscard]] constexpr Color& operator[](std::size_t pos)
+	constexpr InverseMissesInfo(std::uint32_t index, std::uint32_t count)
+	    : index(index), data(count << 1)
 	{
-		assert(BF > pos);
-		return data[pos];
 	}
 
-	[[nodiscard]] constexpr Color const& operator[](std::size_t pos) const
+	[[nodiscard]] constexpr bool voidRegion() const { return 0b1u == (0b1u & data); }
+
+	constexpr void voidRegion(bool v)
 	{
-		assert(BF > pos);
-		return data[pos];
+		data = (~0b1u & data) | static_cast<std::uint32_t>(v);
 	}
 
-	friend constexpr bool operator==(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return lhs.data == rhs.data;
-	}
+	[[nodiscard]] constexpr std::uint32_t count() const { return data >> 1; }
 
-	friend constexpr bool operator!=(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return !(lhs == rhs);
-	};
+	constexpr void count(std::uint32_t count) { data = (0b1u & data) | (count << 1); }
 };
-}  // namespace ufo
-#endif  // UFO_MAP_COLOR_BLOCK_HPP
+}  // namespace ufo::detail
+
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MISSES_INFO_HPP

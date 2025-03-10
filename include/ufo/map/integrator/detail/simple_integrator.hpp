@@ -39,67 +39,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TYPES_HPP
-#define UFO_MAP_TYPES_HPP
-
-// UFO
-#include <ufo/map/tree/tree_container.hpp>
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_SIMPLE_INTEGRATOR_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_SIMPLE_INTEGRATOR_HPP
 
 // STL
-#include <array>
-#include <cstdint>
-#include <limits>
-#include <type_traits>
+#include <cstddef>
 
 namespace ufo
 {
-enum class Device { CPU, GPU };
+template <std::size_t Dim>
+class SimpleIntegrator;
 
-using coord_t         = float;
-using node_size_t     = double;
-using time_t          = float;
-using color_t         = std::uint8_t;
-using label_t         = std::uint32_t;
-using value_t         = float;
-using intensity_t     = float;
-using count_t         = std::int32_t;
-using reflection_t    = double;
-using distance_t      = float;
-using surfel_scalar_t = float;
-using freedom_t       = std::uint8_t;
-
-//
-// Map utility
-//
-
-using mu_t = std::uint64_t;
-
-enum MapUtility : mu_t {
-	ENABLE_DISABLE      = mu_t(1),  // FIXME: Maybe call 'ABILITY' or 'TOGGLE'
-	ACCELERATED_COMPUTE = mu_t(1) << 1,
-	SNAPSHOT            = mu_t(1) << 2,
-	WITH_CENTER         = mu_t(1) << 3
-};
-
-//
-// Accelerated compute indices
-//
-
-enum class AcceleratedComputeIndices : std::size_t {
-	DATASTRUCTURE = 0,
-	MODIFIED      = 1,
-	OCCUPANCY     = 2,
-	TIME          = 3,
-	COLOR         = 4,
-	LABEL         = 5,
-	SEMANTIC      = 6,
-	SURFEL        = 7,
-	INTENSITY     = 8,
-	COUNT         = 9,
-	REFLECTION    = 10,
-	SEEN_FREE     = 11,
-	TSDF          = 12,
-};
+using SimpleIntegrator2D = SimpleIntegrator<2>;
+using SimpleIntegrator3D = SimpleIntegrator<3>;
+using SimpleIntegrator4D = SimpleIntegrator<4>;
 }  // namespace ufo
 
-#endif  // UFO_MAP_TYPES_HPP
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_SIMPLE_INTEGRATOR_HPP

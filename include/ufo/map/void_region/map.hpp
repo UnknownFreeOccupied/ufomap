@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -39,38 +39,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_COST_MAP_HPP
-#define UFO_MAP_COST_MAP_HPP
+#ifndef UFO_MAP_VOID_REGION_MAP_HPP
+#define UFO_MAP_VOID_REGION_MAP_HPP
 
 // UFO
-#include <ufo/container/tree/container.hpp>
-#include <ufo/container/tree/tree.hpp>
-#include <ufo/map/cost/block.hpp>
-#include <ufo/map/cost/predicate.hpp>
-#include <ufo/map/cost/propagation_criteria.hpp>
-#include <ufo/map/map/map_block.hpp>
+#include <ufo/map/block.hpp>
 #include <ufo/map/type.hpp>
-#include <ufo/math/transform3.hpp>
+#include <ufo/map/void_region/block.hpp>
+#include <ufo/map/void_region/predicate.hpp>
 #include <ufo/utility/bit_set.hpp>
 #include <ufo/utility/io/buffer.hpp>
-#include <ufo/utility/macros.hpp>
-#include <ufo/utility/type_traits.hpp>
 
 // STL
-#include <array>
-#include <iostream>
-#include <limits>
-#include <string_view>
+#include <cstddef>
+#include <ostream>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace ufo
 {
 template <class Derived, class Tree>
-class CostMap
+class VoidRegionMap
 {
- private:
 	template <class Derived2, class Tree2>
-	friend class CostMap;
+	friend class VoidRegionMap;
 
 	static constexpr auto const BF  = Tree::branchingFactor();
 	static constexpr auto const Dim = Tree::dimensions();
@@ -82,9 +75,8 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	static constexpr MapType const Type = MapType::COST;
+	static constexpr MapType const Type = MapType::VOID_REGION;
 
-	// Container
 	using Index    = typename Tree::Index;
 	using Node     = typename Tree::Node;
 	using Code     = typename Tree::Code;
@@ -97,9 +89,6 @@ class CostMap
 	using length_t = typename Tree::length_t;
 	using pos_t    = typename Tree::pos_t;
 
-	// Cost
-	using cost_t = typename CostBlock<BF>::cost_t;
-
  public:
 	/**************************************************************************************
 	|                                                                                     |
@@ -107,12 +96,14 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
+	[[nodiscard]] bool voidRegion() const { return voidRegion(derived().index()); }
+
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] cost_t cost(NodeType node) const
+	[[nodiscard]] bool voidRegion(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return costBlock(n.pos)[n.offset].cost;
+		return voidRegionBlock(n.pos)[n.offset];
 	}
 
 	/**************************************************************************************
@@ -121,117 +112,74 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	/**
-	 * @brief
-	 *
-	 * @note If `NodeType` is `Index`, only propagates up to `node` and it does not set
-	 * modified if propagation is `false`.
-	 *
-	 * @tparam NodeType Should be of type `Node`, `Code`, `Key`, or `Coord`
-	 * @param node
-	 * @param value
-	 * @param propagate
-	 */
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void costSet(NodeType node, cost_t value, bool propagate = true)
+	void voidRegionSet(bool value, bool propagate = true)
 	{
-		CostElement elem(value);
-
-		auto node_f  = [this, elem](Index node) { costBlock(node.pos)[node.offset] = elem; };
-		auto block_f = [this, elem](pos_t pos) { costBlock(pos).fill(elem); };
-
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursParentFirst(node, node_f, block_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			if (propagate) {
-				auto propagate_f = [this](Index node, pos_t children) {
-					onPropagateChildren(node, children);
-				};
-
-				derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-				                       propagate);
-			} else {
-				derived().recursParentFirst(derived().code(node), node_f, block_f);
-			}
-		}
+		voidRegionSet(derived().index(), value, propagate);
 	}
 
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void costUpdate(NodeType node, cost_t change, bool propagate = true)
+	void voidRegionSet(NodeType node, bool value, bool propagate = true)
 	{
-		costUpdate(
-		    node,
-		    [this, change](Index node) {
-			    return CostBlock(node.pos)[node.offset].cost + change;
-		    },
-		    propagate);
-	}
-
-	template <class NodeType, class UnaryOp,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool>       = true,
-	          std::enable_if_t<std::is_invocable_r_v<cost_t, UnaryOp, Index>, bool> = true>
-	void costUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
-	{
-		auto node_f = [this, unary_op](Index node) {
-			cost_t value = unary_op(node);
-
-			auto& cb = CostBlock(node.pos)[node.offset];
-			cb.cost  = value;
+		auto node_f = [this, value](Index node) {
+			voidRegionBlock(node.pos)[node.offset] = value;
 		};
 
-		auto block_f = [this, node_f](pos_t pos) {
-			for (std::size_t i{}; BF > i; ++i) {
-				node_f(Index(pos, i));
-			}
-		};
+		auto block_f = [this, value](pos_t block) { voidRegionBlock(block) = value; };
 
-		auto propagate_f = [this](Index node, pos_t children) {
+		auto update_f = [this](Index node, pos_t children) {
 			onPropagateChildren(node, children);
 		};
 
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursLeaves(node, node_f, block_f, propagate_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
+		derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
+	}
+
+	template <class UnaryOp,
+	          std::enable_if_t<std::is_invocable_r_v<bool, UnaryOp, Index>, bool> = true>
+	void voidRegionUpdate(UnaryOp unary_op, bool propagate = true)
+	{
+		voidRegionUpdate(derived().index(), unary_op, propagate);
+	}
+
+	template <class NodeType, class UnaryOp,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool>     = true,
+	          std::enable_if_t<std::is_invocable_r_v<bool, UnaryOp, Index>, bool> = true>
+	void voidRegionUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
+	{
+		auto node_f = [this, unary_op](Index node) {
+			voidRegionBlock(node.pos)[node.offset] = unary_op(node);
+		};
+
+		auto block_f = [this, unary_op](pos_t block) {
+			for (std::size_t i{}; BF > i; ++i) {
+				voidRegionBlock(block)[i] = unary_op(Index(block, i));
 			}
-		} else {
-			derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-			                       propagate);
-		}
+		};
+
+		auto update_f = [this](Index node, pos_t children) {
+			onPropagateChildren(node, children);
+		};
+
+		derived().recursLeaves(node, node_f, block_f, update_f, propagate);
 	}
 
-	//
-	// Propagation criteria
-	//
+	/**************************************************************************************
+	|                                                                                     |
+	|                                       Lookup                                        |
+	|                                                                                     |
+	**************************************************************************************/
 
-	[[nodiscard]] constexpr CostPropagationCriteria costPropagationCriteria() const noexcept
+	[[nodiscard]] bool voidRegionContains() const
 	{
-		return prop_criteria_;
+		return voidRegionContains(derived().index());
 	}
 
-	void costSetPropagationCriteria(CostPropagationCriteria prop_criteria,
-	                                bool                    propagate = true)
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	[[nodiscard]] bool voidRegionContains(NodeType node) const
 	{
-		if (CostPropagationCriteria() == prop_criteria) {
-			return;
-		}
-
-		prop_criteria_ = prop_criteria;
-
-		// Set all inner nodes to modified
-		// FIXME: Possible to optimize this to only set the ones with children
-		derived().setModified();
-
-		if (propagate) {
-			derived().propagateModified();
-		}
+		Index n = derived().index(node);
+		return voidRegionBlock(n.pos).contains(n.offset);
 	}
 
  protected:
@@ -241,20 +189,19 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	CostMap() { onInitRoot(); }
+	VoidRegionMap() { onInitRoot(); }
 
-	CostMap(CostMap const& other) = default;
+	VoidRegionMap(VoidRegionMap const&) = default;
 
-	CostMap(CostMap&& other) = default;
+	VoidRegionMap(VoidRegionMap&&) = default;
 
 	template <class Derived2, class Tree2>
-	CostMap(CostMap<Derived2, Tree2> const& other) : prop_criteria_(other.prop_criteria_)
+	VoidRegionMap(VoidRegionMap<Derived2, Tree2> const& /* other */)
 	{
 	}
 
 	template <class Derived2, class Tree2>
-	CostMap(CostMap<Derived2, Tree2>&& other)
-	    : prop_criteria_(std::move(other.prop_criteria_))
+	VoidRegionMap(VoidRegionMap<Derived2, Tree2>&& /* other */)
 	{
 	}
 
@@ -264,7 +211,7 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	~CostMap() = default;
+	~VoidRegionMap() = default;
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -272,29 +219,29 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	CostMap& operator=(CostMap const& rhs) = default;
+	VoidRegionMap& operator=(VoidRegionMap const&) = default;
 
-	CostMap& operator=(CostMap&& rhs) = default;
+	VoidRegionMap& operator=(VoidRegionMap&&) = default;
 
 	template <class Derived2, class Tree2>
-	CostMap& operator=(CostMap<Derived2, Tree2> const& rhs)
+	VoidRegionMap& operator=(VoidRegionMap<Derived2, Tree2> const& /* rhs */)
 	{
-		prop_criteria_ = rhs.prop_criteria_;
 		return *this;
 	}
 
 	template <class Derived2, class Tree2>
-	CostMap& operator=(CostMap<Derived2, Tree2>&& rhs)
+	VoidRegionMap& operator=(VoidRegionMap<Derived2, Tree2>&& /* rhs */)
 	{
-		prop_criteria_ = std::move(rhs.prop_criteria_);
 		return *this;
 	}
 
-	//
-	// Swap
-	//
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Swap                                         |
+	|                                                                                     |
+	**************************************************************************************/
 
-	void swap(CostMap& other) noexcept { std::swap(prop_criteria_, other.prop_criteria_); }
+	friend void swap(VoidRegionMap& /* lhs */, VoidRegionMap& /* rhs */) noexcept {}
 
 	/**************************************************************************************
 	|                                                                                     |
@@ -315,165 +262,89 @@ class CostMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	[[nodiscard]] CostBlock<BF>& costBlock(pos_t pos)
+	[[nodiscard]] VoidRegionBlock<BF>& voidRegionBlock(pos_t pos)
 	{
-		return derived().template data<CostBlock<BF>>(pos);
+		return derived().template data<VoidRegionBlock<BF>>(pos);
 	}
 
-	[[nodiscard]] CostBlock<BF> const& costBlock(pos_t pos) const
+	[[nodiscard]] VoidRegionBlock<BF> const& voidRegionBlock(pos_t pos) const
 	{
-		return derived().template data<CostBlock<BF>>(pos);
+		return derived().template data<VoidRegionBlock<BF>>(pos);
 	}
 
 	/**************************************************************************************
 	|                                                                                     |
-	|                              Functions Derived expect                               |
+	|                              Functions Derived expects                              |
 	|                                                                                     |
 	**************************************************************************************/
 
-	void onInitRoot()
-	{
-		auto& block = costBlock(0);
-
-		cost_t value{};
-		block[0].cost = value;
-	}
+	void onInitRoot() { voidRegionBlock(0) = false; }
 
 	void onInitChildren(Index node, pos_t children)
 	{
-		costBlock(children).fill(costBlock(node.pos)[node.offset]);
-	}
-
-	void onPruneChildren(Index node, pos_t children)
-	{
-		auto& v = costBlock(node.pos)[node.offset];
+		voidRegionBlock(children) = voidRegionBlock(node.pos)[node.offset];
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
 	{
-		auto const& children_block = costBlock(children);
-
-		auto& cb = costBlock(node.pos)[node.offset];
-
-		cost_t value;
-		switch (prop_criteria_) {
-			case CostPropagationCriteria::MAX:
-				value = std::numeric_limits<cost_t>::lowest();
-				for (std::size_t i{}; BF > i; ++i) {
-					value = UFO_MAX(value, children_block[i].cost);
-				}
-				break;
-			case CostPropagationCriteria::MIN:
-				value = std::numeric_limits<cost_t>::max();
-				for (std::size_t i{}; BF > i; ++i) {
-					value = UFO_MIN(value, children_block[i].cost);
-				}
-				break;
-			case CostPropagationCriteria::MEAN: {
-				cost_t v = 0;
-				for (std::size_t i{}; BF > i; ++i) {
-					v += static_cast<int>(children_block[i].cost);
-				}
-				value = static_cast<cost_t>(v / static_cast<int>(BF));
-				break;
-			}
-			case CostPropagationCriteria::NONE: return;
-		}
-
-		cb.cost = value;
+		auto& vrb                 = voidRegionBlock(node.pos);
+		vrb[node.offset]          = voidRegionBlock(children).void_region.all();
+		vrb.contains(node.offset) = voidRegionBlock(children).contains_void_region.any();
 	}
 
-	//
-	// Is prunable
-	//
-
-	[[nodiscard]] bool prunable(pos_t block) const
+	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
-		using std::begin;
-		using std::end;
-		return std::all_of(
-		    begin(costBlock(block).data) + 1, end(costBlock(block).data),
-		    [v = costBlock(block)[0].cost](auto const& e) { return v == e.cost; });
+		auto const& vrb = voidRegionBlock(block);
+		return vrb.void_region.none() || vrb.void_region.all();
 	}
 
-	//
-	// Input/output (read/write)
-	//
-
-	[[nodiscard]] static constexpr std::size_t serializedSizeNode() noexcept
+	void onPruneChildren(Index node, pos_t /* children */)
 	{
-		return sizeof(cost_t);
+		auto& vrb                 = voidRegionBlock(node.pos);
+		vrb.contains(node.offset) = vrb[node.offset];
 	}
 
-	[[nodiscard]] constexpr std::size_t serializedSize(
+	[[nodiscard]] std::size_t onSerializedSize(
 	    std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
 	    std::size_t num_nodes) const
 	{
-		return num_nodes * serializedSizeNode();
+		return num_nodes * sizeof(VoidRegionBlock<BF>::void_region);
 	}
 
 	void onRead(ReadBuffer& in, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
 	{
 		for (auto [block, offset] : nodes) {
-			auto& cb = costBlock(block);
+			auto& vrb = voidRegionBlock(block);
 
-			if (offset.all()) {
-				std::array<cost_t, BF> cost;
-				in.read(cost);
-				for (offset_t i{}; BF > i; ++i) {
-					cb[i] = CostElement(cost[i]);
-				}
-			} else {
-				for (offset_t i{}; BF > i; ++i) {
-					if (offset[i]) {
-						cost_t value;
-						in.read(value);
-						cb[i] = CostElement(value);
-					}
-				}
-			}
+			BitSet<BF> vr;
+			in.read(vr);
+			vrb.void_region          = vr & offset;
+			vrb.contains_void_region = vrb.void_region;
 		}
 	}
 
-	void onWrite(WriteBuffer& out, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
+	void onWrite(WriteBuffer&                                     out,
+	             std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes) const
 	{
-		for (auto [block, offset] : nodes) {
-			auto const& cb = CostBlock(block);
-
-			if (offset.all()) {
-				std::array<cost_t, BF> cost;
-				for (offset_t i{}; BF > i; ++i) {
-					cost[i] = cb[i].cost;
-				}
-				out.write(cost);
-			} else {
-				for (offset_t i{}; BF > i; ++i) {
-					if (offset[i]) {
-						out.write(cb[i].cost);
-					}
-				}
-			}
+		for (auto [block, _] : nodes) {
+			out.write(voidRegionBlock(block).void_region);
 		}
 	}
 
-	//
-	// Dot file info
-	//
-
-	void onDotFileInfo(std::ostream& out, Index node) const
+	void onDotFile(std::ostream& out, Index node) const
 	{
-		out << "Cost: " << cost(node);
+		if (voidRegion(node)) {
+			out << "Void region: <font color='green'><b>true</b></font>";
+		} else {
+			out << "Void region: <font color='red'>false</font>";
+		}
 	}
-
- private:
-	// Propagation criteria
-	CostPropagationCriteria prop_criteria_ = CostPropagationCriteria::MAX;
 };
 
 template <std::size_t Dim, std::size_t BF>
-struct map_block<CostMap, Dim, BF> {
-	using type = CostBlock<BF>;
+struct map_block<VoidRegionMap, Dim, BF> {
+	using type = VoidRegionBlock<BF>;
 };
 }  // namespace ufo
 
-#endif  // UFO_MAP_COST_MAP_HPP
+#endif  // UFO_MAP_VOID_REGION_MAP_HPP

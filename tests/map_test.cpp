@@ -86,7 +86,7 @@ std::ostream& operator<<(std::ostream& out, Point p)
 // #include <random>
 #include <ufo/cloud/point_cloud.hpp>
 #include <ufo/cloud/ufo.hpp>
-#include <ufo/map/integration/map.hpp>
+#include <ufo/map/integrator/detail/inverse/map.hpp>
 #include <ufo/utility/create_array.hpp>
 #include <ufo/utility/index_iterator.hpp>
 #include <ufo/utility/spinlock.hpp>
@@ -184,7 +184,7 @@ template <class Something>
 
 TEST_CASE("[Octree] raycast")
 {
-	Map3D<IntegrationMap> map(0.1f, 17);
+	Map3D<detail::InverseMap> map(0.1f, 17);
 
 	// TODO: Should be able to remove Color
 	PointCloud<3, float, Color> cloud;

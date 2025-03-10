@@ -39,19 +39,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TREE_MAP_BLOCK_HPP
-#define UFO_MAP_TREE_MAP_BLOCK_HPP
+#ifndef UFO_MAP_VOID_REGION_PREDICATE_HPP
+#define UFO_MAP_VOID_REGION_PREDICATE_HPP
 
-// STL
-#include <cstddef>
+// UFO
+#include <ufo/map/void_region/predicate/void_region.hpp>
+// #include <ufo/map/void_region/predicate/void_region_map.hpp>
 
-namespace ufo
-{
-template <template <class, class> class, std::size_t, std::size_t>
-struct map_block;
-
-template <template <class, class> class Map, std::size_t Dim>
-using map_block_t = typename map_block<Map, Dim, std::size_t(1) << Dim>::type;
-}  // namespace ufo
-
-#endif  // UFO_MAP_TREE_MAP_BLOCK_HPP
+#endif  // UFO_MAP_VOID_REGION_PREDICATE_HPP

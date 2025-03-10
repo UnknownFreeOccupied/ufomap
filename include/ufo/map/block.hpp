@@ -39,11 +39,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEEN_EMPTY_SEEN_EMPTY_PREDICATE_HPP
-#define UFO_MAP_SEEN_EMPTY_SEEN_EMPTY_PREDICATE_HPP
+#ifndef UFO_MAP_BLOCK_HPP
+#define UFO_MAP_BLOCK_HPP
 
-// UFO
-#include <ufo/map/seen_empty/predicate/seen_empty.hpp>
-#include <ufo/map/seen_empty/predicate/seen_empty_map.hpp>
+// STL
+#include <cstddef>
 
-#endif  // UFO_MAP_SEEN_EMPTY_SEEN_EMPTY_PREDICATE_HPP
+namespace ufo
+{
+template <template <class, class> class, std::size_t, std::size_t>
+struct map_block;
+
+template <template <class, class> class Map, std::size_t Dim>
+using map_block_t = typename map_block<Map, Dim, std::size_t(1) << Dim>::type;
+}  // namespace ufo
+
+#endif  // UFO_MAP_BLOCK_HPP

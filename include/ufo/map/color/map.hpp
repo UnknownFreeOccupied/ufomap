@@ -43,12 +43,10 @@
 #define UFO_MAP_COLOR_MAP_HPP
 
 // UFO
-#include <ufo/container/tree/container.hpp>
+#include <ufo/map/block.hpp>
 #include <ufo/map/color/block.hpp>
-#include <ufo/map/tree/map_block.hpp>
 #include <ufo/map/type.hpp>
 #include <ufo/utility/bit_set.hpp>
-#include <ufo/execution/execution.hpp>
 #include <ufo/utility/io/buffer.hpp>
 #include <ufo/vision/color.hpp>
 #include <ufo/vision/image.hpp>
@@ -123,26 +121,14 @@ class ColorMap
 		auto node_f = [this, value](Index node) {
 			colorBlock(node.pos)[node.offset] = value;
 		};
+
 		auto block_f = [this, value](pos_t block) { colorBlock(block) = value; };
 
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursParentFirst(node, node_f, block_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			if (propagate) {
-				auto propagate_f = [this](Index node, pos_t children) {
-					onPropagateChildren(node, children);
-				};
+		auto update_f = [this](Index node, pos_t children) {
+			onPropagateChildren(node, children);
+		};
 
-				derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-				                       propagate);
-			} else {
-				derived().recursParentFirst(derived().code(node), node_f, block_f);
-			}
-		}
+		derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
 	}
 
 	template <class NodeType>
@@ -156,6 +142,27 @@ class ColorMap
 	//
 	// Update color
 	//
+
+	template <class NodeType, class UnaryOp,
+	          std::enable_if_t<std::is_invocable_r_v<Color, UnaryOp, Index>, bool> = true>
+	void colorUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
+	{
+		auto node_f = [this, unary_op](Index node) {
+			colorBlock(node.pos)[node.offset] = unary_op(node);
+		};
+
+		auto block_f = [this, unary_op](pos_t block) {
+			for (std::size_t i{}; BF > i; ++i) {
+				colorBlock(block)[i] = unary_op(Index(block, i));
+			}
+		};
+
+		auto update_f = [this](Index node, pos_t children) {
+			onPropagateChildren(node, children);
+		};
+
+		derived().recursLeaves(node, node_f, block_f, update_f, propagate);
+	}
 
 	template <class NodeType>
 	void colorUpdate(NodeType node, Color color, float weight = 1.0f, bool propagate = true)
@@ -181,36 +188,6 @@ class ColorMap
 		    propagate);
 	}
 
-	template <class NodeType, class UnaryOp,
-	          std::enable_if_t<std::is_invocable_r_v<Color, UnaryOp, Index>, bool> = true>
-	void colorUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
-	{
-		auto node_f = [this, unary_op](Index node) {
-			colorBlock(node.pos)[node.offset] = unary_op(node);
-		};
-
-		auto block_f = [this, unary_op](pos_t block) {
-			for (std::size_t i{}; BF > i; ++i) {
-				colorBlock(block)[i] = unary_op(Index(block, i));
-			}
-		};
-
-		auto propagate_f = [this](Index node, pos_t children) {
-			onPropagateChildren(node, children);
-		};
-
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursLeaves(node, node_f, block_f, propagate_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-			                       propagate);
-		}
-	}
-
 	template <class NodeType>
 	void colorClear(NodeType node, bool propagate = true)
 	{
@@ -230,67 +207,11 @@ class ColorMap
 		return colorBlock(n.pos)[n.offset].empty();
 	}
 
-	//
-	// Color image
-	//
-
-	// 	Image<Color> colorImage(Image<Index> const& image) const
-	// 	{
-	// 		Image<Color> ret(image.rows(), image.cols());
-
-	// 		// FIXME: Implement correct
-	// 		std::transform(std::begin(image), std::end(image), std::begin(ret),
-	// 		               [&](auto node) { return node.valid() ? color(node) : Color(); });
-
-	// 		return ret;
-	// 	}
-
-	// 	Image<Color> colorImage(Image<Node> const& image) const
-	// 	{
-	// 		Image<Color> ret(image.rows(), image.cols());
-
-	// 		// FIXME: Implement correct
-	// 		std::transform(std::begin(image), std::end(image), std::begin(ret),
-	// 		               [&](auto node) { return node.valid() ? color(node) : Color(); });
-
-	// 		return ret;
-	// 	}
-
-	// #ifdef UFO_TBB
-	// 	template <class ExecutionPolicy,
-	// 	          std::enable_if_t<std::is_execution_policy_v<ExecutionPolicy>,
-	// 	                           bool> = true>
-	// 	Image<Color> colorImage(ExecutionPolicy&& policy, Image<Node> const& image) const
-	// 	{
-	// 		Image<Color> ret(image.rows(), image.cols());
-
-	// 		// FIXME: Implement correct
-	// 		std::transform(std::forward<ExecutionPolicy>(policy), std::begin(image),
-	// 		               std::end(image), std::begin(ret),
-	// 		               [&](auto node) { return node.valid() ? color(node) : Color(); });
-
-	// 		return ret;
-	// 	}
-
-	// 	template <class ExecutionPolicy,
-	// 	          std::enable_if_t<std::is_execution_policy_v<ExecutionPolicy>,
-	// 	                           bool> = true>
-	// 	Image<Color> colorImage(ExecutionPolicy&& policy, Image<Index> const& image) const
-	// 	{
-	// 		Image<Color> ret(image.rows(), image.cols());
-
-	// 		// FIXME: Implement correct
-	// 		std::transform(std::forward<ExecutionPolicy>(policy), std::begin(image),
-	// 		               std::end(image), std::begin(ret),
-	// 		               [&](auto node) { return node.valid() ? color(node) : Color(); });
-
-	// 		return ret;
-	// 	}
-	// #endif
-
-	//
-	// Propagation
-	//
+	/**************************************************************************************
+	|                                                                                     |
+	|                                     Propagation                                     |
+	|                                                                                     |
+	**************************************************************************************/
 
 	[[nodiscard]] constexpr ColorBlendingMode colorPropagationBlendingMode() const noexcept
 	{
@@ -411,7 +332,7 @@ class ColorMap
 
 	/**************************************************************************************
 	|                                                                                     |
-	|                              Functions Derived expect                               |
+	|                              Functions Derived expects                              |
 	|                                                                                     |
 	**************************************************************************************/
 
@@ -426,39 +347,27 @@ class ColorMap
 		colorBlock(children).fill(colorBlock(node.pos)[node.offset]);
 	}
 
-	void onPruneChildren(Index /* node */, pos_t /* children */) {}
-
 	void onPropagateChildren(Index node, pos_t children)
 	{
 		colorBlock(node.pos)[node.offset] =
 		    Color::blend(colorBlock(children).data, colorPropagationBlendingMode());
 	}
 
-	//
-	// Is prunable
-	//
-
-	[[nodiscard]] bool isPrunable(pos_t block) const
+	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
 		using std::begin;
 		using std::end;
-		return std::all_of(begin(colorBlock(block)) + 1, cend(colorBlock(block)),
-		                   [v = colorBlock(block).front()](auto e) { return v == e; });
+		return std::all_of(begin(colorBlock(block).data) + 1, cend(colorBlock(block).data),
+		                   [v = colorBlock(block).data.front()](auto e) { return v == e; });
 	}
 
-	//
-	// Input/output (read/write)
-	//
+	void onPruneChildren(Index /* node */, pos_t /* children */) {}
 
-	[[nodiscard]] static constexpr std::size_t serializedSizeNode() noexcept
+	[[nodiscard]] std::size_t onSerializedSize(
+	    std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
+	    std::size_t num_nodes) const
 	{
-		return sizeof(Color);
-	}
-
-	std::size_t serializedSize(std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
-	                           std::size_t num_nodes) const
-	{
-		return num_nodes * serializedSizeNode();
+		return num_nodes * sizeof(Color);
 	}
 
 	void onRead(ReadBuffer& in, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
@@ -469,7 +378,7 @@ class ColorMap
 			if (offset.all()) {
 				in.read(cb);
 			} else {
-				for (offset_t i{}; BF > i; ++i) {
+				for (std::size_t i{}; BF > i; ++i) {
 					if (offset[i]) {
 						in.read(cb[i]);
 					}
@@ -478,7 +387,8 @@ class ColorMap
 		}
 	}
 
-	void onWrite(WriteBuffer& out, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
+	void onWrite(WriteBuffer&                                     out,
+	             std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes) const
 	{
 		for (auto [block, offset] : nodes) {
 			auto const& cb = colorBlock(block);
@@ -486,7 +396,7 @@ class ColorMap
 			if (offset.all()) {
 				out.write(cb);
 			} else {
-				for (offset_t i{}; BF > i; ++i) {
+				for (std::size_t i{}; BF > i; ++i) {
 					if (offset[i]) {
 						out.write(cb[i]);
 					}
@@ -495,11 +405,7 @@ class ColorMap
 		}
 	}
 
-	//
-	// Dot file info
-	//
-
-	void onDotFileInfo(std::ostream& out, Index node) const
+	void onDotFile(std::ostream& out, Index node) const
 	{
 		Color    c     = color(node);
 		unsigned red   = c.red;

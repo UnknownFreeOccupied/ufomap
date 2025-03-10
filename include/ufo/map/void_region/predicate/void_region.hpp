@@ -39,65 +39,55 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_SEEN_EMPTY_PREDICATE_SEEN_EMPTY_HPP
-#define UFO_MAP_SEEN_EMPTY_PREDICATE_SEEN_EMPTY_HPP
+#ifndef UFO_MAP_VOID_REGION_PREDICATE_VOID_REGION_HPP
+#define UFO_MAP_VOID_REGION_PREDICATE_VOID_REGION_HPP
 
 // UFO
-#include <ufo/map/predicate/predicate.hpp>
-#include <ufo/map/seen_empty/seen_empty_propagation_criteria.hpp>
+#include <ufo/container/tree/predicate/filter.hpp>
 
 namespace ufo::pred
 {
 template <bool Negated = false>
-struct SeenEmpty {
+struct VoidRegion {
 };
 
 template <bool Negated>
-SeenEmpty<!Negated> operator!(SeenEmpty<Negated>)
+VoidRegion<!Negated> operator!(VoidRegion<Negated>)
 {
-	return {};
+	return VoidRegion<!Negated>{};
 }
 
 template <bool Negated>
-struct InnerCheck<SeenEmpty<Negated>> {
-	using Pred = SeenEmpty<Negated>;
+struct Filter<VoidRegion<Negated>> {
+	using Pred = VoidRegion<Negated>;
 
-	template <class Map, class Node>
-	static inline bool apply(Pred p, Map const& m, Node n)
+	template <class Tree>
+	static constexpr void init(Pred&, Tree const&)
 	{
-		switch (m.seenEmptyPropagationCriteria()) {
-			case SeenEmptyPropagationCriteria::ALL:
-				if constexpr (Negated) {
-					return !m.seenEmpty(n.index());
-				} else {
-					return true;
-				}
-			case SeenEmptyPropagationCriteria::ANY:
-				if constexpr (Negated) {
-					return true;
-				} else {
-					return m.seenEmpty(n.index());
-				}
-			case SeenEmptyPropagationCriteria::SOME: return true;
-			case SeenEmptyPropagationCriteria::NONE: return true;
-		}
 	}
-};
 
-template <bool Negated>
-struct ValueCheck<SeenEmpty<Negated>> {
-	using Pred = SeenEmpty<Negated>;
-
-	template <class Map, class Node>
-	static inline bool apply(Pred p, Map const& m, Node n)
+	template <class Tree>
+	[[nodiscard]] static constexpr bool returnable(Pred const& p, Tree const& t,
+	                                               typename Tree::Node const& n)
 	{
 		if constexpr (Negated) {
-			return !m.seenEmpty(n.index());
+			return !t.voidRegion(n.index);
 		} else {
-			return m.seenEmpty(n.index());
+			return t.voidRegion(n.index);
+		}
+	}
+
+	template <class Tree>
+	[[nodiscard]] static constexpr bool traversable(Pred const& p, Tree const& t,
+	                                                typename Tree::Node const& n)
+	{
+		if constexpr (Negated) {
+			return !t.voidRegion(n.index);
+		} else {
+			return t.voidRegionContains(n.index);
 		}
 	}
 };
 }  // namespace ufo::pred
 
-#endif  // UFO_MAP_SEEN_EMPTY_PREDICATE_SEEN_EMPTY_HPP
+#endif  // UFO_MAP_VOID_REGION_PREDICATE_VOID_REGION_HPP

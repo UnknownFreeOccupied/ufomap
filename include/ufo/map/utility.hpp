@@ -39,22 +39,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_TREE_MAP_UTILITY_HPP
-#define UFO_MAP_TREE_MAP_UTILITY_HPP
+#ifndef UFO_MAP_UTILITY_HPP
+#define UFO_MAP_UTILITY_HPP
+
+// UFO
+#include <ufo/utility/enum.hpp>
 
 // STL
 #include <cstdint>
 
 namespace ufo
 {
-using mu_t = std::uint64_t;
-
-enum MapUtility : mu_t {
-	NONE                = mu_t(0),
-	WITH_CENTER         = mu_t(1) << 0,
-	ACCELERATED_COMPUTE = mu_t(1) << 1,
-	SNAPSHOT            = mu_t(1) << 2,
+enum class MapUtility : std::uint64_t {
+	NONE        = std::uint64_t(0),
+	WITH_CENTER = std::uint64_t(1) << 0,
+	// ACCELERATED_COMPUTE = std::uint64_t(1) << 1,
+	// SNAPSHOT            = std::uint64_t(1) << 2,
 };
+
+[[nodiscard]] constexpr MapUtility operator|(MapUtility a, MapUtility b) noexcept
+{
+	return MapUtility(to_underlying(a) | to_underlying(b));
+}
+
+[[nodiscard]] constexpr MapUtility operator&(MapUtility a, MapUtility b) noexcept
+{
+	return MapUtility(to_underlying(a) & to_underlying(b));
+}
 }  // namespace ufo
 
 #endif  // UFO_MAP_TREE_MAP_UTILITY_HPP

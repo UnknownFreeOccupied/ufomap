@@ -124,6 +124,18 @@ struct OccupancyElement {
 	{
 		return value_and_indicators & 0b111;
 	}
+
+	friend constexpr bool operator==(OccupancyElement const& lhs,
+	                                 OccupancyElement const& rhs)
+	{
+		return lhs.value_and_indicators == rhs.value_and_indicators;
+	}
+
+	friend constexpr bool operator!=(OccupancyElement const& lhs,
+	                                 OccupancyElement const& rhs)
+	{
+		return !(lhs == rhs);
+	};
 };
 
 template <std::size_t BF>
@@ -156,6 +168,16 @@ struct OccupancyBlock {
 		assert(BF > pos);
 		return data[pos];
 	}
+
+	friend constexpr bool operator==(OccupancyBlock const& lhs, OccupancyBlock const& rhs)
+	{
+		return lhs.data == rhs.data;
+	}
+
+	friend constexpr bool operator!=(OccupancyBlock const& lhs, OccupancyBlock const& rhs)
+	{
+		return !(lhs == rhs);
+	};
 };
 }  // namespace ufo
 #endif  // UFO_MAP_OCCUPANCY_BLOCK_HPP

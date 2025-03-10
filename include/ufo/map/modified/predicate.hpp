@@ -38,51 +38,11 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef UFO_MAP_COLOR_BLOCK_HPP
-#define UFO_MAP_COLOR_BLOCK_HPP
+
+#ifndef UFO_MAP_MODIFIED_PREDICATE_HPP
+#define UFO_MAP_MODIFIED_PREDICATE_HPP
 
 // UFO
-#include <ufo/utility/create_array.hpp>
-#include <ufo/vision/color.hpp>
+#include <ufo/map/modified/predicate/modified.hpp>
 
-// STL
-#include <array>
-#include <cassert>
-#include <cstddef>
-
-namespace ufo
-{
-template <std::size_t BF>
-struct ColorBlock {
-	std::array<Color, BF> data;
-
-	constexpr ColorBlock() = default;
-
-	constexpr ColorBlock(Color const& parent) : data(createArray<BF>(parent)) {}
-
-	constexpr void fill(Color const& parent) { data = createArray<BF>(parent); }
-
-	[[nodiscard]] constexpr Color& operator[](std::size_t pos)
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	[[nodiscard]] constexpr Color const& operator[](std::size_t pos) const
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	friend constexpr bool operator==(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return lhs.data == rhs.data;
-	}
-
-	friend constexpr bool operator!=(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return !(lhs == rhs);
-	};
-};
-}  // namespace ufo
-#endif  // UFO_MAP_COLOR_BLOCK_HPP
+#endif  // UFO_MAP_MODIFIED_PREDICATE_HPP

@@ -44,636 +44,382 @@
 
 // UFO
 #include <ufo/cloud/point_cloud.hpp>
-#include <ufo/container/tree/code.hpp>
+#include <ufo/container/tree/coord.hpp>
 #include <ufo/container/tree/index.hpp>
 #include <ufo/core/label.hpp>
 #include <ufo/execution/execution.hpp>
 #include <ufo/map/color/map.hpp>
-#include <ufo/map/distance/map.hpp>
-#include <ufo/map/integrator/detail/bool_grid.hpp>
-#include <ufo/map/integrator/detail/count_grid.hpp>
-#include <ufo/map/integrator/detail/grid_map.hpp>
 #include <ufo/map/occupancy/map.hpp>
-#include <ufo/math/math.hpp>
-#include <ufo/utility/index_iterator.hpp>
+// #include <ufo/map/time/map.hpp>
+#include <ufo/map/type.hpp>
+#include <ufo/map/void_region/map.hpp>
+#include <ufo/math/vec.hpp>
 #include <ufo/utility/spinlock.hpp>
+#include <ufo/utility/type_traits.hpp>
 
 // STL
-#include <cmath>
-#include <future>
-#include <mutex>
+#include <algorithm>
+#include <cstddef>
+#include <type_traits>
+#include <vector>
 
 namespace ufo
 {
 enum class DownSamplingMethod { NONE, FIRST, CENTER };
 
-struct Integrator {
+template <std::size_t Dim>
+class Integrator
+{
+ public:
+	//
+	// Tags
+	//
 	using occupancy_t = float;
 	using logit_t     = OccupancyElement::logit_t;
 	using depth_t     = unsigned;
-	using time_t      = float;
 
-	// Time
-	mutable time_t time = 1;
-	// How much time should automatically increase after function call
-	time_t time_auto_inc = 1;
-
-	// Occupancy hit [0, 1]
-	occupancy_t occupancy_hit = 0.9f;
-	// Occupancy miss [0, 1]
-	occupancy_t occupancy_miss = 0.45f;
+	depth_t hit_depth  = 0;
+	depth_t miss_depth = 0;
 
 	// Min range to integrate
 	float min_distance = 0.0f;
 	// Max range to integrate, negative value is infinity range
 	float max_distance = std::numeric_limits<float>::infinity();
-
 	// To extend or shorten the rays
 	float distance_offset = 0.0f;
 
-	depth_t hit_depth  = 0;
-	depth_t miss_depth = 0;
+	// Occupancy hit [0, 1]
+	occupancy_t occupancy_hit = 0.75f;
+	// Occupancy miss [0, 1]
+	occupancy_t occupancy_miss = 0.45f;
 
 	DownSamplingMethod sample_method = DownSamplingMethod::NONE;
 
+	// TODO: Should this be here?
 	bool free_hits = false;
 
-	bool counted = false;
-
- private:
-	mutable detail::GridMap<BoolGrid<3, 5, true>, BoolGrid<3, 5, true>>  grids{4096};
-	mutable detail::GridMap<CountGrid<3, 4, true>, BoolGrid<3, 4, true>> count_grids{4096};
-
-	// I want one MEGA bite of chickens
-	mutable std::array<Spinlock, 1'000'000> chickens;
+	MapType integrate_types = MapType::ALL;
 
  public:
-	template <
-	    class ExecutionPolicy, class Map, std::size_t Dim, class T, class... Rest,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void insertPoints(ExecutionPolicy&& policy, Map& map,
-	                  PointCloud<Dim, T, Rest...> const& cloud, bool propagate = true) const
+	template <class Map, class T, class... Rest>
+	void operator()(Map& map, PointCloud<Dim, T, Rest...> cloud,
+	                Transform<Dim, T> const& transform = {}, bool propagate = true) const
 	{
-		std::vector<TreeIndex> nodes;
+		// TODO: Implement
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T, class... Rest,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void operator()(ExecutionPolicy&& policy, Map& map, PointCloud<Dim, T, Rest...> cloud,
+	                Transform<Dim, T> const& transform = {}, bool propagate = true) const
+	{
+		// TODO: Implement
+	}
+
+ protected:
+	/**************************************************************************************
+	|                                                                                     |
+	|                                       Create                                        |
+	|                                                                                     |
+	**************************************************************************************/
+
+	template <class Map, class T>
+	void create(Map& map, std::vector<TreeIndex>& nodes,
+	            std::vector<TreeCoord<Dim, T>> const& points) const
+	{
+		nodes.resize(points.size());
+
+		if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
+			map.modifiedCreate(points, nodes.begin());
+		} else {
+			map.create(points, nodes.begin());
+		}
+	}
+
+	template <class Map, class T>
+	void create(Map& map, std::vector<TreeIndex>& nodes,
+	            std::vector<Vec<Dim, T>> const& cloud, depth_t depth) const
+	{
+		if (0 == depth) {
+			nodes.resize(cloud.size());
+			if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
+				map.modifiedCreate(cloud, nodes.begin());
+			} else {
+				map.create(cloud, nodes.begin());
+			}
+		} else {
+			std::vector<typename Map::Coord> points;
+			points.reserve(cloud.size());
+
+			std::transform(cloud.begin(), cloud.end(), std::back_inserter(points),
+			               [depth](auto const& p) { return TreeCoord(p, depth); });
+
+			create(map, nodes, points);
+		}
+	}
+
+	template <class Map, class T>
+	[[nodiscard]] std::vector<TreeIndex> create(
+	    Map& map, std::vector<TreeCoord<Dim, T>> const& points) const
+	{
+		std::vector<TreeIndex> nodes(points.size());
+		create(map, nodes, points);
+		return nodes;
+	}
+
+	template <class Map, class T>
+	[[nodiscard]] std::vector<TreeIndex> create(Map&                            map,
+	                                            std::vector<Vec<Dim, T>> const& cloud,
+	                                            depth_t                         depth) const
+	{
+		std::vector<TreeIndex> nodes(cloud.size());
+		create(map, nodes, cloud, depth);
+		return nodes;
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void create(ExecutionPolicy&& policy, Map& map, std::vector<TreeIndex>& nodes,
+	            std::vector<TreeCoord<Dim, T>> const& points) const
+	{
+		if constexpr (execution::is_seq_v<ExecutionPolicy> ||
+		              execution::is_unseq_v<ExecutionPolicy>) {
+			return create(map, nodes, points);
+		}
+
+		nodes.resize(points.size());
+
+		if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
+			map.modifiedCreate(policy, points, nodes.begin());
+		} else {
+			map.create(policy, points, nodes.begin());
+		}
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void create(ExecutionPolicy&& policy, Map& map, std::vector<TreeIndex>& nodes,
+	            std::vector<Vec<Dim, T>> const& cloud, depth_t depth) const
+	{
+		if constexpr (execution::is_seq_v<ExecutionPolicy> ||
+		              execution::is_unseq_v<ExecutionPolicy>) {
+			return create(map, nodes, cloud, depth);
+		}
+
+		if (0 == depth) {
+			nodes.resize(cloud.size());
+			if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
+				map.modifiedCreate(policy, cloud, nodes.begin());
+			} else {
+				map.create(policy, cloud, nodes.begin());
+			}
+		} else {
+			__block std::vector<typename Map::Coord> points(cloud.size());
+
+			transform(policy, cloud.begin(), cloud.end(), points.begin(),
+			          [depth](auto const& p) { return TreeCoord(p, depth); });
+
+			create(policy, map, nodes, points);
+		}
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	[[nodiscard]] std::vector<TreeIndex> create(
+	    ExecutionPolicy&& policy, Map& map, std::vector<TreeCoord<Dim, T>> const& points,
+	    depth_t depth) const
+	{
+		std::vector<TreeIndex> nodes(points.size());
+		create(std::forward<ExecutionPolicy>(policy), map, nodes, points, depth);
+		return nodes;
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	[[nodiscard]] std::vector<TreeIndex> create(ExecutionPolicy&& policy, Map& map,
+	                                            std::vector<Vec<Dim, T>> const& cloud,
+	                                            depth_t                         depth) const
+	{
+		std::vector<TreeIndex> nodes(cloud.size());
+		create(std::forward<ExecutionPolicy>(policy), map, nodes, cloud, depth);
+		return nodes;
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Hits                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	template <bool SetModified, class Map, class Point>
+	void insertHit(Map& map, TreeIndex const& node, Point const& data,
+	               logit_t occupancy_logit) const
+	{
+		if constexpr (SetModified && Map::hasMapTypes(MapType::MODIFIED)) {
+			map.modifiedSet(node);
+		}
+
+		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
+			map.occupancyUpdateLogit(node, occupancy_logit, false);
+		}
+
+		if constexpr (Map::hasMapTypes(MapType::COLOR) && std::is_base_of_v<Color, Point>) {
+			// TODO: Make correct
+			map.colorSet(node, static_cast<Color>(data), false);
+		}
+
+		// TODO: Add more map types
+	}
+
+	template <class Map, class T, class... Rest>
+	void insertHits(Map& map, std::vector<TreeIndex> const& nodes,
+	                PointCloud<Dim, T, Rest...> const& cloud) const
+	{
+		logit_t occupancy_logit;
+		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
+			// TODO: What function should be used here?
+			occupancy_logit = map.occupancyLogit(occupancy_hit);
+		}
+
 		if (0 == hit_depth) {
-			nodes = propagate ? map.create(policy, get<0>(cloud))
-			                  : map.modifiedSet(policy, get<0>(cloud));
-		} else {
-			std::vector<TreeCode<Dim>> codes;
-
-			codes.resize(cloud.size());
-
-			// TODO: Fix policy
-			if constexpr (execution::is_stl_v<ExecutionPolicy>) {
-				std::transform(execution::toSTL(policy), get<0>(cloud).begin(),
-				               get<0>(cloud).end(), codes.begin(), [this, &map](auto const& p) {
-					               return map.code(TreeCoord(p, hit_depth));
-				               });
-			}
-#if defined(UFO_PAR_GCD)
-			else if constexpr (execution::is_gcd_v<ExecutionPolicy>) {
-				// TODO: Implement
-				static_assert(dependent_false_v<ExecutionPolicy>,
-				              "insertPoints not implemented for the execution policy gcd");
-			}
-#endif
-#if defined(UFO_PAR_TBB)
-			else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
-				// TODO: Implement
-				static_assert(dependent_false_v<ExecutionPolicy>,
-				              "insertPoints not implemented for the execution policy tbb");
-			}
-#endif
-			else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
-				// TODO: Implement
-				static_assert(dependent_false_v<ExecutionPolicy>,
-				              "insertPoints not implemented for the execution policy omp");
-			} else {
-				static_assert(dependent_false_v<ExecutionPolicy>,
-				              "insertPoints not implemented for the execution policy other");
-			}
-
-			nodes = propagate ? map.create(policy, codes) : map.modifiedSet(policy, codes);
-		}
-
-		logit_t occupancy_hit_logit;
-		if constexpr (Map::mapType(MapType::OCCUPANCY)) {
-			// TODO: What function should be used here?
-			occupancy_hit_logit = map.occupancyLogit(occupancy_hit);
-			// std::cout <<"occupancy_hit_logit of " <<occupancy_hit << ": " <<
-			// +occupancy_hit_logit << std::endl;
-		}
-
-		auto insert_f = [&](TreeIndex const& node, std::size_t cloud_index) {
-			if constexpr (Map::mapType(MapType::OCCUPANCY)) {
-				map.occupancyUpdateLogit(node, occupancy_hit_logit, propagate);
-			}
-
-			if constexpr (Map::mapType(MapType::COLOR) /* TODO: && is_color_v<PointCloud> */) {
-				// map.colorUpdate(node, get<Color>(cloud)[cloud_index], 0.5f, propagate);
-				map.colorSet(node, get<Color>(cloud)[cloud_index], propagate);
-			}
-
-			if constexpr (Map::mapType(MapType::LABEL_SET)) {
-				map.labelsUpdate(node, get<Label>(cloud)[cloud_index], propagate);
-			}
-
-			if constexpr (Map::mapType(MapType::DISTANCE)) {
-				// TODO: Add check if occupancy over a threshold
-				map.distanceUpdate(node, get<0>(cloud)[cloud_index], 1.0f, propagate);
-			}
-		};
-
-		// TODO: Fix policy
-		if constexpr (execution::is_seq_v<ExecutionPolicy>) {
 			for (std::size_t i{}; nodes.size() > i; ++i) {
-				insert_f(nodes[i], i);
-			}
-		} else if constexpr (execution::is_stl_v<ExecutionPolicy>) {
-			// TODO: Implement
-			auto fun = [&](std::size_t cloud_index) {
-				auto node = nodes[cloud_index];
-
-				// This chick wants to rule the block (node.pos being the block)
-				std::lock_guard lock(chickens[node.pos % chickens.size()]);
-
-				insert_f(node, cloud_index);
-			};
-
-			IndexIterator<std::size_t> it(0, nodes.size());
-
-			std::for_each(execution::toSTL(policy), it.begin(), it.end(), fun);
-		}
-#if defined(UFO_PAR_GCD)
-		else if constexpr (execution::is_gcd_v<ExecutionPolicy>) {
-			// TODO: Implement
-			static_assert(dependent_false_v<ExecutionPolicy>,
-			              "insertPoints not implemented for the execution policy");
-		}
-#endif
-#if defined(UFO_PAR_TBB)
-		else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
-			// TODO: Implement
-			static_assert(dependent_false_v<ExecutionPolicy>,
-			              "insertPoints not implemented for the execution policy");
-			// auto fun = [&](std::size_t cloud_index) {
-			// 	auto node = nodes[cloud_index];
-
-			// 	// This chick wants to rule the block (node.pos being the block)
-			// 	std::lock_guard lock(chickens[node.pos % chickens.size()]);
-
-			// 	insert_f(node, cloud_index);
-			// };
-
-			// IndexIterator<std::size_t> it(0, nodes.size());
-
-			// oneapi::tbb::parallel_for(
-			//     std::size_t(0), size,
-			//     [&t, first, d_first](std::size_t i) { d_first[i] = t * first[i]; });
-
-			// // std::for_each(execution::toSTL(policy), it.begin(), it.end(), fun);
-		}
-#endif
-		else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
-// TODO: Implement
-#pragma omp parallel for
-			for (std::size_t i = 0; nodes.size() > i; ++i) {
-				auto node = nodes[i];
-
-				// This chick wants to rule the block (node.pos being the block)
-				std::lock_guard lock(chickens[node.pos % chickens.size()]);
-
-				insert_f(nodes[i], i);
+				insertHit<false>(map, nodes[i], cloud[i], occupancy_logit);
 			}
 		} else {
-			static_assert(dependent_false_v<ExecutionPolicy>,
-			              "insertPoints not implemented for the execution policy");
+			for (std::size_t i{}; nodes.size() > i; ++i) {
+				insertHit<true>(map, nodes[i], cloud[i], occupancy_logit);
+			}
+		}
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T, class... Rest,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void insertHits(ExecutionPolicy&& policy, Map& map, std::vector<TreeIndex> const& nodes,
+	                PointCloud<Dim, T, Rest...> const& cloud) const
+	{
+		logit_t occupancy_logit;
+		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
+			// TODO: What function should be used here?
+			occupancy_logit = map.occupancyLogit(occupancy_hit);
 		}
 
-		// TODO: Implement
+		if (0 == hit_depth) {
+			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+			         [&](std::size_t i) {
+				         auto node = nodes[i];
 
-		time += time_auto_inc;
-	}
+				         // This chick wants to rule the block (node.pos being the block)
+				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
 
-	template <
-	    class ExecutionPolicy, class Map, std::size_t Dim, class T, class... Rest,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void insertPoints(ExecutionPolicy&& policy, Map& map, PointCloud<Dim, T, Rest...> cloud,
-	                  Transform<Dim, T> const& frame_origin, bool propagate = true) const
-	{
-		transformInPlace(policy, frame_origin, get<0>(cloud));
-		insertPoints(map, cloud, propagate);
-	}
-
-	template <
-	    class ExecutionPolicy, class Map, std::size_t Dim, class T, class... Rest,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void insertRays(ExecutionPolicy&& policy, Map& map,
-	                PointCloud<Dim, T, Rest...> const& cloud,
-	                Vec<Dim, T> const& sensor_origin, bool propagate = true) const
-	{
-		auto hits_insert_f = std::async(std::launch::async, [&]() {
-			if (T(0) >= min_distance && std::numeric_limits<T>::max() <= max_distance) {
-				insertPoints(policy, map, cloud, propagate);
-			} else {
-				auto f_cloud =
-				    filterDistance(policy, cloud, sensor_origin, min_distance, max_distance);
-				insertPoints(policy, map, f_cloud, propagate);
-			}
-		});
-
-		if (!counted) {
-			auto misses = rayCast(policy, map, get<0>(cloud), sensor_origin);
-
-			hits_insert_f.wait();
-
-			auto nodes =
-			    propagate ? map.create(policy, misses) : map.modifiedSet(policy, misses);
-
-			// TODO: Implement different execution policies
-
-			// TODO: What function should be used here?
-			logit_t occupancy_miss_logit = map.occupancyLogit(occupancy_miss);
-
-			// TODO: Need to add the chickens to the below
-			std::for_each(execution::toSTL(policy), nodes.begin(), nodes.end(),
-			              [&map, occupancy_miss_logit, propagate](auto const& node) {
-				              map.occupancyUpdateLogit(node, occupancy_miss_logit, propagate);
-
-				              // TODO: Add call to resetIf for distance
-			              });
+				         insertHit<false>(map, node, cloud[i], occupancy_logit);
+			         });
 		} else {
-			auto [misses, count] = rayCastCounted(policy, map, get<0>(cloud), sensor_origin);
+			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+			         [&](std::size_t i) {
+				         auto node = nodes[i];
 
-			hits_insert_f.wait();
+				         // This chick wants to rule the block (node.pos being the block)
+				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
 
-			auto nodes =
-			    propagate ? map.create(policy, misses) : map.modifiedSet(policy, misses);
+				         insertHit<true>(map, node, cloud[i], occupancy_logit);
+			         });
+		}
+	}
 
-			// TODO: Implement different execution policies
+	/**************************************************************************************
+	|                                                                                     |
+	|                                       Misses                                        |
+	|                                                                                     |
+	**************************************************************************************/
 
+	template <bool SetModified, class Map, class Info>
+	void insertMiss(Map& map, TreeIndex const& node, Info const& info,
+	                logit_t occupancy_logit) const
+	{
+		if constexpr (SetModified && Map::hasMapTypes(MapType::MODIFIED)) {
+			map.modifiedSet(node);
+		}
+
+		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
+			// TODO: Make sure `info.count() * occupancy_logit` does not overflow
+			map.occupancyUpdateLogit(node, info.count() * occupancy_logit, false);
+		}
+
+		if constexpr (Map::hasMapTypes(MapType::VOID_REGION)) {
+			if (info.voidRegion()) {
+				map.voidRegionSet(node, true, false);
+			}
+		}
+
+		// TODO: Add more map types
+	}
+
+	template <class Map, class Info>
+	void insertMisses(Map& map, std::vector<TreeIndex> const& nodes,
+	                  std::vector<Info> const& info) const
+	{
+		logit_t occupancy_logit;
+		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
 			// TODO: What function should be used here?
-			logit_t occupancy_miss_logit = map.occupancyLogit(occupancy_miss);
-
-			// TODO: Need to add the chickens to the below
-			IndexIterator<std::size_t> it(0, nodes.size());
-			std::for_each(execution::toSTL(policy), it.begin(), it.end(), [&](std::size_t pos) {
-				auto node = nodes[pos];
-				auto c    = count[pos];
-				map.occupancyUpdateLogit(node, c * occupancy_miss_logit, propagate);
-
-				// TODO: Add call to resetIf for distance
-			});
+			occupancy_logit = map.occupancyLogit(occupancy_miss);
 		}
 
-		// TODO: Implement
-	}
-
-	template <
-	    class ExecutionPolicy, class Map, std::size_t Dim, class T, class... Rest,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void insertRays(ExecutionPolicy&& policy, Map& map, PointCloud<Dim, T, Rest...> cloud,
-	                Vec<Dim, T> const& sensor_origin, Transform<Dim, T> const& frame_origin,
-	                bool propagate = true) const
-	{
-		transformInPlace(policy, frame_origin, get<0>(cloud));
-		insertRays(std::forward<ExecutionPolicy>(policy), map, cloud, sensor_origin,
-		           propagate);
-	}
-
- private:
-	template <
-	    class ExecutionPolicy, class Map, std::size_t Dim, class T, class... Rest,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	[[nodiscard]] std::vector<TreeCode<Dim>> rayCast(ExecutionPolicy&&               policy,
-	                                                 Map const&                      map,
-	                                                 std::vector<Vec<Dim, T>> const& hits,
-	                                                 Vec<Dim, T> const& sensor_origin) const
-	{
-		std::vector<TreeCode<Dim>> misses;
-
-		auto const grid_size    = map.length(miss_depth);
-		auto const k_origin     = map.key(TreeCoord<Dim, T>(sensor_origin, miss_depth));
-		auto const voxel_border = map.center(k_origin) - sensor_origin;
-
-		if constexpr (2 == Dim) {
-			// TODO: Implemment
-		} else if constexpr (3 == Dim) {
-			// Add origin
-			auto       origin_code                    = map.code(k_origin);
-			auto const origin_grid_key                = grids.key(origin_code);
-			auto& [origin_miss_grid, origin_hit_grid] = grids[origin_grid_key];
-			origin_miss_grid.set(origin_code);
-
-			if constexpr (execution::is_seq_v<ExecutionPolicy>) {
-				// TODO: Implement
-			} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
-				std::for_each(execution::toSTL(policy), hits.begin(), hits.end(), [&](auto hit) {
-					// TODO: Fix, wrong use of thread_local
-					thread_local auto  grid_key  = origin_grid_key;
-					thread_local auto* miss_grid = &origin_miss_grid;
-					thread_local auto* hit_grid  = &origin_hit_grid;
-
-					auto code = map.code(TreeCoord<Dim, float>(hit, miss_depth));
-					if (auto cur_grid_key = grids.key(code); grid_key != cur_grid_key) {
-						grid_key       = cur_grid_key;
-						auto& [mg, hg] = grids[grid_key];
-						miss_grid      = &mg;
-						hit_grid       = &hg;
-					}
-
-					auto first_hit = !hit_grid->set(code);
-
-					if (DownSamplingMethod::NONE != sample_method && !first_hit) {
-						return;
-					}
-
-					if (DownSamplingMethod::CENTER == sample_method) {
-						hit = map.center(code);
-					}
-
-					// TODO: Start from min_distance
-
-					auto dir      = hit - sensor_origin;
-					auto distance = norm(dir);
-					dir /= distance;
-
-					// TODO: Filter on distance
-
-					distance = std::clamp(distance + distance_offset, 0.0f, max_distance);
-
-					auto step = sign(dir);
-
-					auto t_max   = (voxel_border + cast<float>(step) * grid_size / 2.0f) / dir;
-					auto t_delta = grid_size / abs(dir);
-					// FIXME: Is this correct? Should it be zero if all zero?
-					auto steps = max(Vec<Dim, float>(0.0f), ceil((distance - t_max) / t_delta));
-
-					for (std::size_t i{}; Dim > i; ++i) {
-						t_max[i]   = 0 != step[i] ? t_max[i] : std::numeric_limits<float>::max();
-						t_delta[i] = 0 != step[i] ? t_delta[i] : std::numeric_limits<float>::max();
-						steps[i]   = 0 != step[i] ? steps[i] : 0;
-					}
-
-					auto k_cur = k_origin;
-					grid_key   = origin_grid_key;
-					miss_grid  = &origin_miss_grid;
-					hit_grid   = &origin_hit_grid;
-
-					std::size_t total_steps = sum(steps);
-					total_steps -= (free_hits || 0 == total_steps) ? 0 : 1;
-					while (total_steps--) {
-						auto const advance_dim = minIndex(t_max);
-						k_cur[advance_dim] += step[advance_dim];
-						t_max[advance_dim] += t_delta[advance_dim];
-
-						auto cur = map.code(k_cur);
-
-						if (auto cur_grid_key = grids.key(cur); grid_key != cur_grid_key) {
-							grid_key       = cur_grid_key;
-							auto& [mg, hg] = grids[grid_key];
-							miss_grid      = &mg;
-							hit_grid       = &hg;
-						}
-
-						miss_grid->set(cur);
-					}
-				});
-
-				Spinlock mutex;
-
-				std::for_each(execution::toSTL(policy), grids.begin(), grids.end(), [&](auto& x) {
-					auto c                      = x.first;
-					auto& [miss_grid, hit_grid] = x.second;
-
-					auto m_it = miss_grid.begin();
-					// TODO: Implement this better
-					auto h_it = free_hits ? grids.end()->second.second.begin() : hit_grid.begin();
-
-					// TODO: Fix, wrong use of thread_local
-					thread_local decltype(misses) local_misses;
-					local_misses.reserve(1'000'000);
-
-					for (std::uint64_t i{}; miss_grid.end() > m_it;
-					     m_it += 8, h_it += 8, i += 512) {
-						std::array<std::uint64_t, 8> v{
-						    (m_it[0]) & (~(h_it[0])), (m_it[1]) & (~(h_it[1])),
-						    (m_it[2]) & (~(h_it[2])), (m_it[3]) & (~(h_it[3])),
-						    (m_it[4]) & (~(h_it[4])), (m_it[5]) & (~(h_it[5])),
-						    (m_it[6]) & (~(h_it[6])), (m_it[7]) & (~(h_it[7]))};
-
-						if (std::all_of(v.begin(), v.end(), [](auto x) {
-							    return std::numeric_limits<std::uint64_t>::max() == x;
-						    })) {
-							local_misses.emplace_back(miss_grid.code(c, i, miss_depth, 3));
-							continue;
-						}
-
-						for (std::uint64_t j{}; 8 > j; ++j) {
-							if (std::numeric_limits<std::uint64_t>::max() == v[j]) {
-								local_misses.emplace_back(miss_grid.code(c, i + j * 64, miss_depth, 2));
-								continue;
-							} else if (std::uint64_t(0) == v[j]) {
-								continue;
-							}
-
-							for (std::uint64_t k{}; 64 > k; k += 8) {
-								std::uint64_t mask = 0xFF << k;
-								if (mask == (mask & v[j])) {
-									local_misses.emplace_back(
-									    miss_grid.code(c, i + j * 64 + k, miss_depth, 1));
-									continue;
-								}
-
-								for (std::uint64_t m{}; 8 > m; ++m) {
-									std::uint64_t mask = 0x1 << (k + m);
-									if (mask == (mask & v[j])) {
-										local_misses.emplace_back(
-										    miss_grid.code(c, i + j * 64 + k + m, miss_depth, 0));
-									}
-								}
-							}
-						}
-					}
-
-					{
-						std::lock_guard lock(mutex);
-						misses.insert(misses.end(), local_misses.begin(), local_misses.end());
-					}
-
-					local_misses.clear();
-
-					miss_grid.clear();
-					hit_grid.clear();
-				});
-
-				grids.clear();
-
-				// std::cout << misses.size() << std::endl;  // 80813
-			} else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
-				// TODO: Implement
-			} else {
-				// TODO: Error
+		if (0 == miss_depth) {
+			for (std::size_t i{}; nodes.size() > i; ++i) {
+				insertMiss<false>(map, nodes[i], info[i], occupancy_logit);
+			}
+		} else {
+			for (std::size_t i{}; nodes.size() > i; ++i) {
+				insertMiss<true>(map, nodes[i], info[i], occupancy_logit);
 			}
 		}
-
-		return misses;
 	}
 
 	template <
-	    class ExecutionPolicy, class Map, std::size_t Dim, class T, class... Rest,
+	    class ExecutionPolicy, class Map, class Info,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	[[nodiscard]] std::pair<std::vector<TreeCode<Dim>>, std::vector<int>> rayCastCounted(
-	    ExecutionPolicy&& policy, Map const& map, std::vector<Vec<Dim, T>> const& hits,
-	    Vec<Dim, T> const& sensor_origin) const
+	void insertMisses(ExecutionPolicy&& policy, Map& map,
+	                  std::vector<TreeIndex> const& nodes,
+	                  std::vector<Info> const&      info) const
 	{
-		std::vector<TreeCode<Dim>> misses;
-		std::vector<int>           count;
-
-		float const grid_size    = map.length(miss_depth);
-		auto const  k_origin     = map.key(TreeCoord<Dim, T>(sensor_origin, miss_depth));
-		auto const  voxel_border = map.center(k_origin) - sensor_origin;
-
-		if constexpr (2 == Dim) {
-			// TODO: Implemment
-		} else if constexpr (3 == Dim) {
-			// Add origin
-			auto       origin_code                    = map.code(k_origin);
-			auto const origin_grid_key                = count_grids.key(origin_code);
-			auto& [origin_miss_grid, origin_hit_grid] = count_grids[origin_grid_key];
-			origin_miss_grid.inc(origin_code);
-
-			if constexpr (execution::is_seq_v<ExecutionPolicy>) {
-				// TODO: Implement
-			} else if constexpr (execution::is_tbb_v<ExecutionPolicy>) {
-				std::for_each(execution::toSTL(policy), hits.begin(), hits.end(), [&](auto hit) {
-					// TODO: Fix, wrong use of thread_local
-					thread_local auto  grid_key  = origin_grid_key;
-					thread_local auto* miss_grid = &origin_miss_grid;
-					thread_local auto* hit_grid  = &origin_hit_grid;
-
-					auto code = map.code(TreeCoord<Dim, float>(hit, miss_depth));
-					if (auto cur_grid_key = count_grids.key(code); grid_key != cur_grid_key) {
-						grid_key       = cur_grid_key;
-						auto& [mg, hg] = count_grids[grid_key];
-						miss_grid      = &mg;
-						hit_grid       = &hg;
-					}
-
-					auto first_hit = !hit_grid->set(code);
-
-					if (DownSamplingMethod::NONE != sample_method && !first_hit) {
-						return;
-					}
-
-					if (DownSamplingMethod::CENTER == sample_method) {
-						hit = map.center(code);
-					}
-
-					auto dir      = hit - sensor_origin;
-					auto distance = norm(dir);
-					dir /= distance;
-
-					distance = std::clamp(distance + distance_offset, 0.0f, max_distance);
-
-					auto step = sign(dir);
-
-					auto t_max   = (voxel_border + cast<float>(step) * grid_size / 2.0f) / dir;
-					auto t_delta = grid_size / abs(dir);
-					// FIXME: Is this correct? Should it be zero if all zero?
-					auto steps = max(Vec<Dim, float>(0.0f), ceil((distance - t_max) / t_delta));
-
-					for (std::size_t i{}; Dim > i; ++i) {
-						t_max[i]   = 0 != step[i] ? t_max[i] : std::numeric_limits<float>::max();
-						t_delta[i] = 0 != step[i] ? t_delta[i] : std::numeric_limits<float>::max();
-						steps[i]   = 0 != step[i] ? steps[i] : 0;
-					}
-
-					auto k_cur = k_origin;
-					grid_key   = origin_grid_key;
-					miss_grid  = &origin_miss_grid;
-					hit_grid   = &origin_hit_grid;
-
-					std::size_t total_steps = sum(steps);
-					total_steps -= (free_hits || 0 == total_steps) ? 0 : 1;
-					while (total_steps--) {
-						auto const advance_dim = minIndex(t_max);
-						k_cur[advance_dim] += step[advance_dim];
-						t_max[advance_dim] += t_delta[advance_dim];
-
-						auto cur = map.code(k_cur);
-
-						if (auto cur_grid_key = count_grids.key(cur); grid_key != cur_grid_key) {
-							grid_key       = cur_grid_key;
-							auto& [mg, hg] = count_grids[grid_key];
-							miss_grid      = &mg;
-							hit_grid       = &hg;
-						}
-
-						miss_grid->inc(cur);
-					}
-				});
-
-				Spinlock mutex;
-
-				std::for_each(
-				    execution::toSTL(policy), count_grids.begin(), count_grids.end(),
-				    [&](auto& x) {
-					    auto c                      = x.first;
-					    auto& [miss_grid, hit_grid] = x.second;
-
-					    auto m_it = miss_grid.begin();
-					    // TODO: Implement this better
-					    auto h_it =
-					        free_hits ? count_grids.end()->second.second.begin() : hit_grid.begin();
-
-					    // TODO: Fix, wrong use of thread_local
-					    thread_local decltype(misses) local_misses;
-					    thread_local decltype(count)  local_count;
-					    local_misses.reserve(1'000'000);
-					    local_count.reserve(1'000'000);
-
-					    for (std::uint64_t i{}; miss_grid.end() > m_it;
-					         m_it += 64, ++h_it, i += 64) {
-						    std::uint64_t hit = *h_it;
-						    for (std::uint64_t j{}; 64 > j; ++j) {
-							    int v = m_it[j];
-							    if (0 == v || (hit & (std::uint64_t(1) << j))) {
-								    continue;
-							    }
-
-							    local_misses.emplace_back(miss_grid.code(c, i + j, miss_depth, 0));
-							    local_count.emplace_back(v);
-						    }
-					    }
-
-					    {
-						    std::lock_guard lock(mutex);
-						    misses.insert(misses.end(), local_misses.begin(), local_misses.end());
-						    count.insert(count.end(), local_count.begin(), local_count.end());
-					    }
-
-					    local_misses.clear();
-					    local_count.clear();
-
-					    miss_grid.clear();
-					    hit_grid.clear();
-				    });
-
-				// std::cout << count_grids.size() << std::endl;
-
-				count_grids.clear();
-
-				// std::cout << misses.size() << std::endl;  // 80813
-			} else if constexpr (execution::is_omp_v<ExecutionPolicy>) {
-				// TODO: Implement
-			} else {
-				// TODO: Error
-			}
+		logit_t occupancy_logit;
+		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
+			// TODO: What function should be used here?
+			occupancy_logit = map.occupancyLogit(occupancy_miss);
 		}
 
-		return std::pair(std::move(misses), std::move(count));
+		if (0 == miss_depth) {
+			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+			         [&](std::size_t i) {
+				         auto node = nodes[i];
+
+				         // This chick wants to rule the block (node.pos being the block)
+				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
+
+				         insertMiss<false>(map, node, info[i], occupancy_logit);
+			         });
+		} else {
+			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+			         [&](std::size_t i) {
+				         auto node = nodes[i];
+
+				         // This chick wants to rule the block (node.pos being the block)
+				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
+
+				         insertMiss<true>(map, node, info[i], occupancy_logit);
+			         });
+		}
 	}
+
+ protected:
+	// I want one MEGA bite of chickens
+	mutable std::array<Spinlock, 1'000'000> chickens;
 };
 }  // namespace ufo
 

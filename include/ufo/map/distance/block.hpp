@@ -42,7 +42,7 @@
 #define UFO_MAP_DISTANCE_BLOCK_HPP
 
 // UFO
-#include <ufo/geometry/shape/aabb.hpp>
+#include <ufo/geometry/aabb.hpp>
 #include <ufo/map/distance/info.hpp>
 #include <ufo/math/vec.hpp>
 #include <ufo/utility/create_array.hpp>

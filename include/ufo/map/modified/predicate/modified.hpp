@@ -38,51 +38,56 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef UFO_MAP_COLOR_BLOCK_HPP
-#define UFO_MAP_COLOR_BLOCK_HPP
+
+#ifndef UFO_MAP_MODIFIED_PREDICATE_MODIFIED_HPP
+#define UFO_MAP_MODIFIED_PREDICATE_MODIFIED_HPP
 
 // UFO
-#include <ufo/utility/create_array.hpp>
-#include <ufo/vision/color.hpp>
+#include <ufo/container/tree/predicate/filter.hpp>
 
-// STL
-#include <array>
-#include <cassert>
-#include <cstddef>
-
-namespace ufo
+namespace ufo::pred
 {
-template <std::size_t BF>
-struct ColorBlock {
-	std::array<Color, BF> data;
-
-	constexpr ColorBlock() = default;
-
-	constexpr ColorBlock(Color const& parent) : data(createArray<BF>(parent)) {}
-
-	constexpr void fill(Color const& parent) { data = createArray<BF>(parent); }
-
-	[[nodiscard]] constexpr Color& operator[](std::size_t pos)
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	[[nodiscard]] constexpr Color const& operator[](std::size_t pos) const
-	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	friend constexpr bool operator==(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return lhs.data == rhs.data;
-	}
-
-	friend constexpr bool operator!=(ColorBlock const& lhs, ColorBlock const& rhs)
-	{
-		return !(lhs == rhs);
-	};
+template <bool Negated = false>
+struct Modified {
 };
-}  // namespace ufo
-#endif  // UFO_MAP_COLOR_BLOCK_HPP
+
+template <bool Negated>
+constexpr Modified<!Negated> operator!(Modified<Negated>)
+{
+	return Modified<!Negated>{};
+}
+
+template <bool Negated>
+struct Filter<Modified<Negated>> {
+	using Pred = Modified<Negated>;
+
+	template <class Tree>
+	static constexpr void init(Pred&, Tree const&)
+	{
+	}
+
+	template <class Tree>
+	[[nodiscard]] static constexpr bool returnable(Pred const&, Tree const& t,
+	                                               typename Tree::Node const& n)
+	{
+		if constexpr (Negated) {
+			return !t.modified(n.index);
+		} else {
+			return t.modified(n.index);
+		}
+	}
+
+	template <class Tree>
+	[[nodiscard]] static constexpr bool traversable(Pred const&, Tree const& t,
+	                                                typename Tree::Node const& n)
+	{
+		if constexpr (Negated) {
+			return true;
+		} else {
+			return t.modified(n.index);
+		}
+	}
+};
+}  // namespace ufo::pred
+
+#endif  // UFO_MAP_MODIFIED_PREDICATE_MODIFIED_HPP
