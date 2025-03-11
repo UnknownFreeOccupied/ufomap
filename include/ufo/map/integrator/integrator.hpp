@@ -238,7 +238,7 @@ class Integrator
 	|                                                                                     |
 	**************************************************************************************/
 
-	template <bool SetModified, class Map, class Point>
+	template <class Map, class Point>
 	void insertHit(Map& map, TreeIndex const& node, Point const& data,
 	               logit_t occupancy_logit) const
 	{
@@ -264,14 +264,8 @@ class Integrator
 			occupancy_logit = map.occupancyLogit(occupancy_hit);
 		}
 
-		if (0 == hit_depth) {
-			for (std::size_t i{}; nodes.size() > i; ++i) {
-				insertHit<false>(map, nodes[i], cloud[i], occupancy_logit);
-			}
-		} else {
-			for (std::size_t i{}; nodes.size() > i; ++i) {
-				insertHit<true>(map, nodes[i], cloud[i], occupancy_logit);
-			}
+		for (std::size_t i{}; nodes.size() > i; ++i) {
+			insertHit(map, nodes[i], cloud[i], occupancy_logit);
 		}
 	}
 
@@ -287,27 +281,15 @@ class Integrator
 			occupancy_logit = map.occupancyLogit(occupancy_hit);
 		}
 
-		if (0 == hit_depth) {
-			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
-			         [&](std::size_t i) {
-				         auto node = nodes[i];
+		for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+		         [&](std::size_t i) {
+			         auto node = nodes[i];
 
-				         // This chick wants to rule the block (node.pos being the block)
-				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
+			         // This chick wants to rule the block (node.pos being the block)
+			         std::lock_guard lock(chickens[node.pos % chickens.size()]);
 
-				         insertHit<false>(map, node, cloud[i], occupancy_logit);
-			         });
-		} else {
-			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
-			         [&](std::size_t i) {
-				         auto node = nodes[i];
-
-				         // This chick wants to rule the block (node.pos being the block)
-				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
-
-				         insertHit<true>(map, node, cloud[i], occupancy_logit);
-			         });
-		}
+			         insertHit(map, node, cloud[i], occupancy_logit);
+		         });
 	}
 
 	/**************************************************************************************
@@ -316,7 +298,7 @@ class Integrator
 	|                                                                                     |
 	**************************************************************************************/
 
-	template <bool SetModified, class Map, class Info>
+	template <class Map, class Info>
 	void insertMiss(Map& map, TreeIndex const& node, Info const& info,
 	                logit_t occupancy_logit) const
 	{
@@ -344,14 +326,8 @@ class Integrator
 			occupancy_logit = map.occupancyLogit(occupancy_miss);
 		}
 
-		if (0 == miss_depth) {
-			for (std::size_t i{}; nodes.size() > i; ++i) {
-				insertMiss<false>(map, nodes[i], info[i], occupancy_logit);
-			}
-		} else {
-			for (std::size_t i{}; nodes.size() > i; ++i) {
-				insertMiss<true>(map, nodes[i], info[i], occupancy_logit);
-			}
+		for (std::size_t i{}; nodes.size() > i; ++i) {
+			insertMiss(map, nodes[i], info[i], occupancy_logit);
 		}
 	}
 
@@ -368,27 +344,15 @@ class Integrator
 			occupancy_logit = map.occupancyLogit(occupancy_miss);
 		}
 
-		if (0 == miss_depth) {
-			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
-			         [&](std::size_t i) {
-				         auto node = nodes[i];
+		for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+		         [&](std::size_t i) {
+			         auto node = nodes[i];
 
-				         // This chick wants to rule the block (node.pos being the block)
-				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
+			         // This chick wants to rule the block (node.pos being the block)
+			         std::lock_guard lock(chickens[node.pos % chickens.size()]);
 
-				         insertMiss<false>(map, node, info[i], occupancy_logit);
-			         });
-		} else {
-			for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
-			         [&](std::size_t i) {
-				         auto node = nodes[i];
-
-				         // This chick wants to rule the block (node.pos being the block)
-				         std::lock_guard lock(chickens[node.pos % chickens.size()]);
-
-				         insertMiss<true>(map, node, info[i], occupancy_logit);
-			         });
-		}
+			         insertMiss(map, node, info[i], occupancy_logit);
+		         });
 	}
 
  protected:
