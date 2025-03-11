@@ -286,7 +286,7 @@ class Integrator
 			         auto node = nodes[i];
 
 			         // This chick wants to rule the block (node.pos being the block)
-			         std::lock_guard lock(chickens[node.pos % chickens.size()]);
+			         std::lock_guard lock(map.chicken(node.pos));
 
 			         insertHit(map, node, cloud[i], occupancy_logit);
 		         });
@@ -349,15 +349,11 @@ class Integrator
 			         auto node = nodes[i];
 
 			         // This chick wants to rule the block (node.pos being the block)
-			         std::lock_guard lock(chickens[node.pos % chickens.size()]);
+			         std::lock_guard lock(map.chicken(node.pos));
 
 			         insertMiss(map, node, info[i], occupancy_logit);
 		         });
 	}
-
- protected:
-	// I want one MEGA bite of chickens
-	mutable std::array<Spinlock, 1'000'000> chickens;
 };
 }  // namespace ufo
 

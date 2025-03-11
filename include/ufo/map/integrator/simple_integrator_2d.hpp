@@ -134,7 +134,7 @@ class SimpleIntegrator<2> : public Integrator<2>
 			         auto node = hit_nodes[i];
 
 			         // This chick wants to rule the block (node.pos being the block)
-			         std::lock_guard lock(chickens[node.pos % chickens.size()]);
+			         std::lock_guard lock(map.chicken(node.pos));
 
 			         update(map, node, cloud, i, propagate);
 		         });

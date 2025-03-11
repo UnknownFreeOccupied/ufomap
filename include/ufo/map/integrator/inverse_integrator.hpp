@@ -222,7 +222,7 @@ class InverseIntegrator : public Integrator<Dim>
 
 		std::vector<TreeCode<Dim>> codes;
 		for (std::size_t i{}; points.size() > i; ++i) {
-			if (isnan(points[i])) {
+			if (isnan(points[i]) || Vec<Dim, T>{} == points[i]) {
 				maximum_points_nan_indices_.push_back(i);
 				continue;
 			}
@@ -233,8 +233,7 @@ class InverseIntegrator : public Integrator<Dim>
 
 			switch (sensor_type) {
 				case SensorType::RAY: {
-					LineSegment<Dim, T> line(Vec<Dim, T>{},
-					                         this->max_distance * normalize(points[i]));
+					LineSegment<Dim, T> line(Vec<Dim, T>{}, maximum_points_[i]);
 					for (auto n : map.query(pred::PureLeaf() && pred::Intersects(line), false)) {
 						codes.push_back(n.code);
 					}
@@ -612,7 +611,7 @@ class InverseIntegrator : public Integrator<Dim>
  private:
 	// Needs to be at least 2
 	std::size_t inverse_levels_       = 5;
-	double      void_region_distance_ = 1.0;
+	double      void_region_distance_ = 4.0;
 
 	mutable std::vector<Vec<Dim, float>> maximum_points_;
 	mutable std::vector<std::size_t>     maximum_points_nan_indices_;
