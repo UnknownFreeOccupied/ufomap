@@ -47,7 +47,7 @@
 #include <ufo/container/tree/predicate.hpp>
 #include <ufo/container/tree/tree.hpp>
 #include <ufo/map/block.hpp>
-#include <ufo/map/modified/map.hpp>
+#include <ufo/map/header.hpp>
 #include <ufo/map/type.hpp>
 #include <ufo/map/utility.hpp>
 #include <ufo/utility/enum.hpp>
@@ -313,6 +313,100 @@ class MapFull final
 		propagate(map_types, prune);
 	}
 
+	/*!
+	 * @brief Propagate modified information up the tree.
+	 *
+	 * @param reset_modified Whether propagated node's modified state should be reset
+	 * @param prune Whether the tree should be pruned also
+	 */
+	void modifiedPropagate(MapType map_types = MapType::ALL, bool reset_modified = true,
+	                       bool prune = true)
+	{
+		modifiedPropagate(Base::index(), map_types, reset_modified, prune);
+	}
+
+	void modifiedPropagate(pos_t block, MapType map_types = MapType::ALL,
+	                       bool reset_modified = true, bool prune = true)
+	{
+		assert(Base::valid(block));
+
+		auto m = reset_modified ? Base::treeBlock(block).modifiedExchange(0)
+		                        : Base::treeBlock(block).modified();
+
+		if (0 == m) {
+			return;
+		}
+
+		for (std::size_t i{}; BF > i; ++i) {
+			auto n = Index(block, i);
+			if (0u == (m & (1u << i)) || Base::isLeaf(n)) {
+				continue;
+			}
+
+			auto c = Base::children(n);
+
+			modifiedPropagate(c, map_types, reset_modified, prune);
+			onPropagateChildren(n, c, map_types);
+
+			if (prune && onIsPrunable(c)) {
+				Base::pruneChildren(n, c);
+			}
+		}
+	}
+
+	template <class NodeType,
+	          std::enable_if_t<Base::template is_node_type_v<NodeType>, bool> = true>
+	void modifiedPropagate(NodeType node, MapType map_types = MapType::ALL,
+	                       bool reset_modified = true, bool prune = true)
+	{
+		assert(Base::valid(node));
+
+		auto n = Base::index(node);
+
+		if (!Base::modified(n)) {
+			return;
+		}
+
+		if (reset_modified) {
+			Base::treeBlock(n.pos).modifiedReset(n.offset);
+		}
+
+		if (Base::isLeaf(n)) {
+			return;
+		}
+
+		auto c = Base::children(n);
+
+		modifiedPropagate(c, map_types, reset_modified, prune);
+		onPropagateChildren(n, c, map_types);
+
+		if (prune && onIsPrunable(c)) {
+			Base::pruneChildren(n, c);
+		}
+	}
+
+	template <
+	    class ExecutionPolicy,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void modifiedPropagate(ExecutionPolicy&& policy, MapType map_types = MapType::ALL,
+	                       bool reset_modified = true, bool prune = true)
+	{
+		modifiedPropagate(std::forward<ExecutionPolicy>(policy), Base::index(), map_types,
+		                  reset_modified, prune);
+	}
+
+	template <
+	    class ExecutionPolicy, class NodeType,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true,
+	    std::enable_if_t<Base::template is_node_type_v<NodeType>, bool>           = true>
+	void modifiedPropagate(ExecutionPolicy&& policy, NodeType node,
+	                       MapType map_types = MapType::ALL, bool reset_modified = true,
+	                       bool prune = true)
+	{
+		// TODO: Optimize
+		modifiedPropagate(node, map_types, reset_modified, prune);
+	}
+
 	/**************************************************************************************
 	|                                                                                     |
 	|                                         I/O                                         |
@@ -381,11 +475,8 @@ class MapFull final
 		readMaps(in, readNodes(in, header), header, map_types);
 
 		if (propagate) {
-			if constexpr (hasMapTypes(MapType::MODIFIED)) {
-				ModifiedMap<MapFull, Base>::modifiedPropagate();
-			} else {
-				this->propagate();
-			}
+			// TODO: What to do here?
+			modifiedPropagate();
 		}
 	}
 
@@ -411,11 +502,8 @@ class MapFull final
 		readMaps(in, readNodes(in, header), header, map_types);
 
 		if (propagate) {
-			if constexpr (hasMapTypes(MapType::MODIFIED)) {
-				ModifiedMap<MapFull, Base>::modifiedPropagate();
-			} else {
-				this->propagate();
-			}
+			// TODO: What to do here?
+			modifiedPropagate();
 		}
 	}
 
@@ -760,6 +848,11 @@ class MapFull final
 	{
 		out << "<br/>Center: " << Base::center(node);
 		out << "<br/>Depth: " << Base::depth(node) << " | Length: " << Base::length(node);
+		if (Base::modified(node)) {
+			out << "Modified: <font color='green'><b>true</b></font>";
+		} else {
+			out << "Modified: <font color='red'>false</font>";
+		}
 
 		(onDotFile<Maps<MapFull, Base>>(out, node, map_types), ...);
 	}
@@ -855,10 +948,6 @@ class MapFull final
 			}
 		}
 
-		if constexpr (hasMapTypes(MapType::MODIFIED)) {
-			ModifiedMap<MapFull, Base>::modifiedBlock(block) = valid_return | valid_inner;
-		}
-
 		return tree_it;
 	}
 
@@ -908,15 +997,14 @@ class MapFull final
 		auto& tree  = res.first;
 		auto& nodes = res.second;
 
-		if constexpr (hasMapTypes(MapType::MODIFIED) &&
-		              (std::is_same_v<decltype(ufo::pred::Leaf() && ufo::pred::Modified()),
+		if constexpr ((std::is_same_v<decltype(ufo::pred::Leaf() && ufo::pred::Modified()),
 		                              ufo::remove_cvref_t<Predicate>> ||
 		               std::is_same_v<decltype(ufo::pred::Modified() && ufo::pred::Leaf()),
 		                              ufo::remove_cvref_t<Predicate>>)) {
 			auto root = Base::index();
 
 			bool leaf     = Base::isLeaf(root);
-			bool modified = ModifiedMap<MapFull, Base>::modified(root);
+			bool modified = Base::modified(root);
 
 			bool valid_return = leaf && modified;
 			bool valid_inner  = !leaf && modified;
@@ -1009,7 +1097,7 @@ class MapFull final
 		for (std::size_t i{}; BF > i; ++i) {
 			Index node(block, i);
 			bool  leaf      = Base::isLeaf(node);
-			bool  modified  = ModifiedMap<MapFull, Base>::modified(node);
+			bool  modified  = Base::modified(node);
 			valid_return[i] = leaf && modified;
 			valid_inner[i]  = !leaf && modified;
 		}

@@ -129,12 +129,7 @@ class Integrator
 	            std::vector<TreeCoord<Dim, T>> const& points) const
 	{
 		nodes.resize(points.size());
-
-		if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
-			map.modifiedCreate(points, nodes.begin());
-		} else {
-			map.create(points, nodes.begin());
-		}
+		map.create(points, nodes.begin());
 	}
 
 	template <class Map, class T>
@@ -143,11 +138,7 @@ class Integrator
 	{
 		if (0 == depth) {
 			nodes.resize(cloud.size());
-			if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
-				map.modifiedCreate(cloud, nodes.begin());
-			} else {
-				map.create(cloud, nodes.begin());
-			}
+			map.create(cloud, nodes.begin());
 		} else {
 			std::vector<typename Map::Coord> points;
 			points.reserve(cloud.size());
@@ -190,12 +181,7 @@ class Integrator
 		}
 
 		nodes.resize(points.size());
-
-		if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
-			map.modifiedCreate(policy, points, nodes.begin());
-		} else {
-			map.create(policy, points, nodes.begin());
-		}
+		map.create(policy, points, nodes.begin());
 	}
 
 	template <
@@ -211,11 +197,7 @@ class Integrator
 
 		if (0 == depth) {
 			nodes.resize(cloud.size());
-			if constexpr (map.hasMapTypes(MapType::MODIFIED)) {
-				map.modifiedCreate(policy, cloud, nodes.begin());
-			} else {
-				map.create(policy, cloud, nodes.begin());
-			}
+			map.create(policy, cloud, nodes.begin());
 		} else {
 			__block std::vector<typename Map::Coord> points(cloud.size());
 
@@ -260,10 +242,6 @@ class Integrator
 	void insertHit(Map& map, TreeIndex const& node, Point const& data,
 	               logit_t occupancy_logit) const
 	{
-		if constexpr (SetModified && Map::hasMapTypes(MapType::MODIFIED)) {
-			map.modifiedSet(node);
-		}
-
 		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
 			map.occupancyUpdateLogit(node, occupancy_logit, false);
 		}
@@ -342,10 +320,6 @@ class Integrator
 	void insertMiss(Map& map, TreeIndex const& node, Info const& info,
 	                logit_t occupancy_logit) const
 	{
-		if constexpr (SetModified && Map::hasMapTypes(MapType::MODIFIED)) {
-			map.modifiedSet(node);
-		}
-
 		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
 			// TODO: Make sure `info.count() * occupancy_logit` does not overflow
 			map.occupancyUpdateLogit(node, info.count() * occupancy_logit, false);

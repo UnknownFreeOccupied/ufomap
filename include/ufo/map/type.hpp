@@ -58,21 +58,20 @@ namespace ufo
 enum class MapType : std::uint64_t {
 	NONE         = std::uint64_t(0),
 	ALL          = ~std::uint64_t(0),
-	MODIFIED     = std::uint64_t(1) << 0,
-	OCCUPANCY    = std::uint64_t(1) << 1,
-	COLOR        = std::uint64_t(1) << 2,
-	TIME         = std::uint64_t(1) << 3,
-	COUNT        = std::uint64_t(1) << 4,
-	REFLECTION   = std::uint64_t(1) << 5,
-	INTENSITY    = std::uint64_t(1) << 6,
-	SURFEL       = std::uint64_t(1) << 7,
-	VOID_REGION  = std::uint64_t(1) << 8,
-	DISTANCE     = std::uint64_t(1) << 9,
-	LABEL        = std::uint64_t(1) << 10,
-	SEMANTIC     = std::uint64_t(1) << 11,
-	LABEL_SET    = std::uint64_t(1) << 12,
-	SEMANTIC_SET = std::uint64_t(1) << 13,
-	COST         = std::uint64_t(1) << 14,
+	OCCUPANCY    = std::uint64_t(1) << 0,
+	COLOR        = std::uint64_t(1) << 1,
+	TIME         = std::uint64_t(1) << 2,
+	COUNT        = std::uint64_t(1) << 3,
+	REFLECTION   = std::uint64_t(1) << 4,
+	INTENSITY    = std::uint64_t(1) << 5,
+	SURFEL       = std::uint64_t(1) << 6,
+	VOID_REGION  = std::uint64_t(1) << 7,
+	DISTANCE     = std::uint64_t(1) << 8,
+	LABEL        = std::uint64_t(1) << 9,
+	SEMANTIC     = std::uint64_t(1) << 10,
+	LABEL_SET    = std::uint64_t(1) << 11,
+	SEMANTIC_SET = std::uint64_t(1) << 12,
+	COST         = std::uint64_t(1) << 13,
 };
 
 [[nodiscard]] constexpr MapType operator|(MapType a, MapType b) noexcept
@@ -90,7 +89,6 @@ enum class MapType : std::uint64_t {
 	switch (mt) {
 		case MapType::ALL: return std::string_view{"all"};
 		case MapType::NONE: return std::string_view{"none"};
-		case MapType::MODIFIED: return std::string_view{"modified"};
 		case MapType::OCCUPANCY: return std::string_view{"occupancy"};
 		case MapType::COLOR: return std::string_view{"color"};
 		case MapType::TIME: return std::string_view{"time"};

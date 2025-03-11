@@ -127,11 +127,7 @@ class InverseIntegrator : public Integrator<Dim>
 
 		if (propagate) {
 			// TODO: Implement
-			if constexpr (Map::hasMapTypes(MapType::MODIFIED)) {
-				map.modifiedPropagate();
-			} else {
-				map.propagate();
-			}
+			map.modifiedPropagate();
 		}
 	}
 
@@ -183,11 +179,7 @@ class InverseIntegrator : public Integrator<Dim>
 
 		if (propagate) {
 			// TODO: Implement
-			if constexpr (Map::hasMapTypes(MapType::MODIFIED)) {
-				map.modifiedPropagate(policy);
-			} else {
-				map.propagate(policy);
-			}
+			map.modifiedPropagate(policy);
 		}
 	}
 
