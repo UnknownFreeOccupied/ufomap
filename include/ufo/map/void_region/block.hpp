@@ -54,52 +54,151 @@ template <std::size_t BF>
 struct VoidRegionBlock {
 	using value_type = typename BitSet<BF>::value_type;
 
-	BitSet<BF> void_region;
-	BitSet<BF> contains_void_region;
+	BitSet<BF> primary_void_region;
+	BitSet<BF> primary_contains_void_region;
+	BitSet<BF> secondary_void_region;
+	BitSet<BF> secondary_contains_void_region;
 
 	constexpr VoidRegionBlock() = default;
 
-	constexpr VoidRegionBlock(bool value)
-	    : void_region(-static_cast<value_type>(value))
-	    , contains_void_region(-static_cast<value_type>(value))
+	constexpr VoidRegionBlock(VoidRegionBlock const&) = default;
+
+	constexpr VoidRegionBlock(VoidRegionBlock const& other, std::size_t pos)
 	{
+		primaryInit(other.primary(pos));
+		secondaryInit(other.secondary(pos));
 	}
 
-	constexpr VoidRegionBlock& operator=(bool value)
-	{
-		void_region          = -static_cast<value_type>(value);
-		contains_void_region = -static_cast<value_type>(value);
-		return *this;
-	}
+	/**************************************************************************************
+	|                                                                                     |
+	|                                       Primary                                       |
+	|                                                                                     |
+	**************************************************************************************/
 
-	[[nodiscard]] constexpr bool operator[](std::size_t pos) const
+	[[nodiscard]] constexpr bool primary(std::size_t pos) const
 	{
 		assert(BF > pos);
-		return void_region[pos];
+		return primary_void_region[pos];
 	}
 
-	[[nodiscard]] constexpr typename BitSet<BF>::Reference operator[](std::size_t pos)
+	constexpr void primaryInit(bool value)
 	{
-		assert(BF > pos);
-		return void_region[pos];
+		primary_void_region          = -static_cast<value_type>(value);
+		primary_contains_void_region = -static_cast<value_type>(value);
 	}
 
-	[[nodiscard]] constexpr bool contains(std::size_t pos) const
+	constexpr void primarySet(std::size_t pos, bool value)
 	{
 		assert(BF > pos);
-		return contains_void_region[pos];
+		primary_void_region.set(pos, value);
+		primary_contains_void_region.set(pos, value);
 	}
 
-	[[nodiscard]] constexpr typename BitSet<BF>::Reference contains(std::size_t pos)
+	constexpr void primarySet(std::size_t pos)
 	{
 		assert(BF > pos);
-		return contains_void_region[pos];
+		primary_void_region.set(pos);
+		primary_contains_void_region.set(pos);
+	}
+
+	constexpr void primaryReset(std::size_t pos)
+	{
+		assert(BF > pos);
+		primary_void_region.reset(pos);
+		primary_contains_void_region.reset(pos);
+	}
+
+	[[nodiscard]] constexpr bool primaryAny() const { return primary_void_region.any(); }
+
+	[[nodiscard]] constexpr bool primaryAll() const { return primary_void_region.all(); }
+
+	[[nodiscard]] constexpr bool primaryNone() const { return primary_void_region.none(); }
+
+	[[nodiscard]] constexpr bool primaryContains(std::size_t pos) const
+	{
+		assert(BF > pos);
+		return primary_contains_void_region[pos];
+	}
+
+	[[nodiscard]] constexpr typename BitSet<BF>::Reference primaryContains(std::size_t pos)
+	{
+		assert(BF > pos);
+		return primary_contains_void_region[pos];
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                      Secondary                                      |
+	|                                                                                     |
+	**************************************************************************************/
+
+	[[nodiscard]] constexpr bool secondary(std::size_t pos) const
+	{
+		assert(BF > pos);
+		return secondary_void_region[pos];
+	}
+
+	constexpr void secondaryInit(bool value)
+	{
+		secondary_void_region          = -static_cast<value_type>(value);
+		secondary_contains_void_region = -static_cast<value_type>(value);
+	}
+
+	constexpr void secondarySet(std::size_t pos, bool value)
+	{
+		assert(BF > pos);
+		secondary_void_region.set(pos, value);
+		secondary_contains_void_region.set(pos, value);
+	}
+
+	constexpr void secondarySet(std::size_t pos)
+	{
+		assert(BF > pos);
+		secondary_void_region.set(pos);
+		secondary_contains_void_region.set(pos);
+	}
+
+	constexpr void secondaryReset(std::size_t pos)
+	{
+		assert(BF > pos);
+		secondary_void_region.reset(pos);
+		secondary_contains_void_region.reset(pos);
+	}
+
+	[[nodiscard]] constexpr bool secondaryAny() const
+	{
+		return secondary_void_region.any();
+	}
+
+	[[nodiscard]] constexpr bool secondaryAll() const
+	{
+		return secondary_void_region.all();
+	}
+
+	[[nodiscard]] constexpr bool secondaryNone() const
+	{
+		return secondary_void_region.none();
+	}
+
+	[[nodiscard]] constexpr bool secondaryContains(std::size_t pos) const
+	{
+		assert(BF > pos);
+		return secondary_contains_void_region[pos];
+	}
+
+	[[nodiscard]] constexpr typename BitSet<BF>::Reference secondaryContains(
+	    std::size_t pos)
+	{
+		assert(BF > pos);
+		return secondary_contains_void_region[pos];
 	}
 
 	friend constexpr bool operator==(VoidRegionBlock const& lhs, VoidRegionBlock const& rhs)
 	{
-		return lhs.void_region == rhs.void_region &&
-		       lhs.contains_void_region == rhs.contains_void_region;
+		return lhs.primary_void_region == rhs.primary_void_region &&
+		       lhs.primary_contains_void_region == rhs.primary_contains_void_region &&
+		       lhs.secondary_void_region == rhs.secondary_void_region &&
+		       lhs.secondary_contains_void_region == rhs.secondary_contains_void_region;
 	}
 
 	friend constexpr bool operator!=(VoidRegionBlock const& lhs, VoidRegionBlock const& rhs)
