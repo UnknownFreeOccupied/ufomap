@@ -53,21 +53,23 @@
 
 namespace ufo::detail
 {
+template <std::size_t Dim>
 struct InverseInfoAndLutTop {
-	std::vector<InverseInfoTop> info;
-	std::vector<std::uint32_t>  lut;
+	std::vector<InverseInfoTop<Dim>> info;
+	std::vector<std::uint32_t>       lut;
 };
 
+template <std::size_t Dim>
 struct InverseInfoAndLutMiddle {
-	std::vector<InverseInfoMiddle> info;
-	std::vector<std::uint32_t>     lut;
+	std::vector<InverseInfoMiddle<Dim>> info;
+	std::vector<std::uint32_t>          lut;
 };
 
 template <std::size_t Dim>
 struct InverseInfoAndLutBottom {
 	std::vector<InverseInfoBottom<Dim>> info;
 	std::vector<std::uint32_t>          lut;
-	std::vector<std::uint32_t>          lut_void;
+	std::vector<std::uint32_t>          lut_void_region;
 };
 }  // namespace ufo::detail
 

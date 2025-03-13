@@ -67,6 +67,8 @@ namespace ufo
 {
 enum class DownSamplingMethod { NONE, FIRST, CENTER };
 
+enum class CountSamplingMethod { NONE, BOOLEAN, MIN, MAX, MEAN };
+
 template <std::size_t Dim>
 class Integrator
 {
@@ -82,16 +84,17 @@ class Integrator
 	depth_t miss_depth = 0;
 
 	// Min range to integrate
-	float min_distance = 0.0f;
+	double min_distance = 0.0;
 	// Max range to integrate, negative value is infinity range
-	float max_distance = std::numeric_limits<float>::infinity();
+	double max_distance = std::numeric_limits<double>::infinity();
 	// To extend or shorten the rays
-	float distance_offset = 0.0f;
+	double distance_offset = 0.0;
 
 	// Occupancy hit [0, 1]
-	occupancy_t occupancy_hit = 0.75f;
+	occupancy_t occupancy_hit = 0.75;
 	// Occupancy miss [0, 1]
-	occupancy_t occupancy_miss = 0.45f;
+	// occupancy_t occupancy_miss = 0.45;
+	occupancy_t occupancy_miss = 0.499;
 
 	DownSamplingMethod sample_method = DownSamplingMethod::NONE;
 
@@ -99,6 +102,12 @@ class Integrator
 	bool free_hits = false;
 
 	MapType integrate_types = MapType::ALL;
+
+	bool verbose = false;
+
+	CountSamplingMethod count_sample_method           = CountSamplingMethod::NONE;
+	unsigned            count_max_diff                = 0;
+	bool                misses_require_all_before_hit = false;
 
  public:
 	template <class Map, class T, class... Rest>
@@ -125,16 +134,16 @@ class Integrator
 	**************************************************************************************/
 
 	template <class Map, class T>
-	void create(Map& map, std::vector<TreeIndex>& nodes,
-	            std::vector<TreeCoord<Dim, T>> const& points) const
+	void create(Map& map, std::vector<TreeCoord<Dim, T>> const& points,
+	            std::vector<TreeIndex>& nodes) const
 	{
 		nodes.resize(points.size());
 		map.create(points, nodes.begin());
 	}
 
 	template <class Map, class T>
-	void create(Map& map, std::vector<TreeIndex>& nodes,
-	            std::vector<Vec<Dim, T>> const& cloud, depth_t depth) const
+	void create(Map& map, std::vector<Vec<Dim, T>> const& cloud, depth_t depth,
+	            std::vector<TreeIndex>& nodes) const
 	{
 		if (0 == depth) {
 			nodes.resize(cloud.size());
@@ -146,7 +155,7 @@ class Integrator
 			std::transform(cloud.begin(), cloud.end(), std::back_inserter(points),
 			               [depth](auto const& p) { return TreeCoord(p, depth); });
 
-			create(map, nodes, points);
+			create(map, points, nodes);
 		}
 	}
 
@@ -155,7 +164,7 @@ class Integrator
 	    Map& map, std::vector<TreeCoord<Dim, T>> const& points) const
 	{
 		std::vector<TreeIndex> nodes(points.size());
-		create(map, nodes, points);
+		create(map, points, nodes);
 		return nodes;
 	}
 
@@ -165,19 +174,20 @@ class Integrator
 	                                            depth_t                         depth) const
 	{
 		std::vector<TreeIndex> nodes(cloud.size());
-		create(map, nodes, cloud, depth);
+		create(map, cloud, depth, nodes);
 		return nodes;
 	}
 
 	template <
 	    class ExecutionPolicy, class Map, class T,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void create(ExecutionPolicy&& policy, Map& map, std::vector<TreeIndex>& nodes,
-	            std::vector<TreeCoord<Dim, T>> const& points) const
+	void create(ExecutionPolicy&& policy, Map& map,
+	            std::vector<TreeCoord<Dim, T>> const& points,
+	            std::vector<TreeIndex>&               nodes) const
 	{
 		if constexpr (execution::is_seq_v<ExecutionPolicy> ||
 		              execution::is_unseq_v<ExecutionPolicy>) {
-			return create(map, nodes, points);
+			return create(map, points, nodes);
 		}
 
 		nodes.resize(points.size());
@@ -187,12 +197,12 @@ class Integrator
 	template <
 	    class ExecutionPolicy, class Map, class T,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void create(ExecutionPolicy&& policy, Map& map, std::vector<TreeIndex>& nodes,
-	            std::vector<Vec<Dim, T>> const& cloud, depth_t depth) const
+	void create(ExecutionPolicy&& policy, Map& map, std::vector<Vec<Dim, T>> const& cloud,
+	            depth_t depth, std::vector<TreeIndex>& nodes) const
 	{
 		if constexpr (execution::is_seq_v<ExecutionPolicy> ||
 		              execution::is_unseq_v<ExecutionPolicy>) {
-			return create(map, nodes, cloud, depth);
+			return create(map, cloud, depth, nodes);
 		}
 
 		if (0 == depth) {
@@ -204,7 +214,7 @@ class Integrator
 			transform(policy, cloud.begin(), cloud.end(), points.begin(),
 			          [depth](auto const& p) { return TreeCoord(p, depth); });
 
-			create(policy, map, nodes, points);
+			create(policy, map, points, nodes);
 		}
 	}
 
@@ -216,7 +226,7 @@ class Integrator
 	    depth_t depth) const
 	{
 		std::vector<TreeIndex> nodes(points.size());
-		create(std::forward<ExecutionPolicy>(policy), map, nodes, points, depth);
+		create(std::forward<ExecutionPolicy>(policy), map, points, depth, nodes);
 		return nodes;
 	}
 
@@ -228,7 +238,7 @@ class Integrator
 	                                            depth_t                         depth) const
 	{
 		std::vector<TreeIndex> nodes(cloud.size());
-		create(std::forward<ExecutionPolicy>(policy), map, nodes, cloud, depth);
+		create(std::forward<ExecutionPolicy>(policy), map, cloud, depth, nodes);
 		return nodes;
 	}
 
@@ -298,27 +308,20 @@ class Integrator
 	|                                                                                     |
 	**************************************************************************************/
 
-	template <class Map, class Info>
-	void insertMiss(Map& map, TreeIndex const& node, Info const& info,
-	                logit_t occupancy_logit) const
+	template <class Map>
+	void insertMiss(Map& map, TreeIndex node, unsigned count, logit_t occupancy_logit) const
 	{
 		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
 			// TODO: Make sure `info.count() * occupancy_logit` does not overflow
-			map.occupancyUpdateLogit(node, info.count() * occupancy_logit, false);
-		}
-
-		if constexpr (Map::hasMapTypes(MapType::VOID_REGION)) {
-			if (info.voidRegion()) {
-				map.voidRegionSet(node, true, false);
-			}
+			map.occupancyUpdateLogit(node, count * occupancy_logit, false);
 		}
 
 		// TODO: Add more map types
 	}
 
-	template <class Map, class Info>
+	template <class Map>
 	void insertMisses(Map& map, std::vector<TreeIndex> const& nodes,
-	                  std::vector<Info> const& info) const
+	                  std::vector<unsigned> const& counts) const
 	{
 		logit_t occupancy_logit;
 		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
@@ -327,16 +330,16 @@ class Integrator
 		}
 
 		for (std::size_t i{}; nodes.size() > i; ++i) {
-			insertMiss(map, nodes[i], info[i], occupancy_logit);
+			insertMiss(map, nodes[i], counts[i], occupancy_logit);
 		}
 	}
 
 	template <
-	    class ExecutionPolicy, class Map, class Info,
+	    class ExecutionPolicy, class Map,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
 	void insertMisses(ExecutionPolicy&& policy, Map& map,
 	                  std::vector<TreeIndex> const& nodes,
-	                  std::vector<Info> const&      info) const
+	                  std::vector<unsigned> const&  counts) const
 	{
 		logit_t occupancy_logit;
 		if constexpr (Map::hasMapTypes(MapType::OCCUPANCY)) {
@@ -351,7 +354,128 @@ class Integrator
 			         // This chick wants to rule the block (node.pos being the block)
 			         std::lock_guard lock(map.chicken(node.pos));
 
-			         insertMiss(map, node, info[i], occupancy_logit);
+			         insertMiss(map, node, counts[i], occupancy_logit);
+		         });
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                 Primary void region                                 |
+	|                                                                                     |
+	**************************************************************************************/
+
+	template <class Map>
+	void insertVoidRegion(Map& map, TreeIndex node) const
+	{
+		if constexpr (Map::hasMapTypes(MapType::VOID_REGION)) {
+			map.voidRegionSet(node, true, false);
+		}
+	}
+
+	template <class Map>
+	void insertVoidRegions(Map& map, std::vector<TreeIndex> const& nodes) const
+	{
+		if constexpr (!Map::hasMapTypes(MapType::VOID_REGION)) {
+			return;
+		} else if (MapType::VOID_REGION != (MapType::VOID_REGION & integrate_types)) {
+			return;
+		}
+
+		for (std::size_t i{}; nodes.size() > i; ++i) {
+			insertVoidRegion(map, nodes[i]);
+		}
+	}
+
+	template <
+	    class ExecutionPolicy, class Map,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void insertVoidRegions(ExecutionPolicy&& policy, Map& map,
+	                       std::vector<TreeIndex> const& nodes) const
+	{
+		if constexpr (!Map::hasMapTypes(MapType::VOID_REGION)) {
+			return;
+		} else if (MapType::VOID_REGION != (MapType::VOID_REGION & integrate_types)) {
+			return;
+		}
+
+		for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+		         [&](std::size_t i) {
+			         auto node = nodes[i];
+
+			         // This chick wants to rule the block (node.pos being the block)
+			         std::lock_guard lock(map.chicken(node.pos));
+
+			         insertVoidRegion(map, node);
+		         });
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
+	|                                Secondary void region                                |
+	|                                                                                     |
+	**************************************************************************************/
+
+	template <class Map>
+	void insertVoidRegionSecondary(Map& map, TreeIndex node) const
+	{
+		if constexpr (Map::hasMapTypes(MapType::VOID_REGION & MapType::OCCUPANCY)) {
+			if (map.voidRegion(node) || map.voidRegionSecondary(node) ||
+			    map.occupancyMinLogit() != map.occupancyLogit(node)) {
+				return;
+			}
+
+			// TODO: Implement correctly
+			if (map.voidRegionAny(node.pos)) {
+				map.voidRegionSecondarySet(node, true, false);
+			} else {
+				// TODO: Optimize
+				auto c  = map.center(node);
+				auto hl = cast<float>(map.halfLength(node) + map.halfLength(0));
+				for (auto n : map.query(pred::Leaf() && pred::VoidRegion() &&
+				                        pred::Intersects(AABB3f(c - hl, c + hl)))) {
+					if (n.index != node) {
+						map.voidRegionSecondarySet(node, true, false);
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	template <class Map>
+	void insertVoidRegionsSecondary(Map& map, std::vector<TreeIndex> const& nodes) const
+	{
+		if constexpr (!Map::hasMapTypes(MapType::VOID_REGION & MapType::OCCUPANCY)) {
+			return;
+		} else if (MapType::VOID_REGION != (MapType::VOID_REGION & integrate_types)) {
+			return;
+		}
+
+		for (std::size_t i{}; nodes.size() > i; ++i) {
+			insertVoidRegionSecondary(map, nodes[i]);
+		}
+	}
+
+	template <
+	    class ExecutionPolicy, class Map,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void insertVoidRegionsSecondary(ExecutionPolicy&& policy, Map& map,
+	                                std::vector<TreeIndex> const& nodes) const
+	{
+		if constexpr (!Map::hasMapTypes(MapType::VOID_REGION & MapType::OCCUPANCY)) {
+			return;
+		} else if (MapType::VOID_REGION != (MapType::VOID_REGION & integrate_types)) {
+			return;
+		}
+
+		for_each(std::forward<ExecutionPolicy>(policy), std::size_t(0), nodes.size(),
+		         [&](std::size_t i) {
+			         auto node = nodes[i];
+
+			         // This chick wants to rule the block (node.pos being the block)
+			         std::lock_guard lock(map.chicken(node.pos));
+
+			         insertVoidRegionSecondary(map, node);
 		         });
 	}
 };

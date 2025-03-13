@@ -52,19 +52,23 @@
 
 namespace ufo::detail
 {
+template <std::size_t Dim>
 struct InverseInfoTop {
-	float         distance{};
-	std::uint32_t first_lut{};
-	std::uint32_t last_lut{};
-	std::uint32_t first_child{};
-	std::uint32_t last_child{};
+	Vec<Dim, float> point{};
+	float           distance{};
+	std::uint32_t   first_lut{};
+	std::uint32_t   last_lut{};
+	std::uint32_t   first_child{};
+	std::uint32_t   last_child{};
+	bool            seen{};
 
 	constexpr InverseInfoTop() = default;
 
-	constexpr InverseInfoTop(float distance, std::uint32_t first_lut,
-	                         std::uint32_t last_lut, std::uint32_t first_child,
-	                         std::uint32_t last_child)
-	    : distance(distance)
+	constexpr InverseInfoTop(Vec<Dim, float> const& point, float distance,
+	                         std::uint32_t first_lut, std::uint32_t last_lut,
+	                         std::uint32_t first_child, std::uint32_t last_child)
+	    : point(point)
+	    , distance(distance)
 	    , first_lut(first_lut)
 	    , last_lut(last_lut)
 	    , first_child(first_child)
@@ -73,17 +77,30 @@ struct InverseInfoTop {
 	}
 };
 
+template <std::size_t Dim>
 struct InverseInfoMiddle {
-	float         distance{};
-	std::uint32_t first_lut{};
-	std::uint32_t first_child = std::numeric_limits<std::uint32_t>::max();
+	Vec<Dim, float> point{};
+	float           distance{};
+	std::uint32_t   first_lut{};
+	std::uint32_t   data = std::numeric_limits<std::uint32_t>::max() << 1;
 
 	constexpr InverseInfoMiddle() = default;
 
-	constexpr InverseInfoMiddle(float distance, std::uint32_t first_lut,
-	                            std::uint32_t first_child)
-	    : distance(distance), first_lut(first_lut), first_child(first_child)
+	constexpr InverseInfoMiddle(Vec<Dim, float> const& point, float distance,
+	                            std::uint32_t first_lut, std::uint32_t first_child)
+	    : point(point), distance(distance), first_lut(first_lut), data(first_child << 1)
 	{
+	}
+
+	[[nodiscard]] constexpr bool seen() const { return 0b1u == (0b1u & data); }
+
+	constexpr void seen(bool v) { data = (~0b1u & data) | static_cast<std::uint32_t>(v); }
+
+	[[nodiscard]] constexpr std::uint32_t firstChild() const { return data >> 1; }
+
+	constexpr void firstChild(std::uint32_t first_child)
+	{
+		data = (0b1u & data) | (first_child << 1);
 	}
 };
 
@@ -106,58 +123,13 @@ struct InverseInfoBottom {
 
 	constexpr void seen(bool v) { data = (~0b1u & data) | static_cast<std::uint32_t>(v); }
 
-	[[nodiscard]] constexpr std::uint32_t firstLutVoid() const { return data >> 1; }
+	[[nodiscard]] constexpr std::uint32_t firstLutVoidRegion() const { return data >> 1; }
 
-	constexpr void firstLutVoid(std::uint32_t first_lut_void)
+	constexpr void firstLutVoidRegion(std::uint32_t first_lut_void_region)
 	{
-		data = (0b1u & data) | (first_lut_void << 1);
+		data = (0b1u & data) | (first_lut_void_region << 1);
 	}
 };
-
-// struct InverseInfo {
-// 	float         distance{};
-// 	std::uint32_t data{};  // Bits 0-3 for num_children, 4 for boolean "seen", 5-31
-// num_lut
-
-// 	constexpr InverseInfo() = default;
-
-// 	constexpr InverseInfo(float distance, std::uint32_t num_children, std::uint32_t
-// num_lut) 	    : distance(distance), data((num_children & 0b1111u) | (num_lut << 5))
-// 	{
-// 	}
-
-// 	[[nodiscard]] constexpr std::uint32_t numChildren() const { return data & 0b1111u; }
-
-// 	constexpr void numChildren(std::uint32_t num)
-// 	{
-// 		data = (data & ~0b1111u) | (num & 0b1111u);
-// 	}
-
-// 	[[nodiscard]] constexpr bool seen() const { return 0b10000 == (data & 0b10000u); }
-
-// 	constexpr void seen(bool v)
-// 	{
-// 		data = (data & ~0b10000u) | (static_cast<std::uint32_t>(v) << 4);
-// 	}
-
-// 	[[nodiscard]] constexpr std::uint32_t numLut() const { return data >> 5; }
-
-// 	constexpr void numLut(std::uint32_t num) { data = (data & 0b11111u) | (num << 5); }
-// };
-
-// struct InverseInfo {
-// 	float         min_distance{};
-// 	float         max_distance{};
-// 	std::uint32_t first_lut{};
-// 	std::uint32_t first_child = std::numeric_limits<std::uint32_t>::max();
-
-// 	constexpr InverseInfo() = default;
-
-// 	constexpr InverseInfo(float min_distance, float max_distance, std::uint32_t first_lut)
-// 	    : min_distance(min_distance), max_distance(max_distance), first_lut(first_lut)
-// 	{
-// 	}
-// };
 }  // namespace ufo::detail
 
 #endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_INFO_HPP
