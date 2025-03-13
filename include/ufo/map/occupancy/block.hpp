@@ -59,8 +59,9 @@ struct OccupancyElement {
 	// 3 bits for unknown, free, occupied, 1 bit for sign, 1 bit because we want half, -1
 	// because positive and negative should be the same
 	static constexpr logit_t const MAX_VALUE = ipow(logit_t(2), 32 - 5) - 1;
+	static constexpr logit_t const MIN_VALUE = -MAX_VALUE;
 
-	std::uint32_t value_and_indicators{};
+	std::uint32_t value_and_indicators = std::uint32_t(MAX_VALUE) << 3;
 
 	OccupancyElement() noexcept                        = default;
 	OccupancyElement(OccupancyElement const&) noexcept = default;

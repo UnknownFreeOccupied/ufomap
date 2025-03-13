@@ -100,11 +100,11 @@ class OccupancyMap
 	using pos_t    = typename Tree::pos_t;
 
 	using logit_t     = typename Block::logit_t;
-	using occupancy_t = float;
+	using occupancy_t = double;
 
  private:
-	static constexpr occupancy_t MaxOccupancy = 1.0;
-	static constexpr occupancy_t MinOccupancy = 0.0;
+	static constexpr occupancy_t const MaxOccupancy = 1.0;
+	static constexpr occupancy_t const MinOccupancy = 0.0;
 
  public:
 	/**************************************************************************************
@@ -223,10 +223,7 @@ class OccupancyMap
 	void occupancyUpdateLogit(NodeType node, UnaryOp unary_op, bool propagate = true)
 	{
 		auto node_f = [this, unary_op](Index node) {
-			logit_t value = unary_op(node);
-
-			assert(occupancyMinLogit() <= value && occupancyMaxLogit() >= value);
-
+			logit_t value = UFO_CLAMP(unary_op(node), occupancyMinLogit(), occupancyMaxLogit());
 			occupancyBlock(node.pos)[node.offset] =
 			    OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
 			                     occupancyOccupiedLogit(value));
@@ -252,13 +249,7 @@ class OccupancyMap
 		assert(occupancyMaxLogit() - occupancyMinLogit() >= std::abs(change));
 
 		occupancyUpdateLogit(
-		    node,
-		    [this, change](Index node) {
-			    return static_cast<logit_t>(UFO_CLAMP(
-			        static_cast<int>(occupancyBlock(node.pos)[node.offset].logit()) + change,
-			        static_cast<int>(occupancyMinLogit()),
-			        static_cast<int>(occupancyMaxLogit())));
-		    },
+		    node, [this, change](Index node) { return occupancyLogit(node) + change; },
 		    propagate);
 	}
 
@@ -389,7 +380,7 @@ class OccupancyMap
 
 	[[nodiscard]] constexpr logit_t occupancyMinLogit() const noexcept
 	{
-		return -occupancyMaxLogit();
+		return OccupancyElement::MIN_VALUE;
 	}
 
 	[[nodiscard]] constexpr occupancy_t occupiedThres() const noexcept
@@ -596,11 +587,10 @@ class OccupancyMap
 
 	void onInitRoot()
 	{
-		auto& block = occupancyBlock(0);
-
 		logit_t value{};
-		block[0] = OccupancyElement(value, occupancyUnknownLogit(value),
-		                            occupancyFreeLogit(value), occupancyOccupiedLogit(value));
+		occupancyBlock(0)[0] =
+		    OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
+		                     occupancyOccupiedLogit(value));
 	}
 
 	void onInitChildren(Index node, pos_t children)
