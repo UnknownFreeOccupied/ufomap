@@ -255,12 +255,12 @@ class MapFull final
 	|                                                                                     |
 	**************************************************************************************/
 
-	void propagate(MapType map_types = MapType::ALL, bool prune = true)
+	void propagate(bool prune = true, MapType map_types = MapType::ALL)
 	{
-		propagate(Base::index(), map_types, prune);
+		propagate(Base::index(), prune, map_types);
 	}
 
-	void propagate(pos_t block, MapType map_types = MapType::ALL, bool prune = true)
+	void propagate(pos_t block, bool prune = true, MapType map_types = MapType::ALL)
 	{
 		assert(Base::valid(block));
 
@@ -272,7 +272,7 @@ class MapFull final
 
 			auto c = Base::children(n);
 
-			propagate(c, map_types, prune);
+			propagate(c, prune, map_types);
 			onPropagateChildren(n, c, map_types);
 
 			if (prune && onIsPrunable(c)) {
@@ -283,7 +283,7 @@ class MapFull final
 
 	template <class NodeType,
 	          std::enable_if_t<Base::template is_node_type_v<NodeType>, bool> = true>
-	void propagate(NodeType node, MapType map_types = MapType::ALL, bool prune = true)
+	void propagate(NodeType node, bool prune = true, MapType map_types = MapType::ALL)
 	{
 		assert(Base::valid(node));
 
@@ -295,7 +295,7 @@ class MapFull final
 
 		auto c = Base::children(n);
 
-		propagate(c, map_types, prune);
+		propagate(c, prune, map_types);
 		onPropagateChildren(n, c, map_types);
 
 		if (prune && onIsPrunable(c)) {
@@ -306,27 +306,27 @@ class MapFull final
 	template <
 	    class ExecutionPolicy,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void propagate(ExecutionPolicy&& policy, MapType map_types = MapType::ALL,
-	               bool prune = true)
+	void propagate(ExecutionPolicy&& policy, bool prune = true,
+	               MapType map_types = MapType::ALL)
 	{
 		// TODO: Optimize
-		propagate(map_types, prune);
+		propagate(prune, map_types);
 	}
 
 	/*!
 	 * @brief Propagate modified information up the tree.
 	 *
-	 * @param reset_modified Whether propagated node's modified state should be reset
 	 * @param prune Whether the tree should be pruned also
+	 * @param reset_modified Whether propagated node's modified state should be reset
 	 */
-	void modifiedPropagate(MapType map_types = MapType::ALL, bool reset_modified = true,
-	                       bool prune = true)
+	void modifiedPropagate(bool prune = true, bool reset_modified = true,
+	                       MapType map_types = MapType::ALL)
 	{
-		modifiedPropagate(Base::index(), map_types, reset_modified, prune);
+		modifiedPropagate(Base::index(), prune, reset_modified, map_types);
 	}
 
-	void modifiedPropagate(pos_t block, MapType map_types = MapType::ALL,
-	                       bool reset_modified = true, bool prune = true)
+	void modifiedPropagate(pos_t block, bool prune = true, bool reset_modified = true,
+	                       MapType map_types = MapType::ALL)
 	{
 		assert(Base::valid(block));
 
@@ -345,7 +345,7 @@ class MapFull final
 
 			auto c = Base::children(n);
 
-			modifiedPropagate(c, map_types, reset_modified, prune);
+			modifiedPropagate(c, prune, reset_modified, map_types);
 			onPropagateChildren(n, c, map_types);
 
 			if (prune && onIsPrunable(c)) {
@@ -356,8 +356,8 @@ class MapFull final
 
 	template <class NodeType,
 	          std::enable_if_t<Base::template is_node_type_v<NodeType>, bool> = true>
-	void modifiedPropagate(NodeType node, MapType map_types = MapType::ALL,
-	                       bool reset_modified = true, bool prune = true)
+	void modifiedPropagate(NodeType node, bool prune = true, bool reset_modified = true,
+	                       MapType map_types = MapType::ALL)
 	{
 		assert(Base::valid(node));
 
@@ -377,7 +377,7 @@ class MapFull final
 
 		auto c = Base::children(n);
 
-		modifiedPropagate(c, map_types, reset_modified, prune);
+		modifiedPropagate(c, prune, reset_modified, map_types);
 		onPropagateChildren(n, c, map_types);
 
 		if (prune && onIsPrunable(c)) {
@@ -388,23 +388,22 @@ class MapFull final
 	template <
 	    class ExecutionPolicy,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void modifiedPropagate(ExecutionPolicy&& policy, MapType map_types = MapType::ALL,
-	                       bool reset_modified = true, bool prune = true)
+	void modifiedPropagate(ExecutionPolicy&& policy, bool prune = true,
+	                       bool reset_modified = true, MapType map_types = MapType::ALL)
 	{
-		modifiedPropagate(std::forward<ExecutionPolicy>(policy), Base::index(), map_types,
-		                  reset_modified, prune);
+		modifiedPropagate(std::forward<ExecutionPolicy>(policy), Base::index(), prune,
+		                  reset_modified, map_types);
 	}
 
 	template <
 	    class ExecutionPolicy, class NodeType,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true,
 	    std::enable_if_t<Base::template is_node_type_v<NodeType>, bool>           = true>
-	void modifiedPropagate(ExecutionPolicy&& policy, NodeType node,
-	                       MapType map_types = MapType::ALL, bool reset_modified = true,
-	                       bool prune = true)
+	void modifiedPropagate(ExecutionPolicy&& policy, NodeType node, bool prune = true,
+	                       bool reset_modified = true, MapType map_types = MapType::ALL)
 	{
 		// TODO: Optimize
-		modifiedPropagate(node, map_types, reset_modified, prune);
+		modifiedPropagate(node, prune, reset_modified, map_types);
 	}
 
 	/**************************************************************************************
