@@ -47,10 +47,10 @@
 #include <numeric>
 #include <ufo/container/tree/container.hpp>
 #include <ufo/container/tree/tree.hpp>
+#include <ufo/map/block.hpp>
 #include <ufo/map/labels/block.hpp>
 #include <ufo/map/labels/predicate.hpp>
 #include <ufo/map/labels/propagation_criteria.hpp>
-#include <ufo/map/tree/map_block.hpp>
 #include <ufo/map/type.hpp>
 #include <ufo/math/transform3.hpp>
 #include <ufo/utility/bit_set.hpp>
@@ -143,26 +143,14 @@ class LabelsMap
 		LabelsElement elem(value);
 
 		auto node_f = [this, elem](Index node) { labelsBlock(node.pos)[node.offset] = elem; };
+
 		auto block_f = [this, elem](pos_t pos) { labelsBlock(pos).fill(elem); };
 
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursParentFirst(node, node_f, block_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			if (propagate) {
-				auto propagate_f = [this](Index node, pos_t children) {
-					onPropagateChildren(node, children);
-				};
+		auto update_f = [this](Index node, pos_t children) {
+			onPropagateChildren(node, children);
+		};
 
-				derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-				                       propagate);
-			} else {
-				derived().recursParentFirst(derived().code(node), node_f, block_f);
-			}
-		}
+		derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
 	}
 
 	template <class NodeType,
@@ -197,20 +185,11 @@ class LabelsMap
 			}
 		};
 
-		auto propagate_f = [this](Index node, pos_t children) {
+		auto update_f = [this](Index node, pos_t children) {
 			onPropagateChildren(node, children);
 		};
 
-		if constexpr (std::is_same_v<Index, std::decay_t<NodeType>>) {
-			if (propagate) {
-				derived().recursLeaves(node, node_f, block_f, propagate_f);
-			} else {
-				derived().recursLeaves(node, node_f, block_f);
-			}
-		} else {
-			derived().recursLeaves(derived().code(node), node_f, block_f, propagate_f,
-			                       propagate);
-		}
+		derived().recursLeaves(node, node_f, block_f, update_f, propagate);
 	}
 
 	//
@@ -358,7 +337,8 @@ class LabelsMap
 
 	void onPruneChildren(Index node, pos_t children)
 	{
-		auto& v = labelsBlock(node.pos)[node.offset];
+		// TODO: implement
+		// auto& v = labelsBlock(node.pos)[node.offset];
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
@@ -412,7 +392,7 @@ class LabelsMap
 	// Is prunable
 	//
 
-	[[nodiscard]] bool prunable(pos_t block) const
+	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
 		using std::begin;
 		using std::end;
