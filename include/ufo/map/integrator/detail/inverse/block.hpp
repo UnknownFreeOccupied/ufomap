@@ -46,23 +46,29 @@
 
 // STL
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
-#include <limits>
-#include <vector>
 
 namespace ufo::detail
 {
 struct InverseElement {
-	float                 distance = std::numeric_limits<float>::max();
-	std::vector<unsigned> indices;
-	std::uint32_t         index;
+	std::atomic_uint_fast32_t count{};
+	std::atomic_uint_fast32_t index{};
 
-	InverseElement() noexcept                      = default;
-	InverseElement(InverseElement const&) noexcept = default;
+	InverseElement() noexcept = default;
 
-	InverseElement& operator=(InverseElement const&) noexcept = default;
+	InverseElement(InverseElement const& other)
+	    : count(other.count.load()), index(other.index.load())
+	{
+	}
+
+	InverseElement& operator=(InverseElement const& rhs)
+	{
+		count = rhs.count.load();
+		index = rhs.index.load();
+		return *this;
+	}
 };
 
 template <std::size_t BF>

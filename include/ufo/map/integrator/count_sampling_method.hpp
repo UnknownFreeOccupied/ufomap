@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -39,10 +39,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_HPP
-#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_HPP
+#ifndef UFO_MAP_INTEGRATOR_COUNT_SAMPLING_METHOD_HPP
+#define UFO_MAP_INTEGRATOR_COUNT_SAMPLING_METHOD_HPP
 
-// UFO
-#include <ufo/map/integrator/detail/inverse/predicate/inverse.hpp>
+namespace ufo
+{
+enum class CountSamplingMethod { NONE, BOOLEAN, MIN, MAX, MEAN };
+}
 
-#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_PREDICATE_HPP
+#endif  // UFO_MAP_INTEGRATOR_COUNT_SAMPLING_METHOD_HPP

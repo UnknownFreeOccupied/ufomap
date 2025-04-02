@@ -44,8 +44,11 @@
 
 // UFO
 #include <ufo/cloud/point_cloud.hpp>
+#include <ufo/container/tree_map.hpp>
 #include <ufo/execution/algorithm.hpp>
 #include <ufo/execution/execution.hpp>
+#include <ufo/geometry/obb.hpp>
+#include <ufo/map/integrator/detail/grid_map.hpp>
 #include <ufo/map/integrator/detail/inverse/cloud_element.hpp>
 #include <ufo/map/integrator/detail/inverse/info.hpp>
 #include <ufo/map/integrator/detail/inverse/info_and_lut.hpp>
@@ -68,8 +71,8 @@
 #include <future>
 #include <limits>
 #include <mutex>
-#include <stdexcept>
 #include <tuple>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -86,13 +89,26 @@ enum class ScanOrder {
 	VERTICAL_MAJOR,
 };
 
-template <std::size_t Dim>
-class InverseIntegrator : public Integrator<Dim>
+enum class InverseNaNBehavior { IGNORE, ZERO, INF };
+
+template <std::size_t Dim, unsigned InverseLevels = 5>
+class InverseIntegrator : public Integrator<Dim, InverseLevels>
 {
+	static_assert(2 <= InverseLevels, "'InverseLevels' needs to be at least 2");
+
  public:
 	SensorType sensor_type = SensorType::RAY;
 
-	bool treat_nan_as_infinity = false;
+	InverseNaNBehavior nan_behavior = InverseNaNBehavior::IGNORE;
+
+	bool conservative_freeing = true;
+
+	bool unordered_mode = true;
+	// double unordered_max_dist = 0.1;
+	double unordered_dir_factor = 10000.0;
+
+	unsigned min_num_for_miss        = 1;
+	unsigned min_num_for_void_region = 1;
 
  public:
 	InverseIntegrator() = default;
@@ -100,43 +116,31 @@ class InverseIntegrator : public Integrator<Dim>
 	InverseIntegrator(std::filesystem::path const& config_file) { loadConfig(config_file); }
 
 	template <class Map, class T, class... Rest>
-	void operator()(Map& map, PointCloud<Dim, T, Rest...> cloud,
+	void operator()(Map& map, PointCloud<Dim, T, Rest...> const& cloud,
 	                Transform<Dim, T> const& transform, bool propagate = true) const
 	{
-		auto misses_and_void_regions_f = std::async(
-		    std::launch::deferred, [this, &map, points = get<0>(cloud), &transform]() {
-			    if (directions_.empty()) {
-				    std::cerr << "No config present, cannot find misses\n";
-				    return;
-			    }
+		auto const t0 = std::chrono::high_resolution_clock::now();
 
-			    if (directions_.size() != points.size()) {
-				    std::cerr << "Present config differs from `cloud`, cannot find misses\n";
-				    return;
-			    }
+		if (!valid(cloud, true)) {
+			return;
+		}
 
-			    misses(map, points, transform);
-			    voidRegions(map, points, transform);
-		    });
+		auto const t1 = std::chrono::high_resolution_clock::now();
 
-		filterDistanceInPlace(cloud, Vec<Dim, T>{}, static_cast<T>(this->min_distance),
-		                      static_cast<T>(this->max_distance), true);
-		transformInPlace(transform, get<0>(cloud));
-		this->create(map, get<0>(cloud), this->hit_depth, hit_nodes_);
+		fillDistances(map, get<0>(cloud));
 
-		misses_and_void_regions_f.wait();
+		auto const t2 = std::chrono::high_resolution_clock::now();
 
-		std::cout << "Misses:       " << miss_coords_.size() << '\n';
-		std::cout << "Void Regions: " << void_region_coords_.size() << '\n';
+		this->hits(map, cloud, transform);
 
-		this->create(map, miss_coords_, miss_nodes_);
-		this->create(map, void_region_coords_, void_region_nodes_);
+		auto const t3 = std::chrono::high_resolution_clock::now();
 
-		this->insertMisses(map, miss_nodes_, miss_counts_);
-		this->insertHits(map, hit_nodes_, cloud);
-		this->insertVoidRegions(map, void_region_nodes_);
-		// TODO: What should this be?
-		// this->insertVoidRegionsSecondary(map, miss_nodes_);
+		bool with_count = true;  // TODO: Fill in some way
+		findMisses(map, transform, with_count);
+		auto const t4 = std::chrono::high_resolution_clock::now();
+
+		this->misses(map);
+		auto const t5 = std::chrono::high_resolution_clock::now();
 
 		// TODO: Implement
 
@@ -144,64 +148,61 @@ class InverseIntegrator : public Integrator<Dim>
 			// TODO: Implement
 			map.modifiedPropagate();
 		}
+		auto const t6 = std::chrono::high_resolution_clock::now();
 
-		miss_coords_.clear();
-		miss_counts_.clear();
-		void_region_coords_.clear();
+		std::chrono::duration<double, std::milli> const valid_ms          = t1 - t0;
+		std::chrono::duration<double, std::milli> const fill_distances_ms = t2 - t1;
+		std::chrono::duration<double, std::milli> const hits_ms           = t3 - t2;
+		std::chrono::duration<double, std::milli> const find_misses_ms    = t4 - t3;
+		std::chrono::duration<double, std::milli> const misses_ms         = t5 - t4;
+		std::chrono::duration<double, std::milli> const propagate_ms      = t6 - t5;
+		std::chrono::duration<double, std::milli> const total_ms          = t6 - t0;
+
+		std::cout << "Valid:          " << valid_ms.count() << " ms\n";
+		std::cout << "Fill distances: " << fill_distances_ms.count() << " ms\n";
+		std::cout << "Hits:           " << hits_ms.count() << " ms\n";
+		std::cout << "Find misses:    " << find_misses_ms.count() << " ms\n";
+		std::cout << "Misses:         " << misses_ms.count() << " ms\n";
+		std::cout << "Propagate:      " << propagate_ms.count() << " ms\n";
+		std::cout << "Total:          " << total_ms.count() << " ms\n\n";
 	}
 
 	template <
 	    class ExecutionPolicy, class Map, class T, class... Rest,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void operator()(ExecutionPolicy&& policy, Map& map, PointCloud<Dim, T, Rest...> cloud,
+	void operator()(ExecutionPolicy&& policy, Map& map,
+	                PointCloud<Dim, T, Rest...> const& cloud,
 	                Transform<Dim, T> const& transform, bool propagate = true) const
 	{
 		if constexpr (execution::is_seq_v<ExecutionPolicy> ||
 		              execution::is_unseq_v<ExecutionPolicy>) {
-			operator()(map, cloud, transform);
+			return operator()(map, cloud, transform);
 		}
 
-		auto misses_and_void_regions_f = std::async(
-		    std::launch::async, [this, policy, &map, points = get<0>(cloud), &transform]() {
-			    if (directions_.empty()) {
-				    std::cerr << "No config present, cannot find misses\n";
-				    return;
-			    }
+		auto const t0 = std::chrono::high_resolution_clock::now();
 
-			    if (directions_.size() != points.size()) {
-				    std::cerr << "Present config differs from `cloud`, cannot find misses\n";
-				    return;
-			    }
+		if (!valid(cloud, true)) {
+			return;
+		}
 
-			    auto const t1 = std::chrono::high_resolution_clock::now();
-			    misses(policy, map, points, transform);
-			    auto const t2 = std::chrono::high_resolution_clock::now();
-			    voidRegions(policy, map, points, transform);
-			    auto const t3 = std::chrono::high_resolution_clock::now();
-			    std::chrono::duration<double, std::milli> const misses_ms       = t2 - t1;
-			    std::chrono::duration<double, std::milli> const void_regions_ms = t3 - t2;
-			    std::cout << "Misses:       " << misses_ms.count() << " ms\n";
-			    std::cout << "Void Regions: " << void_regions_ms.count() << " ms\n";
-		    });
+		auto const t1 = std::chrono::high_resolution_clock::now();
 
-		filterDistanceInPlace(cloud, Vec<Dim, T>{}, static_cast<T>(this->min_distance),
-		                      static_cast<T>(this->max_distance), true);
-		transformInPlace(transform, get<0>(cloud));
-		this->create(map, get<0>(cloud), this->hit_depth, hit_nodes_);
+		fillDistances(policy, map, get<0>(cloud));
 
-		misses_and_void_regions_f.wait();
+		auto const t2 = std::chrono::high_resolution_clock::now();
 
-		std::cout << "Misses:       " << miss_coords_.size() << '\n';
-		std::cout << "Void Regions: " << void_region_coords_.size() << '\n';
+		this->hits(policy, map, cloud, transform);
 
-		this->create(policy, map, miss_coords_, miss_nodes_);
-		this->create(policy, map, void_region_coords_, void_region_nodes_);
+		auto const t3 = std::chrono::high_resolution_clock::now();
 
-		this->insertMisses(policy, map, miss_nodes_, miss_counts_);
-		this->insertHits(policy, map, hit_nodes_, cloud);
-		this->insertVoidRegions(policy, map, void_region_nodes_);
-		// TODO: What should this be?
-		// this->insertVoidRegionsSecondary(policy, map, miss_nodes_);
+		bool with_count = true;  // TODO: Fill in some way
+		findMisses(policy, map, transform, with_count);
+
+		auto const t4 = std::chrono::high_resolution_clock::now();
+
+		this->misses(policy, map);
+
+		auto const t5 = std::chrono::high_resolution_clock::now();
 
 		// TODO: Implement
 
@@ -210,15 +211,32 @@ class InverseIntegrator : public Integrator<Dim>
 			map.modifiedPropagate(policy);
 		}
 
-		miss_coords_.clear();
-		miss_counts_.clear();
-		void_region_coords_.clear();
+		auto const t6 = std::chrono::high_resolution_clock::now();
+
+		std::chrono::duration<double, std::milli> const valid_ms          = t1 - t0;
+		std::chrono::duration<double, std::milli> const fill_distances_ms = t2 - t1;
+		std::chrono::duration<double, std::milli> const hits_ms           = t3 - t2;
+		std::chrono::duration<double, std::milli> const find_misses_ms    = t4 - t3;
+		std::chrono::duration<double, std::milli> const misses_ms         = t5 - t4;
+		std::chrono::duration<double, std::milli> const propagate_ms      = t6 - t5;
+		std::chrono::duration<double, std::milli> const total_ms          = t6 - t0;
+
+		std::cout << "Valid:          " << valid_ms.count() << " ms\n";
+		std::cout << "Fill distances: " << fill_distances_ms.count() << " ms\n";
+		std::cout << "Hits:           " << hits_ms.count() << " ms\n";
+		std::cout << "Find misses:    " << find_misses_ms.count() << " ms\n";
+		std::cout << "Misses:         " << misses_ms.count() << " ms\n";
+		std::cout << "Propagate:      " << propagate_ms.count() << " ms\n";
+		std::cout << "Total:          " << total_ms.count() << " ms\n\n";
 	}
 
 	template <class Map, class T>
 	void generateConfig(Map const& map, std::vector<Vec<Dim, T>> const& complete_cloud)
 	{
 		generateDirections(complete_cloud);
+		if (unordered_mode) {
+			generateDirToIndex();
+		}
 		generateConfig(map);
 	}
 
@@ -228,35 +246,34 @@ class InverseIntegrator : public Integrator<Dim>
 		generateConfig(map, get<0>(complete_cloud));
 	}
 
-	template <class Map>
-	void generateConfig(Map const& map, double horizontal_angle_min,
-	                    double horizontal_angle_max, double horizontal_angle_increment,
-	                    double vertical_angle_min = 0.0, double vertical_angle_max = 0.0,
-	                    double    vertical_angle_increment = 0.0,
-	                    ScanOrder scan_order               = ScanOrder::HORIZONTAL_MAJOR)
-	{
-		generateDirections(horizontal_angle_min, horizontal_angle_max,
-		                   horizontal_angle_increment, vertical_angle_min, vertical_angle_max,
-		                   vertical_angle_increment, scan_order);
-		generateConfig(map);
-	}
+	// template <class Map>
+	// void generateConfig(Map const& map, double horizontal_angle_min,
+	//                     double horizontal_angle_inc, unsigned horizontal_num,
+	//                     double vertical_angle_min = 0.0, double vertical_angle_inc = 0.0,
+	//                     unsigned  vertical_num = 1u,
+	//                     ScanOrder scan_order   = ScanOrder::HORIZONTAL_MAJOR)
+	// {
+	// 	generateDirections(horizontal_angle_min, horizontal_angle_inc, horizontal_num,
+	// 	                   vertical_angle_min, vertical_angle_inc, vertical_num,
+	// scan_order); 	generateConfig(map);
+	// }
 
-	template <class Map, class T>
-	bool generateConfigEstimateStructure(Map const&                      map,
-	                                     std::vector<Vec<Dim, T>> const& cloud)
-	{
-		if (!generateDirectionsEstimateStructure(cloud)) {
-			return false;
-		}
-		generateConfig(map);
-	}
+	// template <class Map, class T>
+	// bool generateConfigEstimateStructure(Map const&                      map,
+	//                                      std::vector<Vec<Dim, T>> const& cloud)
+	// {
+	// 	if (!generateDirectionsEstimateStructure(cloud)) {
+	// 		return false;
+	// 	}
+	// 	generateConfig(map);
+	// }
 
-	template <class Map, class T, class... Rest>
-	bool generateConfigEstimateStructure(Map const&                         map,
-	                                     PointCloud<Dim, T, Rest...> const& cloud)
-	{
-		return generateConfigEstimateStructure(map, get<0>(cloud));
-	}
+	// template <class Map, class T, class... Rest>
+	// bool generateConfigEstimateStructure(Map const&                         map,
+	//                                      PointCloud<Dim, T, Rest...> const& cloud)
+	// {
+	// 	return generateConfigEstimateStructure(map, get<0>(cloud));
+	// }
 
 	void loadConfig(std::filesystem::path const& file)
 	{
@@ -313,6 +330,52 @@ class InverseIntegrator : public Integrator<Dim>
 	// }
 
  private:
+	template <class T, class... Rest>
+	[[nodiscard]] bool valid(PointCloud<Dim, T, Rest...> const& cloud,
+	                         bool                               print_if_not_valid) const
+	{
+		if (directions_.empty()) {
+			if (print_if_not_valid) {
+				std::cerr << "No config present. A config can be generated by using one of the "
+				             "`generateConfig` or `generateConfigEstimateStructure` functions.\n";
+			}
+			return false;
+		}
+
+		if (!unordered_mode && directions_.size() != cloud.size()) {
+			// TODO: Add that it is required for ordered_mode
+			if (print_if_not_valid) {
+				std::cerr << "The generated config does not match the structure of `cloud`. Keep "
+				             "the structure the same for every cloud passed in; otherwise, "
+				             "generate a new config using one of the `generateConfig` or "
+				             "`generateConfigEstimateStructure` functions.\n";
+			}
+			return false;
+		}
+
+		return true;
+	}
+
+	void generateDirToIndex()
+	{
+		for (unsigned i{}; directions_.size() > i; ++i) {
+			auto dir = directions_[i];
+			if (isnan(dir)) {
+				continue;
+			}
+
+			// dir_to_index_.emplace(cast<float>(dir), i);
+			// dir *= round(dir * unordered_dir_factor);
+			std::uint64_t dir_i{};
+			for (unsigned j{}; Dim > j; ++j) {
+				dir_i += static_cast<std::uint64_t>(
+				             std::round((1.0 + dir[j]) * (unordered_dir_factor / 2.0)))
+				         << (j * 20u);
+			}
+			dir_to_index_[dir_i] = i;
+		}
+	}
+
 	template <class T>
 	void generateDirections(std::vector<Vec<Dim, T>> const& points)
 	{
@@ -343,47 +406,49 @@ class InverseIntegrator : public Integrator<Dim>
 		}
 	}
 
-	void generateDirections(double hor_angle_min, double hor_angle_max,
-	                        double hor_angle_inc, double ver_angle_min,
-	                        double ver_angle_max, double ver_angle_inc,
+	void generateDirections(double horizontal_angle_min, double horizontal_angle_inc,
+	                        unsigned horizontal_num, double vertical_angle_min,
+	                        double vertical_angle_inc, unsigned vertical_num,
 	                        ScanOrder scan_order)
 	{
 		directions_.clear();
 
 		// NOTE: Should it be horizontal or azimuth?
 
-		if constexpr (2 == Dim) {
-			if (0.0 != ver_angle_min || 0.0 != ver_angle_max || 0.0 != ver_angle_inc ||
-			    ScanOrder::HORIZONTAL_MAJOR != scan_order) {
-				std::cerr << "2 dimensional integrator only supports horizontal, vertical "
-				             "parameters will be ignored\n";
-			}
+		// TODO: Implement
 
-			for (auto yaw = hor_angle_min; hor_angle_max >= yaw; yaw += hor_angle_inc) {
-				directions_.emplace_back(std::cos(yaw), std::sin(yaw));
-			}
-		} else if constexpr (3 == Dim) {
-			if (ScanOrder::HORIZONTAL_MAJOR == scan_order) {
-				for (auto yaw = hor_angle_min; hor_angle_max >= yaw; yaw += hor_angle_inc) {
-					for (auto pitch = ver_angle_min; ver_angle_max >= pitch;
-					     pitch += ver_angle_inc) {
-						directions_.emplace_back(std::cos(yaw) * std::cos(pitch),
-						                         std::sin(yaw) * std::cos(pitch), std::sin(pitch));
-					}
-				}
-			} else {
-				for (auto pitch = ver_angle_min; ver_angle_max >= pitch; pitch += ver_angle_inc) {
-					for (auto yaw = hor_angle_min; hor_angle_max >= yaw; yaw += hor_angle_inc) {
-						directions_.emplace_back(std::cos(yaw) * std::cos(pitch),
-						                         std::sin(yaw) * std::cos(pitch), std::sin(pitch));
-					}
-				}
-			}
+		// if constexpr (2 == Dim) {
+		// 	if (0.0 != ver_angle_min || 0.0 != ver_angle_max || 0.0 != ver_angle_inc ||
+		// 	    ScanOrder::HORIZONTAL_MAJOR != scan_order) {
+		// 		std::cerr << "2 dimensional integrator only supports horizontal, vertical "
+		// 		             "parameters will be ignored\n";
+		// 	}
 
-			std::cout << directions_.size() << '\n';
-		} else {
-			// TODO: What to do?
-		}
+		// 	for (auto yaw = hor_angle_min; hor_angle_max >= yaw; yaw += hor_angle_inc) {
+		// 		directions_.emplace_back(std::cos(yaw), std::sin(yaw));
+		// 	}
+		// } else if constexpr (3 == Dim) {
+		// 	if (ScanOrder::HORIZONTAL_MAJOR == scan_order) {
+		// 		for (auto yaw = hor_angle_min; hor_angle_max >= yaw; yaw += hor_angle_inc) {
+		// 			for (auto pitch = ver_angle_min; ver_angle_max >= pitch;
+		// 			     pitch += ver_angle_inc) {
+		// 				directions_.emplace_back(std::cos(yaw) * std::cos(pitch),
+		// 				                         std::sin(yaw) * std::cos(pitch), std::sin(pitch));
+		// 			}
+		// 		}
+		// 	} else {
+		// 		for (auto pitch = ver_angle_min; ver_angle_max >= pitch; pitch += ver_angle_inc)
+		// { 			for (auto yaw = hor_angle_min; hor_angle_max >= yaw; yaw += hor_angle_inc) {
+		// 				directions_.emplace_back(std::cos(yaw) * std::cos(pitch),
+		// 				                         std::sin(yaw) * std::cos(pitch), std::sin(pitch));
+		// 			}
+		// 		}
+		// 	}
+
+		// 	std::cout << directions_.size() << '\n';
+		// } else {
+		// 	// TODO: What to do?
+		// }
 	}
 
 	template <class T>
@@ -429,20 +494,37 @@ class InverseIntegrator : public Integrator<Dim>
 	template <class Map>
 	void generateConfig(Map const& map)
 	{
-		auto print_f = [start = std::chrono::high_resolution_clock::now(),
-		                last  = std::chrono::high_resolution_clock::now()](
-		                   std::string const& task, unsigned task_num, std::size_t task_step,
-		                   std::size_t task_total_steps, auto task_start) mutable {
-			auto const now = std::chrono::high_resolution_clock::now();
-			if (0.1 > std::chrono::duration<double>(now - last).count()) {
+		auto print_f = [start           = std::chrono::high_resolution_clock::now(),
+		                last_printed    = std::chrono::high_resolution_clock::now(),
+		                last_task       = std::string(),
+		                last_task_start = std::chrono::high_resolution_clock::now(),
+		                task_num        = 0u](std::string const& task, std::size_t task_step,
+		                               std::size_t task_total_steps) mutable {
+			auto const                          now = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> const total_time = now - start;
+
+			if (last_task != task) {
+				if ("" != last_task) {
+					std::chrono::duration<double> const task_time = now - last_task_start;
+					std::printf("Finished <<< %s [%.1fs]                 \n", last_task.c_str(),
+					            task_time.count());
+				}
+				if ("" != task) {
+					++task_num;
+					std::printf("Starting >>> %s\n", task.c_str());
+				}
+				last_task       = task;
+				last_task_start = now;
+			}
+
+			std::chrono::duration<double> const task_time = now - last_task_start;
+
+			if (0.1 > std::chrono::duration<double>(now - last_printed).count()) {
 				return;
 			}
-			last = now;
+			last_printed = now;
 
-			std::chrono::duration<double> const total_time = now - start;
-			std::chrono::duration<double> const task_time  = now - task_start;
-
-			std::printf("[%.1fs] [%d/4 complete] [%s %u%% - %.1fs]\r", total_time.count(),
+			std::printf("[%.1fs] [%d/7 complete] [%s %u%% - %.1fs]\r", total_time.count(),
 			            task_num - 1, task.c_str(), (100 * task_step) / task_total_steps,
 			            task_time.count());
 			std::fflush(stdout);
@@ -450,209 +532,491 @@ class InverseIntegrator : public Integrator<Dim>
 
 		std::printf("Generating Inverse Config\n");
 
-		auto inv_map = inverseMap(map.length(this->miss_depth),
-		                          map.numDepthLevels() - this->miss_depth, print_f);
+		auto const t0      = std::chrono::high_resolution_clock::now();
+		auto       inv_map = inverseMap(map.length(this->miss_depth),
+		                                map.numDepthLevels() - this->miss_depth, print_f);
 		generateInverseStructure(inv_map, print_f);
+		auto const                          t1   = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> const time = t1 - t0;
+
+		print_f("", 1, 1);
+
+		std::printf("Generated Inverse Config [%.1fs]        \n", time.count());
+
+		info_and_lut_.printMemoryUsage();
 	}
 
 	template <class PrintFun>
 	[[nodiscard]] Map<Dim, detail::InverseMap> inverseMap(
 	    Vec<Dim, double> const& leaf_node_length, unsigned num_depth_levels,
-	    PrintFun print_f) const
+	    PrintFun& print_f) const
 	{
-		std::string task = "InverseMap:build";
-		std::printf("Starting >>> %s\n", task.c_str());
-		auto start = std::chrono::high_resolution_clock::now();
-
 		Map<Dim, detail::InverseMap> map(leaf_node_length, num_depth_levels);
+		// This is needed in order to be able to query while adding to the map
+		Map<Dim, detail::InverseMap> ghost_map(leaf_node_length, num_depth_levels);
 
 		std::vector<TreeCode<Dim>> codes;
-		for (std::size_t i{}; directions_.size() > i; ++i) {
-			print_f(task, 1, i, directions_.size(), start);
+		std::vector<TreeIndex>     nodes;
+		std::vector<TreeIndex>     seen_nodes;
+		codes.reserve(1'000'000);
+		nodes.reserve(1'000'000);
+		std::mutex         mutex;
+		auto const         main_thread = std::this_thread::get_id();
+		std::atomic_size_t print_index{};
+		// FIXME: Take policy instead
+		for_each(execution::par, directions_.begin(), directions_.end(),
+		         [&](auto const& dir) {
+			         if (std::this_thread::get_id() == main_thread) {
+				         print_f("InverseMap:build", print_index, directions_.size());
+			         }
+			         ++print_index;
 
-			auto dir = directions_[i];
+			         if (isnan(dir)) {
+				         return;
+			         }
 
-			if (isnan(dir)) {
-				continue;
+			         Vec<Dim, float> start(this->min_distance * dir);
+			         Vec<Dim, float> end((this->max_distance + this->distance_offset) * dir);
+			         std::variant<LineSegment<Dim, float>, Frustum<Dim, float>> geometry;
+
+			         switch (sensor_type) {
+				         case SensorType::RAY: {
+					         geometry = LineSegment<Dim, float>(start, end);
+					         break;
+				         }
+				         case SensorType::FRUSTUM: {
+					         // TODO: Implement
+					         geometry = Frustum<Dim, float>();
+					         break;
+				         }
+			         }
+
+			         thread_local std::vector<TreeCode<Dim>> local_codes;
+			         std::visit(
+			             [&ghost_map](auto&& g) {
+				             auto pred = pred::PureLeaf() && pred::Intersects(g);
+				             for (auto const& n : ghost_map.query(pred, false)) {
+					             local_codes.push_back(n.code);
+				             }
+			             },
+			             geometry);
+
+			         {
+				         std::scoped_lock lock(mutex);
+				         codes.insert(codes.end(), local_codes.begin(), local_codes.end());
+			         }
+			         local_codes.clear();
+
+			         if (main_thread == std::this_thread::get_id()) {
+				         {
+					         std::scoped_lock lock(mutex);
+					         std::swap(codes, local_codes);
+				         }
+				         nodes.resize(local_codes.size());
+				         map.create(local_codes, nodes.begin());
+				         std::for_each(nodes.begin(), nodes.end(), [&map, &seen_nodes](auto n) {
+					         if (0u == map.inverseCount(n)++) {
+						         seen_nodes.push_back(n);
+					         }
+				         });
+				         local_codes.clear();
+			         }
+		         });
+
+		nodes.resize(codes.size());
+		map.create(execution::par, codes, nodes.begin());
+		std::for_each(nodes.begin(), nodes.end(), [&map, &seen_nodes](auto n) {
+			if (0u == map.inverseCount(n)++) {
+				seen_nodes.push_back(n);
 			}
+		});
 
-			codes.clear();
-
-			Vec<Dim, float> start(this->min_distance * dir);
-			// TODO: Add `this->distance_offset`?
-			Vec<Dim, float> end(this->max_distance * dir);
-			std::variant<LineSegment<Dim, float>, Frustum<Dim, float>> geometry;
-
-			switch (sensor_type) {
-				case SensorType::RAY: {
-					geometry = LineSegment<Dim, float>(start, end);
-					break;
+		if (conservative_freeing) {
+			std::atomic_size_t print_index{};
+			std::size_t        print_total = seen_nodes.size();
+			auto const         main_thread = std::this_thread::get_id();
+			for_each(execution::par, seen_nodes.begin(), seen_nodes.end(), [&](auto n) {
+				if (std::this_thread::get_id() == main_thread) {
+					print_f("InverseMap:postprocess", print_index, print_total);
 				}
-				case SensorType::FRUSTUM: {
-					// TODO: Implement
-					geometry = Frustum<Dim, float>();
-					break;
+				++print_index;
+
+				auto key = map.key(n);
+				auto k   = key;
+				if constexpr (2 == Dim) {
+					for (k.y = key.y - 1; key.y + 1 >= k.y; ++k.y) {
+						for (k.x = key.x - 1; key.x + 1 >= k.x; ++k.x) {
+							if (0u == map.inverseCount(k)) {
+								// NOTE: Index means that it should be prune in the next step
+								map.inverseIndex(n) = std::numeric_limits<std::uint_fast32_t>::max();
+								return;
+							}
+						}
+					}
+				} else if constexpr (3 == Dim) {
+					for (k.z = key.z - 1; key.z + 1 >= k.z; ++k.z) {
+						for (k.y = key.y - 1; key.y + 1 >= k.y; ++k.y) {
+							for (k.x = key.x - 1; key.x + 1 >= k.x; ++k.x) {
+								if (0u == map.inverseCount(k)) {
+									// NOTE: Index means that it should be prune in the next step
+									map.inverseIndex(n) = std::numeric_limits<std::uint_fast32_t>::max();
+									return;
+								}
+							}
+						}
+					}
+				} else {
+					// TODO: Error
 				}
-			}
+			});
 
-			std::visit(
-			    [&map, &codes](auto&& geometry) {
-				    for (auto const& n :
-				         map.query(pred::PureLeaf() && pred::Intersects(geometry), false)) {
-					    codes.push_back(n.code);
-				    }
-			    },
-			    geometry);
+			print_index = {};
+			for_each(execution::par, seen_nodes.begin(), seen_nodes.end(), [&](auto n) {
+				if (std::this_thread::get_id() == main_thread) {
+					print_f("InverseMap:prune", print_index, print_total);
+				}
+				++print_index;
 
-			auto const nodes = map.create(codes);
-			for (auto n : nodes) {
-				map.inverseIndices(n).push_back(i);
-				// TODO: What should this be?
-				double dist            = norm(map.center(n)) + norm(map.halfLength(0));
-				map.inverseDistance(n) = dist * dist;
-			}
+				if (std::numeric_limits<std::uint_fast32_t>::max() == map.inverseIndex(n)) {
+					map.inverseCount(n) = 0u;
+				}
+			});
+		} else {
+			print_f("InverseMap:postprocess", 0, 1);
+			print_f("InverseMap:prune", 0, 1);
 		}
 
-		auto                          now       = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> task_time = now - start;
-		std::printf("Finished <<< %s [%.1fs]                 \n", task.c_str(),
-		            task_time.count());
-
-		task = "InverseMap:propagate";
-		std::printf("Starting >>> %s\n", task.c_str());
-		start = std::chrono::high_resolution_clock::now();
-
+		// TODO: Propagate instead of below
+		print_f("InverseMap:propagate", 0, 1);
 		map.propagate(false);
-
-		now       = std::chrono::high_resolution_clock::now();
-		task_time = now - start;
-		std::printf("Finished <<< %s [%.1fs]                 \n", task.c_str(),
-		            task_time.count());
-
-		task = "InverseMap:indexing";
-		std::printf("Starting >>> %s\n", task.c_str());
-		start = std::chrono::high_resolution_clock::now();
-
-		std::uint32_t index{};
-		std::size_t   total = map.size();
-		for (auto const& n : map.query(pred::PureLeaf())) {
-			print_f(task, 3, index, total, start);
-
-			if (map.inverseIndices(n.index).empty()) {
-				continue;
-			}
-			map.inverseIndex(n.index) = index++;
-		}
-
-		now       = std::chrono::high_resolution_clock::now();
-		task_time = now - start;
-		std::printf("Finished <<< %s [%.1fs]                 \n", task.c_str(),
-		            task_time.count());
+		print_f("InverseMap:propagate", 1, 1);
 
 		return map;
 	}
 
 	template <class PrintFun>
-	void generateInverseStructure(Map<Dim, detail::InverseMap> const& inv_map,
-	                              PrintFun                            print_f) const
+	void generateInverseStructure(Map<Dim, detail::InverseMap>& map, PrintFun& print_f)
 	{
-		std::string task = "InverseStructure";
-		std::printf("Starting >>> %s\n", task.c_str());
-		auto start = std::chrono::high_resolution_clock::now();
+		info_and_lut_.clear();
 
-		info_and_lut_middle_.resize(inverse_levels_ - 2);
-
-		info_and_lut_top_.info.clear();
-		info_and_lut_top_.lut.clear();
-		info_and_lut_bottom_.info.clear();
-		info_and_lut_bottom_.lut.clear();
-		info_and_lut_bottom_.lut_void_region.clear();
-		for (auto& e : info_and_lut_middle_) {
-			e.info.clear();
-			e.lut.clear();
+		std::array<std::size_t, InverseLevels> info_size{};
+		std::size_t                            leaf_lut_size{};
+		for (auto n : map.query(pred::Depth() < InverseLevels)) {
+			if (0u == map.inverseCount(n.index)) {
+				continue;
+			}
+			++info_size[map.depth(n)];
+			if (0u == map.depth(n)) {
+				leaf_lut_size += map.inverseCount(n.index);
+			}
 		}
 
-		std::size_t print_index{};
-		std::size_t print_total = inv_map.size();
-		for (auto n : inv_map.query(pred::Depth() < inverse_levels_, true, false)) {
-			print_f(task, 4, print_index++, print_total, start);
+		for (unsigned d{}; info_size.size() > d; ++d) {
+			info_and_lut_.reserveInfo(info_size[d], d);
+		}
+		info_and_lut_.resizeLut(leaf_lut_size, 0u);
 
-			auto const& indices = inv_map.inverseIndices(n.index);
-
-			if (indices.empty()) {
+		std::uint_fast32_t index{};
+		std::uint32_t      first_leaf_lut{};
+		std::size_t        print_index{};
+		std::size_t        print_total = map.size();
+		for (auto n : map.query(pred::Depth() < InverseLevels)) {
+			print_f("InverseStructure:build", print_index++, print_total);
+			if (0u == map.inverseCount(n.index)) {
 				continue;
 			}
 
-			auto  center   = inv_map.center(n.code);
-			float distance = inv_map.inverseDistance(n.index);
+			auto center = map.center(n);
+			auto depth  = map.depth(n);
 
-			std::vector<std::uint32_t>* lut;
+			if (0u == depth) {  // Leaf layer
+				// NOTE: Minimum distance, because we remove if it overlaps with hits anyways
+				double dist    = norm(center) + norm(map.length(0u));
+				float  dist_sq = static_cast<float>(dist * dist);
+				info_and_lut_.leafEmplaceBack(center, dist_sq, first_leaf_lut);
+				first_leaf_lut += map.inverseCount(n.index);
+				map.inverseIndex(n.index) = index++;
+				map.inverseCount(n.index) = 0u;
+			} else {  // All other layers
+				info_and_lut_.emplaceBack(depth, center, info_and_lut_.infoSize(depth - 1u));
+			}
+		}
 
-			auto depth = inv_map.depth(n);
-			if (0 == depth) {
-				// Bottom layer
-				auto& info            = info_and_lut_bottom_.info;
-				lut                   = &info_and_lut_bottom_.lut;
-				auto& lut_void_region = info_and_lut_bottom_.lut_void_region;
+		{
+			auto const         main_thread = std::this_thread::get_id();
+			std::atomic_size_t print_index{};
+			// FIXME: Take policy instead
+			for_each(execution::par, std::size_t(0u), directions_.size(), [&](std::size_t i) {
+				if (std::this_thread::get_id() == main_thread) {
+					print_f("InverseStructure:fill", print_index, directions_.size());
+				}
+				++print_index;
 
-				info.emplace_back(center, distance, lut->size(), lut_void_region.size());
+				auto dir = directions_[i];
 
-				Vec<Dim, float> half_length =
-				    cast<float>(inv_map.length(0) * (void_region_distance_ / 2.0));
-				AABB<Dim, float> aabb(center - half_length, center + half_length);
-				for (auto m : inv_map.query(pred::PureLeaf() && pred::Intersects(aabb), false)) {
-					if (n.index == m.index) {
+				if (isnan(dir)) {
+					return;
+				}
+
+				Vec<Dim, float> start(this->min_distance * dir);
+				Vec<Dim, float> end((this->max_distance + this->distance_offset) * dir);
+				std::variant<LineSegment<Dim, float>, Frustum<Dim, float>> geometry;
+
+				switch (sensor_type) {
+					case SensorType::RAY: {
+						geometry = LineSegment<Dim, float>(start, end);
+						break;
+					}
+					case SensorType::FRUSTUM: {
+						// TODO: Implement
+						geometry = Frustum<Dim, float>();
+						break;
+					}
+				}
+
+				thread_local std::vector<TreeCode<Dim>> codes;
+				thread_local std::vector<TreeIndex>     nodes;
+				std::visit(
+				    [&map](auto&& g) {
+					    auto pred = pred::PureLeaf() && pred::Intersects(g);
+					    for (auto const& n : map.query(pred, false)) {
+						    codes.push_back(n.code);
+					    }
+				    },
+				    geometry);
+
+				nodes.resize(codes.size());
+				// NOTE: This will not "create" any nodes here since they have already been
+				// created, so no "ghost" map needed.
+				map.create(codes, nodes.begin());
+				for (auto n : nodes) {
+					if (std::numeric_limits<std::uint_fast32_t>::max() == map.inverseIndex(n)) {
 						continue;
 					}
-					lut_void_region.push_back(inv_map.inverseIndex(m.index));
+					auto it =
+					    info_and_lut_.beginLut(map.inverseIndex(n), 0u) + map.inverseCount(n)++;
+					*it = i;
 				}
-			} else if (inverse_levels_ - 1 == depth) {
-				// Top layer
-				auto& info = info_and_lut_top_.info;
-				lut        = &info_and_lut_top_.lut;
+				codes.clear();
+			});
+		}
 
-				std::uint32_t first_child = info_and_lut_middle_.empty()
-				                                ? info_and_lut_bottom_.info.size()
-				                                : info_and_lut_middle_.back().info.size();
-				std::uint32_t num_children{};
-				if (inv_map.isParent(n.index)) {
-					auto block = inv_map.children(n.index);
-					for (std::size_t i{}; inv_map.branchingFactor() > i; ++i) {
-						num_children += inv_map.inverseIndices(TreeIndex(block, i)).empty() ? 0 : 1;
+		// NOTE: Add one extra to make it possible to find last
+		info_and_lut_.leafEmplaceBack(Vec<Dim, float>(), 0.0f, info_and_lut_.lutSize(0u));
+
+		print_index = {};
+		print_total = {};
+		for (unsigned d = 1u; InverseLevels > d; ++d) {
+			print_total += info_and_lut_.infoSize(d);
+		}
+
+		std::vector<std::uint32_t> tmp_lut;
+		for (unsigned depth = 1u; InverseLevels > depth; ++depth) {
+			std::uint32_t size = info_and_lut_.infoSize(depth);
+			for (std::uint32_t index{}; size > index; ++index) {
+				print_f("InverseStructure:propagate", print_index++, print_total);
+				auto first = info_and_lut_.firstChild(index, depth);
+				auto last  = size - 1 > index ? info_and_lut_.lastChild(index, depth)
+				                              : (info_and_lut_.infoSize(depth - 1u) - 1);
+
+				bool  all_children = map.branchingFactor() == (last - first);
+				float min_dist     = std::numeric_limits<float>::max();
+				float max_dist     = std::numeric_limits<float>::lowest();
+				tmp_lut.clear();
+				for (; last > first; ++first) {
+					auto first_lut = info_and_lut_.beginLut(first, depth - 1u);
+					auto last_lut  = info_and_lut_.endLut(first, depth - 1u);
+					tmp_lut.insert(tmp_lut.end(), first_lut, last_lut);
+					if (1u == depth) {
+						min_dist = std::min(min_dist, info_and_lut_.distance(first));
+						max_dist = std::max(max_dist, info_and_lut_.distance(first));
+					} else {
+						min_dist = std::min(min_dist, info_and_lut_.minDistance(first, depth - 1u));
+						max_dist = std::max(max_dist, info_and_lut_.maxDistance(first, depth - 1u));
 					}
 				}
+				std::sort(tmp_lut.begin(), tmp_lut.end());
+				tmp_lut.erase(std::unique(tmp_lut.begin(), tmp_lut.end()), tmp_lut.end());
 
-				info.emplace_back(center, distance, lut->size(), lut->size() + indices.size(),
-				                  first_child, first_child + num_children);
-			} else {
-				// Middle layer
-				auto& info = info_and_lut_middle_[depth - 1].info;
-				lut        = &info_and_lut_middle_[depth - 1].lut;
-
-				std::uint32_t first_child = 1 == depth
-				                                ? info_and_lut_bottom_.info.size()
-				                                : info_and_lut_middle_[depth - 2].info.size();
-
-				info.emplace_back(center, distance, lut->size(), first_child);
+				info_and_lut_.minDistance(index, depth) = min_dist;
+				info_and_lut_.maxDistance(index, depth) = max_dist;
+				info_and_lut_.firstLut(index, depth)    = info_and_lut_.lutSize(depth);
+				info_and_lut_.count(index, depth)       = all_children ? tmp_lut.size() : 0u;
+				info_and_lut_.lutInsert(depth, tmp_lut);
 			}
 
-			lut->insert(lut->end(), indices.begin(), indices.end());
+			// NOTE: Add one extra to make it possible to find last
+			info_and_lut_.emplaceBack(depth, Vec<Dim, float>(), 0.0f, 0.0f,
+			                          info_and_lut_.infoSize(depth - 1u) - 1,
+			                          info_and_lut_.lutSize(depth), 0u);
 		}
 
-		info_and_lut_top_.info.shrink_to_fit();
-		info_and_lut_top_.lut.shrink_to_fit();
-		info_and_lut_bottom_.info.shrink_to_fit();
-		info_and_lut_bottom_.lut.shrink_to_fit();
-		info_and_lut_bottom_.lut_void_region.shrink_to_fit();
-		for (auto& e : info_and_lut_middle_) {
-			e.info.shrink_to_fit();
-			e.lut.shrink_to_fit();
-		}
+		info_and_lut_.shrinkToFit();
+	}
 
-		auto                          now       = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> task_time = now - start;
-		std::printf("Finished <<< %s [%.1fs]                 \n", task.c_str(),
-		            task_time.count());
+	/**************************************************************************************
+	|                                                                                     |
+	|                                      Distances                                      |
+	|                                                                                     |
+	**************************************************************************************/
+
+	template <class Map, class T>
+	void fillDistances(Map const& map, std::vector<Vec<Dim, T>> const& points) const
+	{
+		if (unordered_mode) {
+			fillDistancesUnordered(map, points);
+		} else {
+			fillDistancesOrdered(map, points);
+		}
+	}
+
+	template <class Map, class T>
+	void fillDistancesOrdered(Map const& map, std::vector<Vec<Dim, T>> const& points) const
+	{
+		// TODO: Add distance offset here
+
+		distances_.resize(points.size());
+		float nan = fillDistanceNaNValue(map);
+		std::transform(
+		    points.begin(), points.end(), distances_.begin(),
+		    [nan](auto const& point) { return isnan(point) ? nan : normSquared(point); });
+	}
+
+	template <class Map, class T>
+	void fillDistancesUnordered(Map const&                      map,
+	                            std::vector<Vec<Dim, T>> const& points) const
+	{
+		// TODO: Add distance offset here
+
+		// float nan = fillDistanceNaNValue(map);
+		// distances_.assign(directions_.size(), nan);
+
+		// for (auto p : points) {
+		// 	if (isnan(p)) {
+		// 		continue;
+		// 	}
+
+		// 	auto ds = normSquared(p);
+		// 	p /= std::sqrt(ds);
+
+		// 	auto [v, d] = dir_to_index_.nearestPoint(p);
+		// 	if (nullptr != v && unordered_max_dist >= d) {
+		// 		// TODO: Should it take the minimum?
+		// 		distances_[v->second] = ds;
+		// 	}
+		// }
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void fillDistances(ExecutionPolicy&& policy, Map const& map,
+	                   std::vector<Vec<Dim, T>> const& points) const
+	{
+		if (unordered_mode) {
+			fillDistancesUnordered(std::forward<ExecutionPolicy>(policy), map, points);
+		} else {
+			fillDistancesOrdered(std::forward<ExecutionPolicy>(policy), map, points);
+		}
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void fillDistancesOrdered(ExecutionPolicy&& policy, Map const& map,
+	                          std::vector<Vec<Dim, T>> const& points) const
+	{
+		// TODO: Add distance offset here
+
+		assert(directions_.size() == points.size());
+
+		distances_.resize(points.size());
+		float nan = fillDistanceNaNValue(map);
+		transform(std::forward<ExecutionPolicy>(policy), points.begin(), points.end(),
+		          distances_.begin(),
+		          [nan](auto const& p) { return isnan(p) ? nan : normSquared(p); });
+	}
+
+	template <
+	    class ExecutionPolicy, class Map, class T,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void fillDistancesUnordered(ExecutionPolicy&& policy, Map const& map,
+	                            std::vector<Vec<Dim, T>> const& points) const
+	{
+		// TODO: Add distance offset here
+
+		float nan = fillDistanceNaNValue(map);
+		distances_.assign(directions_.size(), nan);
+
+		std::vector<std::pair<unsigned, float>> index_and_dist(points.size());
+		transform(
+		    std::forward<ExecutionPolicy>(policy), points.begin(), points.end(),
+		    index_and_dist.begin(), [this](auto const& p) {
+			    std::pair<unsigned, float> ret(-1, std::numeric_limits<float>::quiet_NaN());
+
+			    if (!isnan(p) && Vec<Dim, T>{} != p) {
+				    auto   ds = normSquared(p);
+				    double d  = std::sqrt(static_cast<double>(ds));
+
+				    std::uint64_t dir_i{};
+				    for (unsigned j{}; Dim > j; ++j) {
+					    dir_i += static_cast<std::uint64_t>(
+					                 std::round((1.0 + p[j] / d) * (unordered_dir_factor / 2.0)))
+					             << (j * 20u);
+				    }
+
+				    if (auto it = dir_to_index_.find(dir_i); dir_to_index_.end() != it) {
+					    ret.first  = it->second;
+					    ret.second = ds;
+				    }
+			    }
+
+			    return ret;
+		    });
+
+		// std::vector<std::pair<unsigned, float>> index_and_dist(points.size());
+		// transform(std::forward<ExecutionPolicy>(policy), points.begin(), points.end(),
+		//           index_and_dist.begin(), [this](auto p) {
+		// 	          std::pair<unsigned, float> ret(-1,
+		// 	                                         std::numeric_limits<float>::quiet_NaN());
+
+		// 	          if (!isnan(p)) {
+		// 		          auto ds = normSquared(p);
+		// 		          p /= std::sqrt(ds);
+
+		// 		          auto [v, d] = dir_to_index_.nearestPoint(p);
+		// 		          if (nullptr != v && unordered_max_dist >= d) {
+		// 			          ret.first  = v->second;
+		// 			          ret.second = ds;
+		// 		          }
+		// 	          }
+
+		// 	          return ret;
+		//           });
+
+		for (auto [i, ds] : index_and_dist) {
+			if (std::isnan(ds)) {
+				continue;
+			}
+
+			distances_[i] = std::isnan(distances_[i]) ? ds : std::min(distances_[i], ds);
+		}
+	}
+
+	template <class Map>
+	[[nodiscard]] float fillDistanceNaNValue(Map const& map) const
+	{
+		// TODO: Add distance offset here
+
+		switch (nan_behavior) {
+			case InverseNaNBehavior::IGNORE: return std::numeric_limits<float>::quiet_NaN();
+			case ufo::InverseNaNBehavior::INF: {
+				double length_max =
+				    std::min(this->max_distance, max(map.length(this->miss_depth)));
+				return (this->max_distance - length_max) * (this->max_distance - length_max);
+			}
+			case ufo::InverseNaNBehavior::ZERO: return 0.0f;
+		}
 	}
 
 	/**************************************************************************************
@@ -662,36 +1026,30 @@ class InverseIntegrator : public Integrator<Dim>
 	**************************************************************************************/
 
 	template <class Map, class T>
-	void misses(Map const& map, std::vector<Vec<Dim, T>> const& points,
-	            Transform<Dim, T> const& transform) const
+	void findMisses(Map const& map, Transform<Dim, T> const& transform,
+	                bool with_count) const
 	{
-		sq_distances_.resize(points.size());
-		double length_max = std::min(this->max_distance, max(map.length(this->miss_depth)));
-		float  inf = (this->max_distance - length_max) * (this->max_distance - length_max);
-		ufo::transform(points.begin(), points.end(), sq_distances_.begin(),
-		               [inf, nan_as_inf = treat_nan_as_infinity](auto const& point) {
-			               return isnan(point) && nan_as_inf ? inf : normSquared(point);
-		               });
+		auto& miss_grid  = this->misses_grid_;
+		auto& count_grid = this->count_grid_;
 
-		auto const  depth = inverse_levels_ - 1;
-		auto const& lut   = info_and_lut_top_.lut;
-		for (auto& info : info_and_lut_top_.info) {
-			Vec<Dim, float> point       = info.point;
-			float           distance    = info.distance;
-			std::uint32_t   first_lut   = info.first_lut;
-			std::uint32_t   last_lut    = info.last_lut;
-			std::uint32_t   first_child = info.first_child;
-			std::uint32_t   last_child  = info.last_child;
+		auto const depth = info_and_lut_.numLevels() - 1;
+		for (auto const& info : info_and_lut_) {
+			std::uint32_t index = static_cast<std::uint32_t>(&info - info_and_lut_.data());
 
-			for (std::size_t i = first_lut; last_lut > i; ++i) {
-				if (distance <= sq_distances_[lut[i]]) {
-					auto [count, seen] = missesRecurs(miss_coords_, miss_counts_, transform,
-					                                  depth - 1, first_child, last_child);
-					info.seen          = seen;
-					if (0u != count) {
-						// TODO: Implement
-					}
-					break;
+			auto [seen, possibly_seen] =
+			    seenOrPossiblySeen(info.minDistance(), info.maxDistance(), index, depth);
+
+			if (0u < info.count() && seen) {
+				if (with_count) {
+					addMiss(map, transform, miss_grid, count_grid, index, info.count(), depth);
+				} else {
+					addMiss(map, transform, miss_grid, index, depth);
+				}
+			} else if (possibly_seen) {
+				if (with_count) {
+					findMissesRecurs<true>(map, transform, miss_grid, count_grid, index, depth);
+				} else {
+					findMissesRecurs<false>(map, transform, miss_grid, count_grid, index, depth);
 				}
 			}
 		}
@@ -700,547 +1058,402 @@ class InverseIntegrator : public Integrator<Dim>
 	template <
 	    class ExecutionPolicy, class Map, class T,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void misses(ExecutionPolicy&& policy, Map const& map,
-	            std::vector<Vec<Dim, T>> const& points,
-	            Transform<Dim, T> const&        transform) const
+	void findMisses(ExecutionPolicy&& policy, Map const& map,
+	                Transform<Dim, T> const& transform, bool with_count) const
 	{
-		sq_distances_.resize(points.size());
-		double length_max = std::min(this->max_distance, max(map.length(this->miss_depth)));
-		float  inf = (this->max_distance - length_max) * (this->max_distance - length_max);
-		ufo::transform(policy, points.begin(), points.end(), sq_distances_.begin(),
-		               [inf, nan_as_inf = treat_nan_as_infinity](auto const& point) {
-			               return isnan(point) && nan_as_inf ? inf : normSquared(point);
-		               });
-
-		std::atomic_size_t local_miss_size = 0;
+		std::atomic_size_t size = 0;
 		std::mutex         mutex;
 
-		for_each(policy, info_and_lut_top_.info.begin(), info_and_lut_top_.info.end(),
-		         [&](auto& info) {
-			         remove_cvref_t<decltype(miss_coords_)>* miss_coords = nullptr;
-			         remove_cvref_t<decltype(miss_counts_)>* miss_counts = nullptr;
-
-			         {
+		auto const depth = info_and_lut_.numLevels() - 1;
+		for_each(policy, info_and_lut_.begin(), info_and_lut_.end(),
+		         [&, first = true](auto const& info) mutable {
+			         thread_local std::size_t grid_idx;
+			         auto const               id = std::this_thread::get_id();
+			         if (size.load(std::memory_order_relaxed) <= grid_idx ||
+			             id != std::get<0>(local_misses_grid_[grid_idx])) {
 				         std::scoped_lock lock(mutex);
-				         auto const       id = std::this_thread::get_id();
-				         for (std::size_t i = 0, l = local_miss_size; l > i; ++i) {
-					         if (id == std::get<0>(local_miss_[i])) {
-						         miss_coords = &std::get<1>(local_miss_[i]);
-						         miss_counts = &std::get<2>(local_miss_[i]);
-						         break;
-					         }
+				         grid_idx = size;
+				         if (local_misses_grid_.size() <= grid_idx) {
+					         local_misses_grid_.emplace_back();
+					         assert(local_misses_grid_.size() >= grid_idx);
 				         }
-
-				         if (nullptr == miss_coords /* || nullptr == miss_counts */) {
-					         if (local_miss_.size() > local_miss_size) {
-						         std::get<0>(local_miss_[local_miss_size]) = id;
-						         miss_coords = &std::get<1>(local_miss_[local_miss_size]);
-						         miss_counts = &std::get<2>(local_miss_[local_miss_size]);
-						         miss_coords->clear();
-						         miss_counts->clear();
-					         } else {
-						         auto& tmp = local_miss_.emplace_back(
-						             id, remove_cvref_t<decltype(miss_coords_)>{},
-						             remove_cvref_t<decltype(miss_counts_)>{});
-						         miss_coords = &std::get<1>(tmp);
-						         miss_counts = &std::get<2>(tmp);
-					         }
-					         ++local_miss_size;
-				         }
+				         std::get<0>(local_misses_grid_[grid_idx]) = id;
+				         ++size;
 			         }
 
-			         Vec<Dim, float> point       = info.point;
-			         float           distance    = info.distance;
-			         std::uint32_t   first_lut   = info.first_lut;
-			         std::uint32_t   last_lut    = info.last_lut;
-			         std::uint32_t   first_child = info.first_child;
-			         std::uint32_t   last_child  = info.last_child;
+			         auto& misses_grid = std::get<1>(local_misses_grid_[grid_idx]);
+			         auto& count_grid  = std::get<2>(local_misses_grid_[grid_idx]);
 
-			         for (std::size_t i = first_lut; last_lut > i; ++i) {
-				         if (distance <= sq_distances_[info_and_lut_top_.lut[i]]) {
-					         auto [count, seen] =
-					             missesRecurs(*miss_coords, *miss_counts, transform,
-					                          inverse_levels_ - 2, first_child, last_child);
-					         info.seen = seen;
-					         if (0u != count) {
-						         // TODO: Implement
-					         }
-					         return;
+			         std::uint32_t index =
+			             static_cast<std::uint32_t>(&info - info_and_lut_.data());
+
+			         auto [seen, possibly_seen] = seenOrPossiblySeen(
+			             info.minDistance(), info.maxDistance(), index, depth);
+
+			         if (0u < info.count() && seen) {
+				         if (with_count) {
+					         addMiss(map, transform, misses_grid, count_grid, index, info.count(),
+					                 depth);
+				         } else {
+					         addMiss(map, transform, misses_grid, index, depth);
+				         }
+			         } else if (possibly_seen) {
+				         if (with_count) {
+					         findMissesRecurs<true>(map, transform, misses_grid, count_grid, index,
+					                                depth);
+				         } else {
+					         findMissesRecurs<false>(map, transform, misses_grid, count_grid, index,
+					                                 depth);
 				         }
 			         }
 		         });
 
-		std::size_t s{};
-		std::vector<std::tuple<std::size_t, remove_cvref_t<decltype(miss_coords_)>*,
-		                       remove_cvref_t<decltype(miss_counts_)>*>>
-		    tmp;
-		tmp.resize(local_miss_size);
-		for (std::size_t i{}; tmp.size() > i; ++i) {
-			tmp[i] = {s, &std::get<1>(local_miss_[i]), &std::get<2>(local_miss_[i])};
-			s += std::get<1>(local_miss_[i]).size();
+		std::unordered_map<TreeCode<Dim>, unsigned> key_to_index;
+		unsigned                                    index{};
+		for (std::size_t i{}, s = size; s > i; ++i) {
+			ufo::for_each(std::get<1>(local_misses_grid_[i]).begin(),
+			              std::get<1>(local_misses_grid_[i]).end(),
+			              [this, &key_to_index, &index](auto const& e) {
+				              if (auto it = key_to_index.find(e.first);
+				                  key_to_index.end() == it) {
+					              key_to_index[e.first] = index++;
+					              this->misses_grid_.addKey(e.first);
+					              this->count_grid_.addKey(e.first);
+				              }
+			              });
+
+			ufo::for_each(policy, std::get<1>(local_misses_grid_[i]).begin(),
+			              std::get<1>(local_misses_grid_[i]).end(),
+			              [this, &key_to_index](auto const& e) {
+				              auto& v0 = this->misses_grid_[key_to_index[e.first]];
+				              ufo::transform(v0.begin(), v0.end(), e.second.begin(), v0.begin(),
+				                             [](auto a, auto b) { return a | b; });
+			              });
+
+			ufo::for_each(policy, std::get<2>(local_misses_grid_[i]).begin(),
+			              std::get<2>(local_misses_grid_[i]).end(),
+			              [this, &key_to_index](auto const& e) {
+				              auto& v0 = this->count_grid_[key_to_index[e.first]];
+				              ufo::transform(v0.begin(), v0.end(), e.second.begin(), v0.begin(),
+				                             [](auto a, auto b) {
+					                             // TODO: What should this be?
+					                             return std::max(a, b);
+				                             });
+			              });
+
+			std::get<0>(local_misses_grid_[i]) = {};
+			std::get<1>(local_misses_grid_[i]).clear();
+			std::get<2>(local_misses_grid_[i]).clear();
 		}
-
-		miss_coords_.resize(s);
-		miss_counts_.resize(s);
-
-		for_each(policy, tmp.begin(), tmp.end(), [this](auto const& e) {
-			std::size_t s = std::get<0>(e);
-			std::copy(std::get<1>(e)->begin(), std::get<1>(e)->end(), miss_coords_.begin() + s);
-			std::copy(std::get<2>(e)->begin(), std::get<2>(e)->end(), miss_counts_.begin() + s);
-		});
 	}
 
-	template <class T>
-	[[nodiscard]] std::pair<unsigned, bool> missesRecurs(
-	    std::vector<TreeCoord<Dim, float>>& miss_coords, std::vector<unsigned>& miss_counts,
-	    Transform<Dim, T> const& transform, unsigned depth, std::uint32_t first_node,
-	    std::uint32_t last_node) const
+	template <bool WithCount, class Map, class T>
+	void findMissesRecurs(Map const& map, Transform<Dim, T> const& transform,
+	                      detail::GridMap<BoolGrid, Dim, InverseLevels>&  miss_grid,
+	                      detail::GridMap<CountGrid, Dim, InverseLevels>& count_grid,
+	                      std::uint32_t index, unsigned depth) const
 	{
-		std::array<Vec<Dim, float>, 1u << Dim> miss_coord{};
-		std::array<unsigned, 1u << Dim>        miss_count{};
-		bool                                   seen = false;
+		auto first_node = info_and_lut_.firstChild(index, depth);
+		auto last_node  = info_and_lut_.lastChild(index, depth);
+		--depth;
 
-		if (0 == depth) {
-			auto&       info = info_and_lut_bottom_.info;
-			auto const& lut  = info_and_lut_bottom_.lut;
+		if (0u == depth) {  // Leaf layer
+			for (std::size_t i = first_node; last_node > i; ++i) {
+				auto  coord    = info_and_lut_.point(i);
+				float distance = info_and_lut_.distance(i);
 
-			for (std::size_t idx{}, i = first_node; last_node > i; ++idx, ++i) {
-				float distance = info[i].distance;
-
-				std::uint32_t first_lut = info[i].first_lut;
-				std::uint32_t last_lut = info.size() > i + 1 ? info[i + 1].first_lut : lut.size();
+				auto first_lut = info_and_lut_.beginLut(i, 0u);
+				auto last_lut  = info_and_lut_.endLut(i, 0u);
 
 				unsigned count{};
-				bool     after_hit = false;
-
-				for (std::size_t j = first_lut; last_lut > j; ++j) {
-					auto d   = sq_distances_[lut[j]];
-					bool nan = std::isnan(d);
-					count += !nan && distance < d;
-					after_hit = after_hit || (!nan && distance >= d);
-				}
-
-				seen = seen || (!after_hit && 0u != count);
-				info[i].seen(!after_hit && 0u != count);
-
-				if (!after_hit || !this->misses_require_all_before_hit) {
-					miss_coord[idx] = info[i].point;
-					miss_count[idx] = count;
-				}
-			}
-		} else {
-			auto&       info = info_and_lut_middle_[depth - 1].info;
-			auto const& lut  = info_and_lut_middle_[depth - 1].lut;
-
-			for (std::size_t idx{}, i = first_node; last_node > i; ++idx, ++i) {
-				std::uint32_t first_lut = info[i].first_lut;
-				std::uint32_t last_lut = info.size() > i + 1 ? info[i + 1].first_lut : lut.size();
-
-				std::uint32_t first_child = info[i].firstChild();
-				std::uint32_t last_child =
-				    info.size() > i + 1
-				        ? info[i + 1].firstChild()
-				        : (1 == depth ? info_and_lut_bottom_.info.size()
-				                      : info_and_lut_middle_[depth - 2].info.size());
-
-				float distance = info[i].distance;
-
-				for (std::size_t j = first_lut; last_lut > j; ++j) {
-					if (distance <= sq_distances_[lut[j]]) {
-						auto [c, s]     = missesRecurs(miss_coords, miss_counts, transform, depth - 1,
-						                               first_child, last_child);
-						miss_coord[idx] = info[i].point;
-						miss_count[idx] = c;
-						seen            = seen || s;
-						info[i].seen(s);
+				for (; last_lut > first_lut; ++first_lut) {
+					auto d = distances_[*first_lut];
+					if (!(distance <= d) && !std::isnan(d)) {
+						count = 0u;
 						break;
 					}
+					++count;
 				}
-			}
-		}
 
-		// // TODO: Implement
-		// // OBB obb;
-		// // obb = transform(obb);
-		// // for (auto n : map.query(pred::Inside(obb) || (pred::PureLeaf() &&
-		// // pred::Intersects(obb)))) {
-
-		// // }
-
-		unsigned count{};
-		switch (this->count_sample_method) {
-			case CountSamplingMethod::NONE: {
-				for (std::size_t i{}; miss_count.size() > i; ++i) {
-					if (0u == miss_count[i]) {
-						continue;
+				if (0u < count) {
+					if constexpr (WithCount) {
+						addMiss(map, transform, miss_grid, count_grid, i, count, depth);
+					} else {
+						addMiss(map, transform, miss_grid, i, depth);
 					}
-					miss_coords.emplace_back(transform(miss_coord[i]), this->miss_depth + depth);
-					miss_counts.push_back(miss_count[i]);
 				}
-				break;
 			}
-			case CountSamplingMethod::BOOLEAN: {
-				// TODO: Implement
-				break;
-			}
-			case CountSamplingMethod::MIN: {
-				// TODO: Implement
-				break;
-			}
-			case CountSamplingMethod::MAX: {
-				// TODO: Implement
-				break;
-			}
-			case CountSamplingMethod::MEAN: {
-				// TODO: Implement
-				break;
+		} else {  // All other layers
+			for (std::size_t i = first_node; last_node > i; ++i) {
+				auto  coord        = info_and_lut_.point(i, depth);
+				float min_distance = info_and_lut_.minDistance(i, depth);
+				float max_distance = info_and_lut_.maxDistance(i, depth);
+
+				auto [seen, possibly_seen] =
+				    seenOrPossiblySeen(min_distance, max_distance, i, depth);
+
+				auto count = info_and_lut_.count(i, depth);
+				if (0u < count && seen) {
+					if constexpr (WithCount) {
+						addMiss(map, transform, miss_grid, count_grid, i, count, depth);
+					} else {
+						addMiss(map, transform, miss_grid, i, depth);
+					}
+				} else if (possibly_seen) {
+					findMissesRecurs<WithCount>(map, transform, miss_grid, count_grid, i, depth);
+				}
 			}
 		}
-
-		return std::make_pair(count, seen);
 	}
 
 	/**************************************************************************************
 	|                                                                                     |
-	|                                    Void Regions                                     |
+	|                                      Something                                      |
 	|                                                                                     |
 	**************************************************************************************/
+
+	[[nodiscard]] std::pair<bool, bool> seenOrPossiblySeen(
+	    float min_distance, float max_distance,
+	    std::vector<std::uint32_t>::const_iterator first,
+	    std::vector<std::uint32_t>::const_iterator last) const
+	{
+		bool seen_or_nan       = true;
+		bool at_least_one_seen = false;
+		bool possibly_seen     = false;
+		for (; last > first; ++first) {
+			auto d            = distances_[*first];
+			auto seen         = max_distance <= d;
+			seen_or_nan       = seen_or_nan && (seen || std::isnan(d));
+			at_least_one_seen = at_least_one_seen || seen;
+			possibly_seen     = possibly_seen || min_distance <= d;
+		}
+		return std::pair(seen_or_nan && at_least_one_seen, possibly_seen);
+	}
+
+	[[nodiscard]] std::pair<bool, bool> seenOrPossiblySeen(float         min_distance,
+	                                                       float         max_distance,
+	                                                       std::uint32_t index,
+	                                                       unsigned      depth) const
+	{
+		return seenOrPossiblySeen(min_distance, max_distance,
+		                          info_and_lut_.beginLut(index, depth),
+		                          info_and_lut_.endLut(index, depth));
+	}
 
 	template <class Map, class T>
-	void voidRegions(Map const& map, std::vector<Vec<Dim, T>> const& points,
-	                 Transform<Dim, T> const& transform) const
+	void addMiss(Map const& map, Transform<Dim, T> const& transform,
+	             detail::GridMap<BoolGrid, Dim, InverseLevels>& miss_grid,
+	             std::uint32_t index, unsigned depth) const
 	{
-		if constexpr (!Map::hasMapTypes(MapType::VOID_REGION)) {
-			return;
-		} else if (MapType::VOID_REGION != (MapType::VOID_REGION & this->integrate_types)) {
-			return;
-		}
-
-		auto const depth = inverse_levels_ - 1;
-		for (auto const& info : info_and_lut_top_.info) {
-			if (!info.seen) {
-				continue;
-			}
-
-			Vec<Dim, float> point       = info.point;
-			std::uint32_t   first_child = info.first_child;
-			std::uint32_t   last_child  = info.last_child;
-
-			bool void_region = voidRegionsRecurs(void_region_coords_, transform, depth - 1,
-			                                     first_child, last_child);
-
-			if (!void_region) {
-				continue;
-			}
-
-			// TODO: Implement
-		}
-
-		// Reset seen
-		resetSeen();
-	}
-
-	template <
-	    class ExecutionPolicy, class Map, class T,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void voidRegions(ExecutionPolicy&& policy, Map const& map,
-	                 std::vector<Vec<Dim, T>> const& points,
-	                 Transform<Dim, T> const&        transform) const
-	{
-		if constexpr (!Map::hasMapTypes(MapType::VOID_REGION)) {
-			return;
-		} else if (MapType::VOID_REGION != (MapType::VOID_REGION & this->integrate_types)) {
-			return;
-		}
-
-		std::atomic_size_t local_miss_size = 0;
-		std::mutex         mutex;
-
-		for_each(policy, info_and_lut_top_.info.begin(), info_and_lut_top_.info.end(),
-		         [&](auto const& info) {
-			         if (!info.seen) {
-				         return;
-			         }
-
-			         remove_cvref_t<decltype(void_region_coords_)>* void_region_coords =
-			             nullptr;
-
-			         {
-				         std::scoped_lock lock(mutex);
-				         auto const       id = std::this_thread::get_id();
-				         for (std::size_t i = 0, l = local_miss_size; l > i; ++i) {
-					         if (id == std::get<0>(local_miss_[i])) {
-						         void_region_coords = &std::get<1>(local_miss_[i]);
-						         break;
-					         }
-				         }
-
-				         if (nullptr == void_region_coords) {
-					         if (local_miss_.size() > local_miss_size) {
-						         std::get<0>(local_miss_[local_miss_size]) = id;
-						         void_region_coords = &std::get<1>(local_miss_[local_miss_size]);
-						         void_region_coords->clear();
-					         } else {
-						         auto& tmp = local_miss_.emplace_back(
-						             id, remove_cvref_t<decltype(miss_coords_)>{},
-						             remove_cvref_t<decltype(miss_counts_)>{});
-						         void_region_coords = &std::get<1>(tmp);
-					         }
-					         ++local_miss_size;
-				         }
-			         }
-
-			         Vec<Dim, float> point       = info.point;
-			         std::uint32_t   first_child = info.first_child;
-			         std::uint32_t   last_child  = info.last_child;
-
-			         bool void_region =
-			             voidRegionsRecurs(*void_region_coords, transform, inverse_levels_ - 2,
-			                               first_child, last_child);
-
-			         if (!void_region) {
-				         return;
-			         }
-
-			         // TODO: Implement
-		         });
-
-		// Reset seen
-		resetSeen(policy);
-
-		std::size_t                                                                  s{};
-		std::vector<std::pair<std::size_t, remove_cvref_t<decltype(miss_coords_)>*>> tmp;
-		tmp.resize(local_miss_size);
-		for (std::size_t i{}; tmp.size() > i; ++i) {
-			tmp[i] = {s, &std::get<1>(local_miss_[i])};
-			s += std::get<1>(local_miss_[i]).size();
-		}
-
-		void_region_coords_.resize(s);
-
-		for_each(policy, tmp.begin(), tmp.end(), [this](auto const& e) {
-			std::size_t s = e.first;
-			std::copy(e.second->begin(), e.second->end(), void_region_coords_.begin() + s);
-		});
-	}
-
-	template <class T>
-	[[nodiscard]] bool voidRegionsRecurs(
-	    std::vector<TreeCoord<Dim, float>>& void_region_coords,
-	    Transform<Dim, T> const& transform, unsigned depth, std::uint32_t first_node,
-	    std::uint32_t last_node) const
-	{
-		std::array<Vec<Dim, float>, 1u << Dim> coords{};
-		std::array<bool, 1u << Dim>            void_regions{};
+		auto md = this->miss_depth;
 
 		if (0 == depth) {
-			auto&       info = info_and_lut_bottom_.info;
-			auto const& lut  = info_and_lut_bottom_.lut_void_region;
+			auto coord = TreeCoord<Dim>(transform(info_and_lut_.point(index)), md);
+			auto code  = map.code(coord);
+			miss_grid[code].set(code);
+			return;
+		}
 
-			for (std::size_t idx{}, i = first_node; last_node > i; ++idx, ++i) {
-				if (!info[i].seen()) {
-					continue;
+		auto point = info_and_lut_.point(index, depth);
+
+		TreeKey<Dim> key;
+		auto         min = map.key(TreeCoord<Dim>(point, md + depth));
+		auto         max = min + 1u;
+		min.setDepth(md);
+		max.setDepth(md);
+		key.setDepth(md);
+		if constexpr (2 == Dim) {
+			for (key.y = min.y; max.y > key.y; ++key.y) {
+				for (key.x = min.x; max.x > key.x; ++key.x) {
+					auto coord = TreeCoord<Dim>(transform(map.center(key)), md);
+					auto code  = map.code(coord);
+					miss_grid[code].set(code);
 				}
+			}
+		} else if constexpr (3 == Dim) {
+			for (key.z = min.z; max.z > key.z; ++key.z) {
+				for (key.y = min.y; max.y > key.y; ++key.y) {
+					for (key.x = min.x; max.x > key.x; ++key.x) {
+						auto coord = TreeCoord<Dim>(transform(map.center(key)), md);
+						auto code  = map.code(coord);
+						miss_grid[code].set(code);
+					}
+				}
+			}
+		}
+	}
 
-				std::uint32_t first_lut = info[i].firstLutVoidRegion();
-				std::uint32_t last_lut =
-				    info.size() > i + 1 ? info[i + 1].firstLutVoidRegion() : lut.size();
+	template <class Map, class T>
+	void addMiss(Map const& map, Transform<Dim, T> const& transform,
+	             detail::GridMap<BoolGrid, Dim, InverseLevels>&  miss_grid,
+	             detail::GridMap<CountGrid, Dim, InverseLevels>& count_grid,
+	             std::uint32_t index, unsigned count, unsigned depth) const
+	{
+		auto md = this->miss_depth;
 
-				bool void_region = true;
-				for (std::size_t i = first_lut; last_lut > i; ++i) {
-					if (!info[lut[i]].seen()) {
-						void_region = false;
-						break;
+		// TODO: What should this be?
+		count =
+		    std::min(static_cast<unsigned>(std::numeric_limits<std::uint8_t>::max()), count);
+
+		if (0 == depth) {
+			auto coord = TreeCoord<Dim>(transform(info_and_lut_.point(index)), md);
+			auto code  = map.code(coord);
+			miss_grid[code].set(code);
+			count_grid[code][code] = count;  // TODO: What should this be?
+			return;
+		}
+
+		auto point = info_and_lut_.point(index, depth);
+
+		TreeKey<Dim> key;
+		auto         min = map.key(TreeCoord<Dim>(point, md + depth));
+		auto         max = min + 1u;
+		min.setDepth(md);
+		max.setDepth(md);
+		key.setDepth(md);
+		if constexpr (2 == Dim) {
+			for (key.y = min.y; max.y > key.y; ++key.y) {
+				for (key.x = min.x; max.x > key.x; ++key.x) {
+					auto coord = TreeCoord<Dim>(transform(map.center(key)), md);
+					auto code  = map.code(coord);
+					miss_grid[code].set(code);
+					count_grid[code][code] = count;  // TODO: What should this be?
+				}
+			}
+		} else if constexpr (3 == Dim) {
+			for (key.z = min.z; max.z > key.z; ++key.z) {
+				for (key.y = min.y; max.y > key.y; ++key.y) {
+					for (key.x = min.x; max.x > key.x; ++key.x) {
+						auto coord = TreeCoord<Dim>(transform(map.center(key)), md);
+						auto code  = map.code(coord);
+						miss_grid[code].set(code);
+						count_grid[code][code] = count;  // TODO: What should this be?
+					}
+				}
+			}
+		}
+	}
+
+	// TODO: Move this somewhere else
+	template <class Map, class T>
+	void addCoords(std::vector<TreeCoord<Dim, float>>& coords, Map const& map,
+	               Transform<Dim, T> const& transform, std::uint32_t index,
+	               unsigned depth) const
+	{
+		// TODO: Fix depth here
+
+		auto center = info_and_lut_.point(index, depth);
+		depth += this->miss_depth;
+		if (0u == depth) {
+			coords.emplace_back(transform(center), depth);
+		} else {
+			std::vector<std::pair<TreeCode<Dim>, std::vector<std::uint64_t>>> grid;
+
+			std::size_t num = std::max(1u, (1u << (Dim * depth)) / 64u);
+
+			// using code_t = typename TreeCode<Dim>::code_t;
+			// code_t mask  = (~code_t(0) >> (std::numeric_limits<code_t>::digits - Dim *
+			// depth));
+
+			using Key = typename TreeKey<Dim>::Key;
+
+			auto min = map.key(TreeCoord<Dim>(center, depth));
+			auto max = TreeKey<Dim>(min + Key(1), depth);  // TODO: Add operator+ to Key
+			min.setDepth(0u);
+			max.setDepth(0u);
+			if constexpr (2 == Dim) {
+				// TODO: Implement
+			} else if constexpr (3 == Dim) {
+				for (auto x = min.x; max.x > x; ++x) {
+					for (auto y = min.y; max.y > y; ++y) {
+						for (auto z = min.z; max.z > z; ++z) {
+							auto c  = map.code(transform(map.center(TreeKey<Dim>(Key(x, y, z), 0u))));
+							auto lo = c.lowestOffsets();
+							c.setDepth(depth);
+							lo ^= c.lowestOffsets();  // Only the first `depth` levels bits will be set
+
+							std::vector<std::uint64_t>* v;
+							if (auto it = std::find_if(grid.begin(), grid.end(),
+							                           [&c](auto const& v) { return v.first == c; });
+							    grid.end() != it) {
+								v = &it->second;
+							} else {
+								v = &grid.emplace_back(c, std::vector<std::uint64_t>(num)).second;
+							}
+
+							(*v)[lo / 64u] |= std::uint64_t(1) << (lo % 64u);
+						}
 					}
 				}
 
-				coords[idx]       = info[i].point;
-				void_regions[idx] = void_region;
-			}
-		} else {
-			auto const& info = info_and_lut_middle_[depth - 1].info;
-
-			for (std::size_t idx{}, i = first_node; last_node > i; ++idx, ++i) {
-				if (!info[i].seen()) {
-					continue;
-				}
-
-				std::uint32_t first_child = info[i].firstChild();
-				std::uint32_t last_child =
-				    info.size() > i + 1
-				        ? info[i + 1].firstChild()
-				        : (1 == depth ? info_and_lut_bottom_.info.size()
-				                      : info_and_lut_middle_[depth - 2].info.size());
-
-				coords[idx]       = info[i].point;
-				void_regions[idx] = voidRegionsRecurs(void_region_coords, transform, depth - 1,
-				                                      first_child, last_child);
-			}
-		}
-
-		// // TODO: Implement
-		// // OBB obb;
-		// // obb = transform(obb);
-		// // for (auto n : map.query(pred::Inside(obb) || (pred::PureLeaf() &&
-		// // pred::Intersects(obb)))) {
-
-		// // }
-
-		bool void_region = false;
-		switch (this->count_sample_method) {
-			case CountSamplingMethod::NONE: {
-				for (std::size_t i{}; void_regions.size() > i; ++i) {
-					if (!void_regions[i]) {
+				for (auto const& [c, v] : grid) {
+					if (std::all_of(v.begin(), v.end(), [](auto e) {
+						    return std::numeric_limits<std::uint64_t>::max() == e;
+					    })) {
+						coords.push_back(map.center(c));
 						continue;
 					}
-					void_region_coords.emplace_back(transform(coords[i]), this->miss_depth + depth);
-				}
-				break;
-			}
-			case CountSamplingMethod::BOOLEAN: {
-				// TODO: Implement
-				break;
-			}
-			case CountSamplingMethod::MIN: {
-				// TODO: Implement
-				break;
-			}
-			case CountSamplingMethod::MAX: {
-				// TODO: Implement
-				break;
-			}
-			case CountSamplingMethod::MEAN: {
-				// TODO: Implement
-				break;
-			}
-		}
 
-		return void_region;
-	}
+					auto         lo = c.lowestOffsets();
+					decltype(lo) j{};
+					for (auto e : v) {
+						if (std::numeric_limits<std::uint64_t>::max() == e) {
+							auto t = c;
+							t.lowestOffsets(lo | j, 2u);  // TODO: Is correct?
+							coords.push_back(map.center(t));
+						} else if (std::uint64_t(0) != e) {
+							for (std::uint64_t k{}; 64u > k; k += 8u) {
+								std::uint64_t mask = 0xFFu << k;
+								if (mask == (mask & e)) {
+									auto t = c;
+									t.lowestOffsets(lo | j | k, 1u);  // TODO: Is correct?
+									coords.push_back(map.center(t));
+									continue;
+								}
 
-	/**************************************************************************************
-	|                                                                                     |
-	|                                        Seen                                         |
-	|                                                                                     |
-	**************************************************************************************/
+								for (std::uint64_t m{}; 8u > m; ++m) {
+									std::uint64_t mask = 0x1u << (k + m);
+									if (mask == (mask & e)) {
+										auto t = c;
+										t.lowestOffsets(lo | j | k | m, 0u);  // TODO: Is correct?
+										coords.push_back(map.center(t));
+									}
+								}
+							}
+						}
 
-	void setSeen() const
-	{
-		// TODO: Implement
-
-		// Fill in seen_indices_
-	}
-
-	template <
-	    class ExecutionPolicy,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void setSeen(ExecutionPolicy&& policy) const
-	{
-		// TODO: Implement
-
-		// Fill in seen_indices_
-	}
-
-	void setSeenRecurs(unsigned depth, std::uint32_t first_node,
-	                   std::uint32_t last_node) const
-	{
-		// TODO: Implement
-
-		// Fill in seen_indices_
-	}
-
-	void resetSeen() const
-	{
-		auto const depth = inverse_levels_ - 1;
-		for (auto& info : info_and_lut_top_.info) {
-			if (!info.seen) {
-				continue;
-			}
-
-			info.seen = false;
-
-			std::uint32_t first_child = info.first_child;
-			std::uint32_t last_child  = info.last_child;
-
-			resetSeenRecurs(depth - 1, first_child, last_child);
-		}
-	}
-
-	template <
-	    class ExecutionPolicy,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void resetSeen(ExecutionPolicy&& policy) const
-	{
-		for_each(std::forward<ExecutionPolicy>(policy), info_and_lut_top_.info.begin(),
-		         info_and_lut_top_.info.end(), [this](auto& info) {
-			         if (!info.seen) {
-				         return;
-			         }
-
-			         info.seen = false;
-
-			         std::uint32_t first_child = info.first_child;
-			         std::uint32_t last_child  = info.last_child;
-
-			         resetSeenRecurs(inverse_levels_ - 2, first_child, last_child);
-		         });
-	}
-
-	void resetSeenRecurs(unsigned depth, std::uint32_t first_node,
-	                     std::uint32_t last_node) const
-	{
-		if (0 == depth) {
-			auto& info = info_and_lut_bottom_.info;
-			for (std::size_t i = first_node; last_node > i; ++i) {
-				info[i].seen(false);
-			}
-		} else {
-			auto& info = info_and_lut_middle_[depth - 1].info;
-
-			for (std::size_t i = first_node; last_node > i; ++i) {
-				if (!info[i].seen()) {
-					continue;
+						j += 64u;
+					}
 				}
 
-				info[i].seen(false);
-
-				std::uint32_t first_child = info[i].firstChild();
-				std::uint32_t last_child =
-				    info.size() > i + 1
-				        ? info[i + 1].firstChild()
-				        : (1 == depth ? info_and_lut_bottom_.info.size()
-				                      : info_and_lut_middle_[depth - 2].info.size());
-
-				resetSeenRecurs(depth - 1, first_child, last_child);
+				// for (auto const& [k, _] : tmp[0]) {
+				// 	coords.emplace_back(map.center(k), 0u);
+				// }
 			}
+			// center           = transform(center);
+			// auto half_length = cast<float>(map.halfLength(depth) + map.halfLength(0));
+			// // OBB<Dim, float> obb(center, half_length);
+			// AABB<Dim, float> obb(center - half_length, center + half_length);
+			// // TODO: Apply transform transform(obb)
+			// for (auto n : map.query(pred::Inside(obb), false, true)) {
+			// 	coords.emplace_back(map.center(n.code), map.depth(n));
+			// }
 		}
 	}
 
  public:
-	// Needs to be at least 2
-	std::size_t inverse_levels_       = 5;
-	double      void_region_distance_ = 2.0;
+	detail::InverseInfoAndLut<Dim, InverseLevels> info_and_lut_;
+	std::vector<Vec<Dim, double>>                 directions_;
 
-	std::vector<Vec<Dim, double>> directions_;
+	// TreeMap<Dim, unsigned> dir_to_index_;
+	std::unordered_map<std::uint64_t, unsigned> dir_to_index_;
 
-	mutable detail::InverseInfoAndLutTop<Dim>                 info_and_lut_top_;
-	mutable std::vector<detail::InverseInfoAndLutMiddle<Dim>> info_and_lut_middle_;
-	mutable detail::InverseInfoAndLutBottom<Dim>              info_and_lut_bottom_;
+	mutable __block std::vector<float> distances_;
 
-	mutable std::vector<float> sq_distances_;
-
-	mutable __block std::vector<TreeIndex> hit_nodes_;
-	mutable __block std::vector<TreeIndex> miss_nodes_;
-	mutable __block std::vector<TreeIndex> void_region_nodes_;
-
-	mutable std::vector<TreeCoord<Dim, float>> miss_coords_;
-	mutable std::vector<unsigned>              miss_counts_;
-	mutable std::vector<TreeCoord<Dim, float>> void_region_coords_;
-	mutable std::vector<unsigned>              seen_indices_;
-
-	mutable std::deque<std::tuple<std::thread::id, std::vector<TreeCoord<Dim, float>>,
-	                              std::vector<unsigned>>>
-	    local_miss_;
+	mutable __block std::deque<
+	    std::tuple<std::thread::id, detail::GridMap<BoolGrid, Dim, InverseLevels>,
+	               detail::GridMap<CountGrid, Dim, InverseLevels>>>
+	    local_misses_grid_;
 };
 }  // namespace ufo
 

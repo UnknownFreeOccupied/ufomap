@@ -48,12 +48,12 @@
 
 // STL
 #include <array>
-#include <atomic>
 #include <cstddef>
+#include <cstdint>
 
 namespace ufo
 {
-template <std::size_t Dim, unsigned Depth, bool Atomic = false>
+template <std::size_t Dim, unsigned Depth>
 class CountGrid
 {
  public:
@@ -62,54 +62,22 @@ class CountGrid
 	using depth_t = typename Code::depth_t;
 
  private:
-	static constexpr std::size_t const NumIndices = ipow(std::size_t(2), Dim* Depth);
+	static constexpr std::size_t const Size = ipow(std::size_t(2), Dim* Depth);
 
-	using value_t                           = unsigned;
-	static constexpr value_t const MissBits = (~value_t(0u)) >> 1u;
-	static constexpr value_t const HitBit   = ~MissBits;
+	static constexpr code_t const Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
 
-	using Container =
-	    std::array<std::conditional_t<Atomic, std::atomic<value_t>, value_t>, NumIndices>;
+	static constexpr code_t const PosBits = 6;  // [0..63] needs 6 bits
 
- public:
-	using value_type             = typename Container::value_type;
-	using reference              = typename Container::reference;
-	using const_reference        = typename Container::const_reference;
-	using iterator               = typename Container::iterator;
-	using const_iterator         = typename Container::const_iterator;
-	using reverse_iterator       = typename Container::reverse_iterator;
-	using const_reverse_iterator = typename Container::const_reverse_iterator;
+	using Container = std::array<std::uint8_t, Size / 64>;
 
  public:
-	CountGrid() = default;
+	using value_type      = typename Container::value_type;
+	using reference       = typename Container::reference;
+	using const_reference = typename Container::const_reference;
+	using iterator        = typename Container::iterator;
+	using const_iterator  = typename Container::const_iterator;
 
-	CountGrid(CountGrid const& other)
-	{
-		if constexpr (Atomic) {
-			for (std::size_t i{}; grid_.size() > i; ++i) {
-				grid_[i] = other.grid_[i].load();
-			}
-		} else {
-			grid_ = other.grid_;
-		}
-	}
-
-	CountGrid(CountGrid&&) = default;
-
-	CountGrid& operator=(CountGrid const& rhs)
-	{
-		if constexpr (Atomic) {
-			for (std::size_t i{}; grid_.size() > i; ++i) {
-				grid_[i] = rhs.grid_[i].load();
-			}
-		} else {
-			grid_ = rhs.grid_;
-		}
-		return *this;
-	}
-
-	CountGrid& operator=(CountGrid&&) = default;
-
+ public:
 	iterator begin() { return grid_.begin(); }
 
 	const_iterator begin() const { return grid_.begin(); }
@@ -122,95 +90,38 @@ class CountGrid
 
 	const_iterator cend() const { return grid_.cend(); }
 
-	reference operator[](std::size_t pos) { return grid_[pos]; }
-
-	const_reference operator[](std::size_t pos) const { return grid_[pos]; }
+	reference operator[](code_t pos) { return grid_[index(pos)]; }
 
 	reference operator[](Code const code) { return operator[](pos(code)); }
 
+	const_reference operator[](code_t pos) const { return grid_[index(pos)]; }
+
 	const_reference operator[](Code const code) const { return operator[](pos(code)); }
 
-	[[nodiscard]] bool hit(std::size_t pos) const
-	{
-		value_t v;
-		if constexpr (Atomic) {
-			v = grid_[pos].load();
-		}
-		return HitBit == (v & HitBit);
-	}
+	void clear() { grid_.fill(0u); }
 
-	[[nodiscard]] bool hit(Code const& code) const { return hit(pos(code)); }
-
-	bool markHit(std::size_t pos)
-	{
-		value_t p;
-		if constexpr (Atomic) {
-			p = grid_[pos].fetch_or(HitBit);
-		} else {
-			p = grid_[pos];
-			grid_[pos] |= HitBit;
-		}
-		return HitBit == (p & HitBit);
-	}
-
-	bool markHit(Code const& code) { return markHit(pos(code)); }
-
-	[[nodiscard]] std::size_t misses(std::size_t pos) const
-	{
-		value_t v;
-		if constexpr (Atomic) {
-			v = grid_[pos].load();
-		}
-		return v & MissBits;
-	}
-
-	[[nodiscard]] std::size_t misses(Code const& code) const { return misses(pos(code)); }
-
-	void addMiss(std::size_t pos) { grid_[pos]++; }
-
-	void addMiss(Code const& code) { addMiss(pos(code)); }
-
-	[[nodiscard]] bool hitOrNoMisses(std::size_t pos) const
-	{
-		value_t v;
-		if constexpr (Atomic) {
-			v = grid_[pos].load();
-		} else {
-			v = grid_[pos];
-		}
-		return value_t{} == v || HitBit <= v;
-	}
-
-	[[nodiscard]] bool hitOrNoMisses(Code const& code) const
-	{
-		return hitOrNoMisses(pos(code));
-	}
-
-	void clear()
-	{
-		if constexpr (Atomic) {
-			for (auto& x : grid_) {
-				x = 0u;
-			}
-		} else {
-			grid_.fill(0u);
-		}
-	}
-
-	[[nodiscard]] static constexpr std::size_t size() noexcept { return NumIndices; }
-
-	[[nodiscard]] static constexpr std::size_t pos(Code const& code) noexcept
-	{
-		return code.lowestOffsets(Depth);
-	}
-
-	[[nodiscard]] static constexpr Code code(Code code, std::size_t pos)
-	{
-		code.append(pos, Depth);
-		return code;
-	}
+	[[nodiscard]] static constexpr std::size_t size() noexcept { return Size; }
 
 	[[nodiscard]] static constexpr depth_t depth() noexcept { return Depth; }
+
+	[[nodiscard]] static constexpr code_t pos(Code const& code) noexcept
+	{
+		return (code.lowestOffsets() >> Dim * code.depth()) & Mask;
+	}
+
+	[[nodiscard]] static constexpr Code code(Code prefix, code_t pos, depth_t depth_offset,
+	                                         depth_t depth)
+	{
+		prefix.lowestOffsets(prefix.lowestOffsets() | (pos << Dim * depth_offset),
+		                     depth_offset + depth);
+		return prefix;
+	}
+
+ private:
+	[[nodiscard]] static constexpr code_t index(code_t pos) noexcept
+	{
+		return pos >> PosBits;
+	}
 
  private:
 	Container grid_{};

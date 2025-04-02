@@ -53,82 +53,84 @@
 namespace ufo::detail
 {
 template <std::size_t Dim>
-struct InverseInfoTop {
-	Vec<Dim, float> point{};
-	float           distance{};
-	std::uint32_t   first_lut{};
-	std::uint32_t   last_lut{};
-	std::uint32_t   first_child{};
-	std::uint32_t   last_child{};
-	bool            seen{};
+class InverseInfo
+{
+ public:
+	constexpr InverseInfo() = default;
 
-	constexpr InverseInfoTop() = default;
-
-	constexpr InverseInfoTop(Vec<Dim, float> const& point, float distance,
-	                         std::uint32_t first_lut, std::uint32_t last_lut,
-	                         std::uint32_t first_child, std::uint32_t last_child)
-	    : point(point)
-	    , distance(distance)
-	    , first_lut(first_lut)
-	    , last_lut(last_lut)
-	    , first_child(first_child)
-	    , last_child(last_child)
+	constexpr InverseInfo(Vec<Dim, float> const& point, std::uint32_t first_child)
+	    : point_(point), first_child_(first_child)
 	{
 	}
+
+	constexpr InverseInfo(Vec<Dim, float> const& point, float min_distance,
+	                      float max_distance, std::uint32_t first_child,
+	                      std::uint32_t first_lut, std::uint32_t count)
+	    : point_(point)
+	    , min_distance_(min_distance)
+	    , max_distance_(max_distance)
+	    , first_child_(first_child)
+	    , first_lut_(first_lut)
+	    , count_(count)
+	{
+	}
+
+	[[nodiscard]] constexpr Vec<Dim, float> const& point() const noexcept { return point_; }
+
+	[[nodiscard]] constexpr float& minDistance() noexcept { return min_distance_; }
+
+	[[nodiscard]] constexpr float minDistance() const noexcept { return min_distance_; }
+
+	[[nodiscard]] constexpr float& maxDistance() noexcept { return max_distance_; }
+
+	[[nodiscard]] constexpr float maxDistance() const noexcept { return max_distance_; }
+
+	[[nodiscard]] constexpr std::uint32_t firstChild() const noexcept
+	{
+		return first_child_;
+	}
+
+	[[nodiscard]] constexpr std::uint32_t& firstLut() noexcept { return first_lut_; }
+
+	[[nodiscard]] constexpr std::uint32_t firstLut() const noexcept { return first_lut_; }
+
+	[[nodiscard]] constexpr std::uint32_t& count() noexcept { return count_; }
+
+	[[nodiscard]] constexpr std::uint32_t count() const noexcept { return count_; }
+
+ private:
+	Vec<Dim, float> point_{};
+	float           min_distance_{};
+	float           max_distance_{};
+	std::uint32_t   first_child_{};
+	std::uint32_t   first_lut_{};
+	std::uint32_t   count_{};
 };
 
 template <std::size_t Dim>
-struct InverseInfoMiddle {
-	Vec<Dim, float> point{};
-	float           distance{};
-	std::uint32_t   first_lut{};
-	std::uint32_t   data = std::numeric_limits<std::uint32_t>::max() << 1;
+class InverseInfoLeaf
+{
+ public:
+	constexpr InverseInfoLeaf() = default;
 
-	constexpr InverseInfoMiddle() = default;
-
-	constexpr InverseInfoMiddle(Vec<Dim, float> const& point, float distance,
-	                            std::uint32_t first_lut, std::uint32_t first_child)
-	    : point(point), distance(distance), first_lut(first_lut), data(first_child << 1)
+	constexpr InverseInfoLeaf(Vec<Dim, float> const& point, float distance,
+	                          std::uint32_t first_lut)
+	    : point_(point), distance_(distance), first_lut_(first_lut)
 	{
 	}
 
-	[[nodiscard]] constexpr bool seen() const { return 0b1u == (0b1u & data); }
+	[[nodiscard]] constexpr Vec<Dim, float> const& point() const noexcept { return point_; }
 
-	constexpr void seen(bool v) { data = (~0b1u & data) | static_cast<std::uint32_t>(v); }
+	[[nodiscard]] constexpr float distance() const noexcept { return distance_; }
 
-	[[nodiscard]] constexpr std::uint32_t firstChild() const { return data >> 1; }
+	[[nodiscard]] constexpr std::uint32_t& firstLut() noexcept { return first_lut_; }
 
-	constexpr void firstChild(std::uint32_t first_child)
-	{
-		data = (0b1u & data) | (first_child << 1);
-	}
-};
+	[[nodiscard]] constexpr std::uint32_t firstLut() const noexcept { return first_lut_; }
 
-template <std::size_t Dim>
-struct InverseInfoBottom {
-	Vec<Dim, float> point{};
-	float           distance{};
-	std::uint32_t   first_lut{};
-	std::uint32_t   data{};
-
-	constexpr InverseInfoBottom() = default;
-
-	constexpr InverseInfoBottom(Vec<Dim, float> const& point, float distance,
-	                            std::uint32_t first_lut, std::uint32_t first_lut_void)
-	    : point(point), distance(distance), first_lut(first_lut), data(first_lut_void << 1)
-	{
-	}
-
-	[[nodiscard]] constexpr bool seen() const { return 0b1u == (0b1u & data); }
-
-	constexpr void seen(bool v) { data = (~0b1u & data) | static_cast<std::uint32_t>(v); }
-
-	[[nodiscard]] constexpr std::uint32_t firstLutVoidRegion() const { return data >> 1; }
-
-	constexpr void firstLutVoidRegion(std::uint32_t first_lut_void_region)
-	{
-		data = (0b1u & data) | (first_lut_void_region << 1);
-	}
+ private:
+	Vec<Dim, float> point_{};
+	float           distance_{};
+	std::uint32_t   first_lut_{};
 };
 }  // namespace ufo::detail
 

@@ -237,8 +237,7 @@ class SimpleIntegrator<2> : public Integrator<2>
 	}
 
  private:
-	mutable detail::GridMap<CountGrid<2, 4, false>> count_grids_{4096};
-	mutable detail::GridMap<CountGrid<2, 4, true>>  count_grids_atomic_{4096};
+	mutable detail::GridMap<CountGrid<2, 4>> count_grids_{4096};
 };
 }  // namespace ufo
 

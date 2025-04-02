@@ -103,7 +103,7 @@ struct Filter<VoidRegionT<Type, Negated>> {
 				return t.voidRegion(n.index) && t.voidRegionSecondary(n.index);
 			}
 		} else {
-			static_assert(dependent_false_v<Type>, "Non-supported void region type");
+			static_assert(dependent_false_v<Tree>, "Non-supported void region type");
 		}
 	}
 
@@ -136,7 +136,7 @@ struct Filter<VoidRegionT<Type, Negated>> {
 				return t.voidRegionContains(n.index) && t.voidRegionSecondaryContains(n.index);
 			}
 		} else {
-			static_assert(dependent_false_v<Type>, "Non-supported void region type");
+			static_assert(dependent_false_v<Tree>, "Non-supported void region type");
 		}
 	}
 };

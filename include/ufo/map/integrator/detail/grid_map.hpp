@@ -43,32 +43,36 @@
 #define UFO_MAP_INTEGRATION_DETAIL_GRID_MAP_HPP
 
 // UFO
-#include <ufo/container/tree/container.hpp>
-#include <ufo/utility/spinlock.hpp>
+#include <ufo/container/tree/code.hpp>
+#include <ufo/map/integrator/detail/bool_grid.hpp>
+#include <ufo/map/integrator/detail/count_grid.hpp>
 
 // STL
-#include <algorithm>
-#include <stdexcept>
+#include <cassert>
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 namespace ufo::detail
 {
-template <class Grid, std::size_t NumBuckets = 100, std::size_t NumBlocksPerBucket = 128>
+template <std::size_t Dim, unsigned Depth>
+struct GridMapKey : TreeCode<Dim> {
+	constexpr GridMapKey() = default;
+
+	explicit constexpr GridMapKey(TreeCode<Dim> const& code)
+	    : TreeCode<Dim>(code.toDepth(Depth + code.depth()))
+	{
+	}
+};
+
+template <template <std::size_t, unsigned> class Grid, std::size_t Dim, unsigned Depth>
 class GridMap
 {
  public:
-	using Code = typename Grid::Code;
+	using Code = TreeCode<Dim>;
 
-	struct key_type : Code {
-		constexpr key_type() = default;
-
-		explicit constexpr key_type(Code const& code)
-		    : Code(code.toDepth(Grid::depth() + code.depth()))
-		{
-		}
-	};
-
-	using mapped_type     = Grid;
+	using key_type        = GridMapKey<Dim, Depth>;
+	using mapped_type     = Grid<Dim, Depth>;
 	using value_type      = std::pair<key_type, mapped_type>;
 	using size_type       = std::size_t;
 	using difference_type = std::ptrdiff_t;
@@ -78,115 +82,72 @@ class GridMap
 	using const_pointer   = value_type const*;
 
  private:
-	// using Container = TreeContainer<value_type, NumBuckets, NumBlocksPerBucket>;
 	using Container = std::vector<value_type>;
 
  public:
-	using iterator               = typename Container::iterator;
-	using const_iterator         = typename Container::const_iterator;
-	using reverse_iterator       = std::reverse_iterator<iterator>;
-	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+	using iterator       = typename Container::iterator;
+	using const_iterator = typename Container::const_iterator;
 
-	GridMap(std::size_t size)
+	iterator begin() { return maps_.begin(); }
+
+	const_iterator begin() const { return maps_.begin(); }
+
+	const_iterator cbegin() const { return maps_.cbegin(); }
+
+	iterator end() { return begin() + size_; }
+
+	const_iterator end() const { return begin() + size_; }
+
+	const_iterator cend() const { return cbegin() + size_; }
+
+	mapped_type& operator[](key_type const& key)
 	{
-		// map_.reserve(128);
-		map_.resize(size);
+		if (last_key_ == key) {
+			return maps_[last_].second;
+		}
+
+		last_key_ = key;
+
+		for (last_ = {}; size_ > last_; ++last_) {
+			if (maps_[last_].first == key) {
+				return maps_[last_].second;
+			}
+		}
+
+		if (maps_.size() <= last_) {
+			maps_.emplace_back();
+			assert(maps_.size() >= last_);
+		}
+
+		++size_;
+
+		maps_[last_].first = key;
+		return maps_[last_].second;
 	}
 
 	mapped_type& operator[](Code const& code) { return operator[](key(code)); }
 
-	mapped_type& operator[](key_type const& key)
+	mapped_type& operator[](std::size_t pos)
 	{
-		auto first = begin();
-		auto last  = end();
-		if (auto it = find(key, first, last); last != it) {
-			return it->second;
+		assert(size_ > pos);
+		return maps_[pos].second;
+	}
+
+	void addKey(key_type const& key)
+	{
+		if (maps_.size() <= size_) {
+			maps_.emplace_back();
+			assert(maps_.size() > size_);
 		}
 
-		std::lock_guard lock(mutex_);
-
-		first = last;
-		last  = end();
-		if (auto it = find(key, first, last); last != it) {
-			return it->second;
-		}
-
-		// TODO: Fix
-
-		// return map_.emplace_back(key, mapped_type{}).second;
-
-		// map_.setSize(map_.size() + 1);
-		// map_.back().first = key;
-		// return map_.back().second;
-
-		last->first = key;
+		maps_[size_].first = key;
 		++size_;
-		return last->second;
 	}
 
-	mapped_type& at(Code const& code) { return at(key(code)); }
-
-	mapped_type& at(key_type const& key)
+	[[nodiscard]] bool contains(key_type const& key) const
 	{
-		auto first = begin();
-		auto last  = end();
-
-		if (auto it = find(key, first, last); last != it) {
-			return it->second;
-		}
-
-		throw std::out_of_range("GridMap::at: key not found");
+		return std::any_of(begin(), end(), [&key](auto const& v) { return v.first == key; });
 	}
-
-	mapped_type const& at(Code const& code) const { return at(key(code)); }
-
-	mapped_type const& at(key_type const& key) const
-	{
-		auto first = begin();
-		auto last  = end();
-
-		if (auto it = find(key, first, last); last != it) {
-			return it->second;
-		}
-
-		throw std::out_of_range("GridMap::at: key not found");
-	}
-
-	iterator begin() { return map_.begin(); }
-
-	const_iterator begin() const { return map_.begin(); }
-
-	const_iterator cbegin() const { return map_.cbegin(); }
-
-	iterator end()
-	{
-		// return map_.end();
-		return map_.begin() + size();
-	}
-
-	const_iterator end() const
-	{
-		// return map_.end();
-		return map_.begin() + size();
-	}
-
-	const_iterator cend() const
-	{
-		// return map_.cend();
-		return map_.cbegin() + size();
-	}
-
-	reverse_iterator rbegin() { return map_.rbegin(); }
-
-	const_reverse_iterator rbegin() const { return map_.rbegin(); }
-
-	const_reverse_iterator crbegin() const { return map_.crbegin(); }
-
-	reverse_iterator rend() { return map_.rend(); }
-
-	const_reverse_iterator rend() const { return map_.rend(); }
-
-	const_reverse_iterator crend() const { return map_.crend(); }
 
 	[[nodiscard]] constexpr inline key_type key(Code const& code) const
 	{
@@ -195,34 +156,21 @@ class GridMap
 
 	void clear()
 	{
-		// map_.clear();
-		size_ = 0;
+		for (auto& v : *this) {
+			v.second.clear();
+		}
+		size_     = 0u;
+		last_     = {};
+		last_key_ = {};
 	}
 
-	[[nodiscard]] size_type size() const
-	{
-		//  return map_.size();
-		return size_;
-	}
-
- private:
-	[[nodiscard]] inline iterator find(key_type const& key, iterator first, iterator last)
-	{
-		return std::find_if(first, last,
-		                    [key](value_type const& v) { return v.first == key; });
-	}
-
-	[[nodiscard]] const_iterator find(key_type const& key, const_iterator first,
-	                                  const_iterator last) const
-	{
-		return std::find_if(first, last,
-		                    [key](value_type const& v) { return v.first == key; });
-	}
+	[[nodiscard]] size_type size() const { return size_; }
 
  private:
-	Container          map_{};
-	Spinlock           mutex_{};
-	std::atomic_size_t size_{};
+	Container   maps_;
+	std::size_t size_{};
+	std::size_t last_{};
+	key_type    last_key_{};
 };
 }  // namespace ufo::detail
 

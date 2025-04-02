@@ -48,13 +48,12 @@
 
 // STL
 #include <array>
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 
 namespace ufo
 {
-template <std::size_t Dim, unsigned Depth, bool Atomic = false>
+template <std::size_t Dim, unsigned Depth>
 class BoolGrid
 {
  public:
@@ -63,24 +62,22 @@ class BoolGrid
 	using depth_t = typename Code::depth_t;
 
  private:
-	static constexpr std::size_t NumIndices = ipow(std::size_t(2), Dim* Depth);
+	static constexpr std::size_t const Size = ipow(std::size_t(2), Dim* Depth);
 
-	static constexpr code_t Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
+	static constexpr code_t const Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
 
-	static constexpr std::size_t PosBits = 6;  // [0..63] (we use uint64_t) needs 6 bits
+	static constexpr code_t const PosBits = 6;  // [0..63] needs 6 bits
 
-	static constexpr std::size_t PosMask = ~((~std::size_t(0)) << PosBits);
+	static constexpr code_t const PosMask = ~((~code_t(0)) << PosBits);
 
-	using DataType = std::array<std::uint64_t, NumIndices / 64>;
+	using Container = std::array<std::uint64_t, Size / 64>;
 
  public:
-	using value_type             = typename DataType::value_type;
-	using reference              = typename DataType::reference;
-	using const_reference        = typename DataType::const_reference;
-	using iterator               = typename DataType::iterator;
-	using const_iterator         = typename DataType::const_iterator;
-	using reverse_iterator       = typename DataType::reverse_iterator;
-	using const_reverse_iterator = typename DataType::const_reverse_iterator;
+	using value_type      = typename Container::value_type;
+	using reference       = typename Container::reference;
+	using const_reference = typename Container::const_reference;
+	using iterator        = typename Container::iterator;
+	using const_iterator  = typename Container::const_iterator;
 
  public:
 	iterator begin() { return grid_.begin(); }
@@ -95,207 +92,58 @@ class BoolGrid
 
 	const_iterator cend() const { return grid_.cend(); }
 
-	const_reference operator[](std::size_t pos) const { return grid_[pos >> PosBits]; }
-
-	reference operator[](std::size_t pos) { return grid_[pos >> PosBits]; }
-
-	const_reference operator[](Code const& code) const { return operator[](pos(code)); }
+	reference operator[](code_t pos) { return grid_[index(pos)]; }
 
 	reference operator[](Code const& code) { return operator[](pos(code)); }
 
-	[[nodiscard]] bool test(std::size_t pos) const
-	{
-		return grid_[pos >> PosBits] & bitSet(pos);
-	}
+	const_reference operator[](code_t pos) const { return grid_[index(pos)]; }
+
+	const_reference operator[](Code const& code) const { return operator[](pos(code)); }
+
+	[[nodiscard]] bool test(code_t pos) const { return bit(pos) & grid_[index(pos)]; }
 
 	[[nodiscard]] bool test(Code const& code) const { return test(pos(code)); }
 
-	// Returns the value it had before this call
-	bool set(std::size_t pos)
-	{
-		auto v   = bitSet(pos);
-		auto old = grid_[pos >> PosBits];
-		grid_[pos >> PosBits] |= v;
-		return static_cast<bool>(v & old);
-	}
+	void set(code_t pos) { grid_[index(pos)] |= bit(pos); }
 
-	bool set(Code const& code) { return set(pos(code)); }
+	void set(Code const& code) { set(pos(code)); }
 
-	// Returns the value it had before this call
-	bool reset(std::size_t pos)
-	{
-		auto v   = bitSet(pos);
-		auto old = grid_[pos >> PosBits];
-		grid_[pos >> PosBits] &= ~v;
-		return static_cast<bool>(v & old);
-	}
+	void reset(code_t pos) { grid_[index(pos)] &= ~bit(pos); }
 
 	void reset(Code const& code) { reset(pos(code)); }
 
-	void clear() { grid_.fill(std::uint64_t(0)); }
+	void clear() { grid_.fill(0u); }
 
-	[[nodiscard]] static constexpr std::size_t size() noexcept { return NumIndices; }
-
-	[[nodiscard]] static constexpr std::size_t pos(Code const& code) noexcept
-	{
-		return (code.code() >> Dim * code.depth()) & Mask;
-	}
-
-	[[nodiscard]] static constexpr Code code(std::size_t pos, depth_t depth)
-	{
-		return Code(pos << Dim * depth, depth);
-	}
-
-	[[nodiscard]] static constexpr Code code(code_t prefix, std::size_t pos, depth_t depth,
-	                                         depth_t depth_offset)
-	{
-		return Code(prefix | (pos << Dim * depth), depth + depth_offset);
-	}
+	[[nodiscard]] static constexpr std::size_t size() noexcept { return Size; }
 
 	[[nodiscard]] static constexpr depth_t depth() noexcept { return Depth; }
 
+	[[nodiscard]] static constexpr code_t pos(Code const& code) noexcept
+	{
+		return (code.lowestOffsets() >> Dim * code.depth()) & Mask;
+	}
+
+	[[nodiscard]] static constexpr Code code(Code prefix, code_t pos, depth_t depth_offset,
+	                                         depth_t depth)
+	{
+		prefix.lowestOffsets(prefix.lowestOffsets() | (pos << Dim * depth_offset),
+		                     depth_offset + depth);
+		return prefix;
+	}
+
  private:
-	[[nodiscard]] constexpr static std::uint64_t bitSet(std::size_t pos) noexcept
+	[[nodiscard]] static constexpr code_t index(code_t pos) noexcept
+	{
+		return pos >> PosBits;
+	}
+
+	[[nodiscard]] static constexpr std::uint64_t bit(code_t pos) noexcept
 	{
 		return std::uint64_t(1) << (pos & PosMask);
 	}
 
  private:
-	DataType grid_{};
-};
-
-// Atomic
-
-template <std::size_t Dim, unsigned Depth>
-class BoolGrid<Dim, Depth, true>
-{
- public:
-	using Code    = TreeCode<Dim>;
-	using code_t  = typename Code::code_t;
-	using depth_t = typename Code::depth_t;
-
- private:
-	static constexpr std::size_t NumIndices = ipow(std::size_t(2), Dim* Depth);
-
-	static constexpr code_t Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
-
-	static constexpr std::size_t PosBits = 6;  // [0..63] (we use uint64_t) needs 6 bits
-
-	static constexpr std::size_t PosMask = ~((~std::size_t(0)) << PosBits);
-
-	using DataType = std::array<std::atomic_uint64_t, NumIndices / 64>;
-
- public:
-	using value_type             = typename DataType::value_type;
-	using reference              = typename DataType::reference;
-	using const_reference        = typename DataType::const_reference;
-	using iterator               = typename DataType::iterator;
-	using const_iterator         = typename DataType::const_iterator;
-	using reverse_iterator       = typename DataType::reverse_iterator;
-	using const_reverse_iterator = typename DataType::const_reverse_iterator;
-
- public:
-	BoolGrid() = default;
-
-	BoolGrid(BoolGrid const& other)
-	{
-		for (std::size_t i{}; grid_.size() > i; ++i) {
-			grid_[i] = other.grid_[i].load();
-		}
-	}
-
-	BoolGrid(BoolGrid&&) = default;
-
-	BoolGrid& operator=(BoolGrid const& rhs)
-	{
-		for (std::size_t i{}; grid_.size() > i; ++i) {
-			grid_[i] = rhs.grid_[i].load();
-		}
-		return *this;
-	}
-
-	BoolGrid& operator=(BoolGrid&&) = default;
-
-	iterator begin() { return grid_.begin(); }
-
-	const_iterator begin() const { return grid_.begin(); }
-
-	const_iterator cbegin() const { return grid_.cbegin(); }
-
-	iterator end() { return grid_.end(); }
-
-	const_iterator end() const { return grid_.end(); }
-
-	const_iterator cend() const { return grid_.cend(); }
-
-	const_reference operator[](std::size_t pos) const { return grid_[pos >> PosBits]; }
-
-	reference operator[](std::size_t pos) { return grid_[pos >> PosBits]; }
-
-	const_reference operator[](Code const& code) const { return operator[](pos(code)); }
-
-	reference operator[](Code const& code) { return operator[](pos(code)); }
-
-	[[nodiscard]] bool test(std::size_t pos) const
-	{
-		return grid_[pos >> PosBits] & bitSet(pos);
-	}
-
-	[[nodiscard]] bool test(Code const& code) const { return test(pos(code)); }
-
-	// Returns the value it had before this call
-	bool set(std::size_t pos)
-	{
-		auto v = bitSet(pos);
-		return v & grid_[pos >> PosBits].fetch_or(v);
-	}
-
-	bool set(Code const& code) { return set(pos(code)); }
-
-	// Returns the value it had before this call
-	bool reset(std::size_t pos)
-	{
-		auto v = bitSet(pos);
-		return v & grid_[pos >> PosBits].fetch_and(~v);
-	}
-
-	void reset(Code const& code) { reset(pos(code)); }
-
-	void clear()
-	{
-		for (auto& x : grid_) {
-			x = 0;
-		}
-	}
-
-	[[nodiscard]] static constexpr std::size_t size() noexcept { return NumIndices; }
-
-	[[nodiscard]] static constexpr std::size_t pos(Code const& code) noexcept
-	{
-		return (code.code() >> Dim * code.depth()) & Mask;
-	}
-
-	[[nodiscard]] static constexpr Code code(std::size_t pos, depth_t depth)
-	{
-		return Code(pos << Dim * depth, depth);
-	}
-
-	[[nodiscard]] static constexpr Code code(code_t prefix, std::size_t pos, depth_t depth,
-	                                         depth_t depth_offset)
-	{
-		return Code(prefix | (pos << Dim * depth), depth + depth_offset);
-	}
-
-	[[nodiscard]] static constexpr depth_t depth() noexcept { return Depth; }
-
- private:
-	[[nodiscard]] constexpr static std::uint64_t bitSet(std::size_t pos) noexcept
-	{
-		return std::uint64_t(1) << (pos & PosMask);
-	}
-
- private:
-	DataType grid_{};
+	Container grid_{};
 };
 }  // namespace ufo
 

@@ -47,7 +47,6 @@
 #include <ufo/container/tree/tree.hpp>
 #include <ufo/map/block.hpp>
 #include <ufo/map/integrator/detail/inverse/block.hpp>
-#include <ufo/map/integrator/detail/inverse/predicate.hpp>
 #include <ufo/map/type.hpp>
 #include <ufo/math/transform3.hpp>
 #include <ufo/utility/bit_set.hpp>
@@ -56,11 +55,13 @@
 #include <ufo/utility/type_traits.hpp>
 
 // STL
+#include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstddef>
-#include <cstdint>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <string_view>
 #include <type_traits>
 #include <vector>
@@ -110,43 +111,25 @@ class InverseMap
 	// This is a special map type only intended to be used in the integrator
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] float& inverseDistance(NodeType node)
+	[[nodiscard]] std::atomic_uint_fast32_t& inverseCount(NodeType node)
 	{
 		Index n = derived().index(node);
-		return inverseBlock(n.pos)[n.offset].distance;
+		return inverseBlock(n.pos)[n.offset].count;
 	}
 
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] float inverseDistance(NodeType node) const
+	[[nodiscard]] std::uint_fast32_t inverseCount(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return inverseBlock(n.pos)[n.offset].distance;
-	}
-
-	// NOTE: It is bad practice to return reference since it can destory tree structure.
-	// This is a special map type only intended to be used in the integrator
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] std::vector<unsigned>& inverseIndices(NodeType node)
-	{
-		Index n = derived().index(node);
-		return inverseBlock(n.pos)[n.offset].indices;
-	}
-
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] std::vector<unsigned> const& inverseIndices(NodeType node) const
-	{
-		Index n = derived().index(node);
-		return inverseBlock(n.pos)[n.offset].indices;
+		return inverseBlock(n.pos)[n.offset].count;
 	}
 
 	// NOTE: It is bad practice to return reference since it can destory tree structure.
 	// This is a special map type only intended to be used in the integrator
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] std::uint32_t& inverseIndex(NodeType node)
+	[[nodiscard]] std::atomic_uint_fast32_t& inverseIndex(NodeType node)
 	{
 		Index n = derived().index(node);
 		return inverseBlock(n.pos)[n.offset].index;
@@ -154,7 +137,7 @@ class InverseMap
 
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] std::uint32_t inverseIndex(NodeType node) const
+	[[nodiscard]] std::uint_fast32_t inverseIndex(NodeType node) const
 	{
 		Index n = derived().index(node);
 		return inverseBlock(n.pos)[n.offset].index;
@@ -256,12 +239,7 @@ class InverseMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	void onInitRoot()
-	{
-		auto& block       = inverseBlock(0);
-		block[0].distance = std::numeric_limits<float>::max();
-		block[0].indices.clear();
-	}
+	void onInitRoot() { inverseBlock(0) = InverseBlock<BF>{}; }
 
 	void onInitChildren(Index node, pos_t children)
 	{
@@ -271,66 +249,25 @@ class InverseMap
 	void onPropagateChildren(Index node, pos_t children)
 	{
 		auto const& children_block = inverseBlock(children);
+		auto&       v              = inverseBlock(node.pos)[node.offset];
 
-		auto& v = inverseBlock(node.pos)[node.offset];
-
-		v.indices.clear();
-
-		v.distance = std::numeric_limits<float>::max();
+		std::uint_fast32_t count{};
 		for (std::size_t i{}; BF > i; ++i) {
-			v.distance = UFO_MIN(v.distance, children_block[i].distance);
-		}
-
-		if (10 < derived().depth(node)) {
-			return;
-		}
-
-		for (std::size_t i{}; BF > i; ++i) {
-			if (v.indices.empty()) {
-				v.indices = children_block[i].indices;
-			} else if (!children_block[i].indices.empty()) {
-				auto s = v.indices.size();
-				v.indices.insert(v.indices.end(), children_block[i].indices.begin(),
-				                 children_block[i].indices.end());
-				auto it = v.indices.begin() + s;
-				std::inplace_merge(v.indices.begin(), it, v.indices.end());
+			if (0u < children_block[i].count) {
+				++count;
 			}
 		}
-
-		auto last = std::unique(v.indices.begin(), v.indices.end());
-		v.indices.erase(last, v.indices.end());
-		v.indices.shrink_to_fit();
+		v.count = count;
 	}
 
-	[[nodiscard]] bool onIsPrunable(pos_t block) const
-	{
-		using std::begin;
-		using std::end;
-		return std::all_of(begin(inverseBlock(block).data) + 1, end(inverseBlock(block).data),
-		                   [v = inverseBlock(block)[0]](auto const& e) {
-			                   return v.indices.empty() && e.indices.empty();
-		                   });
-	}
+	[[nodiscard]] bool onIsPrunable(pos_t /* block */) const { return false; }
 
-	void onPruneChildren(Index node, pos_t /* children */)
-	{
-		auto& v    = inverseBlock(node.pos)[node.offset];
-		v.distance = std::numeric_limits<float>::max();
-		v.indices.clear();
-	}
-
-	[[nodiscard]] static constexpr std::size_t serializedSizeNode() noexcept
-	{
-		// TODO: Implement
-		// return sizeof(cost_t);
-		return 0;
-	}
+	void onPruneChildren(Index /* node */, pos_t /* children */) {}
 
 	[[nodiscard]] constexpr std::size_t onSerializedSize(
 	    std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
 	    std::size_t /* num_nodes */) const
 	{
-		// return num_nodes * serializedSizeNode();
 		return 0;
 	}
 
@@ -346,6 +283,7 @@ class InverseMap
 
 	void onDotFile(std::ostream& /* out */, Index /* node */) const {}
 };
+
 }  // namespace ufo::detail
 
 namespace ufo
