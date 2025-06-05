@@ -46,6 +46,7 @@
 #include <ufo/container/tree/block.hpp>
 #include <ufo/container/tree/predicate.hpp>
 #include <ufo/container/tree/tree.hpp>
+#include <ufo/execution/algorithm.hpp>
 #include <ufo/map/block.hpp>
 #include <ufo/map/header.hpp>
 #include <ufo/map/type.hpp>
@@ -54,15 +55,15 @@
 #include <ufo/utility/io/buffer.hpp>
 #include <ufo/utility/macros.hpp>
 
-// STD
+// STL
 #include <algorithm>
-#include <array>
 #include <bitset>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <ios>
 #include <limits>
+#include <numeric>
 #include <tuple>
 #include <type_traits>
 
@@ -158,19 +159,11 @@ class MapFull final
 
 	template <MapUtility Utility2, template <class, class> class... Maps2>
 	MapFull(MapFull<Dim, Utility2, Maps2...> const& other)
-	    : Base(static_cast<Base const&>(other))
+	    : Base(static_cast<typename MapFull<Dim, Utility2, Maps2...>::Base const&>(other))
 	{
 		// TODO: Implement
 		// std::size_t size = Base::numBlocks();
 		// (init<Maps<MapFull, Base>>(other, size), ...);
-	}
-
-	template <MapUtility Utility2, template <class, class> class... Maps2>
-	MapFull(MapFull<Dim, Utility2, Maps2...>&& other) : Base(static_cast<Base&&>(other))
-	{
-		// TODO: Implement
-		// std::size_t size = Base::numBlocks();
-		// (init<Maps<MapFull, Base>>(std::move(other), size), ...);
 	}
 
 	/**************************************************************************************
@@ -194,23 +187,12 @@ class MapFull final
 	template <MapUtility Utility2, template <class, class> class... Maps2>
 	MapFull& operator=(MapFull<Dim, Utility2, Maps2...> const& rhs)
 	{
-		Base::operator=(static_cast<Base const&>(rhs));
+		Base::operator=(
+		    static_cast<typename MapFull<Dim, Utility2, Maps2...>::Base const&>(rhs));
 
 		// TODO: Implement
 		// std::size_t size = Base::numBlocks();
 		// (init<Maps<MapFull, Base>>(rhs, size), ...);
-
-		return *this;
-	}
-
-	template <MapUtility Utility2, template <class, class> class... Maps2>
-	MapFull& operator=(MapFull<Dim, Utility2, Maps2...>&& rhs)
-	{
-		Base::operator=(static_cast<Base&&>(rhs));
-
-		// TODO: Implement
-		// std::size_t size = Base::numBlocks();
-		// (init<Maps<MapFull, Base>>(std::move(rhs), size), ...);
 
 		return *this;
 	}
@@ -255,155 +237,85 @@ class MapFull final
 	|                                                                                     |
 	**************************************************************************************/
 
-	void propagate(bool prune = true, MapType map_types = MapType::ALL)
-	{
-		propagate(Base::index(), prune, map_types);
-	}
-
-	void propagate(pos_t block, bool prune = true, MapType map_types = MapType::ALL)
-	{
-		assert(Base::valid(block));
-
-		for (std::size_t i{}; BF > i; ++i) {
-			auto n = Index(block, i);
-			if (Base::isLeaf(n)) {
-				continue;
-			}
-
-			auto c = Base::children(n);
-
-			propagate(c, prune, map_types);
-			onPropagateChildren(n, c, map_types);
-
-			if (prune && onIsPrunable(c)) {
-				Base::pruneChildren(n, c);
-			}
-		}
-	}
-
-	template <class NodeType,
-	          std::enable_if_t<Base::template is_node_type_v<NodeType>, bool> = true>
-	void propagate(NodeType node, bool prune = true, MapType map_types = MapType::ALL)
-	{
-		assert(Base::valid(node));
-
-		auto n = Base::index(node);
-
-		if (Base::isLeaf(n)) {
-			return;
-		}
-
-		auto c = Base::children(n);
-
-		propagate(c, prune, map_types);
-		onPropagateChildren(n, c, map_types);
-
-		if (prune && onIsPrunable(c)) {
-			Base::pruneChildren(n, c);
-		}
-	}
-
-	template <
-	    class ExecutionPolicy,
-	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void propagate(ExecutionPolicy&& policy, bool prune = true,
-	               MapType map_types = MapType::ALL)
-	{
-		// TODO: Optimize
-		propagate(prune, map_types);
-	}
-
 	/*!
 	 * @brief Propagate modified information up the tree.
-	 *
-	 * @param prune Whether the tree should be pruned also
-	 * @param reset_modified Whether propagated node's modified state should be reset
 	 */
-	void modifiedPropagate(bool prune = true, bool reset_modified = true,
-	                       MapType map_types = MapType::ALL)
+	void propagate(MapType map_types = MapType::ALL)
 	{
-		modifiedPropagate(Base::index(), prune, reset_modified, map_types);
-	}
-
-	void modifiedPropagate(pos_t block, bool prune = true, bool reset_modified = true,
-	                       MapType map_types = MapType::ALL)
-	{
-		assert(Base::valid(block));
-
-		auto m = reset_modified ? Base::treeBlock(block).modifiedExchange(0)
-		                        : Base::treeBlock(block).modified();
-
-		if (0 == m) {
-			return;
-		}
-
-		for (std::size_t i{}; BF > i; ++i) {
-			auto n = Index(block, i);
-			if (0u == (m & (1u << i)) || Base::isLeaf(n)) {
-				continue;
-			}
-
-			auto c = Base::children(n);
-
-			modifiedPropagate(c, prune, reset_modified, map_types);
-			onPropagateChildren(n, c, map_types);
-
-			if (prune && onIsPrunable(c)) {
-				Base::pruneChildren(n, c);
-			}
-		}
+		propagate(Base::index(), map_types);
 	}
 
 	template <class NodeType,
 	          std::enable_if_t<Base::template is_node_type_v<NodeType>, bool> = true>
-	void modifiedPropagate(NodeType node, bool prune = true, bool reset_modified = true,
-	                       MapType map_types = MapType::ALL)
+	void propagate(NodeType const& node, MapType map_types = MapType::ALL)
 	{
-		assert(Base::valid(node));
-
 		auto n = Base::index(node);
-
-		if (!Base::modified(n)) {
-			return;
-		}
-
-		if (reset_modified) {
-			Base::treeBlock(n.pos).modifiedReset(n.offset);
-		}
-
-		if (Base::isLeaf(n)) {
-			return;
-		}
-
 		auto c = Base::children(n);
 
-		modifiedPropagate(c, prune, reset_modified, map_types);
+		if (!Base::modified(n) || !Base::valid(c)) {
+			return;
+		}
+
+		propagate(c, map_types);
 		onPropagateChildren(n, c, map_types);
 
-		if (prune && onIsPrunable(c)) {
-			Base::pruneChildren(n, c);
+		if (onIsPrunable(c)) {
+			Base::pruneChildren(n);
 		}
 	}
 
 	template <
 	    class ExecutionPolicy,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
-	void modifiedPropagate(ExecutionPolicy&& policy, bool prune = true,
-	                       bool reset_modified = true, MapType map_types = MapType::ALL)
+	void propagate(ExecutionPolicy&& policy, MapType map_types = MapType::ALL)
 	{
-		modifiedPropagate(std::forward<ExecutionPolicy>(policy), Base::index(), prune,
-		                  reset_modified, map_types);
+		propagate(std::forward<ExecutionPolicy>(policy), Base::index(), map_types);
 	}
 
 	template <
 	    class ExecutionPolicy, class NodeType,
 	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true,
 	    std::enable_if_t<Base::template is_node_type_v<NodeType>, bool>           = true>
-	void modifiedPropagate(ExecutionPolicy&& policy, NodeType node, bool prune = true,
-	                       bool reset_modified = true, MapType map_types = MapType::ALL)
+	void propagate(ExecutionPolicy&& policy, NodeType node,
+	               MapType map_types = MapType::ALL)
 	{
-		// TODO: Optimize
-		modifiedPropagate(node, prune, reset_modified, map_types);
+		auto n = Base::index(node);
+		auto c = Base::children(n);
+
+		if (!Base::modified(n) || !Base::valid(c)) {
+			return;
+		}
+
+		propagate(std::forward<ExecutionPolicy>(policy), c, map_types, false);
+		onPropagateChildren(n, c, map_types);
+
+		if (onIsPrunable(c)) {
+			Base::pruneChildren(n);
+		}
+
+		// auto n = Base::index(node);
+		// auto c = Base::children(n);
+
+		// if (!Base::modified(n) || !Base::valid(c)) {
+		// 	return;
+		// }
+
+		// static thread_local std::vector<pos_t> modified_blocks;
+
+		// propagateHelper(modified_blocks, c);
+
+		// ufo::for_each(std::forward<ExecutionPolicy>(policy), modified_blocks.begin(),
+		//               modified_blocks.end(),
+		//               [this, map_types](pos_t block) { propagate(block, map_types); });
+
+		// modified_blocks.clear();
+
+		// propagate(c, map_types);
+		// onPropagateChildren(n, c, map_types);
+
+		// if (onIsPrunable(c)) {
+		// 	Base::pruneChildren(n);
+		// }
 	}
 
 	/**************************************************************************************
@@ -474,8 +386,7 @@ class MapFull final
 		readMaps(in, readNodes(in, header), header, map_types);
 
 		if (propagate) {
-			// TODO: What to do here?
-			modifiedPropagate();
+			this->propagate(map_types);
 		}
 	}
 
@@ -501,8 +412,7 @@ class MapFull final
 		readMaps(in, readNodes(in, header), header, map_types);
 
 		if (propagate) {
-			// TODO: What to do here?
-			modifiedPropagate();
+			this->propagate(map_types);
 		}
 	}
 
@@ -773,6 +683,12 @@ class MapFull final
 
 	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
+		auto const& c = Base::treeBlock(block).children;
+		for (std::size_t i{}; BF > i; ++i) {
+			if (TreeIndex::NULL_POS != c[i].load(std::memory_order_relaxed)) {
+				return false;
+			}
+		}
 		return (onIsPrunable<Maps<MapFull, Base>>(block) && ...);
 	}
 
@@ -886,6 +802,116 @@ class MapFull final
 
 	/**************************************************************************************
 	|                                                                                     |
+	|                                      Propagate                                      |
+	|                                                                                     |
+	**************************************************************************************/
+
+	void propagate(pos_t block, MapType map_types)
+	{
+		auto m = Base::treeBlock(block).modified();
+
+		if (0u == m) {
+			return;
+		}
+
+		for (std::size_t i{}; BF > i; ++i) {
+			auto n = Index(block, i);
+			auto c = Base::children(n);
+
+			if (0u == (m & (1u << i)) || !Base::valid(c)) {
+				continue;
+			}
+
+			propagate(c, map_types);
+			onPropagateChildren(n, c, map_types);
+
+			if (onIsPrunable(c)) {
+				Base::pruneChildren(n);
+			}
+		}
+	}
+
+	template <
+	    class ExecutionPolicy,
+	    std::enable_if_t<execution::is_execution_policy_v<ExecutionPolicy>, bool> = true>
+	void propagate(ExecutionPolicy&& policy, pos_t block, MapType map_types,
+	               bool is_parallel)
+	{
+		auto const m = std::bitset<BF>(Base::treeBlock(block).modified());
+
+		if (m.none()) {
+			return;
+		}
+
+		auto const d = Base::depth(block);
+		if (BF - 2u <= m.count() && 2u < d) {
+			ufo::for_each(policy, std::size_t(0), BF,
+			              [this, policy, block, map_types, is_parallel, m](std::size_t i) {
+				              auto n = Index(block, i);
+				              auto c = Base::children(n);
+
+				              if (!m[i] || !Base::valid(c)) {
+					              return;
+				              }
+
+				              if (is_parallel) {
+					              propagate(c, map_types);
+				              } else {
+					              propagate(policy, c, map_types, true);
+				              }
+				              onPropagateChildren(n, c, map_types);
+
+				              if (onIsPrunable(c)) {
+					              Base::pruneChildren(n);
+				              }
+			              });
+		} else {
+			for (std::size_t i{}; BF > i; ++i) {
+				auto n = Index(block, i);
+				auto c = Base::children(n);
+
+				if (!m[i] || !Base::valid(c)) {
+					continue;
+				}
+
+				propagate(policy, c, map_types, is_parallel);
+				onPropagateChildren(n, c, map_types);
+
+				if (onIsPrunable(c)) {
+					Base::pruneChildren(n);
+				}
+			}
+		}
+	}
+
+	void propagateHelper(std::vector<pos_t>& modified_blocks, pos_t block) const
+	{
+		auto d = Base::depth(block);
+		auto m = Base::treeBlock(block).modified();
+
+		if (0u == m) {
+			return;
+		}
+
+		if (4u >= d) {
+			modified_blocks.push_back(block);
+			return;
+		}
+
+		for (std::size_t i{}; BF > i; ++i) {
+			auto n = Index(block, i);
+			auto c = Base::children(n);
+
+			if (0u == (m & (1u << i)) || !Base::valid(c)) {
+				continue;
+			}
+
+			propagateHelper(modified_blocks, c);
+		}
+	}
+
+	/**************************************************************************************
+	|                                                                                     |
 	|                                         I/O                                         |
 	|                                                                                     |
 	**************************************************************************************/
@@ -925,6 +951,8 @@ class MapFull final
 		BitSet<BF> const valid_erase_children = valid_return & ~valid_inner;
 
 		if (valid_return.any()) {
+			// TODO: How should this be done?
+			Base::treeBlock(block).modifiedUpdate(valid_return.set_);
 			nodes.emplace_back(block, valid_return);
 		}
 
