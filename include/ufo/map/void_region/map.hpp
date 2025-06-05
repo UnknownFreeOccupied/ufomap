@@ -92,7 +92,7 @@ class VoidRegionMap
  public:
 	/**************************************************************************************
 	|                                                                                     |
-	|                                   Primary Access                                    |
+	|                                       Access                                        |
 	|                                                                                     |
 	**************************************************************************************/
 
@@ -103,30 +103,12 @@ class VoidRegionMap
 	[[nodiscard]] bool voidRegion(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return voidRegionBlock(n.pos).primary(n.offset);
-	}
-
-	[[nodiscard]] bool voidRegionAny(pos_t block) const
-	{
-		assert(derived().valid(block));
-		return voidRegionBlock(block).primaryAny();
-	}
-
-	[[nodiscard]] bool voidRegionAll(pos_t block) const
-	{
-		assert(derived().valid(block));
-		return voidRegionBlock(block).primaryAll();
-	}
-
-	[[nodiscard]] bool voidRegionNone(pos_t block) const
-	{
-		assert(derived().valid(block));
-		return voidRegionBlock(block).primaryNone();
+		return voidRegionBlock(n.pos)[n.offset].is;
 	}
 
 	/**************************************************************************************
 	|                                                                                     |
-	|                                 Primary Modifiers                                   |
+	|                                     Modifiers                                       |
 	|                                                                                     |
 	**************************************************************************************/
 
@@ -139,35 +121,21 @@ class VoidRegionMap
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
 	void voidRegionSet(NodeType node, bool value, bool propagate = true)
 	{
-		if (value) {
-			auto node_f = [this, value](Index node) {
-				voidRegionBlock(node.pos).primarySet(node.offset);
-			};
+		auto node_f = [this, value](Index node) {
+			voidRegionBlock(node.pos)[node.offset] = value;
+		};
 
-			auto block_f = [this, value](pos_t block) {
-				voidRegionBlock(block).primaryInit(true);
-			};
+		auto block_f = [this, value](pos_t block) {
+			for (std::size_t i{}; BF > i; ++i) {
+				voidRegionBlock(block)[i] = value;
+			}
+		};
 
-			auto update_f = [this](Index node, pos_t children) {
-				onPropagateChildren(node, children);
-			};
+		auto update_f = [this](Index node, pos_t children) {
+			onPropagateChildren(node, children);
+		};
 
-			derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
-		} else {
-			auto node_f = [this, value](Index node) {
-				voidRegionBlock(node.pos).primaryReset(node.offset);
-			};
-
-			auto block_f = [this, value](pos_t block) {
-				voidRegionBlock(block).primaryInit(false);
-			};
-
-			auto update_f = [this](Index node, pos_t children) {
-				onPropagateChildren(node, children);
-			};
-
-			derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
-		}
+		derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
 	}
 
 	template <class UnaryOp,
@@ -183,12 +151,12 @@ class VoidRegionMap
 	void voidRegionUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
 	{
 		auto node_f = [this, unary_op](Index node) {
-			voidRegionBlock(node.pos).primarySet(node.offset, unary_op(node));
+			voidRegionBlock(node.pos)[node.offset] = unary_op(node);
 		};
 
 		auto block_f = [this, unary_op](pos_t block) {
 			for (std::size_t i{}; BF > i; ++i) {
-				voidRegionBlock(block).primarySet(i, unary_op(Index(block, i)));
+				voidRegionBlock(block)[i] = unary_op(Index(block, i));
 			}
 		};
 
@@ -201,7 +169,7 @@ class VoidRegionMap
 
 	/**************************************************************************************
 	|                                                                                     |
-	|                                   Primary Lookup                                    |
+	|                                       Lookup                                        |
 	|                                                                                     |
 	**************************************************************************************/
 
@@ -215,138 +183,7 @@ class VoidRegionMap
 	[[nodiscard]] bool voidRegionContains(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return voidRegionBlock(n.pos).primaryContains(n.offset);
-	}
-
-	/**************************************************************************************
-	|                                                                                     |
-	|                                  Secondary Access                                   |
-	|                                                                                     |
-	**************************************************************************************/
-
-	[[nodiscard]] bool voidRegionSecondary() const
-	{
-		return voidRegionSecondary(derived().index());
-	}
-
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] bool voidRegionSecondary(NodeType node) const
-	{
-		Index n = derived().index(node);
-		return voidRegionBlock(n.pos).secondary(n.offset);
-	}
-
-	[[nodiscard]] bool voidRegionSecondaryAny(pos_t block) const
-	{
-		assert(derived().valid(block));
-		return voidRegionBlock(block).secondaryAny();
-	}
-
-	[[nodiscard]] bool voidRegionSecondaryAll(pos_t block) const
-	{
-		assert(derived().valid(block));
-		return voidRegionBlock(block).secondaryAll();
-	}
-
-	[[nodiscard]] bool voidRegionSecondaryNone(pos_t block) const
-	{
-		assert(derived().valid(block));
-		return voidRegionBlock(block).secondaryNone();
-	}
-
-	/**************************************************************************************
-	|                                                                                     |
-	|                                 Secondary Modifiers                                 |
-	|                                                                                     |
-	**************************************************************************************/
-
-	void voidRegionSecondarySet(bool value, bool propagate = true)
-	{
-		voidRegionSecondarySet(derived().index(), value, propagate);
-	}
-
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void voidRegionSecondarySet(NodeType node, bool value, bool propagate = true)
-	{
-		if (value) {
-			auto node_f = [this, value](Index node) {
-				voidRegionBlock(node.pos).secondarySet(node.offset);
-			};
-
-			auto block_f = [this, value](pos_t block) {
-				voidRegionBlock(block).secondaryInit(true);
-			};
-
-			auto update_f = [this](Index node, pos_t children) {
-				onPropagateChildren(node, children);
-			};
-
-			derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
-		} else {
-			auto node_f = [this, value](Index node) {
-				voidRegionBlock(node.pos).secondaryReset(node.offset);
-			};
-
-			auto block_f = [this, value](pos_t block) {
-				voidRegionBlock(block).secondaryInit(false);
-			};
-
-			auto update_f = [this](Index node, pos_t children) {
-				onPropagateChildren(node, children);
-			};
-
-			derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
-		}
-	}
-
-	template <class UnaryOp,
-	          std::enable_if_t<std::is_invocable_r_v<bool, UnaryOp, Index>, bool> = true>
-	void voidRegionSecondaryUpdate(UnaryOp unary_op, bool propagate = true)
-	{
-		voidRegionSecondaryUpdate(derived().index(), unary_op, propagate);
-	}
-
-	template <class NodeType, class UnaryOp,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool>     = true,
-	          std::enable_if_t<std::is_invocable_r_v<bool, UnaryOp, Index>, bool> = true>
-	void voidRegionSecondaryUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
-	{
-		auto node_f = [this, unary_op](Index node) {
-			voidRegionBlock(node.pos).secondarySet(node.offset, unary_op(node));
-		};
-
-		auto block_f = [this, unary_op](pos_t block) {
-			for (std::size_t i{}; BF > i; ++i) {
-				voidRegionBlock(block).secondarySet(i, unary_op(Index(block, i)));
-			}
-		};
-
-		auto update_f = [this](Index node, pos_t children) {
-			onPropagateChildren(node, children);
-		};
-
-		derived().recursLeaves(node, node_f, block_f, update_f, propagate);
-	}
-
-	/**************************************************************************************
-	|                                                                                     |
-	|                                  Secondary Lookup                                   |
-	|                                                                                     |
-	**************************************************************************************/
-
-	[[nodiscard]] bool voidRegionSecondaryContains() const
-	{
-		return voidRegionSecondaryContains(derived().index());
-	}
-
-	template <class NodeType,
-	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	[[nodiscard]] bool voidRegionSecondaryContains(NodeType node) const
-	{
-		Index n = derived().index(node);
-		return voidRegionBlock(n.pos).secondaryContains(n.offset);
+		return voidRegionBlock(n.pos)[n.offset].contains;
 	}
 
  protected:
@@ -449,39 +286,36 @@ class VoidRegionMap
 
 	void onInitChildren(Index node, pos_t children)
 	{
-		voidRegionBlock(children) = VoidRegionBlock(voidRegionBlock(node.pos), node.offset);
+		voidRegionBlock(children) = voidRegionBlock(node.pos)[node.offset];
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
 	{
-		auto&       vrb  = voidRegionBlock(node.pos);
+		auto&       vr   = voidRegionBlock(node.pos)[node.offset];
 		auto const& cvrb = voidRegionBlock(children);
-		vrb.primarySet(node.offset, cvrb.primary_void_region.all());
-		vrb.primaryContains(node.offset) = cvrb.primary_contains_void_region.any();
-		vrb.secondarySet(node.offset, cvrb.secondary_void_region.all());
-		vrb.secondaryContains(node.offset) = cvrb.secondary_contains_void_region.any();
+		vr.is = std::all_of(cvrb.begin(), cvrb.end(), [](auto const& e) { return e.is; });
+		vr.contains =
+		    std::any_of(cvrb.begin(), cvrb.end(), [](auto const& e) { return e.contains; });
 	}
 
 	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
 		auto const& vrb = voidRegionBlock(block);
-		return (vrb.primaryNone() || vrb.primaryAll()) &&
-		       (vrb.secondaryNone() || vrb.secondaryAll());
+		return std::all_of(vrb.begin() + 1, vrb.end(),
+		                   [a = vrb[0]](auto const& e) { return e == a; });
 	}
 
 	void onPruneChildren(Index node, pos_t /* children */)
 	{
-		auto& vrb                          = voidRegionBlock(node.pos);
-		vrb.primaryContains(node.offset)   = vrb.primary(node.offset);
-		vrb.secondaryContains(node.offset) = vrb.secondary(node.offset);
+		auto& vr    = voidRegionBlock(node.pos)[node.offset];
+		vr.contains = vr.is;
 	}
 
 	[[nodiscard]] std::size_t onSerializedSize(
 	    std::vector<std::pair<pos_t, BitSet<BF>>> const& /* nodes */,
 	    std::size_t num_nodes) const
 	{
-		return num_nodes * (sizeof(VoidRegionBlock<BF>::primary_void_region) +
-		                    sizeof(VoidRegionBlock<BF>::secondary_void_region));
+		return num_nodes * sizeof(VoidRegionElement);
 	}
 
 	void onRead(ReadBuffer& in, std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes)
@@ -489,23 +323,33 @@ class VoidRegionMap
 		for (auto [block, offset] : nodes) {
 			auto& vrb = voidRegionBlock(block);
 
-			BitSet<BF> pvr;
-			BitSet<BF> svr;
-			in.read(pvr);
-			in.read(svr);
-			vrb.primary_void_region = (vrb.primary_void_region & ~offset) | (pvr & offset);
-			vrb.primary_contains_void_region = vrb.primary_void_region;
-			vrb.secondary_void_region = (vrb.secondary_void_region & ~offset) | (svr & offset);
-			vrb.secondary_contains_void_region = vrb.secondary_void_region;
+			if (offset.all()) {
+				in.read(vrb);
+			} else {
+				for (std::size_t i{}; BF > i; ++i) {
+					if (offset[i]) {
+						in.read(vrb[i]);
+					}
+				}
+			}
 		}
 	}
 
 	void onWrite(WriteBuffer&                                     out,
 	             std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes) const
 	{
-		for (auto [block, _] : nodes) {
-			out.write(voidRegionBlock(block).primary_void_region);
-			out.write(voidRegionBlock(block).secondary_void_region);
+		for (auto [block, offset] : nodes) {
+			auto const& vrb = voidRegionBlock(block);
+
+			if (offset.all()) {
+				out.write(vrb);
+			} else {
+				for (std::size_t i{}; BF > i; ++i) {
+					if (offset[i]) {
+						out.write(vrb[i]);
+					}
+				}
+			}
 		}
 	}
 
@@ -515,11 +359,6 @@ class VoidRegionMap
 			out << "Void region: <font color='green'><b>true</b></font>";
 		} else {
 			out << "Void region: <font color='red'>false</font>";
-		}
-		if (voidRegionSecondary(node)) {
-			out << "Void region 2nd: <font color='green'><b>true</b></font>";
-		} else {
-			out << "Void region 2nd: <font color='red'>false</font>";
 		}
 	}
 };

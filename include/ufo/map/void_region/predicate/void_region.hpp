@@ -48,26 +48,19 @@
 
 namespace ufo::pred
 {
-enum class VoidRegionType { PRIMARY = 1, SECONDARY = 2, ANY = 3, ALL = 4 };
-
-template <VoidRegionType Type = VoidRegionType::PRIMARY, bool Negated = false>
-struct VoidRegionT {
+template <bool Negated = false>
+struct VoidRegion {
 };
 
-template <VoidRegionType Type, bool Negated>
-VoidRegionT<Type, !Negated> operator!(VoidRegionT<Type, Negated>)
+template <bool Negated>
+VoidRegion<!Negated> operator!(VoidRegion<Negated>)
 {
-	return VoidRegionT<Type, !Negated>{};
+	return VoidRegion<!Negated>{};
 }
 
-using VoidRegion          = VoidRegionT<VoidRegionType::PRIMARY, false>;
-using VoidRegionSecondary = VoidRegionT<VoidRegionType::SECONDARY, false>;
-using VoidRegionAny       = VoidRegionT<VoidRegionType::ANY, false>;
-using VoidRegionAll       = VoidRegionT<VoidRegionType::ALL, false>;
-
-template <VoidRegionType Type, bool Negated>
-struct Filter<VoidRegionT<Type, Negated>> {
-	using Pred = VoidRegionT<Type, Negated>;
+template <bool Negated>
+struct Filter<VoidRegion<Negated>> {
+	using Pred = VoidRegion<Negated>;
 
 	template <class Tree>
 	static constexpr void init(Pred&, Tree const&)
@@ -75,68 +68,24 @@ struct Filter<VoidRegionT<Type, Negated>> {
 	}
 
 	template <class Tree>
-	[[nodiscard]] static constexpr bool returnable(Pred const& p, Tree const& t,
+	[[nodiscard]] static constexpr bool returnable(Pred const&, Tree const& t,
 	                                               typename Tree::Node const& n)
 	{
-		if constexpr (VoidRegionType::PRIMARY == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegion(n.index);
-			} else {
-				return t.voidRegion(n.index);
-			}
-		} else if constexpr (VoidRegionType::SECONDARY == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegionSecondary(n.index);
-			} else {
-				return t.voidRegionSecondary(n.index);
-			}
-		} else if constexpr (VoidRegionType::ANY == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegion(n.index) || !t.voidRegionSecondary(n.index);
-			} else {
-				return t.voidRegion(n.index) || t.voidRegionSecondary(n.index);
-			}
-		} else if constexpr (VoidRegionType::ALL == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegion(n.index) && !t.voidRegionSecondary(n.index);
-			} else {
-				return t.voidRegion(n.index) && t.voidRegionSecondary(n.index);
-			}
+		if constexpr (Negated) {
+			return !t.voidRegion(n.index);
 		} else {
-			static_assert(dependent_false_v<Tree>, "Non-supported void region type");
+			return t.voidRegion(n.index);
 		}
 	}
 
 	template <class Tree>
-	[[nodiscard]] static constexpr bool traversable(Pred const& p, Tree const& t,
+	[[nodiscard]] static constexpr bool traversable(Pred const&, Tree const& t,
 	                                                typename Tree::Node const& n)
 	{
-		if constexpr (VoidRegionType::PRIMARY == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegion(n.index);
-			} else {
-				return t.voidRegionContains(n.index);
-			}
-		} else if constexpr (VoidRegionType::SECONDARY == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegionSecondary(n.index);
-			} else {
-				return t.voidRegionSecondaryContains(n.index);
-			}
-		} else if constexpr (VoidRegionType::ANY == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegion(n.index) || !t.voidRegionSecondary(n.index);
-			} else {
-				return t.voidRegionContains(n.index) || t.voidRegionSecondaryContains(n.index);
-			}
-		} else if constexpr (VoidRegionType::ALL == Type) {
-			if constexpr (Negated) {
-				return !t.voidRegion(n.index) && !t.voidRegionSecondary(n.index);
-			} else {
-				return t.voidRegionContains(n.index) && t.voidRegionSecondaryContains(n.index);
-			}
+		if constexpr (Negated) {
+			return !t.voidRegion(n.index);
 		} else {
-			static_assert(dependent_false_v<Tree>, "Non-supported void region type");
+			return t.voidRegionContains(n.index);
 		}
 	}
 };

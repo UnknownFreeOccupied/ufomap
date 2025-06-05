@@ -43,162 +43,74 @@
 
 // UFO
 #include <ufo/utility/bit_set.hpp>
+#include <ufo/utility/create_array.hpp>
 
 // STL
+#include <array>
 #include <cassert>
 #include <cstddef>
 
 namespace ufo
 {
+struct VoidRegionElement {
+	bool is{};
+	bool contains{};
+
+	constexpr VoidRegionElement() noexcept = default;
+
+	constexpr VoidRegionElement(bool v) noexcept : is(v), contains(v) {}
+
+	friend constexpr bool operator==(VoidRegionElement const& lhs,
+	                                 VoidRegionElement const& rhs)
+	{
+		return lhs.is == rhs.is && lhs.contains == rhs.contains;
+	}
+
+	friend constexpr bool operator!=(VoidRegionElement const& lhs,
+	                                 VoidRegionElement const& rhs)
+	{
+		return !(lhs == rhs);
+	};
+};
+
 template <std::size_t BF>
 struct VoidRegionBlock {
-	using value_type = typename BitSet<BF>::value_type;
-
-	BitSet<BF> primary_void_region;
-	BitSet<BF> primary_contains_void_region;
-	BitSet<BF> secondary_void_region;
-	BitSet<BF> secondary_contains_void_region;
+	std::array<VoidRegionElement, BF> data;
 
 	constexpr VoidRegionBlock() = default;
 
-	constexpr VoidRegionBlock(VoidRegionBlock const&) = default;
-
-	constexpr VoidRegionBlock(VoidRegionBlock const& other, std::size_t pos)
+	constexpr VoidRegionBlock(VoidRegionElement const& parent)
+	    : data(createArray<BF>(parent))
 	{
-		primaryInit(other.primary(pos));
-		secondaryInit(other.secondary(pos));
 	}
 
-	/**************************************************************************************
-	|                                                                                     |
-	|                                       Primary                                       |
-	|                                                                                     |
-	**************************************************************************************/
-
-	[[nodiscard]] constexpr bool primary(std::size_t pos) const
+	[[nodiscard]] constexpr VoidRegionElement& operator[](std::size_t pos)
 	{
 		assert(BF > pos);
-		return primary_void_region[pos];
+		return data[pos];
 	}
 
-	constexpr void primaryInit(bool value)
-	{
-		primary_void_region          = -static_cast<value_type>(value);
-		primary_contains_void_region = -static_cast<value_type>(value);
-	}
-
-	constexpr void primarySet(std::size_t pos, bool value)
+	[[nodiscard]] constexpr VoidRegionElement const& operator[](std::size_t pos) const
 	{
 		assert(BF > pos);
-		primary_void_region.set(pos, value);
-		primary_contains_void_region.set(pos, value);
+		return data[pos];
 	}
 
-	constexpr void primarySet(std::size_t pos)
-	{
-		assert(BF > pos);
-		primary_void_region.set(pos);
-		primary_contains_void_region.set(pos);
-	}
+	auto begin() { return data.begin(); }
 
-	constexpr void primaryReset(std::size_t pos)
-	{
-		assert(BF > pos);
-		primary_void_region.reset(pos);
-		primary_contains_void_region.reset(pos);
-	}
+	auto begin() const { return data.begin(); }
 
-	[[nodiscard]] constexpr bool primaryAny() const { return primary_void_region.any(); }
+	auto cbegin() const { return begin(); }
 
-	[[nodiscard]] constexpr bool primaryAll() const { return primary_void_region.all(); }
+	auto end() { return data.end(); }
 
-	[[nodiscard]] constexpr bool primaryNone() const { return primary_void_region.none(); }
+	auto end() const { return data.end(); }
 
-	[[nodiscard]] constexpr bool primaryContains(std::size_t pos) const
-	{
-		assert(BF > pos);
-		return primary_contains_void_region[pos];
-	}
-
-	[[nodiscard]] constexpr typename BitSet<BF>::Reference primaryContains(std::size_t pos)
-	{
-		assert(BF > pos);
-		return primary_contains_void_region[pos];
-	}
-
-	/**************************************************************************************
-	|                                                                                     |
-	|                                      Secondary                                      |
-	|                                                                                     |
-	**************************************************************************************/
-
-	[[nodiscard]] constexpr bool secondary(std::size_t pos) const
-	{
-		assert(BF > pos);
-		return secondary_void_region[pos];
-	}
-
-	constexpr void secondaryInit(bool value)
-	{
-		secondary_void_region          = -static_cast<value_type>(value);
-		secondary_contains_void_region = -static_cast<value_type>(value);
-	}
-
-	constexpr void secondarySet(std::size_t pos, bool value)
-	{
-		assert(BF > pos);
-		secondary_void_region.set(pos, value);
-		secondary_contains_void_region.set(pos, value);
-	}
-
-	constexpr void secondarySet(std::size_t pos)
-	{
-		assert(BF > pos);
-		secondary_void_region.set(pos);
-		secondary_contains_void_region.set(pos);
-	}
-
-	constexpr void secondaryReset(std::size_t pos)
-	{
-		assert(BF > pos);
-		secondary_void_region.reset(pos);
-		secondary_contains_void_region.reset(pos);
-	}
-
-	[[nodiscard]] constexpr bool secondaryAny() const
-	{
-		return secondary_void_region.any();
-	}
-
-	[[nodiscard]] constexpr bool secondaryAll() const
-	{
-		return secondary_void_region.all();
-	}
-
-	[[nodiscard]] constexpr bool secondaryNone() const
-	{
-		return secondary_void_region.none();
-	}
-
-	[[nodiscard]] constexpr bool secondaryContains(std::size_t pos) const
-	{
-		assert(BF > pos);
-		return secondary_contains_void_region[pos];
-	}
-
-	[[nodiscard]] constexpr typename BitSet<BF>::Reference secondaryContains(
-	    std::size_t pos)
-	{
-		assert(BF > pos);
-		return secondary_contains_void_region[pos];
-	}
+	auto cend() const { return end(); }
 
 	friend constexpr bool operator==(VoidRegionBlock const& lhs, VoidRegionBlock const& rhs)
 	{
-		return lhs.primary_void_region == rhs.primary_void_region &&
-		       lhs.primary_contains_void_region == rhs.primary_contains_void_region &&
-		       lhs.secondary_void_region == rhs.secondary_void_region &&
-		       lhs.secondary_contains_void_region == rhs.secondary_contains_void_region;
+		return lhs.data == rhs.data;
 	}
 
 	friend constexpr bool operator!=(VoidRegionBlock const& lhs, VoidRegionBlock const& rhs)
