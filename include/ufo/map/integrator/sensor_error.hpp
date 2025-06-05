@@ -1,7 +1,7 @@
 /*!
  * UFOMap: An Efficient Probabilistic 3D Mapping Framework That Embraces the Unknown
  *
- * @author Daniel Duberg (dduberg@kth.se), Ramona Häuselmann (ramonaha@kth.se)
+ * @author Daniel Duberg (dduberg@kth.se)
  * @see https://github.com/UnknownFreeOccupied/ufomap
  * @version 1.0
  * @date 2022-05-13
@@ -38,60 +38,52 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_BLOCK_HPP
-#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_BLOCK_HPP
 
-// UFO
-#include <ufo/utility/create_array.hpp>
+#ifndef UFO_MAP_INTEGRATOR_SENSOR_ERROR_HPP
+#define UFO_MAP_INTEGRATOR_SENSOR_ERROR_HPP
 
 // STL
-#include <array>
-#include <atomic>
-#include <cassert>
-#include <cstddef>
+#include <cmath>
 
-namespace ufo::detail
+namespace ufo
 {
-struct InverseElement {
-	std::atomic_uint_fast32_t count{};
-	std::atomic_uint_fast32_t index{};
+struct FixedSensorError {
+	float error_distance{};
 
-	InverseElement() noexcept = default;
+	[[nodiscard]] float operator()(float /* distance */) const { return error_distance; }
+};
 
-	InverseElement(InverseElement const& other)
-	    : count(other.count.load()), index(other.index.load())
+struct LinearSensorError {
+	float factor{};
+
+	[[nodiscard]] float operator()(float distance) const { return factor * distance; }
+};
+
+struct PolynomialSensorError {
+	float a = 0.002797f;
+	float b = -0.004249f;
+	float c = 0.007311f;
+
+	[[nodiscard]] float operator()(float distance) const
 	{
-	}
-
-	InverseElement& operator=(InverseElement const& rhs)
-	{
-		count = rhs.count.load();
-		index = rhs.index.load();
-		return *this;
+		return a + b * distance + c * distance * distance;
 	}
 };
 
-template <std::size_t BF>
-struct InverseBlock {
-	std::array<InverseElement, BF> data;
+struct ExponentialSensorError {
+	float a = 0.0005877f;
+	float b = 0.9925f;
 
-	constexpr InverseBlock() = default;
-
-	constexpr InverseBlock(InverseElement const& parent) : data(createArray<BF>(parent)) {}
-
-	constexpr void fill(InverseElement const& parent) { data.fill(parent); }
-
-	[[nodiscard]] constexpr InverseElement& operator[](std::size_t pos)
+	[[nodiscard]] float operator()(float distance) const
 	{
-		assert(BF > pos);
-		return data[pos];
-	}
-
-	[[nodiscard]] constexpr InverseElement const& operator[](std::size_t pos) const
-	{
-		assert(BF > pos);
-		return data[pos];
+		return a * std::exp(b * distance);
 	}
 };
-}  // namespace ufo::detail
-#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_BLOCK_HPP
+
+static constexpr PolynomialSensorError const  KinectV1ErrorFunction{0.002797f, -0.004249f,
+                                                                   0.007311};
+static constexpr ExponentialSensorError const KinectV2ErrorFunction{0.0005877f, 0.9925f};
+static constexpr ExponentialSensorError const ZEDErrorFunction{0.007437f, 0.3855f};
+}  // namespace ufo
+
+#endif  // UFO_MAP_INTEGRATOR_SENSOR_ERROR_HPP

@@ -39,36 +39,57 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MISSES_INFO_HPP
-#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MISSES_INFO_HPP
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_MISS_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_MISS_HPP
+
+// UFO
+#include <ufo/container/tree/code.hpp>
+#include <ufo/container/tree/index.hpp>
 
 // STL
+#include <cstddef>
 #include <cstdint>
 
 namespace ufo::detail
 {
-struct InverseMissesInfo {
-	std::uint32_t index{};
-	std::uint32_t data{};
+template <std::size_t Dim>
+struct Miss {
+	union {
+		TreeCode<Dim> code{};
+		TreeIndex     node;
+	};
+	Vec<Dim, float>    direction{};
+	std::uint_fast32_t count{};
+	bool               void_region{};
 
-	constexpr InverseMissesInfo() = default;
+	constexpr Miss() noexcept                       = default;
 
-	constexpr InverseMissesInfo(std::uint32_t index, std::uint32_t count)
-	    : index(index), data(count << 1)
+	Miss(TreeCode<Dim> const& code, Vec<Dim, float> const& direction,
+	     std::uint_fast32_t count, bool void_region)
+	    : code(code), direction(direction), count(count), void_region(void_region)
 	{
 	}
 
-	[[nodiscard]] constexpr bool voidRegion() const { return 0b1u == (0b1u & data); }
-
-	constexpr void voidRegion(bool v)
+	Miss(TreeIndex const& node, Vec<Dim, float> const& direction, std::uint_fast32_t count,
+	     bool void_region)
+	    : node(node), direction(direction), count(count), void_region(void_region)
 	{
-		data = (~0b1u & data) | static_cast<std::uint32_t>(v);
 	}
 
-	[[nodiscard]] constexpr std::uint32_t count() const { return data >> 1; }
+	Miss& operator=(TreeCode<Dim> const& code)
+	{
+		this->code = code;
+		return *this;
+	}
 
-	constexpr void count(std::uint32_t count) { data = (0b1u & data) | (count << 1); }
+	Miss& operator=(TreeIndex const& node)
+	{
+		this->node = node;
+		return *this;
+	}
+
+	operator TreeCode<Dim>() const { return code; }
 };
 }  // namespace ufo::detail
 
-#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_MISSES_INFO_HPP
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_MISS_HPP

@@ -39,32 +39,53 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_INTEGRATOR_DETAIL_INVERSE_CLOUD_ELEMENT_HPP
-#define UFO_MAP_INTEGRATOR_DETAIL_INVERSE_CLOUD_ELEMENT_HPP
+#ifndef UFO_MAP_INTEGRATION_DETAIL_HIT_GRID_HPP
+#define UFO_MAP_INTEGRATION_DETAIL_HIT_GRID_HPP
 
 // UFO
-#include <ufo/math/vec.hpp>
+#include <ufo/map/integrator/detail/bool_grid.hpp>
+#include <ufo/map/integrator/detail/count_grid.hpp>
 
 // STL
-#include <cstdint>
-#include <vector>
+#include <cstddef>
 
 namespace ufo::detail
 {
-template <std::size_t Dim>
-struct InverseCloudElement {
-	Vec<Dim, float> direction;
-	float           distance;
+template <std::size_t Dim, unsigned Depth>
+class HitGrid
+{
+ public:
+	using Code    = TreeCode<Dim>;
+	using code_t  = typename Code::code_t;
+	using depth_t = typename Code::depth_t;
 
-	InverseCloudElement() = default;
+ private:
+	static constexpr std::size_t const Size = ipow(std::size_t(2), Dim* Depth);
 
-	InverseCloudElement(Vec<Dim, float> const& start, Vec<Dim, float> const& end)
+	static constexpr code_t const Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
+
+ public:
+	BoolGrid<Dim, Depth> hit;
+
+	void clear() { hit.clear(); }
+
+	[[nodiscard]] static constexpr std::size_t size() noexcept { return Size; }
+
+	[[nodiscard]] static constexpr depth_t depth() noexcept { return Depth; }
+
+	[[nodiscard]] static constexpr code_t pos(Code const& code) noexcept
 	{
-		direction = end - start;
-		distance  = norm(direction);
-		direction /= distance;
+		return (code.lowestOffsets() >> Dim * code.depth()) & Mask;
+	}
+
+	[[nodiscard]] static constexpr Code code(Code prefix, code_t pos, depth_t depth_offset,
+	                                         depth_t depth)
+	{
+		prefix.lowestOffsets(prefix.lowestOffsets() | (pos << Dim * depth_offset),
+		                     depth_offset + depth);
+		return prefix;
 	}
 };
 }  // namespace ufo::detail
 
-#endif  // UFO_MAP_INTEGRATOR_DETAIL_INVERSE_CLOUD_ELEMENT_HPP
+#endif  // UFO_MAP_INTEGRATION_DETAIL_HIT_GRID_HPP

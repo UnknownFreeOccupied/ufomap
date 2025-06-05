@@ -39,12 +39,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_HPP
-#define UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_HPP
+#ifndef UFO_MAP_INTEGRATOR_DETAIL_HIT_HPP
+#define UFO_MAP_INTEGRATOR_DETAIL_HIT_HPP
 
 // UFO
-#include <ufo/map/integrator/simple_integrator_2d.hpp>
-#include <ufo/map/integrator/simple_integrator_3d.hpp>
-#include <ufo/map/integrator/simple_integrator_4d.hpp>
+#include <ufo/container/tree/code.hpp>
+#include <ufo/container/tree/index.hpp>
 
-#endif  // UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_HPP
+// STL
+#include <cstddef>
+
+namespace ufo::detail
+{
+template <std::size_t Dim>
+struct Hit {
+	union {
+		TreeCode<Dim> code{};
+		TreeIndex     node;
+	};
+
+	Hit& operator=(TreeCode<Dim> const& code)
+	{
+		this->code = code;
+		return *this;
+	}
+
+	Hit& operator=(TreeIndex const& node)
+	{
+		this->node = node;
+		return *this;
+	}
+
+	operator TreeCode<Dim>() const { return code; }
+};
+}  // namespace ufo::detail
+
+#endif  // UFO_MAP_INTEGRATOR_DETAIL_HIT_HPP

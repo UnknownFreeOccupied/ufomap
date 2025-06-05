@@ -39,31 +39,60 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- #ifndef UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_3D_HPP
- #define UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_3D_HPP
- 
- // UFO
- #include <ufo/cloud/point_cloud.hpp>
- #include <ufo/execution/algorithm.hpp>
- #include <ufo/execution/execution.hpp>
- #include <ufo/map/integrator/detail/simple_integrator.hpp>
- #include <ufo/map/integrator/integrator.hpp>
- #include <ufo/map/occupancy/block.hpp>
- #include <ufo/utility/index_iterator.hpp>
- #include <ufo/utility/spinlock.hpp>
- 
- // STL
- #include <algorithm>
- #include <cstddef>
- #include <iterator>
- #include <type_traits>
- 
- namespace ufo
- {
- template <>
- class SimpleIntegrator<3> : public Integrator<3>
- {
- };
- }  // namespace ufo
- 
- #endif  // UFO_MAP_INTEGRATOR_SIMPLE_INTEGRATOR_3D_HPP
+#ifndef UFO_MAP_INTEGRATION_DETAIL_MISS_GRID_HPP
+#define UFO_MAP_INTEGRATION_DETAIL_MISS_GRID_HPP
+
+// UFO
+#include <ufo/map/integrator/detail/bool_grid.hpp>
+#include <ufo/map/integrator/detail/count_grid.hpp>
+
+// STL
+#include <cstddef>
+
+namespace ufo::detail
+{
+template <std::size_t Dim, unsigned Depth>
+class MissGrid
+{
+ public:
+	using Code    = TreeCode<Dim>;
+	using code_t  = typename Code::code_t;
+	using depth_t = typename Code::depth_t;
+
+ private:
+	static constexpr std::size_t const Size = ipow(std::size_t(2), Dim* Depth);
+
+	static constexpr code_t const Mask = ~(((~code_t(0)) >> Dim * Depth) << Dim * Depth);
+
+ public:
+	BoolGrid<Dim, Depth>  miss;
+	BoolGrid<Dim, Depth>  void_region;
+	CountGrid<Dim, Depth> count;
+
+	void clear()
+	{
+		miss.clear();
+		void_region.clear();
+		count.clear();
+	}
+
+	[[nodiscard]] static constexpr std::size_t size() noexcept { return Size; }
+
+	[[nodiscard]] static constexpr depth_t depth() noexcept { return Depth; }
+
+	[[nodiscard]] static constexpr code_t pos(Code const& code) noexcept
+	{
+		return (code.lowestOffsets() >> Dim * code.depth()) & Mask;
+	}
+
+	[[nodiscard]] static constexpr Code code(Code prefix, code_t pos, depth_t depth_offset,
+	                                         depth_t depth)
+	{
+		prefix.lowestOffsets(prefix.lowestOffsets() | (pos << Dim * depth_offset),
+		                     depth_offset + depth);
+		return prefix;
+	}
+};
+}  // namespace ufo::detail
+
+#endif  // UFO_MAP_INTEGRATION_DETAIL_MISS_GRID_HPP
