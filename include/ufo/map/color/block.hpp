@@ -60,8 +60,6 @@ struct ColorBlock {
 
 	constexpr ColorBlock(Color const& parent) : data(createArray<BF>(parent)) {}
 
-	constexpr void fill(Color const& parent) { data = createArray<BF>(parent); }
-
 	[[nodiscard]] constexpr Color& operator[](std::size_t pos)
 	{
 		assert(BF > pos);

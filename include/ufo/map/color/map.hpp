@@ -336,15 +336,11 @@ class ColorMap
 	|                                                                                     |
 	**************************************************************************************/
 
-	void onInitRoot()
-	{
-		auto& block = colorBlock(0);
-		block.fill(Color(0));
-	}
+	void onInitRoot() { colorBlock(0) = Color(0); }
 
 	void onInitChildren(Index node, pos_t children)
 	{
-		colorBlock(children).fill(colorBlock(node.pos)[node.offset]);
+		colorBlock(children) = colorBlock(node.pos)[node.offset];
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
