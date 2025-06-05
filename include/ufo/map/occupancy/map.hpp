@@ -58,7 +58,6 @@
 #include <ufo/utility/type_traits.hpp>
 
 // STL
-#include <array>
 #include <iostream>
 #include <limits>
 #include <string_view>
@@ -100,11 +99,7 @@ class OccupancyMap
 	using pos_t    = typename Tree::pos_t;
 
 	using logit_t     = typename Block::logit_t;
-	using occupancy_t = double;
-
- private:
-	static constexpr occupancy_t const MaxOccupancy = 1.0;
-	static constexpr occupancy_t const MinOccupancy = 0.0;
+	using occupancy_t = logit_t;
 
  public:
 	/**************************************************************************************
@@ -112,24 +107,6 @@ class OccupancyMap
 	|                                       Access                                        |
 	|                                                                                     |
 	**************************************************************************************/
-
-	[[nodiscard]] logit_t occupancyLogit(occupancy_t probability) const
-	{
-		assert(0 <= probability && 1 >= probability);
-
-		occupancy_t c = occupancyClampingThresLogit();
-		occupancy_t l = logit(probability, -c, c);
-		return std::round(l / c * static_cast<occupancy_t>(occupancyMaxLogit()));
-	}
-
-	[[nodiscard]] occupancy_t occupancy(logit_t logit) const
-	{
-		assert(occupancyMinLogit() <= logit && occupancyMaxLogit() >= logit);
-
-		occupancy_t max   = static_cast<occupancy_t>(occupancyMaxLogit());
-		occupancy_t value = static_cast<occupancy_t>(logit);
-		return probability(occupancyClampingThresLogit() * (value / max));
-	}
 
 	[[nodiscard]] logit_t occupancyLogit() const
 	{
@@ -141,7 +118,7 @@ class OccupancyMap
 	[[nodiscard]] logit_t occupancyLogit(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return occupancyBlock(n.pos)[n.offset].logit();
+		return occupancyBlock(n.pos)[n.offset].logit;
 	}
 
 	[[nodiscard]] occupancy_t occupancy() const { return occupancy(derived().index()); }
@@ -151,22 +128,6 @@ class OccupancyMap
 	[[nodiscard]] occupancy_t occupancy(NodeType node) const
 	{
 		return occupancy(occupancyLogit(node));
-	}
-
-	/**************************************************************************************
-	|                                                                                     |
-	|                                         GPU                                         |
-	|                                                                                     |
-	**************************************************************************************/
-
-	[[nodiscard]] WGPUBuffer gpuOccupancyBuffer() const
-	{
-		return derived().template gpuBuffer<Block>();
-	}
-
-	[[nodiscard]] std::size_t gpuOccupancyBufferSize() const
-	{
-		return derived().template gpuBufferSize<Block>();
 	}
 
 	/**************************************************************************************
@@ -190,8 +151,6 @@ class OccupancyMap
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
 	void occupancySetLogit(NodeType node, logit_t value, bool propagate = true)
 	{
-		assert(occupancyMinLogit() <= value && occupancyMaxLogit() >= value);
-
 		OccupancyElement elem(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
 		                      occupancyOccupiedLogit(value));
 
@@ -199,7 +158,7 @@ class OccupancyMap
 			occupancyBlock(node.pos)[node.offset] = elem;
 		};
 
-		auto block_f = [this, elem](pos_t pos) { occupancyBlock(pos).fill(elem); };
+		auto block_f = [this, elem](pos_t pos) { occupancyBlock(pos) = elem; };
 
 		auto update_f = [this](Index node, pos_t children) {
 			onPropagateChildren(node, children);
@@ -212,7 +171,7 @@ class OccupancyMap
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
 	void occupancySet(NodeType node, occupancy_t value, bool propagate = true)
 	{
-		assert(MinOccupancy <= value && MaxOccupancy >= value);
+		assert(0 <= value && 1 >= value);
 
 		occupancySetLogit(node, occupancyLogit(value), propagate);
 	}
@@ -220,10 +179,10 @@ class OccupancyMap
 	template <class NodeType, class UnaryOp,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool>        = true,
 	          std::enable_if_t<std::is_invocable_r_v<logit_t, UnaryOp, Index>, bool> = true>
-	void occupancyUpdateLogit(NodeType node, UnaryOp unary_op, bool propagate = true)
+	void occupancyUpdateLogit(NodeType node, UnaryOp&& unary_op, bool propagate = true)
 	{
-		auto node_f = [this, unary_op](Index node) {
-			logit_t value = UFO_CLAMP(unary_op(node), occupancyMinLogit(), occupancyMaxLogit());
+		auto node_f = [this, &unary_op](Index node) {
+			logit_t value = unary_op(node);
 			occupancyBlock(node.pos)[node.offset] =
 			    OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
 			                     occupancyOccupiedLogit(value));
@@ -239,17 +198,29 @@ class OccupancyMap
 			onPropagateChildren(node, children);
 		};
 
-		derived().recursLeaves(node, node_f, block_f, update_f, propagate);
+		derived().recursParentFirst(node, node_f, block_f, update_f, propagate);
 	}
 
 	template <class NodeType,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
-	void occupancyUpdateLogit(NodeType node, int change, bool propagate = true)
+	void occupancyUpdateLogit(NodeType node, logit_t change, bool propagate = true)
 	{
-		assert(occupancyMaxLogit() - occupancyMinLogit() >= std::abs(change));
-
 		occupancyUpdateLogit(
 		    node, [this, change](Index node) { return occupancyLogit(node) + change; },
+		    propagate);
+	}
+
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	void occupancyUpdateLogit(NodeType node, logit_t change, logit_t min_clamp_thres,
+	                          logit_t max_clamp_thres, bool propagate = true)
+	{
+		occupancyUpdateLogit(
+		    node,
+		    [this, change, min_clamp_thres, max_clamp_thres](Index node) {
+			    return std::clamp(occupancyLogit(node) + change, min_clamp_thres,
+			                      max_clamp_thres);
+		    },
 		    propagate);
 	}
 
@@ -257,10 +228,10 @@ class OccupancyMap
 	    class NodeType, class UnaryOp,
 	    std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool>            = true,
 	    std::enable_if_t<std::is_invocable_r_v<occupancy_t, UnaryOp, Index>, bool> = true>
-	void occupancyUpdate(NodeType node, UnaryOp unary_op, bool propagate = true)
+	void occupancyUpdate(NodeType node, UnaryOp&& unary_op, bool propagate = true)
 	{
 		occupancyUpdateLogit(
-		    node, [this, unary_op](Index node) { return occupancyLogit(unary_op(node)); },
+		    node, [this, &unary_op](Index node) { return occupancyLogit(unary_op(node)); },
 		    propagate);
 	}
 
@@ -269,6 +240,15 @@ class OccupancyMap
 	void occupancyUpdate(NodeType node, occupancy_t change, bool propagate = true)
 	{
 		occupancyUpdateLogit(node, occupancyLogit(change), propagate);
+	}
+
+	template <class NodeType,
+	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true>
+	void occupancyUpdate(NodeType node, occupancy_t change, occupancy_t min_clamp_thres,
+	                     occupancy_t max_clamp_thres, bool propagate = true)
+	{
+		occupancyUpdateLogit(node, occupancyLogit(change), occupancyLogit(min_clamp_thres),
+		                     occupancyLogit(max_clamp_thres), propagate);
 	}
 
 	/**************************************************************************************
@@ -331,7 +311,7 @@ class OccupancyMap
 	[[nodiscard]] bool containsUnknown(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].unknown());
+		return occupancyBlock(n.pos)[n.offset].contains_unknown;
 	}
 
 	template <class NodeType,
@@ -339,7 +319,7 @@ class OccupancyMap
 	[[nodiscard]] bool containsFree(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].free());
+		return occupancyBlock(n.pos)[n.offset].contains_free;
 	}
 
 	template <class NodeType,
@@ -347,41 +327,12 @@ class OccupancyMap
 	[[nodiscard]] bool containsOccupied(NodeType node) const
 	{
 		Index n = derived().index(node);
-		return static_cast<bool>(occupancyBlock(n.pos)[n.offset].occupied());
+		return occupancyBlock(n.pos)[n.offset].contains_occupied;
 	}
 
 	//
 	// Sensor model
 	//
-
-	[[nodiscard]] constexpr occupancy_t occupancyClampingThres() const noexcept
-	{
-		return probability(occupancyClampingThresLogit());
-	}
-
-	[[nodiscard]] constexpr occupancy_t occupancyClampingThresLogit() const noexcept
-	{
-		return clamping_thres_logit_;
-	}
-
-	[[nodiscard]] constexpr occupancy_t occupancyMax() const noexcept
-	{
-		return occupancyClampingThres();
-	}
-	[[nodiscard]] constexpr occupancy_t occupancyMin() const noexcept
-	{
-		return -occupancyClampingThres();
-	}
-
-	[[nodiscard]] constexpr logit_t occupancyMaxLogit() const noexcept
-	{
-		return OccupancyElement::MAX_VALUE;
-	}
-
-	[[nodiscard]] constexpr logit_t occupancyMinLogit() const noexcept
-	{
-		return OccupancyElement::MIN_VALUE;
-	}
 
 	[[nodiscard]] constexpr occupancy_t occupiedThres() const noexcept
 	{
@@ -436,11 +387,6 @@ class OccupancyMap
 		// }
 	}
 
-	void occupancySetClampingThres(occupancy_t probability)
-	{
-		clamping_thres_logit_ = logit(probability);
-	}
-
 	//
 	// Propagation criteria
 	//
@@ -469,6 +415,22 @@ class OccupancyMap
 		}
 	}
 
+	/**************************************************************************************
+	|                                                                                     |
+	|                                         GPU                                         |
+	|                                                                                     |
+	**************************************************************************************/
+
+	[[nodiscard]] WGPUBuffer gpuOccupancyBuffer() const
+	{
+		return derived().template gpuBuffer<Block>();
+	}
+
+	[[nodiscard]] std::size_t gpuOccupancyBufferSize() const
+	{
+		return derived().template gpuBufferSize<Block>();
+	}
+
  protected:
 	/**************************************************************************************
 	|                                                                                     |
@@ -484,19 +446,9 @@ class OccupancyMap
 
 	template <class Derived2, class Tree2>
 	OccupancyMap(OccupancyMap<Derived2, Tree2> const& other)
-	    : clamping_thres_logit_(other.clamping_thres_logit_)
-	    , occupied_thres_logit_(other.occupied_thres_logit_)
+	    : occupied_thres_logit_(other.occupied_thres_logit_)
 	    , free_thres_logit_(other.free_thres_logit_)
 	    , prop_criteria_(other.prop_criteria_)
-	{
-	}
-
-	template <class Derived2, class Tree2>
-	OccupancyMap(OccupancyMap<Derived2, Tree2>&& other)
-	    : clamping_thres_logit_(std::move(other.clamping_thres_logit_))
-	    , occupied_thres_logit_(std::move(other.occupied_thres_logit_))
-	    , free_thres_logit_(std::move(other.free_thres_logit_))
-	    , prop_criteria_(std::move(other.prop_criteria_))
 	{
 	}
 
@@ -521,30 +473,20 @@ class OccupancyMap
 	template <class Derived2, class Tree2>
 	OccupancyMap& operator=(OccupancyMap<Derived2, Tree2> const& rhs)
 	{
-		clamping_thres_logit_ = rhs.clamping_thres_logit_;
 		occupied_thres_logit_ = rhs.occupied_thres_logit_;
 		free_thres_logit_     = rhs.free_thres_logit_;
 		prop_criteria_        = rhs.prop_criteria_;
 		return *this;
 	}
 
-	template <class Derived2, class Tree2>
-	OccupancyMap& operator=(OccupancyMap<Derived2, Tree2>&& rhs)
-	{
-		clamping_thres_logit_ = std::move(rhs.clamping_thres_logit_);
-		occupied_thres_logit_ = std::move(rhs.occupied_thres_logit_);
-		free_thres_logit_     = std::move(rhs.free_thres_logit_);
-		prop_criteria_        = std::move(rhs.prop_criteria_);
-		return *this;
-	}
-
-	//
-	// Swap
-	//
+	/**************************************************************************************
+	|                                                                                     |
+	|                                        Swap                                         |
+	|                                                                                     |
+	**************************************************************************************/
 
 	void swap(OccupancyMap& other) noexcept
 	{
-		std::swap(clamping_thres_logit_, other.clamping_thres_logit_);
 		std::swap(occupied_thres_logit_, other.occupied_thres_logit_);
 		std::swap(free_thres_logit_, other.free_thres_logit_);
 		std::swap(prop_criteria_, other.prop_criteria_);
@@ -588,67 +530,77 @@ class OccupancyMap
 	void onInitRoot()
 	{
 		logit_t value{};
-		occupancyBlock(0)[0] =
+		occupancyBlock(0) =
 		    OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
 		                     occupancyOccupiedLogit(value));
 	}
 
 	void onInitChildren(Index node, pos_t children)
 	{
-		occupancyBlock(children).fill(occupancyBlock(node.pos)[node.offset]);
+		occupancyBlock(children) = occupancyBlock(node.pos)[node.offset];
 	}
 
 	void onPropagateChildren(Index node, pos_t children)
 	{
-		auto const& children_block = occupancyBlock(children);
+		auto&       o   = occupancyBlock(node.pos)[node.offset];
+		auto const& ocb = occupancyBlock(children);
 
-		std::uint32_t indicators{};
-		std::uint32_t value{};
+		o.contains_unknown  = false;
+		o.contains_free     = false;
+		o.contains_occupied = false;
 		switch (prop_criteria_) {
 			case OccupancyPropagationCriteria::MAX:
-				for (auto child : children_block.data) {
-					indicators |= child.indicators();
-					value = UFO_MAX(value, child.value());
+				o.logit = std::numeric_limits<logit_t>::lowest();
+				for (auto child : ocb.data) {
+					o.logit             = UFO_MAX(o.logit, child.logit);
+					o.contains_unknown  = o.contains_unknown || child.contains_unknown;
+					o.contains_free     = o.contains_free || child.contains_free;
+					o.contains_occupied = o.contains_occupied || child.contains_occupied;
 				}
 				break;
 			case OccupancyPropagationCriteria::MIN:
-				value = std::numeric_limits<std::uint32_t>::max();
-				for (auto child : children_block.data) {
-					indicators |= child.indicators();
-					value = UFO_MIN(value, child.value());
+				o.logit = std::numeric_limits<logit_t>::max();
+				for (auto child : ocb.data) {
+					o.logit             = UFO_MIN(o.logit, child.logit);
+					o.contains_unknown  = o.contains_unknown || child.contains_unknown;
+					o.contains_free     = o.contains_free || child.contains_free;
+					o.contains_occupied = o.contains_occupied || child.contains_occupied;
 				}
 				break;
 			case OccupancyPropagationCriteria::MEAN: {
-				for (auto child : children_block.data) {
-					indicators |= child.indicators();
-					value += child.value();
+				o.logit = {};
+				for (auto child : ocb.data) {
+					o.logit += child.logit;
+					o.contains_unknown  = o.contains_unknown || child.contains_unknown;
+					o.contains_free     = o.contains_free || child.contains_free;
+					o.contains_occupied = o.contains_occupied || child.contains_occupied;
 				}
-				value /= BF;
+				o.logit /= BF;
 				break;
 			}
-			case OccupancyPropagationCriteria::ONLY_INDICATORS: return;
+			case OccupancyPropagationCriteria::ONLY_INDICATORS: {
+				for (auto child : ocb.data) {
+					o.contains_unknown  = o.contains_unknown || child.contains_unknown;
+					o.contains_free     = o.contains_free || child.contains_free;
+					o.contains_occupied = o.contains_occupied || child.contains_occupied;
+				}
+				break;
+			}
 			case OccupancyPropagationCriteria::NONE: return;
 		}
-
-		occupancyBlock(node.pos)[node.offset] = OccupancyElement(value, indicators);
 	}
 
 	[[nodiscard]] bool onIsPrunable(pos_t block) const
 	{
-		using std::begin;
-		using std::end;
-		return std::all_of(
-		    begin(occupancyBlock(block).data) + 1, end(occupancyBlock(block).data),
-		    [v = occupancyBlock(block)[0].value_and_indicators](auto const& e) {
-			    return v == e.value_and_indicators;
-		    });
+		return std::all_of(occupancyBlock(block).begin() + 1, occupancyBlock(block).end(),
+		                   [v = occupancyBlock(block)[0]](auto const& e) { return v == e; });
 	}
 
 	void onPruneChildren(Index node, pos_t /* children */)
 	{
 		// Ensure that the indicators of `node` are correct
 		auto&   v     = occupancyBlock(node.pos)[node.offset];
-		logit_t value = v.logit();
+		logit_t value = v.logit;
 		v = OccupancyElement(value, occupancyUnknownLogit(value), occupancyFreeLogit(value),
 		                     occupancyOccupiedLogit(value));
 	}
@@ -666,19 +618,19 @@ class OccupancyMap
 			auto& ob = occupancyBlock(block);
 
 			if (offset.all()) {
-				in.read(ob.data);
 				for (std::size_t i{}; BF > i; ++i) {
-					auto l = ob[i].logit();
-					ob[i]  = OccupancyElement(l, occupancyUnknownLogit(l), occupancyFreeLogit(l),
-					                          occupancyOccupiedLogit(l));
+					logit_t l;
+					in.read(l);
+					ob[i] = OccupancyElement(l, occupancyUnknownLogit(l), occupancyFreeLogit(l),
+					                         occupancyOccupiedLogit(l));
 				}
 			} else {
 				for (std::size_t i{}; BF > i; ++i) {
 					if (offset[i]) {
-						in.read(ob[i]);
-						auto l = ob[i].logit();
-						ob[i]  = OccupancyElement(l, occupancyUnknownLogit(l), occupancyFreeLogit(l),
-						                          occupancyOccupiedLogit(l));
+						logit_t l;
+						in.read(l);
+						ob[i] = OccupancyElement(l, occupancyUnknownLogit(l), occupancyFreeLogit(l),
+						                         occupancyOccupiedLogit(l));
 					}
 				}
 			}
@@ -689,14 +641,16 @@ class OccupancyMap
 	             std::vector<std::pair<pos_t, BitSet<BF>>> const& nodes) const
 	{
 		for (auto [block, offset] : nodes) {
-			auto const& occ = occupancyBlock(block);
+			auto const& ob = occupancyBlock(block);
 
 			if (offset.all()) {
-				out.write(occ.data);
+				for (std::size_t i{}; BF > i; ++i) {
+					out.write(ob[i].logit);
+				}
 			} else {
 				for (std::size_t i{}; BF > i; ++i) {
 					if (offset[i]) {
-						out.write(occ[i]);
+						out.write(ob[i].logit);
 					}
 				}
 			}
@@ -727,37 +681,9 @@ class OccupancyMap
 		return occupiedThresLogit() < logit;
 	}
 
-	//
-	// Probability functions
-	//
-
-	[[nodiscard]] static occupancy_t probability(occupancy_t logit)
-	{
-		return occupancy_t(1) / (occupancy_t(1) + std::exp(-logit));
-	}
-
-	//
-	// Logit functions
-	//
-
-	[[nodiscard]] static occupancy_t logit(occupancy_t probability)
-	{
-		return std::log(probability / (occupancy_t(1) - probability));
-	}
-
-	[[nodiscard]] static occupancy_t logit(occupancy_t probability, occupancy_t min,
-	                                       occupancy_t max)
-	{
-		return std::clamp(logit(probability), min, max);
-	}
-
  private:
-	occupancy_t clamping_thres_logit_ = logit(0.971);
-
 	logit_t occupied_thres_logit_{};  // Threshold for occupied
 	logit_t free_thres_logit_{};      // Threshold for free
-
-	// TODO: Maybe add lookup tables?
 
 	// Propagation criteria
 	OccupancyPropagationCriteria prop_criteria_ = OccupancyPropagationCriteria::MAX;
