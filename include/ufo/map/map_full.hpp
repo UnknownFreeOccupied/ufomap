@@ -416,8 +416,8 @@ class MapFull final
 		}
 	}
 
-	template <class Predicate                                             = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	void write(std::filesystem::path const& file, Predicate const& pred = pred::Leaf{},
 	           MapType map_types = MapType::ALL) const
 	{
@@ -425,8 +425,8 @@ class MapFull final
 		return write(f, pred, map_types);
 	}
 
-	template <class Predicate                                             = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	void write(std::ostream& out, Predicate const& pred = pred::Leaf{},
 	           MapType map_types = MapType::ALL) const
 	{
@@ -450,8 +450,8 @@ class MapFull final
 		}
 	}
 
-	template <class Predicate                                             = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	void write(WriteBuffer& out, Predicate const& pred = pred::Leaf{},
 	           MapType map_types = MapType::ALL) const
 	{
@@ -475,8 +475,8 @@ class MapFull final
 		}
 	}
 
-	template <class Predicate                                             = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	[[nodiscard]] Buffer write(Predicate const& pred      = pred::Leaf{},
 	                           MapType          map_types = MapType::ALL) const
 	{
@@ -485,8 +485,8 @@ class MapFull final
 		return buffer;
 	}
 
-	template <class Predicate                                             = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	[[nodiscard]] MapHeader writeData(std::filesystem::path const& file,
 	                                  Predicate const&             pred = pred::Leaf{},
 	                                  MapType map_types = MapType::ALL) const
@@ -495,8 +495,8 @@ class MapFull final
 		return writeData(f, pred, map_types);
 	}
 
-	template <class Predicate                                             = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	[[nodiscard]] MapHeader writeData(std::ostream&    out,
 	                                  Predicate const& pred      = pred::Leaf{},
 	                                  MapType          map_types = MapType::ALL) const
@@ -522,8 +522,8 @@ class MapFull final
 		return h;
 	}
 
-	template <class Predicate                                             = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	[[nodiscard]] MapHeader writeData(WriteBuffer&     out,
 	                                  Predicate const& pred      = pred::Leaf{},
 	                                  MapType          map_types = MapType::ALL) const
@@ -555,8 +555,8 @@ class MapFull final
 	|                                                                                     |
 	**************************************************************************************/
 
-	template <class Predicate                                             = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	void saveDotFile(std::filesystem::path const& file,
 	                 Predicate const&             pred      = pred::True{},
 	                 MapType                      map_types = MapType::ALL) const
@@ -564,8 +564,8 @@ class MapFull final
 		saveDotFile(Base::node(), file, pred, map_types);
 	}
 
-	template <class Predicate                                             = pred::True,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate                                    = pred::True,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	void saveDotFile(std::ostream& out, Predicate const& pred = pred::True{},
 	                 MapType map_types = MapType::ALL) const
 	{
@@ -574,7 +574,7 @@ class MapFull final
 
 	template <class NodeType, class Predicate = pred::True,
 	          std::enable_if_t<Base::template is_node_type_v<NodeType>, bool> = true,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool>     = true>
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool>              = true>
 	void saveDotFile(NodeType node, std::filesystem::path const& file,
 	                 Predicate const& pred      = pred::True{},
 	                 MapType          map_types = MapType::ALL) const
@@ -585,7 +585,7 @@ class MapFull final
 
 	template <class NodeType, class Predicate = pred::True,
 	          std::enable_if_t<Base::template is_node_type_v<NodeType>, bool> = true,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool>     = true>
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool>              = true>
 	void saveDotFile(NodeType node, std::ostream& out, Predicate const& pred = pred::True{},
 	                 MapType map_types = MapType::ALL) const
 	{
@@ -1013,8 +1013,7 @@ class MapFull final
 		}
 	}
 
-	template <class Predicate,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate, std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	[[nodiscard]] std::pair<std::vector<BitSet<BF>>,
 	                        std::vector<std::pair<pos_t, BitSet<BF>>>>
 	writeNodes(Predicate pred) const
@@ -1073,8 +1072,7 @@ class MapFull final
 		return res;
 	}
 
-	template <class Predicate,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate, std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	void writeNodesRecurs(Node parent, Predicate const& pred, std::vector<BitSet<BF>>& tree,
 	                      std::vector<std::pair<pos_t, BitSet<BF>>>& nodes) const
 	{
@@ -1227,8 +1225,7 @@ class MapFull final
 	|                                                                                     |
 	**************************************************************************************/
 
-	template <class Predicate,
-	          std::enable_if_t<pred::is_pred_v<Predicate, MapFull>, bool> = true>
+	template <class Predicate, std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	void saveDotFileRecurs(std::ostream& out, Node node, std::string const& id,
 	                       Predicate const& pred, MapType map_types,
 	                       std::string const& parent_shape) const

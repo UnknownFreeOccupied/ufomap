@@ -61,7 +61,7 @@ struct OccupancyStates {
 };
 
 template <>
-struct Filter<OccupancyStates> {
+struct Filter<OccupancyStates> : public FilterBase<OccupancyStates> {
 	using Pred = OccupancyStates;
 
 	template <class Tree>

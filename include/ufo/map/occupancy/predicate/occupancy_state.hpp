@@ -64,7 +64,8 @@ constexpr OccupancyState<State, !Negated> operator!(OccupancyState<State, Negate
 }
 
 template <ufo::OccupancyState State, bool Negated>
-struct Filter<OccupancyState<State, Negated>> {
+struct Filter<OccupancyState<State, Negated>>
+    : public FilterBase<OccupancyState<State, Negated>> {
 	using Pred = OccupancyState<State, Negated>;
 
 	template <class Tree>

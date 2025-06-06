@@ -66,7 +66,8 @@ OccupancyInterval<!Negated> operator!(OccupancyInterval<Negated> p)
 }
 
 template <bool Negated>
-struct Filter<OccupancyInterval<Negated>> {
+struct Filter<OccupancyInterval<Negated>>
+    : public FilterBase<OccupancyInterval<Negated>> {
 	using Pred = OccupancyInterval<Negated>;
 
 	template <class Tree>

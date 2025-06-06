@@ -57,11 +57,10 @@ template <PredicateCompare PC = PredicateCompare::EQUAL>
 struct Occupancy {
 	using occupancy_t = float;
 	using logit_t     = std::int8_t;
-	
+
 	Occupancy(occupancy_t occupancy) : occupancy(occupancy) {}
 
 	occupancy_t occupancy;
-
 
  protected:
 	logit_t logit;
@@ -155,7 +154,7 @@ using OccupancyMax = OccupancyLE;
 // };
 
 template <PredicateCompare PC>
-struct Filter<Occupancy<PC>> {
+struct Filter<Occupancy<PC>> : public FilterBase<Occupancy<PC>> {
 	using Pred = Occupancy<PC>;
 
 	template <class Tree>

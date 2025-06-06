@@ -58,7 +58,8 @@ using ContainFree     = ContainOccupancyState<ufo::OccupancyState::FREE>;
 using ContainOccupied = ContainOccupancyState<ufo::OccupancyState::OCCUPIED>;
 
 template <ufo::OccupancyState State>
-struct Filter<ContainOccupancyState<State>> {
+struct Filter<ContainOccupancyState<State>>
+    : public FilterBase<ContainOccupancyState<State>> {
 	using Pred = ContainOccupancyState<State>;
 
 	template <class Tree>

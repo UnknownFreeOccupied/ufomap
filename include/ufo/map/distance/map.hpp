@@ -571,10 +571,10 @@ class DistanceMap
 		return std::sqrt(distanceSquared(node, query));
 	}
 
-	template <class Geometry, class Pred = pred::Leaf,
-	          std::enable_if_t<pred::is_pred_v<Pred, Derived, Node>, bool> = true>
+	template <class Geometry, class Predicate = pred::Leaf,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	[[nodiscard]] float distance(
-	    Geometry const& query, Pred const& pred = pred::Leaf(),
+	    Geometry const& query, Predicate const& pred = pred::Leaf(),
 	    DistanceInterpolate interpolate = DistanceInterpolate::ALL,
 	    float max_distance = std::numeric_limits<float>::max(), float epsilon = 0.0f,
 	    NearestSearchAlgorithm search_alg = NearestSearchAlgorithm::DEPTH_FIRST) const
@@ -585,9 +585,9 @@ class DistanceMap
 
 	template <class NodeType, class Pred, class Geometry,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true,
-	          std::enable_if_t<pred::is_pred_v<Pred, Derived, Node>, bool>    = true>
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool>              = true>
 	[[nodiscard]] float distance(
-	    NodeType node, Pred const& pred, Geometry const& query,
+	    NodeType node, Predicate const& pred, Geometry const& query,
 	    DistanceInterpolate interpolate = DistanceInterpolate::ALL,
 	    float max_distance = std::numeric_limits<float>::max(), float epsilon = 0.0f,
 	    NearestSearchAlgorithm search_alg = NearestSearchAlgorithm::DEPTH_FIRST) const
@@ -664,10 +664,10 @@ class DistanceMap
 		    n, search_alg, value_f, inner_f, max_distance, epsilon));
 	}
 
-	template <class Pred, class Geometry,
-	          std::enable_if_t<pred::is_pred_v<Pred, Derived, Node>, bool> = true>
+	template <class Predicate, class Geometry,
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool> = true>
 	[[nodiscard]] std::pair<float, Point> distancePoint(
-	    Pred const& pred, Geometry const& query,
+	    Predicate const& pred, Geometry const& query,
 	    DistanceInterpolate interpolate = DistanceInterpolate::ALL,
 	    float max_distance = std::numeric_limits<float>::max(), float epsilon = 0.0f,
 	    NearestSearchAlgorithm search_alg = NearestSearchAlgorithm::DEPTH_FIRST) const
@@ -676,11 +676,11 @@ class DistanceMap
 		                     epsilon, search_alg);
 	}
 
-	template <class NodeType, class Pred, class Geometry,
+	template <class NodeType, class Predicate, class Geometry,
 	          std::enable_if_t<Tree::template is_node_type_v<NodeType>, bool> = true,
-	          std::enable_if_t<pred::is_pred_v<Pred, Derived, Node>, bool>    = true>
+	          std::enable_if_t<pred::is_pred_v<Predicate>, bool>              = true>
 	[[nodiscard]] std::pair<float, Point> distancePoint(
-	    NodeType node, Pred const& pred, Geometry const& query,
+	    NodeType node, Predicate const& pred, Geometry const& query,
 	    DistanceInterpolate interpolate = DistanceInterpolate::ALL,
 	    float max_distance = std::numeric_limits<float>::max(), float epsilon = 0.0f,
 	    NearestSearchAlgorithm search_alg = NearestSearchAlgorithm::DEPTH_FIRST) const
