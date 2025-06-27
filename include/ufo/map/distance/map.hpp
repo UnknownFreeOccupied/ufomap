@@ -865,7 +865,7 @@ class DistanceMap
 
 		auto block_f = [this, node_f](pos_t pos) {
 			for (std::size_t i{}; BF > i; ++i) {
-				node_f(Index(pos, i));
+				node_f(Index{pos, static_cast<offset_t>(i)});
 			}
 		};
 
@@ -911,7 +911,7 @@ class DistanceMap
 
 		auto block_f = [this, node_f](pos_t pos) {
 			for (std::size_t i{}; BF > i; ++i) {
-				node_f(Index(pos, i));
+				node_f(Index{pos, static_cast<offset_t>(i)});
 			}
 		};
 
@@ -949,7 +949,7 @@ class DistanceMap
 
 		auto block_f = [this, node_f](pos_t pos) {
 			for (std::size_t i{}; BF > i; ++i) {
-				node_f(Index(pos, i));
+				node_f(Index{pos, static_cast<offset_t>(i)});
 			}
 		};
 
