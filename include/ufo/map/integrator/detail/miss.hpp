@@ -54,15 +54,14 @@ namespace ufo::detail
 {
 template <std::size_t Dim>
 struct Miss {
-	union {
-		TreeCode<Dim> code{};
-		TreeIndex     node;
-	};
+	TreeCode<Dim> code;
+	TreeIndex     node;
+
 	Vec<Dim, float>    direction{};
 	std::uint_fast32_t count{};
 	bool               void_region{};
 
-	constexpr Miss() noexcept                       = default;
+	constexpr Miss() noexcept = default;
 
 	Miss(TreeCode<Dim> const& code, Vec<Dim, float> const& direction,
 	     std::uint_fast32_t count, bool void_region)

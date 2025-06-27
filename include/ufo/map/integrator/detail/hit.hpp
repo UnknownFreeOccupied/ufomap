@@ -53,10 +53,8 @@ namespace ufo::detail
 {
 template <std::size_t Dim>
 struct Hit {
-	union {
-		TreeCode<Dim> code{};
-		TreeIndex     node;
-	};
+	TreeCode<Dim> code;
+	TreeIndex     node;
 
 	Hit& operator=(TreeCode<Dim> const& code)
 	{
