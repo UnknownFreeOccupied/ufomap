@@ -815,8 +815,8 @@ class MapFull final
 		}
 
 		for (std::size_t i{}; BF > i; ++i) {
-			Index n{block, static_cast<offset_t>(i)};
-			auto  c = Base::children(n);
+			auto n = Index(block, i);
+			auto c = Base::children(n);
 
 			if (0u == (m & (1u << i)) || !Base::valid(c)) {
 				continue;
@@ -847,8 +847,8 @@ class MapFull final
 		if (BF - 2u <= m.count() && 2u < d) {
 			ufo::for_each(policy, std::size_t(0), BF,
 			              [this, policy, block, map_types, is_parallel, m](std::size_t i) {
-				              Index n{block, static_cast<offset_t>(i)};
-				              auto  c = Base::children(n);
+				              auto n = Index(block, i);
+				              auto c = Base::children(n);
 
 				              if (!m[i] || !Base::valid(c)) {
 					              return;
@@ -867,8 +867,8 @@ class MapFull final
 			              });
 		} else {
 			for (std::size_t i{}; BF > i; ++i) {
-				Index n{block, static_cast<offset_t>(i)};
-				auto  c = Base::children(n);
+				auto n = Index(block, i);
+				auto c = Base::children(n);
 
 				if (!m[i] || !Base::valid(c)) {
 					continue;
@@ -899,8 +899,8 @@ class MapFull final
 		}
 
 		for (std::size_t i{}; BF > i; ++i) {
-			Index n{block, static_cast<offset_t>(i)};
-			auto  c = Base::children(n);
+			auto n = Index(block, i);
+			auto c = Base::children(n);
 
 			if (0u == (m & (1u << i)) || !Base::valid(c)) {
 				continue;
@@ -958,7 +958,7 @@ class MapFull final
 
 		if (valid_erase_children.any()) {
 			for (std::size_t i{}; BF > i; ++i) {
-				Index node{block, static_cast<offset_t>(i)};
+				Index node(block, i);
 				if (valid_erase_children[i]) {
 					Base::eraseChildren(node);
 				}
@@ -967,7 +967,7 @@ class MapFull final
 
 		if (valid_inner.any()) {
 			for (std::size_t i{}; BF > i; ++i) {
-				Index node{block, static_cast<offset_t>(i)};
+				Index node(block, i);
 				if (valid_inner[i]) {
 					auto children = Base::createChildren(node);
 					tree_it       = readNodesRecurs(children, tree_it, nodes);
@@ -1120,7 +1120,7 @@ class MapFull final
 		BitSet<BF> valid_inner;
 
 		for (std::size_t i{}; BF > i; ++i) {
-			Index node{block, static_cast<offset_t>(i)};
+			Index node(block, i);
 			bool  leaf      = Base::isLeaf(node);
 			bool  modified  = Base::modified(node);
 			valid_return[i] = leaf && modified;
@@ -1137,7 +1137,7 @@ class MapFull final
 
 		if (valid_inner.any()) {
 			for (std::size_t i{}; BF > i; ++i) {
-				Index node{block, static_cast<offset_t>(i)};
+				Index node(block, i);
 				if (valid_inner[i]) {
 					auto const tree_size  = tree.size();
 					auto const nodes_size = nodes.size();

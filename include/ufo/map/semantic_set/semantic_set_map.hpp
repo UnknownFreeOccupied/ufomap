@@ -3184,7 +3184,7 @@ class SemanticSetMap : public SemanticMapping
 						continue;
 					}
 
-					Index node{block, static_cast<offset_t>(i)};;
+					Index node(block, i);
 					if (derived().isLeaf(node)) {
 						semantics_[block].semantics.write(out, i);
 					} else {

@@ -486,7 +486,7 @@ class SurfelMap
 		    },
 		    [this, &surfel](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    auto pos = createSurfel(Index{block, i});
+				    auto pos = createSurfel(Index(block, i));
 				    surfel_[pos] += surfel;
 			    }
 		    });
@@ -502,7 +502,7 @@ class SurfelMap
 		    },
 		    [this, &surfel](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    auto pos = createSurfel(Index{block, i});
+				    auto pos = createSurfel(Index(block, i));
 				    surfel_[pos] += surfel;
 			    }
 		    },
@@ -519,7 +519,7 @@ class SurfelMap
 		    },
 		    [this, &surfel](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    auto pos = createSurfel(Index{block, i});
+				    auto pos = createSurfel(Index(block, i));
 				    surfel_[pos] += surfel;
 			    }
 		    },
@@ -1186,7 +1186,7 @@ class SurfelMap
 		    },
 		    [this, unary_op](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    Index node{block, static_cast<offset_t>(i)};;
+				    Index node(block, i);
 				    auto  pos = indices_[node.pos][node.offset];
 				    if (NULL_POS == pos) {
 					    if (auto s = unary_op(Surfel{}); !s.empty()) {
@@ -1225,7 +1225,7 @@ class SurfelMap
 		    },
 		    [this, binary_op](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    Index node{block, static_cast<offset_t>(i)};;
+				    Index node(block, i);
 				    auto  pos = indices_[node.pos][node.offset];
 				    if (NULL_POS == pos) {
 					    if (auto s = binary_op(node, Surfel{}); !s.empty()) {
@@ -1264,7 +1264,7 @@ class SurfelMap
 		    },
 		    [this, unary_op](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    Index node{block, static_cast<offset_t>(i)};;
+				    Index node(block, i);
 				    auto  pos = indices_[node.pos][node.offset];
 				    if (NULL_POS == pos) {
 					    if (auto s = unary_op(Surfel{}); !s.empty()) {
@@ -1304,7 +1304,7 @@ class SurfelMap
 		    },
 		    [this, binary_op](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    Index node{block, static_cast<offset_t>(i)};;
+				    Index node(block, i);
 				    auto  pos = indices_[node.pos][node.offset];
 				    if (NULL_POS == pos) {
 					    if (auto s = binary_op(node, Surfel{}); !s.empty()) {
@@ -1344,7 +1344,7 @@ class SurfelMap
 		    },
 		    [this, unary_op](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    Index node{block, static_cast<offset_t>(i)};;
+				    Index node(block, i);
 				    auto  pos = indices_[node.pos][node.offset];
 				    if (NULL_POS == pos) {
 					    if (auto s = unary_op(Surfel{}); !s.empty()) {
@@ -1384,7 +1384,7 @@ class SurfelMap
 		    },
 		    [this, binary_op](pos_t block) {
 			    for (offset_t i{}; N != i; ++i) {
-				    Index node{block, static_cast<offset_t>(i)};;
+				    Index node(block, i);
 				    auto  pos = indices_[node.pos][node.offset];
 				    if (NULL_POS == pos) {
 					    if (auto s = binary_op(node, Surfel{}); !s.empty()) {
@@ -1668,7 +1668,7 @@ class SurfelMap
 	{
 		for (offset_t i{}; N != i; ++i) {
 			if (modified_parent[i]) {
-				Index node{block, static_cast<offset_t>(i)};;
+				Index node(block, i);
 				updateNode(node, derived().children(node));
 			}
 		}

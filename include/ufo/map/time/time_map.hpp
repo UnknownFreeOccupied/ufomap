@@ -152,7 +152,7 @@ class TimeMap
 		    [this, binary_op](pos_t pos) {
 			    offset_t i{};
 			    for (auto& e : time_[pos]) {
-				    e = binary_op(Index{pos, i++}, e);
+				    e = binary_op(Index(pos, i++), e);
 			    }
 		    });
 	}
@@ -186,7 +186,7 @@ class TimeMap
 		    [this, binary_op](pos_t pos) {
 			    offset_t i{};
 			    for (auto& e : time_[pos]) {
-				    e = binary_op(Index{pos, i++}, e);
+				    e = binary_op(Index(pos, i++), e);
 			    }
 		    },
 		    propagate);
@@ -221,7 +221,7 @@ class TimeMap
 		    [this, binary_op](pos_t pos) {
 			    offset_t i{};
 			    for (auto& e : time_[pos]) {
-				    e = binary_op(Index{pos, i++}, e);
+				    e = binary_op(Index(pos, i++), e);
 			    }
 		    },
 		    propagate);
@@ -416,7 +416,7 @@ class TimeMap
 	{
 		for (offset_t i{}; N != i; ++i) {
 			if (modified_parent[i]) {
-				Index node{block, static_cast<offset_t>(i)};;
+				Index node(block, i);
 				updateNode(node, derived().children(node));
 			}
 		}

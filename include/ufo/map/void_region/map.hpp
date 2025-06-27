@@ -156,7 +156,7 @@ class VoidRegionMap
 
 		auto block_f = [this, unary_op](pos_t block) {
 			for (std::size_t i{}; BF > i; ++i) {
-				voidRegionBlock(block)[i] = unary_op(Index{block, static_cast<offset_t>(i)});
+				voidRegionBlock(block)[i] = unary_op(Index(block, i));
 			}
 		};
 
